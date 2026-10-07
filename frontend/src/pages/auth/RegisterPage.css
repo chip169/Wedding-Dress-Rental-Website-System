@@ -1,0 +1,407 @@
+/* ================================================================
+   RegisterPage.css – UniBridal Haute Couture Registration Screen
+   ================================================================ */
+
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+
+/* ── Global Screen Canvas ───────────────────────────────────────── */
+.ub-reg-screen {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 100vh;
+  width: 100vw;
+  background-color: #EFE7E3;
+  font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+  box-sizing: border-box;
+  padding: 24px;
+  overflow-x: hidden;
+}
+
+/* Ambient glow lights in background */
+.ub-reg-screen .ub-bg-glow {
+  position: absolute;
+  width: 550px;
+  height: 550px;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(100px);
+  opacity: 0.6;
+}
+.ub-reg-screen .ub-bg-glow--left {
+  top: -150px;
+  left: 5%;
+  background: radial-gradient(circle, rgba(255, 218, 222, 0.7) 0%, rgba(255, 238, 230, 0) 70%);
+}
+.ub-reg-screen .ub-bg-glow--right {
+  bottom: -150px;
+  right: 5%;
+  background: radial-gradient(circle, rgba(245, 220, 205, 0.6) 0%, rgba(255, 240, 235, 0) 70%);
+}
+
+/* ── Top Navigation Bar ─────────────────────────────────────────── */
+.ub-top-nav-bar {
+  position: relative;
+  z-index: 15;
+  width: 1152px;
+  max-width: 1152px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.ub-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #6E5A5D;
+  cursor: pointer;
+  padding: 6px 0;
+  transition: all 0.2s ease;
+}
+.ub-back-btn:hover {
+  color: #854F55;
+  transform: translateX(-3px);
+}
+
+/* ── Main Dual-Panel Luxury Card ────────────────────────────────── */
+.ub-reg-card {
+  position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: row;
+  width: 1152px;
+  max-width: 1152px;
+  min-height: 740px;
+  background: #FFFFFF;
+  border-radius: 16px;
+  box-shadow:
+    0 30px 60px -15px rgba(105, 50, 58, 0.15),
+    0 0 0 1px rgba(255, 255, 255, 0.9),
+    0 4px 16px -2px rgba(0, 0, 0, 0.04);
+  overflow: hidden;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   LEFT PANEL (576px) – Haute Couture Brand Presentation
+   ═══════════════════════════════════════════════════════════════════ */
+.ub-reg-card .ub-panel-left {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 576px;
+  min-height: 740px;
+  padding: 44px 48px;
+  background: radial-gradient(130% 130% at 20% 15%, #FFF6F3 0%, #FCEAE4 55%, #F7DDD5 100%);
+  overflow: hidden;
+  box-sizing: border-box;
+}
+
+/* ═══════════════════════════════════════════════════════════════════
+   RIGHT PANEL (576px) – Registration Form
+   ═══════════════════════════════════════════════════════════════════ */
+.ub-reg-card .ub-panel-right {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  width: 576px;
+  padding: 36px 48px;
+  background: #FFFFFF;
+  box-sizing: border-box;
+}
+
+.ub-reg-form-container {
+  display: flex;
+  flex-direction: column;
+  width: 480px;
+  max-width: 480px;
+}
+
+/* Header Group */
+.ub-reg-form-container .ub-header-group {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  margin-bottom: 24px;
+}
+
+.ub-reg-form-container .ub-form-overhead {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 2.5px;
+  text-transform: uppercase;
+  color: #854F55;
+  margin-bottom: 6px;
+}
+
+.ub-reg-form-container .ub-form-heading {
+  font-family: 'Playfair Display', Georgia, serif;
+  font-weight: 500;
+  font-size: 32px;
+  line-height: 40px;
+  color: #1C1415;
+  margin: 0 0 8px;
+  letter-spacing: -0.2px;
+}
+
+.ub-form-description {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 12.5px;
+  line-height: 18px;
+  color: #6E5A5D;
+  margin: 0;
+  text-align: center;
+  max-width: 430px;
+}
+
+/* ── Form Layout ────────────────────────────────────────────────── */
+.ub-reg-form-container .ub-form {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: 100%;
+}
+
+.ub-form-row {
+  display: flex;
+  flex-direction: row;
+  gap: 14px;
+  width: 100%;
+}
+
+.ub-form-row .ub-field-group {
+  flex: 1;
+}
+
+.ub-reg-form-container .ub-field-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  width: 100%;
+}
+
+.ub-reg-form-container .ub-label {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.4px;
+  color: #4D3F41;
+}
+
+.ub-required-star {
+  color: #B8737D;
+  font-weight: bold;
+}
+
+/* Input Boxes */
+.ub-reg-form-container .ub-input-box {
+  position: relative;
+  display: flex;
+  align-items: center;
+  width: 100%;
+  height: 44px;
+  background: #FDF3EF;
+  border: 1px solid rgba(133, 79, 85, 0.12);
+  border-radius: 6px;
+  box-sizing: border-box;
+  transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
+}
+
+.ub-reg-form-container .ub-input-box:focus-within {
+  background: #FFFFFF;
+  border-color: #C28288;
+  box-shadow: 0 0 0 3.5px rgba(194, 130, 136, 0.15);
+}
+
+.ub-reg-form-container .ub-input {
+  width: 100%;
+  height: 100%;
+  padding: 11px 40px 11px 14px;
+  background: transparent;
+  border: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-size: 13.5px;
+  line-height: 18px;
+  color: #1C1415;
+  outline: none;
+  box-sizing: border-box;
+}
+
+.ub-reg-form-container .ub-input--no-icon {
+  padding-right: 14px;
+}
+
+.ub-reg-form-container .ub-input::placeholder {
+  color: rgba(81, 67, 68, 0.40);
+  font-size: 13px;
+}
+
+.ub-input-icon--right {
+  position: absolute;
+  right: 12px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+}
+
+/* Password Strength Indicator */
+.ub-strength-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-top: -2px;
+  margin-bottom: 2px;
+}
+
+.ub-strength-bars {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.ub-strength-bar {
+  display: inline-block;
+  width: 58px;
+  height: 3.5px;
+  border-radius: 2px;
+  background: #EFE4E0;
+  transition: background-color 0.25s ease;
+}
+
+.ub-strength-bar.is-active {
+  background: #BD7B82;
+}
+
+.ub-strength-text {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 500;
+  font-size: 11.5px;
+  line-height: 14px;
+  color: #6E5A5D;
+}
+
+/* Terms Checkbox Row */
+.ub-terms-row {
+  display: flex;
+  align-items: flex-start;
+  margin-top: 2px;
+}
+
+.ub-terms-text {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 17px;
+  color: #5A484A;
+}
+
+.ub-terms-link {
+  color: #854F55;
+  text-decoration: underline;
+  text-underline-offset: 2.5px;
+  transition: color 0.15s ease;
+}
+.ub-terms-link:hover {
+  color: #5C2F35;
+}
+
+/* Submit Button */
+.ub-reg-form-container .ub-submit-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  height: 46px;
+  background: linear-gradient(135deg, #C58187 0%, #B36F75 100%);
+  color: #FFFFFF;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  border-radius: 6px;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 16px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  cursor: pointer;
+  box-shadow: 0 8px 22px -3px rgba(179, 111, 117, 0.42);
+  transition: all 0.22s cubic-bezier(0.2, 0.8, 0.2, 1);
+  margin-top: 4px;
+}
+
+.ub-reg-form-container .ub-submit-btn:hover {
+  background: linear-gradient(135deg, #BE787E 0%, #A96269 100%);
+  box-shadow: 0 10px 26px -2px rgba(179, 111, 117, 0.52);
+  transform: translateY(-1px);
+}
+
+.ub-reg-form-container .ub-submit-btn:active {
+  transform: translateY(0) scale(0.99);
+}
+
+/* Bottom Login Link */
+.ub-reg-form-container .ub-bottom-link-row {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin-top: 24px;
+}
+
+.ub-login-link {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 18px;
+  color: #854F55;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  transition: all 0.15s ease;
+}
+.ub-login-link:hover {
+  color: #5C2F35;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────── */
+@media (max-width: 1200px) {
+  .ub-top-nav-bar {
+    width: 100%;
+  }
+  .ub-reg-card {
+    width: 100vw;
+    border-radius: 0;
+  }
+}
+
+@media (max-width: 880px) {
+  .ub-reg-card .ub-panel-left {
+    display: none;
+  }
+  .ub-reg-card .ub-panel-right {
+    width: 100vw;
+    padding: 32px 20px;
+  }
+  .ub-reg-form-container {
+    width: 100%;
+  }
+  .ub-form-row {
+    flex-direction: column;
+    gap: 12px;
+  }
+}
