@@ -1,4 +1,5 @@
 import React from 'react';
+import logoImg from '../assets/logo.png';
 
 const Footer = () => {
   return (
@@ -10,11 +11,13 @@ const Footer = () => {
           
           {/* Column 1: Brand Intro (col-span-4) */}
           <div className="lg:col-span-4 pr-0 lg:pr-6">
-            <div className="flex items-center gap-3 mb-4">
-              <span className="font-playfair text-[26px] font-bold italic text-[#B8737D]">
-                <span className="text-[#C98A90]">U</span>B
-              </span>
-              <span className="font-playfair text-[22px] font-bold text-[#2C2523]">
+            <div className="flex items-center gap-2.5 mb-4 select-none">
+              <img
+                src={logoImg}
+                alt="UniBridal Logo"
+                className="h-[36px] w-auto object-contain"
+              />
+              <span className="font-playfair text-[22px] font-bold text-[#2C2523] tracking-[0.5px]">
                 UniBridal
               </span>
             </div>
@@ -73,7 +76,7 @@ const Footer = () => {
                 <li key={idx}>
                   <a
                     href="#"
-                    className="font-jakarta text-[12px] text-[#514344] hover:text-[#B8737D] transition-colors text-decoration-none"
+                    className="font-jakarta text-[12px] text-[#514344] hover:text-[#B8737D] transition-colors no-underline"
                   >
                     {text}
                   </a>
@@ -98,7 +101,7 @@ const Footer = () => {
                 <li key={idx}>
                   <a
                     href="#"
-                    className="font-jakarta text-[12px] text-[#514344] hover:text-[#B8737D] transition-colors text-decoration-none"
+                    className="font-jakarta text-[12px] text-[#514344] hover:text-[#B8737D] transition-colors no-underline"
                   >
                     {text}
                   </a>
@@ -116,15 +119,15 @@ const Footer = () => {
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 font-jakarta text-[11px] text-[#514344]">
-            <a href="#" className="hover:text-[#B8737D] transition-colors text-decoration-none">
+            <a href="#" className="hover:text-[#B8737D] transition-colors no-underline">
               Quy Định Đặt Cọc
             </a>
             <span>•</span>
-            <a href="#" className="hover:text-[#B8737D] transition-colors text-decoration-none">
+            <a href="#" className="hover:text-[#B8737D] transition-colors no-underline">
               Chính Sách Bảo Mật
             </a>
             <span>•</span>
-            <a href="#" className="hover:text-[#B8737D] transition-colors text-decoration-none">
+            <a href="#" className="hover:text-[#B8737D] transition-colors no-underline">
               Tiêu Chuẩn Giặt Hấp
             </a>
           </div>
