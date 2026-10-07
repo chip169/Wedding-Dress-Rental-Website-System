@@ -144,7 +144,7 @@
 }
 
 /* Form Inner Container */
-.ub-form-container {
+.ub-panel-form-left .ub-form-container {
   display: flex;
   flex-direction: column;
   width: 440px;
@@ -152,7 +152,7 @@
 }
 
 /* Form Header */
-.ub-header-group {
+.ub-panel-form-left .ub-header-group {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -160,7 +160,7 @@
   margin-bottom: 30px;
 }
 
-.ub-form-overhead {
+.ub-panel-form-left .ub-form-overhead {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 600;
   font-size: 11px;
@@ -171,7 +171,7 @@
   margin-bottom: 8px;
 }
 
-.ub-form-heading {
+.ub-panel-form-left .ub-form-heading {
   font-family: 'Playfair Display', Georgia, serif;
   font-weight: 500;
   font-size: 36px;
@@ -182,20 +182,20 @@
 }
 
 /* Decorative ornament below heading */
-.ub-heading-ornament {
+.ub-panel-form-left .ub-heading-ornament {
   display: flex;
   align-items: center;
   gap: 8px;
   margin-top: 10px;
 }
 
-.ub-ornament-line {
+.ub-panel-form-left .ub-ornament-line {
   width: 22px;
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(133, 79, 85, 0.35), transparent);
 }
 
-.ub-ornament-diamond {
+.ub-panel-form-left .ub-ornament-diamond {
   width: 4px;
   height: 4px;
   background: #C28288;
@@ -204,21 +204,21 @@
 }
 
 /* Form Body */
-.ub-form {
+.ub-panel-form-left .ub-form {
   display: flex;
   flex-direction: column;
   gap: 18px;
   width: 100%;
 }
 
-.ub-field-group {
+.ub-panel-form-left .ub-field-group {
   display: flex;
   flex-direction: column;
   gap: 7px;
   width: 100%;
 }
 
-.ub-label-row {
+.ub-panel-form-left .ub-label-row {
   display: flex;
   flex-direction: row;
   justify-content: space-between;
@@ -226,7 +226,7 @@
   width: 100%;
 }
 
-.ub-label {
+.ub-panel-form-left .ub-label {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 600;
   font-size: 11px;
@@ -236,7 +236,7 @@
   color: #4D3F41;
 }
 
-.ub-forgot-link {
+.ub-panel-form-left .ub-forgot-link {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 500;
   font-size: 12px;
@@ -246,14 +246,14 @@
   text-decoration: none;
   transition: all 0.15s ease;
 }
-.ub-forgot-link:hover {
+.ub-panel-form-left .ub-forgot-link:hover {
   color: #633339;
   text-decoration: underline;
   text-underline-offset: 3px;
 }
 
 /* Input Box */
-.ub-input-box {
+.ub-panel-form-left .ub-input-box {
   position: relative;
   display: flex;
   align-items: center;
@@ -266,13 +266,13 @@
   transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.ub-input-box:focus-within {
+.ub-panel-form-left .ub-input-box:focus-within {
   background: #FFFFFF;
   border-color: #C28288;
   box-shadow: 0 0 0 3.5px rgba(194, 130, 136, 0.15);
 }
 
-.ub-input-icon {
+.ub-panel-form-left .ub-input-icon {
   position: absolute;
   left: 15px;
   display: flex;
@@ -281,11 +281,11 @@
   pointer-events: none;
   transition: transform 0.2s ease, opacity 0.2s ease;
 }
-.ub-input-box:focus-within .ub-input-icon {
+.ub-panel-form-left .ub-input-box:focus-within .ub-input-icon {
   transform: scale(1.05);
 }
 
-.ub-input {
+.ub-panel-form-left .ub-input {
   width: 100%;
   height: 100%;
   padding: 13px 16px 13px 44px;
@@ -299,17 +299,17 @@
   box-sizing: border-box;
 }
 
-.ub-input::placeholder {
+.ub-panel-form-left .ub-input::placeholder {
   color: rgba(81, 67, 68, 0.42);
   font-size: 13.5px;
 }
 
-.ub-input--pass {
+.ub-panel-form-left .ub-input--pass {
   padding-right: 44px;
 }
 
 /* Eye Toggle */
-.ub-eye-toggle {
+.ub-panel-form-left .ub-eye-toggle {
   position: absolute;
   right: 12px;
   top: 50%;
@@ -324,19 +324,19 @@
   opacity: 0.75;
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
-.ub-eye-toggle:hover {
+.ub-panel-form-left .ub-eye-toggle:hover {
   opacity: 1;
   transform: translateY(-50%) scale(1.1);
 }
 
 /* Checkbox Row */
-.ub-remember-row {
+.ub-panel-form-left .ub-remember-row {
   display: flex;
   align-items: center;
   margin-top: 3px;
 }
 
-.ub-checkbox-label {
+.ub-panel-form-left .ub-checkbox-label {
   display: inline-flex;
   align-items: center;
   gap: 9px;
@@ -344,7 +344,7 @@
   user-select: none;
 }
 
-.ub-checkbox-input {
+.ub-panel-form-left .ub-checkbox-input {
   position: absolute;
   opacity: 0;
   width: 0;
@@ -352,7 +352,7 @@
   pointer-events: none;
 }
 
-.ub-custom-checkbox {
+.ub-panel-form-left .ub-custom-checkbox {
   position: relative;
   display: inline-flex;
   align-items: center;
@@ -366,13 +366,13 @@
   box-shadow: 0 1px 3px rgba(100, 50, 60, 0.15);
 }
 
-.ub-checkbox-input:not(:checked) + .ub-custom-checkbox {
+.ub-panel-form-left .ub-checkbox-input:not(:checked) + .ub-custom-checkbox {
   background: #FDF3EF;
   border: 1.5px solid rgba(133, 79, 85, 0.35);
   box-shadow: none;
 }
 
-.ub-custom-checkbox::after {
+.ub-panel-form-left .ub-custom-checkbox::after {
   content: '';
   width: 8.5px;
   height: 4.8px;
@@ -384,11 +384,11 @@
   transition: opacity 0.15s ease;
 }
 
-.ub-checkbox-input:not(:checked) + .ub-custom-checkbox::after {
+.ub-panel-form-left .ub-checkbox-input:not(:checked) + .ub-custom-checkbox::after {
   opacity: 0;
 }
 
-.ub-remember-text {
+.ub-panel-form-left .ub-remember-text {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 400;
   font-size: 12.5px;
@@ -397,7 +397,7 @@
 }
 
 /* Submit Button */
-.ub-submit-btn {
+.ub-panel-form-left .ub-submit-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -420,33 +420,33 @@
   margin-top: 6px;
 }
 
-.ub-submit-btn:hover {
+.ub-panel-form-left .ub-submit-btn:hover {
   background: linear-gradient(135deg, #BE787E 0%, #A96269 100%);
   box-shadow: 0 10px 26px -2px rgba(179, 111, 117, 0.52);
   transform: translateY(-1px);
 }
 
-.ub-submit-btn:active {
+.ub-panel-form-left .ub-submit-btn:active {
   transform: translateY(0) scale(0.99);
 }
 
-.ub-submit-btn__arrow {
+.ub-panel-form-left .ub-submit-btn__arrow {
   font-size: 15px;
   transition: transform 0.2s ease;
 }
-.ub-submit-btn:hover .ub-submit-btn__arrow {
+.ub-panel-form-left .ub-submit-btn:hover .ub-submit-btn__arrow {
   transform: translateX(3px);
 }
 
 /* Bottom Registration Link */
-.ub-bottom-link-row {
+.ub-panel-form-left .ub-bottom-link-row {
   display: flex;
   align-items: center;
   justify-content: center;
   margin-top: 42px;
 }
 
-.ub-prompt-text {
+.ub-panel-form-left .ub-prompt-text {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 400;
   font-size: 13.5px;
@@ -454,7 +454,7 @@
   color: #4D3F41;
 }
 
-.ub-register-link {
+.ub-panel-form-left .ub-register-link {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 600;
   font-size: 13.5px;
@@ -464,8 +464,7 @@
   text-underline-offset: 3px;
   transition: all 0.15s ease;
 }
-
-.ub-register-link:hover {
+.ub-panel-form-left .ub-register-link:hover {
   color: #5C2F35;
   opacity: 0.9;
 }
@@ -770,7 +769,7 @@
     height: 100vh;
     padding: 24px;
   }
-  .ub-form-container {
+  .ub-panel-form-left .ub-form-container {
     width: 100%;
     max-width: 380px;
   }
