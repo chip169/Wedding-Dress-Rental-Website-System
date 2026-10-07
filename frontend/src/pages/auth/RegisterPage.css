@@ -1,12 +1,11 @@
 /* ================================================================
-   AuthPage.css – Seamless 60FPS Sliding Panel Transition
-   Between Haute Couture Login and Register
+   RegisterPage.css – UniBridal Haute Couture Registration Screen
    ================================================================ */
 
-@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap');
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400&family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap');
 
 /* ── Global Screen Canvas ───────────────────────────────────────── */
-.ub-auth-screen {
+.ub-reg-screen {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -22,7 +21,7 @@
 }
 
 /* Ambient glow lights in background */
-.ub-auth-screen .ub-bg-glow {
+.ub-reg-screen .ub-bg-glow {
   position: absolute;
   width: 550px;
   height: 550px;
@@ -31,19 +30,19 @@
   filter: blur(100px);
   opacity: 0.6;
 }
-.ub-auth-screen .ub-bg-glow--left {
+.ub-reg-screen .ub-bg-glow--left {
   top: -150px;
   left: 5%;
   background: radial-gradient(circle, rgba(255, 218, 222, 0.7) 0%, rgba(255, 238, 230, 0) 70%);
 }
-.ub-auth-screen .ub-bg-glow--right {
+.ub-reg-screen .ub-bg-glow--right {
   bottom: -150px;
   right: 5%;
   background: radial-gradient(circle, rgba(245, 220, 205, 0.6) 0%, rgba(255, 240, 235, 0) 70%);
 }
 
 /* ── Top Navigation Bar ─────────────────────────────────────────── */
-.ub-auth-screen .ub-top-nav-bar {
+.ub-top-nav-bar {
   position: relative;
   z-index: 15;
   width: 1152px;
@@ -53,7 +52,7 @@
   margin-bottom: 14px;
 }
 
-.ub-auth-screen .ub-back-btn {
+.ub-back-btn {
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -69,17 +68,20 @@
   padding: 6px 0;
   transition: all 0.2s ease;
 }
-.ub-auth-screen .ub-back-btn:hover {
+.ub-back-btn:hover {
   color: #854F55;
   transform: translateX(-3px);
 }
 
-/* ── Main Dual-Panel Luxury Card (Single Container) ─────────────── */
-.ub-auth-card {
+/* ── Main Dual-Panel Luxury Card ────────────────────────────────── */
+.ub-reg-card {
   position: relative;
+  z-index: 10;
+  display: flex;
+  flex-direction: row;
   width: 1152px;
   max-width: 1152px;
-  height: 740px;
+  min-height: 740px;
   background: #FFFFFF;
   border-radius: 16px;
   box-shadow:
@@ -87,137 +89,58 @@
     0 0 0 1px rgba(255, 255, 255, 0.9),
     0 4px 16px -2px rgba(0, 0, 0, 0.04);
   overflow: hidden;
-  z-index: 10;
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   1. LOGIN FORM PANEL (Left Half: 0 -> 576px)
+   LEFT PANEL (576px) – Haute Couture Brand Presentation
    ═══════════════════════════════════════════════════════════════════ */
-.ub-form-panel--login {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 576px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 48px;
-  box-sizing: border-box;
-  background: #FFFFFF;
-  z-index: 2;
-  transition:
-    opacity 0.5s ease,
-    transform 0.65s cubic-bezier(0.25, 1, 0.3, 1),
-    visibility 0.5s;
-}
-
-.ub-form-panel--login.is-active {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: translateX(0);
-}
-
-.ub-form-panel--login.is-hidden {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transform: translateX(-40px);
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   2. REGISTER FORM PANEL (Right Half: 576px -> 1152px)
-   ═══════════════════════════════════════════════════════════════════ */
-.ub-form-panel--register {
-  position: absolute;
-  top: 0;
-  right: 0;
-  width: 576px;
-  height: 100%;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 36px 48px;
-  box-sizing: border-box;
-  background: #FFFFFF;
-  z-index: 2;
-  transition:
-    opacity 0.5s ease,
-    transform 0.65s cubic-bezier(0.25, 1, 0.3, 1),
-    visibility 0.5s;
-}
-
-.ub-form-panel--register.is-active {
-  opacity: 1;
-  visibility: visible;
-  pointer-events: auto;
-  transform: translateX(0);
-}
-
-.ub-form-panel--register.is-hidden {
-  opacity: 0;
-  visibility: hidden;
-  pointer-events: none;
-  transform: translateX(40px);
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   3. SLIDING BRAND OVERLAY (The Luxury Moving Silk Panel)
-   ═══════════════════════════════════════════════════════════════════ */
-.ub-sliding-brand-overlay {
-  position: absolute;
-  top: 0;
-  left: 0;
-  width: 576px;
-  height: 100%;
-  padding: 44px 48px;
-  box-sizing: border-box;
+.ub-reg-card .ub-panel-left {
+  position: relative;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
+  width: 576px;
+  min-height: 740px;
+  padding: 44px 48px;
   background: radial-gradient(130% 130% at 20% 15%, #FFF6F3 0%, #FCEAE4 55%, #F7DDD5 100%);
   overflow: hidden;
-  z-index: 10;
-  box-shadow: 0 0 35px rgba(105, 50, 58, 0.10);
-  transition: transform 0.65s cubic-bezier(0.25, 1, 0.3, 1);
-  will-change: transform;
+  box-sizing: border-box;
+  animation: swapBrandToLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* In Register Mode: Brand sits on the LEFT */
-.ub-auth-card.is-signup-mode .ub-sliding-brand-overlay {
-  transform: translateX(0%);
+@keyframes swapBrandToLeft {
+  0% {
+    opacity: 0.2;
+    transform: translateX(45px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
-/* In Login Mode: Brand smoothly glides to the RIGHT! */
-.ub-auth-card.is-login-mode .ub-sliding-brand-overlay {
-  transform: translateX(100%);
-}
-
-/* ── Brand Overlay Content ──────────────────────────────────────── */
-.ub-sliding-brand-overlay .ub-aura {
+/* Aura Lights */
+.ub-reg-card .ub-aura {
   position: absolute;
   border-radius: 50%;
   pointer-events: none;
   filter: blur(55px);
 }
-.ub-sliding-brand-overlay .ub-aura--top {
+.ub-reg-card .ub-aura--top {
   top: -70px;
   left: -70px;
   width: 320px;
   height: 320px;
   background: rgba(255, 215, 220, 0.55);
 }
-.ub-sliding-brand-overlay .ub-aura--center {
+.ub-reg-card .ub-aura--center {
   top: 35%;
   left: 20%;
   width: 280px;
   height: 280px;
   background: rgba(255, 240, 230, 0.5);
 }
-.ub-sliding-brand-overlay .ub-aura--bottom {
+.ub-reg-card .ub-aura--bottom {
   bottom: -80px;
   right: -80px;
   width: 340px;
@@ -225,27 +148,18 @@
   background: rgba(245, 222, 208, 0.65);
 }
 
-.ub-sliding-brand-overlay .ub-couture-pattern {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: 
-    radial-gradient(circle at 50% 50%, rgba(133, 79, 85, 0.03) 1px, transparent 1px);
-  background-size: 24px 24px;
-  opacity: 0.7;
-}
-
-.ub-sliding-brand-overlay .ub-top-chips {
+/* Top Chips */
+.ub-reg-card .ub-top-chips {
   position: relative;
   z-index: 5;
   display: flex;
   flex-direction: row;
   align-items: center;
-  justify-content: space-between;
+  justify-content: flex-start;
   width: 100%;
 }
 
-.ub-sliding-brand-overlay .ub-chip {
+.ub-reg-card .ub-chip {
   display: inline-flex;
   align-items: center;
   gap: 7px;
@@ -253,11 +167,11 @@
   user-select: none;
   transition: transform 0.2s ease;
 }
-.ub-sliding-brand-overlay .ub-chip:hover {
+.ub-reg-card .ub-chip:hover {
   transform: translateY(-1px);
 }
 
-.ub-sliding-brand-overlay .ub-chip--white {
+.ub-reg-card .ub-chip--white {
   padding: 7px 16px;
   background: rgba(255, 255, 255, 0.95);
   border: 1px solid rgba(133, 79, 85, 0.12);
@@ -265,25 +179,13 @@
   backdrop-filter: blur(8px);
 }
 
-.ub-sliding-brand-overlay .ub-chip--blush {
-  padding: 7px 16px;
-  background: #F3E4DF;
-  border: 1px solid rgba(133, 79, 85, 0.08);
-}
-
-.ub-sliding-brand-overlay .ub-chip__icon {
+.ub-reg-card .ub-chip__icon {
   display: flex;
   align-items: center;
   color: #854F55;
-  animation: pulseSparkle 3s ease-in-out infinite;
 }
 
-@keyframes pulseSparkle {
-  0%, 100% { opacity: 0.85; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.15); }
-}
-
-.ub-sliding-brand-overlay .ub-chip__text {
+.ub-reg-card .ub-chip__text {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 600;
   font-size: 11px;
@@ -294,12 +196,8 @@
   white-space: nowrap;
 }
 
-.ub-sliding-brand-overlay .ub-chip__text--taupe {
-  color: #705B57;
-}
-
 /* Center Brand Section */
-.ub-sliding-brand-overlay .ub-brand-center {
+.ub-reg-card .ub-brand-center {
   position: relative;
   z-index: 5;
   display: flex;
@@ -309,7 +207,8 @@
   margin-top: -8px;
 }
 
-.ub-sliding-brand-overlay .ub-emblem-card {
+/* Porcelain Emblem Tile Card */
+.ub-reg-card .ub-emblem-card {
   position: relative;
   display: flex;
   align-items: center;
@@ -327,14 +226,14 @@
   box-sizing: border-box;
   transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease;
 }
-.ub-sliding-brand-overlay .ub-emblem-card:hover {
+.ub-reg-card .ub-emblem-card:hover {
   transform: translateY(-2px);
   box-shadow:
     0 20px 42px -6px rgba(133, 79, 85, 0.22),
     0 6px 16px rgba(0, 0, 0, 0.05);
 }
 
-.ub-sliding-brand-overlay .ub-emblem-inner-glow {
+.ub-reg-card .ub-emblem-inner-glow {
   position: absolute;
   inset: 2px;
   border-radius: 20px;
@@ -342,14 +241,14 @@
   pointer-events: none;
 }
 
-.ub-sliding-brand-overlay .ub-emblem-img {
+.ub-reg-card .ub-emblem-img {
   max-width: 100%;
   max-height: 100%;
   object-fit: contain;
   filter: drop-shadow(0 2px 4px rgba(133, 79, 85, 0.08));
 }
 
-.ub-sliding-brand-overlay .ub-brand-title {
+.ub-reg-card .ub-brand-title {
   font-family: 'Cinzel', 'Playfair Display', serif;
   font-weight: 500;
   font-size: 38px;
@@ -362,20 +261,20 @@
   filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.04));
 }
 
-.ub-sliding-brand-overlay .ub-brand-subtitle-wrap {
+.ub-reg-card .ub-brand-subtitle-wrap {
   display: flex;
   align-items: center;
   gap: 12px;
   margin-top: 10px;
 }
 
-.ub-sliding-brand-overlay .ub-dash-line {
+.ub-reg-card .ub-dash-line {
   width: 28px;
   height: 1px;
   background: linear-gradient(90deg, transparent, rgba(133, 79, 85, 0.4), transparent);
 }
 
-.ub-sliding-brand-overlay .ub-brand-subtitle {
+.ub-reg-card .ub-brand-subtitle {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 600;
   font-size: 13px;
@@ -385,7 +284,7 @@
   color: #854F55;
 }
 
-.ub-sliding-brand-overlay .ub-brand-tagline {
+.ub-reg-card .ub-brand-tagline {
   font-family: 'Cormorant Garamond', 'Playfair Display', serif;
   font-style: italic;
   font-size: 13px;
@@ -397,7 +296,8 @@
   opacity: 0.9;
 }
 
-.ub-sliding-brand-overlay .ub-footer-row {
+/* Bottom Security Footer */
+.ub-reg-card .ub-footer-row {
   position: relative;
   z-index: 5;
   display: flex;
@@ -408,13 +308,13 @@
   padding-top: 8px;
 }
 
-.ub-sliding-brand-overlay .ub-security-badge {
+.ub-reg-card .ub-security-badge {
   display: flex;
   align-items: center;
   gap: 7px;
 }
 
-.ub-sliding-brand-overlay .ub-security-text {
+.ub-reg-card .ub-security-text {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 400;
   font-size: 12px;
@@ -423,20 +323,20 @@
   color: #6E5A56;
 }
 
-.ub-sliding-brand-overlay .ub-est-group {
+.ub-reg-card .ub-est-group {
   display: flex;
   align-items: center;
   gap: 6px;
 }
 
-.ub-sliding-brand-overlay .ub-est-dot {
+.ub-reg-card .ub-est-dot {
   width: 3px;
   height: 3px;
   border-radius: 50%;
   background: #A0827E;
 }
 
-.ub-sliding-brand-overlay .ub-est-text {
+.ub-reg-card .ub-est-text {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 600;
   font-size: 11px;
@@ -447,45 +347,41 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   FORM COMMON STYLES (Both Login and Register)
+   RIGHT PANEL (576px) – Registration Form
    ═══════════════════════════════════════════════════════════════════ */
-.ub-form-inner {
+.ub-reg-card .ub-panel-right {
+  position: relative;
   display: flex;
   flex-direction: column;
-  width: 440px;
-  max-width: 440px;
+  align-items: center;
+  justify-content: center;
+  width: 576px;
+  padding: 36px 48px;
+  background: #FFFFFF;
+  box-sizing: border-box;
+  animation: swapFormToRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-.ub-form-inner--register {
+@keyframes swapFormToRight {
+  0% {
+    opacity: 0.2;
+    transform: translateX(-45px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.ub-reg-form-container {
+  display: flex;
+  flex-direction: column;
   width: 480px;
   max-width: 480px;
 }
 
-/* Diamond Privilege Badge */
-.ub-diamond-badge {
-  position: absolute;
-  top: 40px;
-  right: 48px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 44px;
-  height: 44px;
-  background: #FAF0EC;
-  border: 1px solid rgba(133, 79, 85, 0.12);
-  border-radius: 12px;
-  cursor: pointer;
-  transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
-}
-.ub-diamond-badge:hover {
-  background: #F3E0DB;
-  border-color: rgba(133, 79, 85, 0.25);
-  transform: rotate(8deg) scale(1.08);
-  box-shadow: 0 4px 12px rgba(133, 79, 85, 0.15);
-}
-
-/* Headers */
-.ub-header-group {
+/* Header Group */
+.ub-reg-form-container .ub-header-group {
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -493,46 +389,25 @@
   margin-bottom: 24px;
 }
 
-.ub-form-overhead {
+.ub-reg-form-container .ub-form-overhead {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 600;
   font-size: 11px;
   line-height: 14px;
-  letter-spacing: 2.6px;
+  letter-spacing: 2.5px;
   text-transform: uppercase;
   color: #854F55;
   margin-bottom: 6px;
 }
 
-.ub-form-heading {
+.ub-reg-form-container .ub-form-heading {
   font-family: 'Playfair Display', Georgia, serif;
   font-weight: 500;
-  font-size: 34px;
-  line-height: 42px;
+  font-size: 32px;
+  line-height: 40px;
   color: #1C1415;
-  margin: 0;
+  margin: 0 0 8px;
   letter-spacing: -0.2px;
-}
-
-.ub-heading-ornament {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.ub-ornament-line {
-  width: 22px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(133, 79, 85, 0.35), transparent);
-}
-
-.ub-ornament-diamond {
-  width: 4px;
-  height: 4px;
-  background: #C28288;
-  transform: rotate(45deg);
-  border-radius: 0.5px;
 }
 
 .ub-form-description {
@@ -540,34 +415,16 @@
   font-size: 12.5px;
   line-height: 18px;
   color: #6E5A5D;
-  margin: 6px 0 0;
+  margin: 0;
   text-align: center;
   max-width: 430px;
 }
 
-.ub-success-toast {
-  background: #E8F5E9;
-  border: 1px solid #A5D6A7;
-  color: #2E7D32;
-  font-size: 12.5px;
-  font-weight: 500;
-  padding: 8px 14px;
-  border-radius: 6px;
-  margin-bottom: 12px;
-  text-align: center;
-  animation: fadeIn 0.3s ease;
-}
-
-@keyframes fadeIn {
-  from { opacity: 0; transform: translateY(-4px); }
-  to { opacity: 1; transform: translateY(0); }
-}
-
-/* Form Layout */
-.ub-form {
+/* ── Form Layout ────────────────────────────────────────────────── */
+.ub-reg-form-container .ub-form {
   display: flex;
   flex-direction: column;
-  gap: 15px;
+  gap: 14px;
   width: 100%;
 }
 
@@ -582,28 +439,19 @@
   flex: 1;
 }
 
-.ub-field-group {
+.ub-reg-form-container .ub-field-group {
   display: flex;
   flex-direction: column;
   gap: 6px;
   width: 100%;
 }
 
-.ub-label-row {
-  display: flex;
-  flex-direction: row;
-  justify-content: space-between;
-  align-items: center;
-  width: 100%;
-}
-
-.ub-label {
+.ub-reg-form-container .ub-label {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 600;
   font-size: 11px;
   line-height: 14px;
-  letter-spacing: 0.5px;
-  text-transform: uppercase;
+  letter-spacing: 0.4px;
   color: #4D3F41;
 }
 
@@ -612,29 +460,13 @@
   font-weight: bold;
 }
 
-.ub-forgot-link {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-weight: 500;
-  font-size: 12px;
-  line-height: 16px;
-  letter-spacing: 0.1px;
-  color: #854F55;
-  text-decoration: none;
-  transition: all 0.15s ease;
-}
-.ub-forgot-link:hover {
-  color: #633339;
-  text-decoration: underline;
-  text-underline-offset: 3px;
-}
-
-/* Inputs */
-.ub-input-box {
+/* Input Boxes */
+.ub-reg-form-container .ub-input-box {
   position: relative;
   display: flex;
   align-items: center;
   width: 100%;
-  height: 46px;
+  height: 44px;
   background: #FDF3EF;
   border: 1px solid rgba(133, 79, 85, 0.12);
   border-radius: 6px;
@@ -642,30 +474,16 @@
   transition: all 0.2s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
 
-.ub-input-box:focus-within {
+.ub-reg-form-container .ub-input-box:focus-within {
   background: #FFFFFF;
   border-color: #C28288;
   box-shadow: 0 0 0 3.5px rgba(194, 130, 136, 0.15);
 }
 
-.ub-form-panel--login .ub-input-icon {
-  position: absolute;
-  left: 15px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  pointer-events: none;
-}
-
-.ub-form-panel--login .ub-input {
-  padding-left: 44px;
-  padding-right: 44px;
-}
-
-.ub-input {
+.ub-reg-form-container .ub-input {
   width: 100%;
   height: 100%;
-  padding: 12px 14px;
+  padding: 11px 40px 11px 14px;
   background: transparent;
   border: none;
   font-family: 'Plus Jakarta Sans', sans-serif;
@@ -676,8 +494,12 @@
   box-sizing: border-box;
 }
 
-.ub-input::placeholder {
-  color: rgba(81, 67, 68, 0.42);
+.ub-reg-form-container .ub-input--no-icon {
+  padding-right: 14px;
+}
+
+.ub-reg-form-container .ub-input::placeholder {
+  color: rgba(81, 67, 68, 0.40);
   font-size: 13px;
 }
 
@@ -690,7 +512,7 @@
   pointer-events: none;
 }
 
-.ub-eye-toggle {
+.ub-reg-form-container .ub-eye-toggle {
   position: absolute;
   right: 12px;
   top: 50%;
@@ -700,12 +522,12 @@
   justify-content: center;
   background: none;
   border: none;
-  padding: 6px;
+  padding: 4px;
   cursor: pointer;
   opacity: 0.75;
   transition: opacity 0.15s ease, transform 0.15s ease;
 }
-.ub-eye-toggle:hover {
+.ub-reg-form-container .ub-eye-toggle:hover {
   opacity: 1;
   transform: translateY(-50%) scale(1.1);
 }
@@ -715,8 +537,8 @@
   display: flex;
   align-items: center;
   justify-content: space-between;
-  margin-top: -3px;
-  margin-bottom: 1px;
+  margin-top: -2px;
+  margin-bottom: 2px;
 }
 
 .ub-strength-bars {
@@ -746,8 +568,7 @@
   color: #6E5A5D;
 }
 
-/* Checkboxes */
-.ub-remember-row,
+/* Terms Checkbox Row */
 .ub-terms-row {
   display: flex;
   align-items: flex-start;
@@ -807,13 +628,12 @@
   opacity: 0;
 }
 
-.ub-remember-text,
 .ub-terms-text {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 400;
-  font-size: 12.2px;
+  font-size: 12px;
   line-height: 17px;
-  color: #4D3F41;
+  color: #5A484A;
 }
 
 .ub-terms-link {
@@ -826,8 +646,8 @@
   color: #5C2F35;
 }
 
-/* Submit Buttons */
-.ub-submit-btn {
+/* Submit Button */
+.ub-reg-form-container .ub-submit-btn {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -850,30 +670,30 @@
   margin-top: 4px;
 }
 
-.ub-submit-btn:hover {
+.ub-reg-form-container .ub-submit-btn:hover {
   background: linear-gradient(135deg, #BE787E 0%, #A96269 100%);
   box-shadow: 0 10px 26px -2px rgba(179, 111, 117, 0.52);
   transform: translateY(-1px);
 }
 
-.ub-submit-btn:active {
+.ub-reg-form-container .ub-submit-btn:active {
   transform: translateY(0) scale(0.99);
 }
 
-.ub-submit-btn__arrow {
+.ub-reg-form-container .ub-submit-btn__arrow {
   font-size: 15px;
   transition: transform 0.2s ease;
 }
-.ub-submit-btn:hover .ub-submit-btn__arrow {
+.ub-reg-form-container .ub-submit-btn:hover .ub-submit-btn__arrow {
   transform: translateX(3px);
 }
 
-/* Bottom Switcher Link */
-.ub-bottom-link-row {
+/* Bottom Login Link */
+.ub-reg-form-container .ub-bottom-link-row {
   display: flex;
   align-items: center;
   justify-content: center;
-  margin-top: 28px;
+  margin-top: 24px;
 }
 
 .ub-prompt-text {
@@ -884,9 +704,7 @@
   color: #4D3F41;
 }
 
-.ub-text-btn-link {
-  background: none;
-  border: none;
+.ub-login-link {
   font-family: 'Plus Jakarta Sans', sans-serif;
   font-weight: 600;
   font-size: 13px;
@@ -894,38 +712,32 @@
   color: #854F55;
   text-decoration: underline;
   text-underline-offset: 3px;
-  cursor: pointer;
-  padding: 0;
-  margin-left: 4px;
   transition: all 0.15s ease;
 }
-.ub-text-btn-link:hover {
+.ub-login-link:hover {
   color: #5C2F35;
-  opacity: 0.9;
 }
 
 /* ── Responsive ─────────────────────────────────────────────────── */
 @media (max-width: 1200px) {
-  .ub-auth-screen .ub-top-nav-bar {
+  .ub-top-nav-bar {
     width: 100%;
   }
-  .ub-auth-card {
+  .ub-reg-card {
     width: 100vw;
     border-radius: 0;
   }
 }
 
 @media (max-width: 880px) {
-  .ub-sliding-brand-overlay {
+  .ub-reg-card .ub-panel-left {
     display: none;
   }
-  .ub-form-panel--login,
-  .ub-form-panel--register {
+  .ub-reg-card .ub-panel-right {
     width: 100vw;
     padding: 32px 20px;
   }
-  .ub-form-inner,
-  .ub-form-inner--register {
+  .ub-reg-form-container {
     width: 100%;
   }
   .ub-form-row {
