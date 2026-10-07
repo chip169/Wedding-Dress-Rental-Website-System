@@ -1,5 +1,6 @@
 /* ================================================================
-   LoginPage.css – High-End Haute Couture Bridal Luxury Design
+   LoginPage.css – Reversed Layout (Form Left, Brand Right)
+   With Smooth Haute Couture Swapping Animation
    ================================================================ */
 
 @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@300;400;500;600;700&family=Playfair+Display:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Cinzel:wght@400;500;600;700&family=Cormorant+Garamond:ital,wght@0,400;0,500;0,600;1,400&display=swap');
@@ -8,6 +9,7 @@
 .ub-login-screen {
   position: relative;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
   min-height: 100vh;
@@ -15,12 +17,12 @@
   background-color: #EFE7E3;
   font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
   box-sizing: border-box;
-  padding: 32px 24px;
-  overflow: hidden;
+  padding: 24px;
+  overflow-x: hidden;
 }
 
 /* Ambient glow lights in background */
-.ub-bg-glow {
+.ub-login-screen .ub-bg-glow {
   position: absolute;
   width: 550px;
   height: 550px;
@@ -29,15 +31,47 @@
   filter: blur(100px);
   opacity: 0.6;
 }
-.ub-bg-glow--left {
+.ub-login-screen .ub-bg-glow--left {
   top: -150px;
   left: 5%;
   background: radial-gradient(circle, rgba(255, 218, 222, 0.7) 0%, rgba(255, 238, 230, 0) 70%);
 }
-.ub-bg-glow--right {
+.ub-login-screen .ub-bg-glow--right {
   bottom: -150px;
   right: 5%;
   background: radial-gradient(circle, rgba(245, 220, 205, 0.6) 0%, rgba(255, 240, 235, 0) 70%);
+}
+
+/* ── Top Navigation Bar ─────────────────────────────────────────── */
+.ub-login-screen .ub-top-nav-bar {
+  position: relative;
+  z-index: 15;
+  width: 1152px;
+  max-width: 1152px;
+  display: flex;
+  align-items: center;
+  margin-bottom: 14px;
+}
+
+.ub-login-screen .ub-back-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: none;
+  border: none;
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 11.5px;
+  letter-spacing: 1.2px;
+  text-transform: uppercase;
+  color: #6E5A5D;
+  cursor: pointer;
+  padding: 6px 0;
+  transition: all 0.2s ease;
+}
+.ub-login-screen .ub-back-btn:hover {
+  color: #854F55;
+  transform: translateX(-3px);
 }
 
 /* ── Main Dual-Panel Luxury Card ────────────────────────────────── */
@@ -59,280 +93,9 @@
 }
 
 /* ═══════════════════════════════════════════════════════════════════
-   LEFT PANEL (576px) – Haute Couture Brand Presentation
+   LEFT PANEL (576px) – Form Đăng Nhập (Đã đảo sang bên trái)
    ═══════════════════════════════════════════════════════════════════ */
-.ub-panel-left {
-  position: relative;
-  display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  width: 576px;
-  height: 740px;
-  padding: 44px 48px;
-  background: radial-gradient(130% 130% at 20% 15%, #FFF6F3 0%, #FCEAE4 55%, #F7DDD5 100%);
-  overflow: hidden;
-  box-sizing: border-box;
-}
-
-/* Multi-layer soft aura lights */
-.ub-aura {
-  position: absolute;
-  border-radius: 50%;
-  pointer-events: none;
-  filter: blur(55px);
-}
-.ub-aura--top {
-  top: -70px;
-  left: -70px;
-  width: 320px;
-  height: 320px;
-  background: rgba(255, 215, 220, 0.55);
-}
-.ub-aura--center {
-  top: 35%;
-  left: 20%;
-  width: 280px;
-  height: 280px;
-  background: rgba(255, 240, 230, 0.5);
-}
-.ub-aura--bottom {
-  bottom: -80px;
-  right: -80px;
-  width: 340px;
-  height: 340px;
-  background: rgba(245, 222, 208, 0.65);
-}
-
-/* Subtle couture decorative arch watermark */
-.ub-couture-pattern {
-  position: absolute;
-  inset: 0;
-  pointer-events: none;
-  background-image: 
-    radial-gradient(circle at 50% 50%, rgba(133, 79, 85, 0.03) 1px, transparent 1px);
-  background-size: 24px 24px;
-  opacity: 0.7;
-}
-
-/* ── Top Chips Row ──────────────────────────────────────────────── */
-.ub-top-chips {
-  position: relative;
-  z-index: 5;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-}
-
-.ub-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 7px;
-  border-radius: 9999px;
-  user-select: none;
-  transition: transform 0.2s ease, box-shadow 0.2s ease;
-}
-.ub-chip:hover {
-  transform: translateY(-1px);
-}
-
-.ub-chip--white {
-  padding: 7px 16px;
-  background: rgba(255, 255, 255, 0.95);
-  border: 1px solid rgba(133, 79, 85, 0.12);
-  box-shadow: 0 2px 8px rgba(100, 55, 60, 0.06);
-  backdrop-filter: blur(8px);
-}
-
-.ub-chip--blush {
-  padding: 7px 16px;
-  background: #F3E4DF;
-  border: 1px solid rgba(133, 79, 85, 0.08);
-}
-
-.ub-chip__icon {
-  display: flex;
-  align-items: center;
-  color: #854F55;
-  animation: pulseSparkle 3s ease-in-out infinite;
-}
-
-@keyframes pulseSparkle {
-  0%, 100% { opacity: 0.85; transform: scale(1); }
-  50% { opacity: 1; transform: scale(1.15); }
-}
-
-.ub-chip__text {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-weight: 600;
-  font-size: 11px;
-  line-height: 14px;
-  letter-spacing: 0.9px;
-  text-transform: uppercase;
-  color: #854F55;
-  white-space: nowrap;
-}
-
-.ub-chip__text--taupe {
-  color: #705B57;
-}
-
-/* ── Center Brand Group ─────────────────────────────────────────── */
-.ub-brand-center {
-  position: relative;
-  z-index: 5;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  margin-top: -8px;
-}
-
-/* Porcelain Emblem Tile Card */
-.ub-emblem-card {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  width: 144px;
-  height: 134px;
-  background: #FFFFFF;
-  border-radius: 22px;
-  border: 1px solid rgba(255, 255, 255, 0.95);
-  box-shadow:
-    0 16px 36px -8px rgba(133, 79, 85, 0.16),
-    0 4px 12px rgba(0, 0, 0, 0.03);
-  margin-bottom: 24px;
-  padding: 16px;
-  box-sizing: border-box;
-  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease;
-}
-.ub-emblem-card:hover {
-  transform: translateY(-2px);
-  box-shadow:
-    0 20px 42px -6px rgba(133, 79, 85, 0.22),
-    0 6px 16px rgba(0, 0, 0, 0.05);
-}
-
-.ub-emblem-inner-glow {
-  position: absolute;
-  inset: 2px;
-  border-radius: 20px;
-  border: 1px solid rgba(133, 79, 85, 0.06);
-  pointer-events: none;
-}
-
-.ub-emblem-img {
-  max-width: 100%;
-  max-height: 100%;
-  object-fit: contain;
-  filter: drop-shadow(0 2px 4px rgba(133, 79, 85, 0.08));
-}
-
-/* Brand Typography */
-.ub-brand-title {
-  font-family: 'Cinzel', 'Playfair Display', serif;
-  font-weight: 500;
-  font-size: 38px;
-  line-height: 44px;
-  letter-spacing: 8px;
-  text-transform: uppercase;
-  color: #1E1617;
-  margin: 0;
-  text-align: center;
-  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.04));
-}
-
-.ub-brand-subtitle-wrap {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-top: 10px;
-}
-
-.ub-dash-line {
-  width: 28px;
-  height: 1px;
-  background: linear-gradient(90deg, transparent, rgba(133, 79, 85, 0.4), transparent);
-}
-
-.ub-brand-subtitle {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-weight: 600;
-  font-size: 13px;
-  line-height: 18px;
-  letter-spacing: 4.2px;
-  text-transform: uppercase;
-  color: #854F55;
-}
-
-.ub-brand-tagline {
-  font-family: 'Cormorant Garamond', 'Playfair Display', serif;
-  font-style: italic;
-  font-size: 13px;
-  line-height: 18px;
-  letter-spacing: 0.8px;
-  color: #8E6D72;
-  margin: 8px 0 0;
-  text-align: center;
-  opacity: 0.9;
-}
-
-/* ── Bottom Security & Est Footer ───────────────────────────────── */
-.ub-footer-row {
-  position: relative;
-  z-index: 5;
-  display: flex;
-  flex-direction: row;
-  align-items: center;
-  justify-content: space-between;
-  width: 100%;
-  padding-top: 8px;
-}
-
-.ub-security-badge {
-  display: flex;
-  align-items: center;
-  gap: 7px;
-}
-
-.ub-security-text {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-weight: 400;
-  font-size: 12px;
-  line-height: 16px;
-  letter-spacing: 0.1px;
-  color: #6E5A56;
-}
-
-.ub-est-group {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.ub-est-dot {
-  width: 3px;
-  height: 3px;
-  border-radius: 50%;
-  background: #A0827E;
-}
-
-.ub-est-text {
-  font-family: 'Plus Jakarta Sans', sans-serif;
-  font-weight: 600;
-  font-size: 11px;
-  line-height: 16px;
-  letter-spacing: 1.4px;
-  text-transform: uppercase;
-  color: #6E5A56;
-}
-
-/* ═══════════════════════════════════════════════════════════════════
-   RIGHT PANEL (576px) – Haute Couture Form
-   ═══════════════════════════════════════════════════════════════════ */
-.ub-panel-right {
+.ub-panel-form-left {
   position: relative;
   display: flex;
   flex-direction: column;
@@ -343,10 +106,22 @@
   padding: 48px;
   background: #FFFFFF;
   box-sizing: border-box;
+  animation: swapFormToLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
 }
 
-/* Diamond Privilege Badge at Top Right */
-.ub-diamond-badge {
+@keyframes swapFormToLeft {
+  0% {
+    opacity: 0.2;
+    transform: translateX(45px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Diamond Privilege Badge at Top Right of Form */
+.ub-panel-form-left .ub-diamond-badge {
   position: absolute;
   top: 40px;
   right: 48px;
@@ -361,7 +136,7 @@
   cursor: pointer;
   transition: all 0.25s cubic-bezier(0.2, 0.8, 0.2, 1);
 }
-.ub-diamond-badge:hover {
+.ub-panel-form-left .ub-diamond-badge:hover {
   background: #F3E0DB;
   border-color: rgba(133, 79, 85, 0.25);
   transform: rotate(8deg) scale(1.08);
@@ -695,24 +470,302 @@
   opacity: 0.9;
 }
 
-/* ── Responsive adjustments ─────────────────────────────────────── */
+/* ═══════════════════════════════════════════════════════════════════
+   RIGHT PANEL (576px) – Brand Presentation (Đã đảo sang bên phải)
+   ═══════════════════════════════════════════════════════════════════ */
+.ub-panel-brand-right {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  width: 576px;
+  height: 740px;
+  padding: 44px 48px;
+  background: radial-gradient(130% 130% at 80% 15%, #FFF6F3 0%, #FCEAE4 55%, #F7DDD5 100%);
+  overflow: hidden;
+  box-sizing: border-box;
+  animation: swapBrandToRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes swapBrandToRight {
+  0% {
+    opacity: 0.2;
+    transform: translateX(-45px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+/* Multi-layer soft aura lights */
+.ub-panel-brand-right .ub-aura {
+  position: absolute;
+  border-radius: 50%;
+  pointer-events: none;
+  filter: blur(55px);
+}
+.ub-panel-brand-right .ub-aura--top {
+  top: -70px;
+  right: -70px;
+  width: 320px;
+  height: 320px;
+  background: rgba(255, 215, 220, 0.55);
+}
+.ub-panel-brand-right .ub-aura--center {
+  top: 35%;
+  right: 20%;
+  width: 280px;
+  height: 280px;
+  background: rgba(255, 240, 230, 0.5);
+}
+.ub-panel-brand-right .ub-aura--bottom {
+  bottom: -80px;
+  left: -80px;
+  width: 340px;
+  height: 340px;
+  background: rgba(245, 222, 208, 0.65);
+}
+
+.ub-panel-brand-right .ub-couture-pattern {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background-image: 
+    radial-gradient(circle at 50% 50%, rgba(133, 79, 85, 0.03) 1px, transparent 1px);
+  background-size: 24px 24px;
+  opacity: 0.7;
+}
+
+/* Top Chips Row */
+.ub-panel-brand-right .ub-top-chips {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+}
+
+.ub-panel-brand-right .ub-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  border-radius: 9999px;
+  user-select: none;
+  transition: transform 0.2s ease, box-shadow 0.2s ease;
+}
+.ub-panel-brand-right .ub-chip:hover {
+  transform: translateY(-1px);
+}
+
+.ub-panel-brand-right .ub-chip--white {
+  padding: 7px 16px;
+  background: rgba(255, 255, 255, 0.95);
+  border: 1px solid rgba(133, 79, 85, 0.12);
+  box-shadow: 0 2px 8px rgba(100, 55, 60, 0.06);
+  backdrop-filter: blur(8px);
+}
+
+.ub-panel-brand-right .ub-chip--blush {
+  padding: 7px 16px;
+  background: #F3E4DF;
+  border: 1px solid rgba(133, 79, 85, 0.08);
+}
+
+.ub-panel-brand-right .ub-chip__icon {
+  display: flex;
+  align-items: center;
+  color: #854F55;
+  animation: pulseSparkle 3s ease-in-out infinite;
+}
+
+@keyframes pulseSparkle {
+  0%, 100% { opacity: 0.85; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.15); }
+}
+
+.ub-panel-brand-right .ub-chip__text {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 14px;
+  letter-spacing: 0.9px;
+  text-transform: uppercase;
+  color: #854F55;
+  white-space: nowrap;
+}
+
+.ub-panel-brand-right .ub-chip__text--taupe {
+  color: #705B57;
+}
+
+/* Center Brand Group */
+.ub-panel-brand-right .ub-brand-center {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  margin-top: -8px;
+}
+
+.ub-panel-brand-right .ub-emblem-card {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 144px;
+  height: 134px;
+  background: #FFFFFF;
+  border-radius: 22px;
+  border: 1px solid rgba(255, 255, 255, 0.95);
+  box-shadow:
+    0 16px 36px -8px rgba(133, 79, 85, 0.16),
+    0 4px 12px rgba(0, 0, 0, 0.03);
+  margin-bottom: 24px;
+  padding: 16px;
+  box-sizing: border-box;
+  transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease;
+}
+.ub-panel-brand-right .ub-emblem-card:hover {
+  transform: translateY(-2px);
+  box-shadow:
+    0 20px 42px -6px rgba(133, 79, 85, 0.22),
+    0 6px 16px rgba(0, 0, 0, 0.05);
+}
+
+.ub-panel-brand-right .ub-emblem-inner-glow {
+  position: absolute;
+  inset: 2px;
+  border-radius: 20px;
+  border: 1px solid rgba(133, 79, 85, 0.06);
+  pointer-events: none;
+}
+
+.ub-panel-brand-right .ub-emblem-img {
+  max-width: 100%;
+  max-height: 100%;
+  object-fit: contain;
+  filter: drop-shadow(0 2px 4px rgba(133, 79, 85, 0.08));
+}
+
+.ub-panel-brand-right .ub-brand-title {
+  font-family: 'Cinzel', 'Playfair Display', serif;
+  font-weight: 500;
+  font-size: 38px;
+  line-height: 44px;
+  letter-spacing: 8px;
+  text-transform: uppercase;
+  color: #1E1617;
+  margin: 0;
+  text-align: center;
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.04));
+}
+
+.ub-panel-brand-right .ub-brand-subtitle-wrap {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-top: 10px;
+}
+
+.ub-panel-brand-right .ub-dash-line {
+  width: 28px;
+  height: 1px;
+  background: linear-gradient(90deg, transparent, rgba(133, 79, 85, 0.4), transparent);
+}
+
+.ub-panel-brand-right .ub-brand-subtitle {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: 4.2px;
+  text-transform: uppercase;
+  color: #854F55;
+}
+
+.ub-panel-brand-right .ub-brand-tagline {
+  font-family: 'Cormorant Garamond', 'Playfair Display', serif;
+  font-style: italic;
+  font-size: 13px;
+  line-height: 18px;
+  letter-spacing: 0.8px;
+  color: #8E6D72;
+  margin: 8px 0 0;
+  text-align: center;
+  opacity: 0.9;
+}
+
+/* Bottom Security Footer */
+.ub-panel-brand-right .ub-footer-row {
+  position: relative;
+  z-index: 5;
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  justify-content: space-between;
+  width: 100%;
+  padding-top: 8px;
+}
+
+.ub-panel-brand-right .ub-security-badge {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+
+.ub-panel-brand-right .ub-security-text {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 400;
+  font-size: 12px;
+  line-height: 16px;
+  letter-spacing: 0.1px;
+  color: #6E5A56;
+}
+
+.ub-panel-brand-right .ub-est-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.ub-panel-brand-right .ub-est-dot {
+  width: 3px;
+  height: 3px;
+  border-radius: 50%;
+  background: #A0827E;
+}
+
+.ub-panel-brand-right .ub-est-text {
+  font-family: 'Plus Jakarta Sans', sans-serif;
+  font-weight: 600;
+  font-size: 11px;
+  line-height: 16px;
+  letter-spacing: 1.4px;
+  text-transform: uppercase;
+  color: #6E5A56;
+}
+
+/* ── Responsive ─────────────────────────────────────────────────── */
 @media (max-width: 1200px) {
-  .ub-login-screen {
-    padding: 0;
+  .ub-login-screen .ub-top-nav-bar {
+    width: 100%;
   }
   .ub-login-card {
     width: 100vw;
-    height: 100vh;
     border-radius: 0;
-    box-shadow: none;
   }
 }
 
 @media (max-width: 880px) {
-  .ub-panel-left {
+  .ub-panel-brand-right {
     display: none;
   }
-  .ub-panel-right {
+  .ub-panel-form-left {
     width: 100vw;
     height: 100vh;
     padding: 24px;

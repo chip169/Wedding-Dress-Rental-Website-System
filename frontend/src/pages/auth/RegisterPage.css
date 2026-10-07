@@ -105,6 +105,18 @@
   background: radial-gradient(130% 130% at 20% 15%, #FFF6F3 0%, #FCEAE4 55%, #F7DDD5 100%);
   overflow: hidden;
   box-sizing: border-box;
+  animation: swapBrandToLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes swapBrandToLeft {
+  0% {
+    opacity: 0.2;
+    transform: translateX(45px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 /* ═══════════════════════════════════════════════════════════════════
@@ -120,6 +132,18 @@
   padding: 36px 48px;
   background: #FFFFFF;
   box-sizing: border-box;
+  animation: swapFormToRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+@keyframes swapFormToRight {
+  0% {
+    opacity: 0.2;
+    transform: translateX(-45px);
+  }
+  100% {
+    opacity: 1;
+    transform: translateX(0);
+  }
 }
 
 .ub-reg-form-container {

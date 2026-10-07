@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
 import Logo from '../../components/common/Logo';
 import './LoginPage.css';
 
@@ -9,7 +10,7 @@ const SparkleIcon = () => (
   </svg>
 );
 
-// Diamond Gemstone Icon (Top right of right panel)
+// Diamond Gemstone Icon (Privilege Badge)
 const DiamondIcon = () => (
   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#854F55" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <path d="M6 3h12l4 7-10 11L2 10l4-7z" />
@@ -53,8 +54,15 @@ const EyeIcon = ({ visible }) => (
   </svg>
 );
 
+const ArrowBackIcon = () => (
+  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="19" y1="12" x2="5" y2="12" />
+    <polyline points="12 19 5 12 12 5" />
+  </svg>
+);
 
 export default function LoginPage() {
+  const navigate = useNavigate();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -71,67 +79,31 @@ export default function LoginPage() {
       <div className="ub-bg-glow ub-bg-glow--left" />
       <div className="ub-bg-glow ub-bg-glow--right" />
 
-      <div className="ub-login-card">
+      {/* Top Navigation Back Button */}
+      <div className="ub-top-nav-bar">
+        <button
+          type="button"
+          className="ub-back-btn"
+          onClick={() => navigate('/')}
+          aria-label="Quay lại trang chủ"
+        >
+          <ArrowBackIcon />
+          <span>QUAY LẠI</span>
+        </button>
+      </div>
 
-        {/* ── LEFT PANEL (576px) – Haute Couture Brand Presentation ── */}
-        <div className="ub-panel-left">
-          {/* Subtle silk ambient blurs */}
-          <div className="ub-aura ub-aura--top" />
-          <div className="ub-aura ub-aura--center" />
-          <div className="ub-aura ub-aura--bottom" />
+      {/* 
+        Reverse Layout Card: 
+        Left = Form Đăng Nhập
+        Right = Khối Thương Hiệu (Brand Presentation)
+      */}
+      <div className="ub-login-card ub-login-card--reverse">
 
-          {/* Delicate couture watermark ornament */}
-          <div className="ub-couture-pattern" />
-
-          {/* Top Chips Row */}
-          <div className="ub-top-chips">
-            <div className="ub-chip ub-chip--white">
-              <span className="ub-chip__icon">
-                <SparkleIcon />
-              </span>
-              <span className="ub-chip__text">WEDDING DRESS RENTAL</span>
-            </div>
-            <div className="ub-chip ub-chip--blush">
-              <span className="ub-chip__text ub-chip__text--taupe">ESPACE MEMBRE</span>
-            </div>
-          </div>
-
-          {/* Center Brand Group */}
-          <div className="ub-brand-center">
-            {/* White Monogram Emblem Card with porcelain glassmorphism effect */}
-            <div className="ub-emblem-card">
-              <div className="ub-emblem-inner-glow" />
-              <Logo variant="emblem" className="ub-emblem-img" alt="UniBridal Emblem" />
-            </div>
-
-            {/* Haute Couture Typography */}
-            <h1 className="ub-brand-title">UNIBRIDAL</h1>
-            <div className="ub-brand-subtitle-wrap">
-              <span className="ub-dash-line" />
-              <span className="ub-brand-subtitle">HAUTE COUTURE</span>
-              <span className="ub-dash-line" />
-            </div>
-            <p className="ub-brand-tagline">Atelier de Robes de Mariée & Sur-Mesure</p>
-          </div>
-
-          {/* Bottom Security & Est Footer */}
-          <div className="ub-footer-row">
-            <div className="ub-security-badge">
-              <FootnoteLockIcon />
-              <span className="ub-security-text">Bảo mật thông tin tuyệt đối</span>
-            </div>
-            <div className="ub-est-group">
-              <span className="ub-est-dot" />
-              <span className="ub-est-text">EST. 2026</span>
-            </div>
-          </div>
-        </div>
-
-        {/* ── RIGHT PANEL (576px) – Login Form ────────────────────── */}
-        <div className="ub-panel-right">
+        {/* ── LEFT PANEL: Login Form (Đã đảo sang bên trái) ───────── */}
+        <div className="ub-panel-form-left">
           <div className="ub-form-container">
 
-            {/* Diamond Privilege Badge on top right */}
+            {/* Diamond Privilege Badge */}
             <div className="ub-diamond-badge" title="Haute Couture Member Access">
               <DiamondIcon />
             </div>
@@ -238,6 +210,60 @@ export default function LoginPage() {
               </a>
             </div>
 
+          </div>
+        </div>
+
+        {/* ── RIGHT PANEL: Brand Presentation (Đã đảo sang bên phải) ─ */}
+        <div className="ub-panel-brand-right">
+          {/* Subtle silk ambient blurs */}
+          <div className="ub-aura ub-aura--top" />
+          <div className="ub-aura ub-aura--center" />
+          <div className="ub-aura ub-aura--bottom" />
+
+          {/* Delicate couture watermark ornament */}
+          <div className="ub-couture-pattern" />
+
+          {/* Top Chips Row */}
+          <div className="ub-top-chips">
+            <div className="ub-chip ub-chip--white">
+              <span className="ub-chip__icon">
+                <SparkleIcon />
+              </span>
+              <span className="ub-chip__text">WEDDING DRESS RENTAL</span>
+            </div>
+            <div className="ub-chip ub-chip--blush">
+              <span className="ub-chip__text ub-chip__text--taupe">ESPACE MEMBRE</span>
+            </div>
+          </div>
+
+          {/* Center Brand Group */}
+          <div className="ub-brand-center">
+            {/* White Monogram Emblem Card */}
+            <div className="ub-emblem-card">
+              <div className="ub-emblem-inner-glow" />
+              <Logo variant="emblem" className="ub-emblem-img" alt="UniBridal Emblem" />
+            </div>
+
+            {/* Haute Couture Typography */}
+            <h1 className="ub-brand-title">UNIBRIDAL</h1>
+            <div className="ub-brand-subtitle-wrap">
+              <span className="ub-dash-line" />
+              <span className="ub-brand-subtitle">HAUTE COUTURE</span>
+              <span className="ub-dash-line" />
+            </div>
+            <p className="ub-brand-tagline">Atelier de Robes de Mariée & Sur-Mesure</p>
+          </div>
+
+          {/* Bottom Security & Est Footer */}
+          <div className="ub-footer-row">
+            <div className="ub-security-badge">
+              <FootnoteLockIcon />
+              <span className="ub-security-text">Bảo mật thông tin tuyệt đối</span>
+            </div>
+            <div className="ub-est-group">
+              <span className="ub-est-dot" />
+              <span className="ub-est-text">EST. 2026</span>
+            </div>
           </div>
         </div>
 
