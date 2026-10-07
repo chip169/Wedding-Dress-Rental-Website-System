@@ -97,9 +97,9 @@ const SilhouetteShowcase = ({ onSelectSilhouette }) => {
                   {item.description}
                 </p>
 
-                <div className="inline-flex items-center gap-1.5 text-white/95 font-jakarta text-[13px] font-medium group-hover:translate-x-1 transition-transform">
+                <div className="inline-flex items-center gap-1.5 text-[#FFDADC] font-jakarta text-[14px] font-normal tracking-[0.14px] group-hover:translate-x-1 transition-transform">
                   <span>Xem Dáng Váy</span>
-                  <ArrowRight className="w-3.5 h-3.5" />
+                  <ArrowRight className="w-3.5 h-3.5 text-[#FFDADC]" />
                 </div>
               </div>
             </div>

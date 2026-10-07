@@ -96,17 +96,19 @@ const HeroSection = () => {
                 </span>
               </div>
 
-              {/* Main Hero Portrait */}
-              <div className="relative w-full h-[520px] sm:h-[600px] lg:h-[640px] rounded-[32px] overflow-hidden bg-[#FCEEE9] border-4 border-white shadow-[0px_20px_40px_-10px_rgba(0,0,0,0.18)]">
-                <img
-                  src={heroBrideImg}
-                  alt="UniBridal Haute Couture Collection"
-                  className="w-full h-full object-cover object-center"
-                />
+              {/* Main Hero Portrait with Prominent Crisp White Border */}
+              <div className="relative w-full h-[520px] sm:h-[600px] lg:h-[640px] p-[6px] sm:p-[7px] bg-white rounded-[30px] sm:rounded-[34px] shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] border-[4px] border-solid border-white">
+                <div className="w-full h-full rounded-[24px] sm:rounded-[28px] overflow-hidden bg-[#FCEEE9]">
+                  <img
+                    src={heroBrideImg}
+                    alt="UniBridal Haute Couture Collection"
+                    className="w-full h-full object-cover object-center"
+                  />
+                </div>
               </div>
 
-              {/* Overlapping Detail Inset */}
-              <div className="absolute -bottom-6 -left-4 sm:-left-8 z-20 w-[160px] h-[160px] sm:w-[190px] sm:h-[190px] p-1.5 bg-white rounded-2xl border border-[#E6DAC8] shadow-xl">
+              {/* Overlapping Detail Inset with Prominent White Border */}
+              <div className="absolute -bottom-6 -left-4 sm:-left-8 z-20 w-[160px] h-[160px] sm:w-[195px] sm:h-[195px] p-[6px] bg-white rounded-2xl shadow-[0px_20px_25px_-5px_rgba(0,0,0,0.15)] border-2 border-solid border-white">
                 <div className="w-full h-full rounded-xl overflow-hidden bg-[#FCEEE9]">
                   <img
                     src={laceDetailImg}
