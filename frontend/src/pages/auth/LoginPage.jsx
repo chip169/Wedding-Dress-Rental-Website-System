@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import Logo from '../../components/common/Logo';
 import './LoginPage.css';
 
 // Sparkle Star Icon
@@ -39,7 +40,7 @@ const LockIcon = () => (
 const FootnoteLockIcon = () => (
   <svg width="13" height="14" viewBox="0 0 14 16" fill="none" stroke="#7A6663" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
     <rect x="1.5" y="6.5" width="11" height="8.5" rx="1.5" />
-    <path d="M4 6.5V4a3 3 0 0 1 6 0v2.5" />
+    <path d="M4 6.5V4a3.5 3.5 0 0 1 6 0v2.5" />
   </svg>
 );
 
@@ -52,44 +53,6 @@ const EyeIcon = ({ visible }) => (
   </svg>
 );
 
-// UniBridal UB Monogram Emblem
-const UBMonogramLogo = () => (
-  <svg width="130" height="120" viewBox="0 0 130 120" fill="none" xmlns="http://www.w3.org/2000/svg">
-    <defs>
-      <linearGradient id="ubGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-        <stop offset="0%" stopColor="#C28289" />
-        <stop offset="100%" stopColor="#A8676E" />
-      </linearGradient>
-    </defs>
-    
-    {/* Letter U */}
-    <path
-      d="M20 28 C20 28 27 28 27 34 L27 64 C27 80 37 88 50 88 C60 88 68 81 72 72 C70 66 69 58 69 50 L69 34 C69 28 76 28 76 28 L76 25 L58 25 L58 28 C58 28 64 28 64 34 L64 54 C64 68 56 78 46 78 C36 78 32 70 32 58 L32 34 C32 28 38 28 38 28 L38 25 L20 25 Z"
-      fill="url(#ubGrad)"
-    />
-
-    {/* Letter B */}
-    <path
-      d="M62 25 L92 25 C104 25 112 32 112 43 C112 51 106 57 99 60 C108 63 115 71 115 82 C115 95 105 103 90 103 L60 103 L60 99 C60 99 66 99 66 94 L66 34 C66 29 60 29 60 29 Z M72 32 L72 58 L89 58 C98 58 103 52 103 45 C103 37 97 32 89 32 Z M72 65 L72 95 L90 95 C99 95 106 89 106 80 C106 71 99 65 90 65 Z"
-      fill="url(#ubGrad)"
-    />
-
-    {/* Bride Silhouette inside Monogram */}
-    <g transform="translate(48, 26)">
-      {/* Head */}
-      <circle cx="12" cy="7" r="3.2" fill="#B9787F" />
-      {/* Delicate Veil flowing back */}
-      <path d="M10 6 C7 8 4 15 2 24 C5 21 9 15 11 10 Z" fill="#DDB2B6" opacity="0.85" />
-      {/* Torso & Bodice */}
-      <path d="M10 11 C10 11 8 16 9 20 C10 22 14 22 15 20 C16 16 14 11 14 11 Z" fill="#B9787F" />
-      {/* Flowing Ballgown skirt */}
-      <path d="M9 20 C6 28 1 44 -2 58 C4 57 12 58 18 57 C16 46 14 30 15 20 Z" fill="#C98A90" />
-      <path d="M12 21 C15 32 19 46 24 57 C19 57 14 57 11 57 C13 46 13 32 12 21 Z" fill="#E8C5C8" opacity="0.9" />
-      {/* Sparkle Star near bride's crown */}
-      <path d="M18 3 L19.2 6.8 L23 8 L19.2 9.2 L18 13 L16.8 9.2 L13 8 L16.8 6.8 Z" fill="#BA7980" />
-    </g>
-  </svg>
-);
 
 export default function LoginPage() {
   const [email, setEmail] = useState('');
@@ -104,15 +67,23 @@ export default function LoginPage() {
 
   return (
     <div className="ub-login-screen">
+      {/* Decorative ambient background blur lights */}
+      <div className="ub-bg-glow ub-bg-glow--left" />
+      <div className="ub-bg-glow ub-bg-glow--right" />
+
       <div className="ub-login-card">
 
-        {/* ── LEFT PANEL ─────────────────────────────────────────── */}
+        {/* ── LEFT PANEL (576px) – Haute Couture Brand Presentation ── */}
         <div className="ub-panel-left">
-          {/* Subtle warm aura blobs */}
+          {/* Subtle silk ambient blurs */}
           <div className="ub-aura ub-aura--top" />
+          <div className="ub-aura ub-aura--center" />
           <div className="ub-aura ub-aura--bottom" />
 
-          {/* Top Chips */}
+          {/* Delicate couture watermark ornament */}
+          <div className="ub-couture-pattern" />
+
+          {/* Top Chips Row */}
           <div className="ub-top-chips">
             <div className="ub-chip ub-chip--white">
               <span className="ub-chip__icon">
@@ -127,36 +98,41 @@ export default function LoginPage() {
 
           {/* Center Brand Group */}
           <div className="ub-brand-center">
-            {/* White Monogram Emblem Card */}
+            {/* White Monogram Emblem Card with porcelain glassmorphism effect */}
             <div className="ub-emblem-card">
-              <UBMonogramLogo />
+              <div className="ub-emblem-inner-glow" />
+              <Logo variant="emblem" className="ub-emblem-img" alt="UniBridal Emblem" />
             </div>
 
-            {/* Typography */}
+            {/* Haute Couture Typography */}
             <h1 className="ub-brand-title">UNIBRIDAL</h1>
             <div className="ub-brand-subtitle-wrap">
-              <span className="ub-dash">—</span>
+              <span className="ub-dash-line" />
               <span className="ub-brand-subtitle">HAUTE COUTURE</span>
-              <span className="ub-dash">—</span>
+              <span className="ub-dash-line" />
             </div>
+            <p className="ub-brand-tagline">Atelier de Robes de Mariée & Sur-Mesure</p>
           </div>
 
-          {/* Bottom Security Row */}
+          {/* Bottom Security & Est Footer */}
           <div className="ub-footer-row">
             <div className="ub-security-badge">
               <FootnoteLockIcon />
               <span className="ub-security-text">Bảo mật thông tin tuyệt đối</span>
             </div>
-            <span className="ub-est-text">EST. 2026</span>
+            <div className="ub-est-group">
+              <span className="ub-est-dot" />
+              <span className="ub-est-text">EST. 2026</span>
+            </div>
           </div>
         </div>
 
-        {/* ── RIGHT PANEL ────────────────────────────────────────── */}
+        {/* ── RIGHT PANEL (576px) – Login Form ────────────────────── */}
         <div className="ub-panel-right">
           <div className="ub-form-container">
 
-            {/* Diamond Badge on top right */}
-            <div className="ub-diamond-badge" title="Haute Couture Privilege">
+            {/* Diamond Privilege Badge on top right */}
+            <div className="ub-diamond-badge" title="Haute Couture Member Access">
               <DiamondIcon />
             </div>
 
@@ -164,6 +140,11 @@ export default function LoginPage() {
             <div className="ub-header-group">
               <span className="ub-form-overhead">UNIBRIDAL HAUTE COUTURE</span>
               <h2 className="ub-form-heading">Đăng Nhập</h2>
+              <div className="ub-heading-ornament">
+                <span className="ub-ornament-line" />
+                <span className="ub-ornament-diamond" />
+                <span className="ub-ornament-line" />
+              </div>
             </div>
 
             {/* Main Form */}
@@ -244,7 +225,8 @@ export default function LoginPage() {
 
               {/* Submit Button */}
               <button type="submit" className="ub-submit-btn" id="login-submit-btn">
-                <span>ĐĂNG NHẬP TÀI KHOẢN →</span>
+                <span className="ub-submit-btn__text">ĐĂNG NHẬP TÀI KHOẢN</span>
+                <span className="ub-submit-btn__arrow">→</span>
               </button>
             </form>
 
