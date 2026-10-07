@@ -1,11 +1,16 @@
+import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
+import LoginPage from './pages/auth/LoginPage';
+
 function App() {
   return (
-    <div className="flex items-center justify-center min-h-screen bg-gray-50">
-      <h1 className="text-2xl font-bold text-gray-800">
-        Wedding Dress Rental Website System - Frontend
-      </h1>
-    </div>
+    <Router>
+      <Routes>
+        <Route path="/login" element={<LoginPage />} />
+        <Route path="/" element={<Navigate to="/login" replace />} />
+      </Routes>
+    </Router>
   );
 }
 
 export default App;
+
