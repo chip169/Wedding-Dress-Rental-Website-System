@@ -86,14 +86,14 @@ const Header = ({ onOpenBooking, cartCount = 2 }) => {
             <Heart className="w-[18px] h-[18px] stroke-[1.8]" />
           </button>
 
-          {/* User Profile */}
-          <button
-            type="button"
-            className="w-9 h-9 rounded-xl flex items-center justify-center text-[#2C2523] hover:text-[#B8737D] transition-colors border-0 bg-transparent cursor-pointer p-0"
-            title="Tài khoản"
+          {/* User Profile / Login */}
+          <a
+            href="/login"
+            className="w-9 h-9 rounded-xl flex items-center justify-center text-[#2C2523] hover:text-[#B8737D] transition-colors no-underline"
+            title="Đăng nhập / Tài khoản"
           >
             <User className="w-[18px] h-[18px] stroke-[1.8]" />
-          </button>
+          </a>
 
           {/* Mobile Menu Toggle */}
           <button
