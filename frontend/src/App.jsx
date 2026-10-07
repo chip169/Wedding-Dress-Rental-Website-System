@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import LoginPage from './pages/auth/LoginPage';
-import RegisterPage from './pages/auth/RegisterPage';
+import AuthPage from './pages/auth/AuthPage';
 import Header from './components/Header';
 import HeroSection from './components/HeroSection';
 import SilhouetteShowcase from './components/SilhouetteShowcase';
@@ -84,8 +83,8 @@ function App() {
     <Router>
       <Routes>
         <Route path="/" element={<HomePage />} />
-        <Route path="/login" element={<LoginPage />} />
-        <Route path="/register" element={<RegisterPage />} />
+        <Route path="/login" element={<AuthPage defaultMode="login" />} />
+        <Route path="/register" element={<AuthPage defaultMode="register" />} />
         <Route path="*" element={<Navigate to="/" replace />} />
       </Routes>
     </Router>
