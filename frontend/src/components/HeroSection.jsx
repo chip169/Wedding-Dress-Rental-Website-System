@@ -17,9 +17,9 @@ const HeroSection = () => {
           <div className="lg:col-span-6 flex flex-col items-start z-10">
             
             {/* Pill Badge */}
-            <div className="inline-flex items-center gap-2 px-3.5 py-1 rounded-full bg-white border border-[#E6DAC8] shadow-xs mb-6">
-              <span className="w-1.5 h-1.5 rounded-full bg-[#B8737D]" />
-              <span className="font-jakarta font-bold text-[11px] tracking-[2px] uppercase text-[#B8737D]">
+            <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white shadow-[0px_2px_10px_rgba(0,0,0,0.04)] mb-6 select-none mt-2 sm:mt-3">
+              <span className="w-1.5 h-1.5 rounded-full bg-[#B8737D] shrink-0" />
+              <span className="font-jakarta font-semibold text-[11px] sm:text-[11.5px] tracking-[0.2em] uppercase text-[#B8737D] leading-none">
                 HAUTE COUTURE COLLECTION 2026
               </span>
             </div>
@@ -96,26 +96,22 @@ const HeroSection = () => {
                 </span>
               </div>
 
-              {/* Main Hero Portrait with Prominent Crisp White Border */}
-              <div className="relative w-full h-[520px] sm:h-[600px] lg:h-[640px] p-[6px] sm:p-[7px] bg-white rounded-[30px] sm:rounded-[34px] shadow-[0px_25px_50px_-12px_rgba(0,0,0,0.25)] border-[4px] border-solid border-white">
-                <div className="w-full h-full rounded-[24px] sm:rounded-[28px] overflow-hidden bg-[#FCEEE9]">
-                  <img
-                    src={heroBrideImg}
-                    alt="UniBridal Haute Couture Collection"
-                    className="w-full h-full object-cover object-center"
-                  />
-                </div>
+              {/* Main Hero Portrait with Clean 4px White Border */}
+              <div className="relative w-full h-[520px] sm:h-[600px] lg:h-[640px] rounded-[28px] sm:rounded-[32px] overflow-hidden bg-[#FCEEE9] border-4 border-solid border-white shadow-[0px_20px_45px_-10px_rgba(0,0,0,0.18)]">
+                <img
+                  src={heroBrideImg}
+                  alt="UniBridal Haute Couture Collection"
+                  className="w-full h-full object-cover object-center"
+                />
               </div>
 
-              {/* Overlapping Detail Inset with Prominent White Border */}
-              <div className="absolute -bottom-6 -left-4 sm:-left-8 z-20 w-[160px] h-[160px] sm:w-[195px] sm:h-[195px] p-[6px] bg-white rounded-2xl shadow-[0px_20px_25px_-5px_rgba(0,0,0,0.15)] border-2 border-solid border-white">
-                <div className="w-full h-full rounded-xl overflow-hidden bg-[#FCEEE9]">
-                  <img
-                    src={laceDetailImg}
-                    alt="Chi tiết đính kết ren thủ công"
-                    className="w-full h-full object-cover"
-                  />
-                </div>
+              {/* Overlapping Detail Inset matching sample 4px white border */}
+              <div className="absolute -bottom-6 -left-4 sm:-left-8 z-20 w-[150px] h-[150px] sm:w-[185px] sm:h-[185px] rounded-2xl overflow-hidden bg-[#FCEEE9] border-4 border-solid border-white shadow-[0px_16px_32px_-6px_rgba(0,0,0,0.2)]">
+                <img
+                  src={laceDetailImg}
+                  alt="Chi tiết đính kết ren thủ công"
+                  className="w-full h-full object-cover"
+                />
               </div>
 
             </div>
