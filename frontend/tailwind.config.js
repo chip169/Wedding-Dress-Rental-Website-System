@@ -11,20 +11,25 @@ export default {
   theme: {
     extend: {
       colors: {
-        wedding: {
-          primary: '#B76E79',     // Rose gold
-          primaryHover: '#9F5560',
-          secondary: '#D4AF37',   // Champagne Gold
-          accent: '#E0A96D',
-          dark: '#2C3E50',
-          light: '#FFF9F5',
-          cream: '#FAF7F2',
-          border: '#E8DFD8',
+        bridal: {
+          rose: '#B8737D',
+          roseLight: '#C98A90',
+          roseSoft: '#FCEEE9',
+          rosePill: '#FFDADC',
+          champagne: '#E6DAC8',
+          charcoal: '#2C2523',
+          warmGray: '#514344',
+          subtleGray: '#847374',
+          darkGray: '#695C4E',
+          bgPage: '#FDFBF7',
+          bgBlush: '#FFF7F5',
+          bgReview: '#FAF6F0',
+          bgFooter: '#FBF7F4',
         },
       },
       fontFamily: {
-        serif: ['Playfair Display', 'Georgia', 'serif'],
-        sans: ['Inter', 'Segoe UI', 'Roboto', 'sans-serif'],
+        serif: ['"Playfair Display"', 'Georgia', 'serif'],
+        sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
       },
     },
   },
