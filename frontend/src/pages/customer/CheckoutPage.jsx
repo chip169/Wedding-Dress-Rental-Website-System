@@ -1,0 +1,1160 @@
+import React, { useState, useMemo } from 'react';
+import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import {
+  ShieldCheck,
+  Calendar,
+  MapPin,
+  Check,
+  CheckCircle2,
+  Lock,
+  Phone,
+  QrCode,
+  CreditCard,
+  Building2,
+  FileText,
+  Sparkles,
+  Scissors,
+  Briefcase,
+  HelpCircle,
+  X,
+  Download,
+  Printer,
+  ChevronRight,
+  ArrowRight,
+  Clock,
+  ExternalLink,
+  Award,
+  Crown,
+  FileCheck,
+  PenTool,
+  CheckSquare,
+  AlertCircle,
+  ArrowLeft,
+  Copy,
+} from 'lucide-react';
+import { message } from 'antd';
+import Header from '../../components/layout/Header';
+import Footer from '../../components/layout/Footer';
+import { MOCK_DRESSES } from '../../services/dressService';
+import { getCart } from '../../services/cartService';
+
+export default function CheckoutPage() {
+  const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
+  const dressIdParam = searchParams.get('dressId');
+  const sizeParam = searchParams.get('size');
+  const startDateParam = searchParams.get('startDate');
+  const endDateParam = searchParams.get('endDate');
+
+  // Dynamic Selected Dress
+  const activeDress = useMemo(() => {
+    if (dressIdParam) {
+      const found = MOCK_DRESSES.find((d) => String(d.id) === String(dressIdParam));
+      if (found) return found;
+    }
+    const cart = getCart();
+    if (cart && cart.length > 0) {
+      const first = cart[0];
+      const found = MOCK_DRESSES.find((d) => String(d.id) === String(first.id));
+      if (found) return found;
+    }
+    return MOCK_DRESSES[0];
+  }, [dressIdParam]);
+
+  // Current Active Wizard Step: 1 = Thông Tin & Số Đo, 2 = Ký Hợp Đồng Điện Tử, 3 = Đặt Cọc & Thanh Toán
+  const [currentStep, setCurrentStep] = useState(1);
+
+  // Step 1: Form state
+  const [brideName, setBrideName] = useState('Lê Nguyễn Thảo My');
+  const [phone, setPhone] = useState('0938 128 899');
+  const [email, setEmail] = useState('thaomy.bride@gmail.com');
+  const [cccd, setCccd] = useState('079201019888');
+  const [address, setAddress] = useState('120/4 Lê Lai, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh');
+  
+  // Schedule state
+  const [rentalSchedule, setRentalSchedule] = useState({
+    startDate: startDateParam || '18/11/2026',
+    endDate: endDateParam || '21/11/2026',
+    weddingDate: '20/11/2026',
+  });
+
+  // Selected dress size
+  const [selectedSize, setSelectedSize] = useState(sizeParam || 'S');
+
+  // Measurements
+  const [measurements, setMeasurements] = useState({
+    height: '165',
+    weight: '48',
+    bust: '84',
+    waist: '64',
+    hips: '92',
+    heel: '9',
+  });
+
+  // Delivery method: 'direct' | 'delivery'
+  const [deliveryMethod, setDeliveryMethod] = useState('direct');
+
+  // Step 2: Contract signing state
+  const [contractSignature, setContractSignature] = useState('Lê Nguyễn Thảo My');
+  const [hasAgreedContractTerms, setHasAgreedContractTerms] = useState(true);
+  const [isContractSigned, setIsContractSigned] = useState(false);
+
+  // Step 3: Deposit option: 'deposit30' | 'full100'
+  const [depositOption, setDepositOption] = useState('deposit30');
+
+  // Payment gateway: 'vietqr' | 'card' | 'offline'
+  const [paymentGateway, setPaymentGateway] = useState('vietqr');
+
+  // Modals
+  const [isContractModalOpen, setIsContractModalOpen] = useState(false);
+  const [isSizeGuideModalOpen, setIsSizeGuideModalOpen] = useState(false);
+  const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
+
+  // Financial calculations
+  const totalRentPrice = activeDress?.price || 5200000;
+  const depositCollateral = activeDress?.depositAmount || 15000000;
+  
+  // Amount to pay today based on depositOption (30% or 100%)
+  const amountToPayToday = depositOption === 'deposit30' ? Math.round(totalRentPrice * 0.5) : totalRentPrice;
+
+  // Validation Step 1
+  const handleProceedToContract = (e) => {
+    e?.preventDefault();
+    if (!brideName.trim() || !phone.trim() || !email.trim()) {
+      message.error('Vui lòng điền đầy đủ họ tên, số điện thoại và email của cô dâu.');
+      return;
+    }
+    setCurrentStep(2);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Validation Step 2 (Sign contract)
+  const handleSignAndProceedToPayment = () => {
+    if (!hasAgreedContractTerms) {
+      message.warning('Nàng vui lòng tích chọn đồng ý với các điều khoản của Hợp đồng thuê.');
+      return;
+    }
+    if (!contractSignature.trim()) {
+      message.warning('Vui lòng nhập họ tên xác nhận chữ ký điện tử.');
+      return;
+    }
+    setIsContractSigned(true);
+    message.success('Ký hợp đồng thuê điện tử thành công!');
+    setCurrentStep(3);
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+  };
+
+  // Confirm final booking & payment
+  const handleConfirmFinalPayment = (e) => {
+    e?.preventDefault();
+    setIsSuccessModalOpen(true);
+    message.success('Xác nhận đặt thuê & thanh toán cọc thành công!');
+  };
+
+  const copyToClipboard = (text) => {
+    navigator.clipboard.writeText(text);
+    message.success('Đã sao chép vào bộ nhớ tạm!');
+  };
+
+  return (
+    <div className="min-h-screen bg-[#FDFBF7] text-[#2C2523] flex flex-col font-jakarta selection:bg-[#FCEEE9] selection:text-[#B8737D]">
+      <div className="print:hidden">
+        <Header />
+      </div>
+
+      {/* Main Content */}
+      <main className="flex-1 max-w-[1320px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-9">
+        
+        {/* Breadcrumb */}
+        <nav className="flex items-center gap-2 text-[12.5px] text-[#847374] mb-6 print:hidden">
+          <Link to="/" className="hover:text-[#B8737D] transition-colors no-underline text-[#847374]">
+            Trang chủ
+          </Link>
+          <span>/</span>
+          <Link to="/collection" className="hover:text-[#B8737D] transition-colors no-underline text-[#847374]">
+            Bộ sưu tập
+          </Link>
+          <span>/</span>
+          <span className="text-[#2C2523] font-medium">Đặt Thuê, Ký Hợp Đồng & Thanh Toán</span>
+        </nav>
+
+        {/* Header Title Section */}
+        <div className="mb-8 print:hidden">
+          <div className="text-[11.5px] sm:text-[12px] font-bold tracking-[1.2px] text-[#B8737D] uppercase mb-1.5 font-jakarta flex items-center gap-1.5">
+            <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
+            <span>QUY TRÌNH THUÊ LỄ PHỤC CHUẨN QUỐC TẾ • 3 BƯỚC BẢO CHỨNG</span>
+          </div>
+          <h1 className="font-playfair text-[28px] sm:text-[38px] lg:text-[42px] font-medium text-[#2C2523] leading-tight mb-2.5">
+            {currentStep === 1 && 'Thông Tin Đặt Thuê & Số Đo May Đo'}
+            {currentStep === 2 && 'Xem & Ký Hợp Đồng Thuê Điện Tử'}
+            {currentStep === 3 && 'Đặt Cọc Giữ Lịch & Thanh Toán'}
+          </h1>
+          <p className="text-[13.5px] sm:text-[14.5px] text-[#6B5C5D] font-normal leading-relaxed m-0 max-w-[850px]">
+            {currentStep === 1 && 'Cung cấp số đo cơ thể chuẩn xác để đội ngũ nghệ nhân Haute Couture may đo, chỉnh sửa vừa khít vóc dáng.'}
+            {currentStep === 2 && 'Văn bản hợp đồng bảo hộ pháp lý song phương, cam kết hoàn cọc 100% và bảo quản trang phục nguyên bản.'}
+            {currentStep === 3 && 'Ký hợp đồng thành công! Tiến hành đặt cọc để Atelier khóa lịch độc quyền cho hôn lễ của nàng.'}
+          </p>
+        </div>
+
+        {/* Stepper Bar (3 Clear Steps) */}
+        <div className="w-full max-w-[820px] mx-auto mb-10 print:hidden">
+          <div className="bg-white rounded-full border border-[#EEDECF]/80 shadow-[0_2px_12px_rgba(44,37,35,0.04)] px-4 sm:px-8 py-3 flex items-center justify-between text-[12px] sm:text-[13.5px]">
+            
+            {/* Step 1 */}
+            <button
+              type="button"
+              onClick={() => setCurrentStep(1)}
+              className={`flex items-center gap-2 border-0 bg-transparent cursor-pointer font-medium transition-colors ${
+                currentStep >= 1 ? 'text-[#733F49]' : 'text-[#847374]'
+              }`}
+            >
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                currentStep > 1 ? 'bg-[#2E7D32] text-white' : 'bg-[#733F49] text-white shadow-xs'
+              }`}>
+                {currentStep > 1 ? '✓' : '1'}
+              </span>
+              <span className={currentStep === 1 ? 'font-bold text-[#733F49]' : ''}>1. Thông tin & Số đo</span>
+            </button>
+
+            {/* Line 1 */}
+            <div className={`flex-1 h-[2px] mx-2 sm:mx-4 transition-colors ${
+              currentStep >= 2 ? 'bg-[#733F49]' : 'bg-[#EEDECF]'
+            }`} />
+
+            {/* Step 2 */}
+            <button
+              type="button"
+              onClick={() => {
+                if (brideName && phone) setCurrentStep(2);
+              }}
+              className={`flex items-center gap-2 border-0 bg-transparent cursor-pointer font-medium transition-colors ${
+                currentStep >= 2 ? 'text-[#733F49]' : 'text-[#847374]'
+              }`}
+            >
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                currentStep > 2 ? 'bg-[#2E7D32] text-white' : currentStep === 2 ? 'bg-[#733F49] text-white shadow-xs' : 'bg-[#EAE0D5] text-[#847374]'
+              }`}>
+                {currentStep > 2 ? '✓' : '2'}
+              </span>
+              <span className={currentStep === 2 ? 'font-bold text-[#733F49]' : ''}>2. Ký hợp đồng số</span>
+            </button>
+
+            {/* Line 2 */}
+            <div className={`flex-1 h-[2px] mx-2 sm:mx-4 transition-colors ${
+              currentStep >= 3 ? 'bg-[#733F49]' : 'bg-[#EEDECF]'
+            }`} />
+
+            {/* Step 3 */}
+            <div className={`flex items-center gap-2 font-medium ${
+              currentStep === 3 ? 'text-[#733F49] font-bold' : 'text-[#847374]'
+            }`}>
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
+                currentStep === 3 ? 'bg-[#733F49] text-white shadow-xs' : 'bg-[#EAE0D5] text-[#847374]'
+              }`}>
+                3
+              </span>
+              <span>3. Đặt cọc & Thanh toán</span>
+            </div>
+
+          </div>
+        </div>
+
+        {/* Two-Column Grid: Form Left & Sticky Order Summary Right */}
+        <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
+          
+          {/* ================= LEFT COLUMN ================= */}
+          <div className="lg:col-span-7 xl:col-span-8 space-y-8">
+            
+            {/* ================= STEP 1: THÔNG TIN & SỐ ĐO ================= */}
+            {currentStep === 1 && (
+              <div className="space-y-8 animate-fade-in">
+                
+                {/* 1. THÔNG TIN NGƯỜI THUÊ */}
+                <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
+                  <div className="flex items-center justify-between pb-5 border-b border-[#F5EDE8] mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#FAF0EC] flex items-center justify-center text-[#B8737D]">
+                        <FileText className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="font-playfair text-[19px] sm:text-[21px] font-semibold text-[#2C2523] m-0">
+                          Thông Tin Cô Dâu & Người Đại Diện Thuê
+                        </h2>
+                        <p className="text-[12px] text-[#847374] m-0 mt-0.5">
+                          Thông tin chính xác để ghi nhận vào Hợp đồng bảo hộ pháp lý
+                        </p>
+                      </div>
+                    </div>
+                    <span className="hidden sm:inline-flex px-3 py-1 rounded-full bg-[#FDF2F0] border border-[#F7D8D4] text-[#B8737D] font-bold text-[10.5px]">
+                      BẢO MẬT 100%
+                    </span>
+                  </div>
+
+                  <div className="space-y-4">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-jakarta text-[11px] font-bold uppercase tracking-wider text-[#733F49] mb-1.5">
+                          HỌ & TÊN CÔ DÂU *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={brideName}
+                          onChange={(e) => {
+                            setBrideName(e.target.value);
+                            setContractSignature(e.target.value);
+                          }}
+                          className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
+                          placeholder="Lê Nguyễn Thảo My"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-jakarta text-[11px] font-bold uppercase tracking-wider text-[#733F49] mb-1.5">
+                          SỐ ĐIỆN THOẠI (ZALO) *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={phone}
+                          onChange={(e) => setPhone(e.target.value)}
+                          className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
+                          placeholder="09xx xxx xxx"
+                        />
+                      </div>
+                    </div>
+
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <label className="block font-jakarta text-[11px] font-bold uppercase tracking-wider text-[#733F49] mb-1.5">
+                          EMAIL NHẬN HỢP ĐỒNG SỐ *
+                        </label>
+                        <input
+                          type="email"
+                          required
+                          value={email}
+                          onChange={(e) => setEmail(e.target.value)}
+                          className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
+                          placeholder="thaomy.bride@gmail.com"
+                        />
+                      </div>
+
+                      <div>
+                        <label className="block font-jakarta text-[11px] font-bold uppercase tracking-wider text-[#733F49] mb-1.5">
+                          SỐ CCCD / CMND (LẬP HỢP ĐỒNG PHÁP LÝ) *
+                        </label>
+                        <input
+                          type="text"
+                          required
+                          value={cccd}
+                          onChange={(e) => setCccd(e.target.value)}
+                          className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
+                          placeholder="079201019888"
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <label className="block font-jakarta text-[11px] font-bold uppercase tracking-wider text-[#733F49] mb-1.5">
+                        ĐỊA CHỈ THƯỜNG TRÚ HOẶC GIAO NHẬN LỄ PHỤC *
+                      </label>
+                      <input
+                        type="text"
+                        required
+                        value={address}
+                        onChange={(e) => setAddress(e.target.value)}
+                        className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
+                        placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố"
+                      />
+                    </div>
+                  </div>
+                </section>
+
+                {/* 2. LỊCH TRÌNH THUÊ & PHƯƠNG THỨC BÀN GIAO */}
+                <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
+                  <div className="flex items-center justify-between pb-5 border-b border-[#F5EDE8] mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#FAF0EC] flex items-center justify-center text-[#B8737D]">
+                        <Calendar className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="font-playfair text-[19px] sm:text-[21px] font-semibold text-[#2C2523] m-0">
+                          Lịch Trình Đặt Thuê & Bàn Giao
+                        </h2>
+                        <p className="text-[12px] text-[#847374] m-0 mt-0.5">
+                          Gói thuê tiêu chuẩn 4 ngày (Nhận trước ngày cưới 2 ngày để thử lại phom)
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
+                    <div className="bg-[#FCF9F6] p-4 rounded-xl border border-[#EEDECF]">
+                      <label className="block text-[10.5px] font-bold text-[#847374] uppercase tracking-wider mb-1">
+                        NGÀY BẮT ĐẦU NHẬN VÁY
+                      </label>
+                      <input
+                        type="text"
+                        value={rentalSchedule.startDate}
+                        onChange={(e) => setRentalSchedule({ ...rentalSchedule, startDate: e.target.value })}
+                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-3 py-1.5 text-[13.5px] font-bold text-[#2C2523] focus:outline-none focus:border-[#733F49]"
+                      />
+                      <span className="text-[10.5px] text-[#2E7D32] mt-1 block">✦ Thử vừa vặn lần cuối</span>
+                    </div>
+
+                    <div className="bg-[#FAF0EC] p-4 rounded-xl border border-[#F2D8D4]">
+                      <label className="block text-[10.5px] font-bold text-[#733F49] uppercase tracking-wider mb-1">
+                        NGÀY CƯỚI CHÍNH THỨC
+                      </label>
+                      <input
+                        type="text"
+                        value={rentalSchedule.weddingDate}
+                        onChange={(e) => setRentalSchedule({ ...rentalSchedule, weddingDate: e.target.value })}
+                        className="w-full bg-white border border-[#F2D8D4] rounded-lg px-3 py-1.5 text-[13.5px] font-bold text-[#733F49] focus:outline-none focus:border-[#733F49]"
+                      />
+                      <span className="text-[10.5px] text-[#733F49] mt-1 block">★ Ngày trọng đại nhất</span>
+                    </div>
+
+                    <div className="bg-[#FCF9F6] p-4 rounded-xl border border-[#EEDECF]">
+                      <label className="block text-[10.5px] font-bold text-[#847374] uppercase tracking-wider mb-1">
+                        NGÀY HOÀN TRẢ VÁY
+                      </label>
+                      <input
+                        type="text"
+                        value={rentalSchedule.endDate}
+                        onChange={(e) => setRentalSchedule({ ...rentalSchedule, endDate: e.target.value })}
+                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-3 py-1.5 text-[13.5px] font-bold text-[#2C2523] focus:outline-none focus:border-[#733F49]"
+                      />
+                      <span className="text-[10.5px] text-[#6B5C5D] mt-1 block">✦ Hoàn cọc ngay khi nhận</span>
+                    </div>
+                  </div>
+
+                  {/* Delivery Mode */}
+                  <div>
+                    <label className="block font-jakarta text-[11px] font-bold uppercase tracking-wider text-[#733F49] mb-2.5">
+                      PHƯƠNG THỨC BÀN GIAO LỄ PHỤC
+                    </label>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      <div
+                        onClick={() => setDeliveryMethod('direct')}
+                        className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                          deliveryMethod === 'direct'
+                            ? 'border-[#733F49] bg-[#FAF3F0] ring-1 ring-[#733F49]'
+                            : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-bold text-[13.5px] text-[#2C2523]">
+                            Nhận tại Showroom Atelier (Khuyên dùng)
+                          </span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8F5E9] text-[#2E7D32]">
+                            MIỄN PHÍ
+                          </span>
+                        </div>
+                        <p className="text-[11.5px] text-[#6B5C5D] m-0">
+                          Chuyên viên may đo hỗ trợ mặc thử, căn chỉnh phom dáng trực tiếp trên sân khấu catwalk trước khi mang về.
+                        </p>
+                      </div>
+
+                      <div
+                        onClick={() => setDeliveryMethod('delivery')}
+                        className={`p-4 rounded-xl border cursor-pointer transition-all ${
+                          deliveryMethod === 'delivery'
+                            ? 'border-[#733F49] bg-[#FAF3F0] ring-1 ring-[#733F49]'
+                            : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
+                        }`}
+                      >
+                        <div className="flex items-center justify-between mb-1">
+                          <span className="font-bold text-[13.5px] text-[#2C2523]">
+                            Giao tận nơi bằng Vali Chuyên Dụng
+                          </span>
+                          <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FAF0EC] text-[#B8737D]">
+                            VIP COURIER
+                          </span>
+                        </div>
+                        <p className="text-[11.5px] text-[#6B5C5D] m-0">
+                          Vali giữ nhiệt chống ẩm, móc treo gỗ tơ tằm bảo vệ phom váy tuyệt đối, giao đúng giờ hẹn.
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* 3. SỐ ĐO CƠ THỂ MAY ĐO */}
+                <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
+                  <div className="flex items-center justify-between pb-5 border-b border-[#F5EDE8] mb-6">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#FAF0EC] flex items-center justify-center text-[#B8737D]">
+                        <Scissors className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="font-playfair text-[19px] sm:text-[21px] font-semibold text-[#2C2523] m-0">
+                          Số Đo May Đo & Tinh Chỉnh Phom Váy
+                        </h2>
+                        <p className="text-[12px] text-[#847374] m-0 mt-0.5">
+                          Hệ thống đan dây corsetry Pháp cho phép tùy chỉnh nới/siết linh hoạt từ 2 - 4cm
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-4">
+                    <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
+                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">CHIỀU CAO (CM)</label>
+                      <input
+                        type="text"
+                        value={measurements.height}
+                        onChange={(e) => setMeasurements({ ...measurements, height: e.target.value })}
+                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
+                      />
+                    </div>
+                    <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
+                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">CÂN NẶNG (KG)</label>
+                      <input
+                        type="text"
+                        value={measurements.weight}
+                        onChange={(e) => setMeasurements({ ...measurements, weight: e.target.value })}
+                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
+                      />
+                    </div>
+                    <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
+                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">VÒNG 1 (NGỰC)</label>
+                      <input
+                        type="text"
+                        value={measurements.bust}
+                        onChange={(e) => setMeasurements({ ...measurements, bust: e.target.value })}
+                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
+                      />
+                    </div>
+                    <div className="bg-[#FAF0EC] p-3 rounded-xl border border-[#F2D8D4]">
+                      <label className="text-[10px] font-bold uppercase text-[#733F49] block mb-1">VÒNG 2 (EO * QUAN TRỌNG)</label>
+                      <input
+                        type="text"
+                        value={measurements.waist}
+                        onChange={(e) => setMeasurements({ ...measurements, waist: e.target.value })}
+                        className="w-full bg-white border border-[#F2D8D4] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#733F49] text-center"
+                      />
+                    </div>
+                    <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
+                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">VÒNG 3 (MÔNG)</label>
+                      <input
+                        type="text"
+                        value={measurements.hips}
+                        onChange={(e) => setMeasurements({ ...measurements, hips: e.target.value })}
+                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
+                      />
+                    </div>
+                    <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
+                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">CAO GIÀY CƯỚI</label>
+                      <input
+                        type="text"
+                        value={measurements.heel}
+                        onChange={(e) => setMeasurements({ ...measurements, heel: e.target.value })}
+                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
+                      />
+                    </div>
+                  </div>
+
+                  <div className="text-[11.5px] text-[#6B5C5D] italic">
+                    ✦ Nếu nàng chưa đo chính xác, chuyên viên Atelier sẽ gọi video hướng dẫn hoặc đo trực tiếp tại buổi thử váy.
+                  </div>
+                </section>
+
+                {/* Continue Button to Step 2 */}
+                <div className="pt-2">
+                  <button
+                    type="button"
+                    onClick={handleProceedToContract}
+                    className="w-full py-4 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer border-0 flex items-center justify-center gap-2 active:scale-[0.99]"
+                  >
+                    <span>TIẾP TỤC: XEM & KÝ HỢP ĐỒNG ĐIỆN TỬ (BƯỚC 2)</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
+
+              </div>
+            )}
+
+            {/* ================= STEP 2: XEM & KÝ HỢP ĐỒNG ĐIỆN TỬ ================= */}
+            {currentStep === 2 && (
+              <div className="space-y-8 animate-fade-in">
+                
+                {/* Contract Paper Box */}
+                <section className="bg-white rounded-3xl border-2 border-[#D4AF37]/40 shadow-[0_12px_45px_rgba(115,63,73,0.08)] p-6 sm:p-10 space-y-6">
+                  
+                  {/* National Emblem & Title */}
+                  <div className="text-center pb-6 border-b border-[#F0E5DC] space-y-1.5">
+                    <div className="font-playfair text-[12.5px] font-bold uppercase tracking-wider text-[#2C2523]">
+                      CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+                    </div>
+                    <div className="text-[12px] italic text-[#6B5C5D]">
+                      Độc lập — Tự do — Hạnh phúc
+                    </div>
+                    <div className="w-16 h-[1.5px] bg-[#D4AF37] mx-auto my-2" />
+                    <h2 className="font-playfair text-[22px] sm:text-[26px] font-bold text-[#733F49] mt-3 mb-1">
+                      HỢP ĐỒNG THUÊ LỄ PHỤC CƯỚI CAO CẤP
+                    </h2>
+                    <span className="font-mono text-[12px] text-[#847374] block">
+                      Số: HĐ-UB-2026/8992 • Cấp ngày: {new Date().toLocaleDateString('vi-VN')}
+                    </span>
+                  </div>
+
+                  {/* Parties Info */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[12.5px] bg-[#FCF9F6] p-4.5 rounded-2xl border border-[#EEDECF]">
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#847374] block mb-1">
+                        BÊN CHO THUÊ (BÊN A):
+                      </span>
+                      <strong className="text-[#2C2523] block text-[13.5px]">CÔNG TY TNHH UNIBRIDAL HAUTE COUTURE</strong>
+                      <span className="text-[#6B5C5D] block mt-0.5">Mã số thuế: 0316889988</span>
+                      <span className="text-[#6B5C5D] block">Showroom Flagship: 88 Nam Kỳ Khởi Nghĩa, Q.1, TP. HCM</span>
+                      <span className="text-[#6B5C5D] block">Đại diện: NTK. Hoàng Yến (Lead Haute Couture Stylist)</span>
+                    </div>
+
+                    <div>
+                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#733F49] block mb-1">
+                        BÊN THUÊ LỄ PHỤC (BÊN B):
+                      </span>
+                      <strong className="text-[#733F49] block text-[13.5px]">{brideName}</strong>
+                      <span className="text-[#6B5C5D] block mt-0.5">Số CCCD / CMND: <strong>{cccd}</strong></span>
+                      <span className="text-[#6B5C5D] block">Số điện thoại: {phone} • Email: {email}</span>
+                      <span className="text-[#6B5C5D] block truncate">Địa chỉ: {address}</span>
+                    </div>
+                  </div>
+
+                  {/* Contract Clauses */}
+                  <div className="space-y-4 text-[12.5px] leading-relaxed text-[#4A3B3D]">
+                    
+                    <div className="p-3.5 rounded-xl bg-[#FAF4EE] border border-[#EEDECF]">
+                      <strong className="text-[#733F49] block mb-1">
+                        ĐIỀU 1: THÔNG TIN TRANG PHỤC & THỜI HẠN THUÊ
+                      </strong>
+                      <p className="m-0 text-[#6B5C5D]">
+                        1.1. Bên A đồng ý cho Bên B thuê tác phẩm váy cưới <strong>{activeDress?.name}</strong> (Mã: <strong>{activeDress?.code || 'UB-HC-2026'}</strong>), Size: <strong>{selectedSize}</strong>.<br />
+                        1.2. Thời gian thuê: <strong>4 ngày</strong>, nhận váy từ ngày <strong>{rentalSchedule.startDate}</strong> và hoàn trả trước 20:00 ngày <strong>{rentalSchedule.endDate}</strong>.<br />
+                        1.3. Lễ phục được giặt sấy tiệt trùng sinh học, ủi phẳng phiu và tinh chỉnh số đo hoàn thiện trước giờ trao nhận 2 giờ.
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-[#FAF4EE] border border-[#EEDECF]">
+                      <strong className="text-[#733F49] block mb-1">
+                        ĐIỀU 2: GIÁ THUÊ, TIỀN CỌC GIỮ LỊCH & CỌC BẢO LÃNH HOÀN TRẢ
+                      </strong>
+                      <p className="m-0 text-[#6B5C5D]">
+                        2.1. Tổng chi phí thuê váy: <strong>{totalRentPrice.toLocaleString('vi-VN')}₫</strong>.<br />
+                        2.2. Tiền đặt cọc giữ lịch: <strong>{amountToPayToday.toLocaleString('vi-VN')}₫</strong> (thanh toán tại Bước 3).<br />
+                        2.3. Tiền cọc bảo lãnh hoàn trả: <strong>{depositCollateral.toLocaleString('vi-VN')}₫</strong>. Bên A cam kết <strong>hoàn trả 100%</strong> tự động qua tài khoản ngân hàng của Bên B trong vòng 24 giờ sau khi kiểm tra váy nguyên vẹn khi hoàn trả.
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-[#FAF4EE] border border-[#EEDECF]">
+                      <strong className="text-[#733F49] block mb-1">
+                        ĐIỀU 3: QUY ĐỊNH BẢO QUẢN & BỒI THƯỜNG
+                      </strong>
+                      <p className="m-0 text-[#6B5C5D]">
+                        3.1. Bên B có trách nhiệm bảo quản lễ phục trong suốt thời gian tổ chức hôn lễ.<br />
+                        3.2. Tuyệt đối không tự ý cắt may, tẩy nhuộm hoặc đem váy tới tiệm giặt ủi thông thường.<br />
+                        3.3. Trường hợp làm bẩn bùn đất/rượu vang thông thường, UniBridal hỗ trợ xử lý sinh học miễn phí. Nếu phát sinh rách lớn hoặc hư hại hạt pha lê do bất cẩn, chi phí phục hồi sẽ được khấu trừ minh bạch theo phụ lục hợp đồng.
+                      </p>
+                    </div>
+
+                    <div className="p-3.5 rounded-xl bg-[#FAF4EE] border border-[#EEDECF]">
+                      <strong className="text-[#733F49] block mb-1">
+                        ĐIỀU 4: CHÍNH SÁCH ĐỔI NGÀY CƯỚI & GIÁ TRỊ PHÁP LÝ CHỮ KÝ SỐ
+                      </strong>
+                      <p className="m-0 text-[#6B5C5D]">
+                        4.1. Bên B được quyền dời ngày thuê miễn phí nếu thông báo trước tối thiểu 15 ngày.<br />
+                        4.2. Hợp đồng này được xác lập dưới dạng điện tử, có giá trị pháp lý tương đương bản ký tay theo Luật Giao dịch điện tử số 20/2023/QH15.
+                      </p>
+                    </div>
+
+                  </div>
+
+                  {/* Digital Signature Box */}
+                  <div className="pt-4 border-t border-[#F0E5DC] grid grid-cols-1 sm:grid-cols-2 gap-6">
+                    
+                    {/* Bên A Signature */}
+                    <div className="p-4 rounded-2xl bg-[#FCF9F6] border border-[#EEDECF] text-center space-y-2">
+                      <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#847374] block">
+                        ĐẠI DIỆN BÊN CHO THUÊ (BÊN A)
+                      </span>
+                      <div className="h-16 flex items-center justify-center">
+                        <div className="border-2 border-[#D4AF37] px-4 py-1.5 rounded-xl bg-[#FFFDF9] text-[#733F49] shadow-xs">
+                          <div className="font-playfair font-bold text-[13px] tracking-wide text-[#733F49]">
+                            UNIBRIDAL ATELIER
+                          </div>
+                          <span className="text-[9px] uppercase tracking-wider text-[#2E7D32] font-mono block">
+                            ✓ E-SIGNED & TIMESTAMPED
+                          </span>
+                        </div>
+                      </div>
+                      <span className="font-bold text-[12px] text-[#2C2523] block">
+                        NTK. Hoàng Yến (Lead Designer)
+                      </span>
+                    </div>
+
+                    {/* Bên B Signature */}
+                    <div className="p-4 rounded-2xl bg-[#FAF0EC] border-2 border-[#F2D8D4] text-center space-y-2">
+                      <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#733F49] block">
+                        ĐẠI DIỆN BÊN THUÊ (BÊN B - CÔ DÂU KÝ SỐ)
+                      </span>
+                      <div className="h-16 flex flex-col items-center justify-center">
+                        <div className="font-playfair italic font-bold text-[22px] text-[#733F49] tracking-wider select-none">
+                          {contractSignature || brideName}
+                        </div>
+                        <span className="text-[9.5px] font-mono text-[#2E7D32] font-semibold">
+                          ✓ XÁC THỰC CHỮ KÝ ĐIỆN TỬ CÔ DÂU
+                        </span>
+                      </div>
+                      <input
+                        type="text"
+                        value={contractSignature}
+                        onChange={(e) => setContractSignature(e.target.value)}
+                        placeholder="Nhập họ tên cô dâu để xác thực chữ ký"
+                        className="w-full text-center bg-white border border-[#F2D8D4] rounded-lg px-2.5 py-1 text-[12px] font-semibold text-[#733F49] focus:outline-none focus:border-[#733F49]"
+                      />
+                    </div>
+
+                  </div>
+
+                  {/* Terms Checkbox */}
+                  <div className="pt-2">
+                    <label className="flex items-start gap-3 cursor-pointer select-none">
+                      <input
+                        type="checkbox"
+                        checked={hasAgreedContractTerms}
+                        onChange={(e) => setHasAgreedContractTerms(e.target.checked)}
+                        className="mt-1 accent-[#733F49] w-4 h-4 rounded shrink-0"
+                      />
+                      <span className="text-[12.5px] text-[#4A3E3D] leading-relaxed">
+                        Tôi là <strong>{brideName}</strong>, xác nhận đã đọc kỹ, thấu hiểu toàn bộ điều khoản Hợp đồng cho thuê lễ phục cao cấp và cam kết chữ ký điện tử này có đầy đủ giá trị pháp lý song phương.
+                      </span>
+                    </label>
+                  </div>
+
+                  {/* Actions for Step 2 */}
+                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#F0E5DC]">
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(1)}
+                      className="w-full sm:w-auto px-5 py-3 rounded-xl bg-white border border-[#EEDECF] text-[#2C2523] text-[13px] font-bold hover:bg-[#FAF0EC] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                    >
+                      <ArrowLeft className="w-4 h-4" />
+                      <span>Quay lại Bước 1: Sửa thông tin</span>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleSignAndProceedToPayment}
+                      className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white font-jakarta text-[13.5px] font-bold tracking-wider uppercase transition-all shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer border-0 flex items-center justify-center gap-2"
+                    >
+                      <span>KÝ HỢP ĐỒNG & CHUYỂN SANG THANH TOÁN (BƯỚC 3)</span>
+                      <ArrowRight className="w-4 h-4" />
+                    </button>
+                  </div>
+
+                </section>
+
+              </div>
+            )}
+
+            {/* ================= STEP 3: ĐẶT CỌC & THANH TOÁN ================= */}
+            {currentStep === 3 && (
+              <div className="space-y-8 animate-fade-in">
+                
+                {/* Contract Signed Success Banner */}
+                <div className="bg-[#E8F5E9] border border-[#C8E6C9] p-4.5 rounded-2xl flex items-center justify-between gap-3">
+                  <div className="flex items-center gap-3">
+                    <div className="w-8 h-8 rounded-full bg-[#2E7D32] text-white flex items-center justify-center shrink-0">
+                      <Check className="w-5 h-5 stroke-[2.5]" />
+                    </div>
+                    <div>
+                      <div className="font-bold text-[13.5px] text-[#2E7D32]">
+                        Hợp Đồng Thuê #HĐ-UB-2026/8992 Đã Ký Điện Tử Thành Công!
+                      </div>
+                      <div className="text-[11.5px] text-[#6B5C5D]">
+                        Bản hợp đồng pháp lý đã gắn mã số bảo mật và sẵn sàng tải về sau khi cọc giữ lịch.
+                      </div>
+                    </div>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(2)}
+                    className="text-[12px] font-bold text-[#733F49] hover:underline bg-transparent border-0 cursor-pointer shrink-0"
+                  >
+                    Xem lại hợp đồng
+                  </button>
+                </div>
+
+                {/* 1. CHỌN HÌNH THỨC ĐẶT CỌC */}
+                <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
+                  <div className="flex items-center gap-3 pb-4 border-b border-[#F5EDE8] mb-5">
+                    <div className="w-10 h-10 rounded-xl bg-[#FAF0EC] flex items-center justify-center text-[#B8737D]">
+                      <Briefcase className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="font-playfair text-[19px] sm:text-[21px] font-semibold text-[#2C2523] m-0">
+                        Chọn Phương Án Đặt Cọc Giữ Lịch
+                      </h2>
+                      <p className="text-[12px] text-[#847374] m-0 mt-0.5">
+                        Thanh toán cọc ngay để khóa lịch váy độc quyền không nhận thêm lịch khác
+                      </p>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {/* Option 1: 50% deposit */}
+                    <div
+                      onClick={() => setDepositOption('deposit30')}
+                      className={`rounded-2xl p-5 border cursor-pointer transition-all relative ${
+                        depositOption === 'deposit30'
+                          ? 'border-[#733F49] bg-[#FAF3F0] ring-2 ring-[#733F49]/20 shadow-xs'
+                          : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-jakarta font-bold text-[14px] text-[#2C2523]">
+                          Đặt cọc giữ lịch 50%
+                        </span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FAF0EC] text-[#733F49]">
+                          PHỔ BIẾN NHẤT
+                        </span>
+                      </div>
+                      <div className="font-playfair font-bold text-[24px] text-[#733F49] mb-1">
+                        {Math.round(totalRentPrice * 0.5).toLocaleString('vi-VN')}₫
+                      </div>
+                      <p className="text-[11.5px] text-[#6B5C5D] m-0 leading-relaxed">
+                        Thanh toán 50% hôm nay để giữ lịch. Phần còn lại {Math.round(totalRentPrice * 0.5).toLocaleString('vi-VN')}₫ thanh toán khi nhận bàn giao váy.
+                      </p>
+                    </div>
+
+                    {/* Option 2: 100% full pay */}
+                    <div
+                      onClick={() => setDepositOption('full100')}
+                      className={`rounded-2xl p-5 border cursor-pointer transition-all relative ${
+                        depositOption === 'full100'
+                          ? 'border-[#733F49] bg-[#FAF3F0] ring-2 ring-[#733F49]/20 shadow-xs'
+                          : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
+                      }`}
+                    >
+                      <div className="flex items-center justify-between mb-2">
+                        <span className="font-jakarta font-bold text-[14px] text-[#2C2523]">
+                          Thanh toán 100% trọn gói
+                        </span>
+                        <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8F5E9] text-[#2E7D32]">
+                          TẶNG VOAN REN CAO CẤP
+                        </span>
+                      </div>
+                      <div className="font-playfair font-bold text-[24px] text-[#733F49] mb-1">
+                        {totalRentPrice.toLocaleString('vi-VN')}₫
+                      </div>
+                      <p className="text-[11.5px] text-[#6B5C5D] m-0 leading-relaxed">
+                        Thanh toán toàn bộ phí thuê váy hôm nay. Tặng miễn phí mượn bộ voan cài đầu ren Pháp đồng bộ trị giá 1.500.000₫.
+                      </p>
+                    </div>
+                  </div>
+                </section>
+
+                {/* 2. THANH TOÁN BẰNG QUÉT MÃ VIETQR */}
+                <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
+                  <div className="flex items-center gap-3 pb-4 border-b border-[#F5EDE8] mb-6">
+                    <div className="w-10 h-10 rounded-xl bg-[#FAF0EC] flex items-center justify-center text-[#B8737D]">
+                      <QrCode className="w-5 h-5" />
+                    </div>
+                    <div>
+                      <h2 className="font-playfair text-[19px] sm:text-[21px] font-semibold text-[#2C2523] m-0">
+                        Thanh Toán Đặt Cọc Bằng Quét Mã VietQR
+                      </h2>
+                      <p className="text-[12px] text-[#847374] m-0 mt-0.5">
+                        Chuyển khoản 24/7 tức thì qua mã VietQR liên ngân hàng, tự động xác nhận đơn cọc
+                      </p>
+                    </div>
+                  </div>
+
+                  {/* VietQR Payment Details Box */}
+                  <div className="p-5 sm:p-6 rounded-2xl bg-[#FCF9F6] border border-[#EEDECF] flex flex-col md:flex-row items-center gap-6">
+                    {/* QR Box */}
+                    <div className="w-48 h-52 bg-white p-3 rounded-2xl border border-[#EEDECF] shadow-sm flex flex-col items-center justify-center shrink-0">
+                      <QrCode className="w-36 h-36 text-[#2C2523]" />
+                      <span className="text-[10.5px] font-mono text-[#733F49] font-bold mt-1.5 tracking-wider">
+                        VIETQR 24/7 PRO
+                      </span>
+                    </div>
+
+                    {/* Bank Transfer Details */}
+                    <div className="space-y-3 text-[13px] flex-1 w-full">
+                      <div>
+                        <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#847374] block mb-0.5">
+                          NGÂN HÀNG THỤ HƯỞNG
+                        </span>
+                        <strong className="text-[#2C2523] text-[15px]">
+                          Techcombank — Chi nhánh TP. Hồ Chí Minh
+                        </strong>
+                      </div>
+
+                      <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-[#EEDECF]">
+                        <div>
+                          <span className="text-[10px] text-[#847374] block uppercase font-bold">SỐ TÀI KHOẢN:</span>
+                          <strong className="font-mono text-[16px] text-[#733F49] tracking-wider">
+                            1903 8899 2200 88
+                          </strong>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard('19038899220088')}
+                          className="px-3 py-1.5 text-[11.5px] font-bold text-[#733F49] bg-[#FAF0EC] rounded-lg border border-[#F2D8D4] hover:bg-[#F2DDD9] cursor-pointer transition-colors"
+                        >
+                          Sao chép
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-[#EEDECF]">
+                        <div>
+                          <span className="text-[10px] text-[#847374] block uppercase font-bold">SỐ TIỀN CỌC HÔM NAY:</span>
+                          <strong className="font-mono text-[16px] text-[#2E7D32]">
+                            {amountToPayToday.toLocaleString('vi-VN')}₫
+                          </strong>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(String(amountToPayToday))}
+                          className="px-3 py-1.5 text-[11.5px] font-bold text-[#733F49] bg-[#FAF0EC] rounded-lg border border-[#F2D8D4] hover:bg-[#F2DDD9] cursor-pointer transition-colors"
+                        >
+                          Sao chép
+                        </button>
+                      </div>
+
+                      <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-[#EEDECF]">
+                        <div>
+                          <span className="text-[10px] text-[#847374] block uppercase font-bold">NỘI DUNG CHUYỂN KHOẢN:</span>
+                          <strong className="font-mono text-[14px] text-[#733F49]">
+                            UB COC 8992 {phone.replace(/\s/g, '')}
+                          </strong>
+                        </div>
+                        <button
+                          type="button"
+                          onClick={() => copyToClipboard(`UB COC 8992 ${phone.replace(/\s/g, '')}`)}
+                          className="px-3 py-1.5 text-[11.5px] font-bold text-[#733F49] bg-[#FAF0EC] rounded-lg border border-[#F2D8D4] hover:bg-[#F2DDD9] cursor-pointer transition-colors"
+                        >
+                          Sao chép
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                </section>
+
+                {/* Confirm Final Payment Button */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(2)}
+                    className="w-full sm:w-auto px-5 py-3 rounded-xl bg-white border border-[#EEDECF] text-[#2C2523] text-[13px] font-bold hover:bg-[#FAF0EC] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Quay lại Bước 2: Xem Hợp đồng</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={handleConfirmFinalPayment}
+                    className="w-full sm:w-auto px-8 py-4 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer border-0 flex items-center justify-center gap-2"
+                  >
+                    <Lock className="w-4 h-4" />
+                    <span>XÁC NHẬN THANH TOÁN & KHÓA LỊCH ĐẶT THUÊ</span>
+                  </button>
+                </div>
+
+              </div>
+            )}
+
+          </div>
+
+          {/* ================= RIGHT COLUMN: STICKY SUMMARY CARD ================= */}
+          <div className="lg:col-span-5 xl:col-span-4 sticky top-24 space-y-4 print:hidden">
+            
+            <div className="bg-white rounded-3xl border border-[#F0E5DC] shadow-[0_8px_32px_rgba(44,37,35,0.06)] overflow-hidden">
+              
+              {/* Card Header Bar */}
+              <div className="bg-[#FAF4EE] px-5 py-3.5 border-b border-[#EEDECF] flex items-center justify-between gap-2 text-[12px]">
+                <div className="truncate">
+                  <span className="font-bold text-[#733F49] uppercase tracking-wide text-[11px]">
+                    LỄ PHỤC THUÊ ĐỘC BẢN
+                  </span>
+                  <span className="text-[#847374] ml-1.5 hidden sm:inline">
+                    • {activeDress?.silhouette || 'Ballgown'}
+                  </span>
+                </div>
+                <div className="shrink-0 flex items-center gap-1 text-[10.5px] font-bold text-[#B8737D] bg-white px-2 py-0.5 rounded-full border border-[#F2D8D4]">
+                  <ShieldCheck className="w-3 h-3" />
+                  <span>Cọc bảo lãnh: {depositCollateral.toLocaleString('vi-VN')}₫</span>
+                </div>
+              </div>
+
+              {/* Card Body */}
+              <div className="p-5 sm:p-6 space-y-5">
+                
+                {/* Product Info Row */}
+                <div className="flex gap-4 pb-5 border-b border-[#F5EDE8]">
+                  <div className="relative w-20 h-26 rounded-xl overflow-hidden shrink-0 border border-[#EEDECF]">
+                    <img
+                      src={activeDress?.images?.[0] || activeDress?.image}
+                      alt={activeDress?.name}
+                      className="w-full h-full object-cover"
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0">
+                    <div className="font-playfair font-bold text-[16px] text-[#2C2523] leading-snug truncate">
+                      {activeDress?.name}
+                    </div>
+                    <div className="text-[12px] text-[#847374] mt-0.5">
+                      Mã: <span className="font-mono text-[#733F49] font-bold">{activeDress?.code || 'UB-HC-2026'}</span>
+                    </div>
+                    <div className="text-[11.5px] text-[#6B5C5D] mt-1">
+                      Size: <strong>{selectedSize}</strong> • Gói 4 ngày
+                    </div>
+                    <div className="font-playfair font-bold text-[17px] text-[#733F49] mt-2">
+                      {totalRentPrice.toLocaleString('vi-VN')}₫
+                    </div>
+                  </div>
+                </div>
+
+                {/* Progress / Step Overview Badge */}
+                <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF] space-y-1 text-[12px]">
+                  <div className="flex items-center justify-between text-[#847374]">
+                    <span>Tiến độ hợp đồng:</span>
+                    <strong className="text-[#733F49]">
+                      {currentStep === 1 && 'Bước 1: Điền thông tin'}
+                      {currentStep === 2 && 'Bước 2: Ký hợp đồng điện tử'}
+                      {currentStep === 3 && 'Bước 3: Đặt cọc giữ lịch'}
+                    </strong>
+                  </div>
+                  <div className="flex items-center justify-between text-[#847374]">
+                    <span>Trạng thái chữ ký:</span>
+                    <strong className={isContractSigned ? 'text-[#2E7D32]' : 'text-[#D4AF37]'}>
+                      {isContractSigned ? '✓ Đã ký hợp đồng' : 'Chưa ký'}
+                    </strong>
+                  </div>
+                </div>
+
+                {/* Price Breakdown */}
+                <div className="space-y-2.5 text-[13px]">
+                  <div className="flex items-center justify-between text-[#6B5C5D]">
+                    <span>Giá thuê lễ phục (4 ngày):</span>
+                    <span className="font-bold text-[#2C2523]">{totalRentPrice.toLocaleString('vi-VN')}₫</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[#6B5C5D]">
+                    <span>Dịch vụ giặt sấy tiệt trùng:</span>
+                    <span className="font-bold text-[#2E7D32]">0₫ (Miễn Phí)</span>
+                  </div>
+                  <div className="flex items-center justify-between text-[#6B5C5D]">
+                    <span>May đo & chỉnh phom theo số đo:</span>
+                    <span className="font-bold text-[#2E7D32]">0₫ (Miễn Phí)</span>
+                  </div>
+
+                  <div className="pt-3 border-t border-[#F5EDE8] flex items-center justify-between">
+                    <div>
+                      <span className="text-[13.5px] font-bold text-[#2C2523] block">Số tiền cọc hôm nay:</span>
+                      <span className="text-[11px] text-[#847374]">
+                        {depositOption === 'deposit30' ? '(Tạm ứng cọc giữ lịch 50%)' : '(Thanh toán 100% trọn gói)'}
+                      </span>
+                    </div>
+                    <span className="font-playfair font-bold text-[22px] text-[#733F49]">
+                      {amountToPayToday.toLocaleString('vi-VN')}₫
+                    </span>
+                  </div>
+
+                  <div className="p-3 rounded-xl bg-[#E8F5E9]/50 border border-[#C8E6C9] text-[11px] text-[#2E7D32] space-y-1">
+                    <div className="font-bold flex items-center gap-1">
+                      <Check className="w-3.5 h-3.5" />
+                      <span>CAM KẾT HOÀN CỌC 100%:</span>
+                    </div>
+                    <p className="m-0 text-[#6B5C5D]">
+                      Khoản tiền cọc bảo lãnh {depositCollateral.toLocaleString('vi-VN')}₫ sẽ được hoàn trả tự động vào tài khoản nàng trong vòng 24h sau khi nhận lại lễ phục nguyên vẹn.
+                    </p>
+                  </div>
+                </div>
+
+              </div>
+
+            </div>
+
+          </div>
+
+        </div>
+
+      </main>
+
+      {/* ================= SUCCESS MODAL (HOÀN TẤT ĐẶT THUÊ & HỢP ĐỒNG ĐÃ KÝ) ================= */}
+      {isSuccessModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-[620px] bg-white rounded-3xl shadow-2xl border border-[#EEDECF] overflow-hidden p-6 sm:p-8 text-center space-y-5">
+            
+            <div className="w-16 h-16 rounded-full bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center mx-auto shadow-md">
+              <CheckCircle2 className="w-10 h-10" />
+            </div>
+
+            <div>
+              <span className="text-[11px] font-bold uppercase tracking-[2px] text-[#D4AF37] block mb-1">
+                ★ HỢP ĐỒNG SỐ #HĐ-UB-2026/8992 ĐÃ KÍCH HOẠT ★
+              </span>
+              <h2 className="font-playfair text-[24px] sm:text-[30px] font-bold text-[#2C2523] m-0 mb-2">
+                Khóa Lịch Đặt Thuê Thành Công!
+              </h2>
+              <p className="text-[13.5px] text-[#6B5C5D] leading-relaxed max-w-[500px] mx-auto m-0">
+                Chúc mừng cô dâu <strong>{brideName}</strong>. Hợp đồng cho thuê tác phẩm <strong>{activeDress?.name}</strong> đã được ký kết điện tử thành công và lịch độc quyền đã được khóa cho hôn lễ của nàng.
+              </p>
+            </div>
+
+            {/* Contract Ticket Voucher */}
+            <div className="bg-[#FAF4EE] p-4.5 rounded-2xl border border-[#EEDECF] text-left text-[12.5px] space-y-2">
+              <div className="flex items-center justify-between pb-2 border-b border-[#EEDECF]">
+                <span className="text-[#847374]">Mã Hợp Đồng:</span>
+                <strong className="font-mono text-[#733F49] text-[14px]">HĐ-UB-2026/8992</strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#847374]">Trang phục:</span>
+                <strong className="text-[#2C2523]">{activeDress?.name} (Size {selectedSize})</strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#847374]">Thời gian nhận:</span>
+                <strong className="text-[#2C2523]">{rentalSchedule.startDate} — {rentalSchedule.endDate}</strong>
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#847374]">Chữ ký số bên B:</span>
+                <strong className="text-[#2E7D32]">✓ Đã ký bởi {brideName}</strong>
+              </div>
+            </div>
+
+            {/* Modal Actions */}
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => window.print()}
+                className="w-full sm:w-auto px-5 py-3 rounded-xl bg-white border border-[#EEDECF] hover:bg-[#FAF0EC] text-[#733F49] text-[13px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Download className="w-4 h-4" />
+                <span>Tải Hợp Đồng (PDF)</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSuccessModalOpen(false);
+                  navigate('/');
+                }}
+                className="w-full sm:w-auto px-7 py-3 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white text-[13px] font-bold transition-all cursor-pointer border-0 shadow-md"
+              >
+                Về Trang Chủ
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
+
+      <div className="print:hidden">
+        <Footer />
+      </div>
+    </div>
+  );
+}

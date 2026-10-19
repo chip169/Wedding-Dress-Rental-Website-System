@@ -1,0 +1,6 @@
+# Please strictly follow all coding standards and architecture rules defined in AGENTS.md
+# Reference: See AGENTS.md in project root for full guidelines on:
+# 1. Monorepo structure (React 19 + Express REST API)
+# 2. Backend Layered Architecture (Routes -> Controllers -> Services -> Models)
+# 3. Frontend Component-based Architecture, Tailwind CSS + Ant Design, API calling via src/services/
+# 4. Standard API Response format and Naming Conventions

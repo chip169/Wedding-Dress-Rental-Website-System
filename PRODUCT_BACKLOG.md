@@ -1,7 +1,7 @@
 # PRODUCT BACKLOG - WEDDING DRESS RENTAL WEBSITE SYSTEM
-**Dự án**: Hệ thống Website Thuê Áo Cưới (Wedding Dress Rental Website System)  
-**Môn học / Khóa**: WDP301 - Web Development Project  
-**Phương pháp luận**: Agile / Scrum  
+**Dự án**: Hệ thống Website Thuê Áo Cưới (Wedding Dress Rental Website System)
+**Môn học / Khóa**: WDP301 - Web Development Project
+**Phương pháp luận**: Agile / Scrum
 
 ---
 

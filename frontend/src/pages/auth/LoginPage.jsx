@@ -1,65 +1,17 @@
 import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
+import { Mail, Lock, Eye, EyeOff, ArrowLeft, Sparkles, Gem } from 'lucide-react';
 import Logo from '../../components/common/Logo';
 
-// Sparkle Star Icon
-const SparkleIcon = () => (
-  <svg width="12" height="12" viewBox="0 0 16 16" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
-    <path d="M8 0L9.8 6.2L16 8L9.8 9.8L8 16L6.2 9.8L0 8L6.2 6.2L8 0Z" />
-  </svg>
-);
-
-// Diamond Gemstone Icon (Privilege Badge)
-const DiamondIcon = () => (
-  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#854F55" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <path d="M6 3h12l4 6-10 12L2 9l4-6z" />
-    <path d="M2 9h20" />
-    <path d="M10 3L6 9l6 12 6-12-4-6" />
-  </svg>
-);
-
-// Input Icons
-const MailIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7A6663" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="2" y="4" width="20" height="16" rx="2" />
-    <path d="m22 7-8.97 5.7a1.94 1.94 0 0 1-2.06 0L2 7" />
-  </svg>
-);
-
-const LockIcon = () => (
-  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7A6663" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="3" y="11" width="18" height="11" rx="2" ry="2" />
-    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
-  </svg>
-);
-
+const SparkleIcon = () => <Sparkles size={12} fill="currentColor" stroke="none" />;
+const DiamondIcon = () => <Gem size={18} strokeWidth={1.8} color="#854F55" />;
+const MailIcon = () => <Mail size={16} strokeWidth={1.8} color="#7A6663" />;
+const LockIcon = () => <Lock size={16} strokeWidth={1.8} color="#7A6663" />;
 const EyeIcon = ({ visible }) => (
-  visible ? (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7A6663" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-      <circle cx="12" cy="12" r="3" />
-    </svg>
-  ) : (
-    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#7A6663" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19m-6.72-1.07a3 3 0 1 1-4.24-4.24" />
-      <line x1="1" y1="1" x2="23" y2="23" />
-    </svg>
-  )
+  visible ? <Eye size={16} strokeWidth={1.8} color="#7A6663" /> : <EyeOff size={16} strokeWidth={1.8} color="#7A6663" />
 );
-
-const FootnoteLockIcon = () => (
-  <svg width="13" height="14" viewBox="0 0 14 16" fill="none" stroke="#7A6663" strokeWidth="1.3" strokeLinecap="round" strokeLinejoin="round">
-    <rect x="1.5" y="6.5" width="11" height="8.5" rx="1.5" />
-    <path d="M4 6.5V4.5C4 2.84 5.34 1.5 7 1.5C8.66 1.5 10 2.84 10 4.5V6.5" />
-  </svg>
-);
-
-const ArrowBackIcon = () => (
-  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-    <line x1="19" y1="12" x2="5" y2="12" />
-    <polyline points="12 19 5 12 12 5" />
-  </svg>
-);
+const FootnoteLockIcon = () => <Lock size={13} strokeWidth={1.3} color="#7A6663" />;
+const ArrowBackIcon = () => <ArrowLeft size={14} strokeWidth={2} />;
 
 export default function LoginPage() {
   const navigate = useNavigate();

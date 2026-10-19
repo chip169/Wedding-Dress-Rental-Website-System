@@ -1,9 +1,9 @@
 import React from 'react';
-import logoImg from '../assets/logo.png';
+import logoImg from '../../assets/logo.png';
 
-const Footer = () => {
+const Footer = ({ variant }) => {
   return (
-    <footer className="bg-[#FAF7F2] border-t border-[#E6DAC8] pt-14 pb-8 text-[#514344]">
+    <footer className={`${variant === 'profile' ? 'profile-footer' : 'bg-[#FAF7F2]'} border-t border-[#E6DAC8] pt-14 pb-8 text-[#514344]`}>
       <div className="max-w-[1280px] mx-auto px-6 sm:px-8">
         
         {/* 4 Columns Grid */}

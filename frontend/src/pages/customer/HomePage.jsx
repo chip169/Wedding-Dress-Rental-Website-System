@@ -1,16 +1,31 @@
-import React, { useState } from 'react';
-import Header from '../../components/Header';
+import React, { useState, useEffect } from 'react';
+import { useLocation } from 'react-router-dom';
+import Header from '../../components/layout/Header';
 import HeroSection from '../../components/HeroSection';
 import SilhouetteShowcase from '../../components/SilhouetteShowcase';
 import TrendingCollection from '../../components/TrendingCollection';
 import RealBridesGallery from '../../components/RealBridesGallery';
-import Footer from '../../components/Footer';
-import BookingModal from '../../components/BookingModal';
+import Footer from '../../components/layout/Footer';
+import BookingModal from '../../components/common/BookingModal';
 
 export default function HomePage() {
+  const location = useLocation();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
   const [wishlistedIds, setWishlistedIds] = useState([1, 2]);
+
+  // Tự động cuộn đến mục khi URL có hash (ví dụ: /#collection, /#silhouettes, /#brides)
+  useEffect(() => {
+    if (location.hash) {
+      const id = location.hash.replace('#', '');
+      const el = document.getElementById(id);
+      if (el) {
+        setTimeout(() => {
+          el.scrollIntoView({ behavior: 'smooth' });
+        }, 150);
+      }
+    }
+  }, [location]);
 
   const handleOpenBooking = (product = null) => {
     setSelectedProduct(product);
