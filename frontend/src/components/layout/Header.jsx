@@ -193,14 +193,6 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
             Bộ Sưu Tập
           </Link>
 
-          {/* Form Đặt Thuê & Lịch Thử Cho Guest */}
-          <Link
-            to="/thue-nhanh"
-            className="font-jakarta text-[15.5px] font-medium text-[#2C2523] no-underline hover:text-[#B8737D] transition-colors cursor-pointer"
-          >
-            Thuê & Đặt Lịch
-          </Link>
-
           <a
             href="/#brides"
             onClick={(e) => {
@@ -354,14 +346,6 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
             className="block font-jakarta text-[16px] font-semibold text-[#2C2523] no-underline hover:text-[#B8737D]"
           >
             Bộ Sưu Tập
-          </Link>
-
-          <Link
-            to="/thue-nhanh"
-            onClick={() => setMobileMenuOpen(false)}
-            className="block font-jakarta text-[16px] font-semibold text-[#2C2523] no-underline hover:text-[#B8737D]"
-          >
-            Thuê & Đặt Lịch (Guest)
           </Link>
 
 
