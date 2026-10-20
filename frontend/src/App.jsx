@@ -14,6 +14,9 @@ import CartPage from './pages/customer/CartPage';
 import CheckoutPage from './pages/customer/CheckoutPage';
 import AppointmentPage from './pages/customer/AppointmentPage';
 import GuestBookingPage from './pages/customer/GuestBookingPage';
+import StaffDashboardPage from './pages/staff/StaffDashboardPage';
+import AdminDashboardPage from './pages/admin/AdminDashboardPage';
+import RevenueReportPage from './pages/admin/RevenueReportPage';
 
 export default function App() {
   return (
@@ -32,6 +35,12 @@ export default function App() {
         <Route path="/booking" element={<AppointmentPage />} />
         <Route path="/thue-nhanh" element={<GuestBookingPage />} />
         <Route path="/guest-booking" element={<GuestBookingPage />} />
+        <Route path="/staff" element={<Navigate to="/staff/dashboard" replace />} />
+        <Route path="/staff/dashboard" element={<StaffDashboardPage />} />
+        <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+        <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
+        <Route path="/admin/reports/revenue" element={<RevenueReportPage />} />
+        <Route path="/admin/revenue" element={<Navigate to="/admin/reports/revenue" replace />} />
         <Route path="/dresses/:id" element={<DressDetailPage />} />
         <Route path="/dress/:id" element={<DressDetailPage />} />
         <Route path="/profile" element={<ProfilePage />} />
