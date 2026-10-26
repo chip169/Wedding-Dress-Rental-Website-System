@@ -3,7 +3,6 @@ import { Link, useParams } from 'react-router-dom';
 import { ArrowLeft, Check, Heart, Landmark, LockKeyhole, Scissors, Shirt, Truck } from 'lucide-react';
 import AccountLayout from '../../components/layout/AccountLayout';
 import { formatVnd, getDemoOrder } from '../../services/orderService';
-import './AccountPages.css';
 
 const steps = [
   { title: 'Đặt Cọc & Xác Nhận', Icon: Check, description: 'Khách hàng đặt cọc và xác nhận đơn theo kịch bản minh họa.' },

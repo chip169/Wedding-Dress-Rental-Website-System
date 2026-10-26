@@ -38,22 +38,11 @@ const SilhouetteShowcase = ({ onSelectSilhouette }) => {
     <section id="silhouettes" className="py-20 bg-white">
       <div className="max-w-[1280px] mx-auto px-6 sm:px-8">
         
-        {/* Header Section matching screenshot exactly */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-12 sm:mb-14">
-          <div className="max-w-[620px]">
-            <span className="font-jakarta font-bold text-[11px] leading-tight tracking-[2.75px] uppercase text-[#B8737D] block mb-1">
-              ARCHIVAL SILHOUETTES
-            </span>
-            <h2 className="font-playfair text-[32px] sm:text-[40px] leading-[1.15] font-normal tracking-tight text-[#2C2523] m-0">
-              Dáng Váy Tuyệt Tác Cho Nàng Dâu
-            </h2>
-          </div>
-
-          <div className="max-w-[490px] md:pb-[2px]">
-            <p className="font-jakarta font-light text-[13.5px] sm:text-[14px] leading-[22px] text-[#514344] m-0">
-              Mỗi cấu trúc phom dáng là bản giao hưởng giữa kỹ thuật corset siết eo hoàng gia và chất liệu thượng hạng từ Ý & Pháp.
-            </p>
-          </div>
+        {/* Header Section */}
+        <div className="mb-10 sm:mb-12 text-left">
+          <h2 className="font-playfair text-[32px] sm:text-[40px] leading-[1.15] font-normal tracking-tight text-[#2C2523] m-0">
+            Dáng Váy Tuyệt Tác Cho Nàng Dâu
+          </h2>
         </div>
 
         {/* 4 Cards Grid */}

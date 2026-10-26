@@ -27,12 +27,14 @@ import { message } from 'antd';
 import { MOCK_DRESSES } from '../../services/dressService';
 import { addToCart } from '../../services/cartService';
 import { SHOWROOM_BRANCHES, TIME_SLOTS, createAppointment } from '../../services/appointmentService';
+import { useAuth } from '../../contexts/AuthContext';
 
-export default function BookingModal({ isOpen, onClose, preselectedProduct }) {
+export default function BookingModal({ isOpen, onClose, preselectedProduct, initialMode = 'both' }) {
   const navigate = useNavigate();
+  const { user } = useAuth();
 
   // Mode: 'both' (Thuê & Thử váy) | 'rent' (Chỉ thuê) | 'fitting' (Chỉ thử)
-  const [serviceType, setServiceType] = useState('both');
+  const [serviceType, setServiceType] = useState(initialMode);
 
   // Selected dress
   const [selectedDressId, setSelectedDressId] = useState(() => {
@@ -46,11 +48,11 @@ export default function BookingModal({ isOpen, onClose, preselectedProduct }) {
   }, [preselectedProduct, selectedDressId]);
 
   // Guest information
-  const [fullName, setFullName] = useState('Lê Nguyễn Thảo My');
-  const [phone, setPhone] = useState('0938 128 899');
-  const [email, setEmail] = useState('thaomy.bride@gmail.com');
-  const [cccd, setCccd] = useState('079201019888');
-  const [address, setAddress] = useState('120/4 Lê Lai, Phường Bến Thành, Quận 1, TP. HCM');
+  const [fullName, setFullName] = useState(user?.name || '');
+  const [phone, setPhone] = useState(user?.phone || '');
+  const [email, setEmail] = useState(user?.email || '');
+  const [cccd, setCccd] = useState('');
+  const [address, setAddress] = useState('');
 
   // Fitting options
   const [branchId, setBranchId] = useState('hcm-q1');

@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { CheckCircle2, Eye, EyeOff, FileLock2, Info, LockKeyhole, Shield, ShieldCheck } from 'lucide-react';
 import AccountLayout from '../../components/layout/AccountLayout';
-import './AccountPages.css';
 
 const initialValues = { current: '', next: '', confirm: '' };
 

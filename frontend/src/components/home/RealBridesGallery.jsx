@@ -1,5 +1,4 @@
 import React from 'react';
-import { Star } from 'lucide-react';
 
 const reviews = [
   {
@@ -49,37 +48,77 @@ const reviews = [
     ),
     image: 'https://images.unsplash.com/photo-1583939411023-14783179e581?auto=format&fit=crop&w=800&q=85',
   },
+  {
+    id: 4,
+    author: 'Thảo Vy & Daniel Lee',
+    venue: 'Lễ cưới tại InterContinental Danang',
+    dressType: 'A-Line Lace',
+    quote: (
+      <>
+        “Chất liệu ren hoa 3D tinh xảo đến từng đường kim mũi chỉ.{' '}
+        <span className="italic">Váy nhẹ tênh giúp mình di chuyển chào bàn suốt 4 tiếng</span> mà
+        vẫn giữ trọn vẹn phom dáng siết eo hoàn hảo.”
+      </>
+    ),
+    image: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=800&q=85',
+  },
+  {
+    id: 5,
+    author: 'Hà My & Quốc Bảo',
+    venue: 'Lễ cưới tại GEM Center Saigon',
+    dressType: 'Royal Princess',
+    quote: (
+      <>
+        “Được thử váy trong không gian riêng tư và được quay chụp kỷ niệm trước lễ cưới.{' '}
+        <span className="italic">Đội ngũ stylist chăm sóc chu đáo như người nhà</span>, mang lại trải
+        nghiệm may đo hoàng gia đích thực.”
+      </>
+    ),
+    image: 'https://images.unsplash.com/photo-1546804784-896d0dca3800?auto=format&fit=crop&w=800&q=85',
+  },
+  {
+    id: 6,
+    author: 'Kim Ngân & Tuấn Hưng',
+    venue: 'Lễ cưới tại Lotte Hotel Hanoi',
+    dressType: 'Minimalist Silk',
+    quote: (
+      <>
+        “Váy lụa Mikado tối giản nhưng toát lên vẻ sang trọng quý phái.{' '}
+        <span className="italic">Ai nhìn cũng khen gu chọn váy tinh tế, thanh tao</span>. Rất hài
+        lòng với sự chỉn chu và quy trình giặt hấp sinh học sạch sẽ.”
+      </>
+    ),
+    image: 'https://images.unsplash.com/photo-1532712938310-34cb3982ef74?auto=format&fit=crop&w=800&q=85',
+  },
 ];
+
+const allReviews = [...reviews, ...reviews];
 
 const RealBridesGallery = () => {
   return (
-    <section id="brides" className="py-20 bg-[#FAF7F2] border-y border-[#E6DAC8]/60">
+    <section id="brides" className="py-20 bg-[#FAF7F2] border-y border-[#E6DAC8]/60 overflow-hidden">
       <div className="max-w-[1280px] mx-auto px-6 sm:px-8">
         
         {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-end justify-between gap-6 mb-14">
-          <div className="max-w-[620px]">
-            <span className="font-jakarta font-bold text-[11px] leading-[14px] tracking-[2.75px] uppercase text-[#B8737D] block mb-2">
-              UNIBRIDAL REAL BRIDES
-            </span>
-            <h2 className="font-playfair text-[32px] sm:text-[40px] leading-[48px] font-normal tracking-tight text-[#2C2523] m-0">
-              Khoảnh Khắc Của Những Nàng Thơ
-            </h2>
-          </div>
-
-          <div className="max-w-[420px]">
-            <p className="font-jakarta text-[13px] leading-[20px] text-[#514344] m-0">
-              Những nụ cười rạng rỡ và câu chuyện hạnh phúc đọng lại trong từng thước phim cưới.
-            </p>
-          </div>
+        <div className="mb-10 sm:mb-12 text-left">
+          <h2 className="font-playfair text-[32px] sm:text-[40px] leading-[48px] font-normal tracking-tight text-[#2C2523] m-0">
+            Khoảnh Khắc Của Những Nàng Thơ
+          </h2>
         </div>
 
-        {/* 3 Review Cards */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {reviews.map((item) => (
+      </div>
+
+      {/* Infinite Seamless Continuous Running Marquee */}
+      <div className="relative w-full overflow-hidden">
+        {/* Left & Right Soft Fade Gradients */}
+        <div className="pointer-events-none absolute left-0 top-0 bottom-0 w-8 sm:w-24 bg-gradient-to-r from-[#FAF7F2] to-transparent z-10" />
+        <div className="pointer-events-none absolute right-0 top-0 bottom-0 w-8 sm:w-24 bg-gradient-to-l from-[#FAF7F2] to-transparent z-10" />
+
+        <div className="flex gap-6 animate-marquee py-2 px-6">
+          {allReviews.map((item, index) => (
             <div
-              key={item.id}
-              className="bg-white border border-[#E6DAC8] rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between"
+              key={`${item.id}-${index}`}
+              className="w-[310px] sm:w-[350px] md:w-[370px] shrink-0 bg-white border border-[#E6DAC8] rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between select-none"
             >
               <div>
                 {/* Photo */}
@@ -87,7 +126,7 @@ const RealBridesGallery = () => {
                   <img
                     src={item.image}
                     alt={item.author}
-                    className="w-full h-full object-cover object-center"
+                    className="w-full h-full object-cover object-center pointer-events-none"
                   />
                 </div>
 
@@ -125,7 +164,6 @@ const RealBridesGallery = () => {
             </div>
           ))}
         </div>
-
       </div>
     </section>
   );

@@ -1,7 +1,7 @@
 import React from 'react';
 import { CheckCircle } from 'lucide-react';
-import heroBrideImg from '../assets/hero_bride.jpg';
-import laceDetailImg from '../assets/lace_detail.jpg';
+import heroBrideImg from '../../assets/hero_bride.jpg';
+import laceDetailImg from '../../assets/lace_detail.jpg';
 
 const HeroSection = () => {
   return (
@@ -20,7 +20,7 @@ const HeroSection = () => {
             <div className="inline-flex items-center gap-2.5 px-4 py-2 rounded-full bg-white shadow-[0px_2px_10px_rgba(0,0,0,0.04)] mb-6 select-none mt-2 sm:mt-3">
               <span className="w-1.5 h-1.5 rounded-full bg-[#B8737D] shrink-0" />
               <span className="font-jakarta font-semibold text-[11px] sm:text-[11.5px] tracking-[0.2em] uppercase text-[#B8737D] leading-none">
-                HAUTE COUTURE COLLECTION 2026
+                BỘ SƯU TẬP CAO CẤP 2026
               </span>
             </div>
 
@@ -48,33 +48,33 @@ const HeroSection = () => {
             </div>
 
             {/* Separator Line */}
-            <div className="w-full border-t border-[#E6DAC8]/70 pt-8 grid grid-cols-3 gap-4 sm:gap-6">
+            <div className="w-full border-t border-[#E6DAC8]/70 pt-8 flex items-start justify-between gap-3 sm:gap-6 overflow-x-auto sm:overflow-visible">
               {/* Metric 1 */}
-              <div>
+              <div className="shrink-0">
                 <span className="font-playfair text-[32px] sm:text-[36px] font-normal text-[#B8737D] block leading-none mb-1.5">
                   100%
                 </span>
-                <span className="font-jakarta text-[12px] leading-[17px] text-[#514344] block">
+                <span className="font-jakarta text-[11.5px] sm:text-[12px] leading-[17px] text-[#514344] block whitespace-nowrap">
                   Lụa tơ tằm & ren nhập khẩu Pháp
                 </span>
               </div>
 
               {/* Metric 2 */}
-              <div>
+              <div className="shrink-0">
                 <span className="font-playfair text-[32px] sm:text-[36px] font-normal text-[#B8737D] block leading-none mb-1.5">
                   1 : 1
                 </span>
-                <span className="font-jakarta text-[12px] leading-[17px] text-[#514344] block">
+                <span className="font-jakarta text-[11.5px] sm:text-[12px] leading-[17px] text-[#514344] block whitespace-nowrap">
                   Staff tư vấn riêng tư
                 </span>
               </div>
 
               {/* Metric 3 */}
-              <div>
+              <div className="shrink-0">
                 <span className="font-playfair text-[32px] sm:text-[36px] font-normal text-[#B8737D] block leading-none mb-1.5">
                   2.400+
                 </span>
-                <span className="font-jakarta text-[12px] leading-[17px] text-[#514344] block">
+                <span className="font-jakarta text-[11.5px] sm:text-[12px] leading-[17px] text-[#514344] block whitespace-nowrap">
                   Cô dâu tỏa sáng rạng ngời
                 </span>
               </div>

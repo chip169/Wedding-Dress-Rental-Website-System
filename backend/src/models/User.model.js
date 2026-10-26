@@ -57,6 +57,19 @@ const userSchema = new mongoose.Schema(
       district: { type: String, default: '' },
       city: { type: String, default: '' },
     },
+    // Số CCCD / CMND dùng để xác thực hợp đồng điện tử
+    idCard: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    // Danh sách mẫu váy yêu thích đồng bộ tài khoản
+    wishlist: [
+      {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Dress',
+      },
+    ],
     isActive: {
       type: Boolean,
       default: true,

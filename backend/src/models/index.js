@@ -8,6 +8,10 @@ import Order from './Order.model.js';
 import Payment from './Payment.model.js';
 import ReturnInspection from './ReturnInspection.model.js';
 import Review from './Review.model.js';
+import ContractTemplate from './ContractTemplate.model.js';
+import Contract from './Contract.model.js';
+import Conversation from './Conversation.model.js';
+import Message from './Message.model.js';
 
 export {
   Permission,
@@ -20,6 +24,10 @@ export {
   Payment,
   ReturnInspection,
   Review,
+  ContractTemplate,
+  Contract,
+  Conversation,
+  Message,
 };
 
 export default {
@@ -33,4 +41,8 @@ export default {
   Payment,
   ReturnInspection,
   Review,
+  ContractTemplate,
+  Contract,
+  Conversation,
+  Message,
 };

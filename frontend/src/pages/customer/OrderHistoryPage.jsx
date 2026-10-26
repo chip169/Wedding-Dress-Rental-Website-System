@@ -3,7 +3,6 @@ import { Link } from 'react-router-dom';
 import { CalendarDays, Heart, Search } from 'lucide-react';
 import AccountLayout from '../../components/layout/AccountLayout';
 import { formatVnd, getDemoOrders } from '../../services/orderService';
-import './AccountPages.css';
 
 const tabs = [
   { id: 'all', label: 'Tất cả' },
