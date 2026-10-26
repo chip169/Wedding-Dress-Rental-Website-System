@@ -1,18 +1,39 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation } from 'react-router-dom';
+import { Sparkles, X } from 'lucide-react';
 import Header from '../../components/layout/Header';
-import HeroSection from '../../components/HeroSection';
-import SilhouetteShowcase from '../../components/SilhouetteShowcase';
-import TrendingCollection from '../../components/TrendingCollection';
-import RealBridesGallery from '../../components/RealBridesGallery';
+import HeroSection from '../../components/home/HeroSection';
+import SilhouetteShowcase from '../../components/home/SilhouetteShowcase';
+import TrendingCollection from '../../components/home/TrendingCollection';
+import RealBridesGallery from '../../components/home/RealBridesGallery';
 import Footer from '../../components/layout/Footer';
 import BookingModal from '../../components/common/BookingModal';
+import { getWishlistIds, toggleWishlist, WISHLIST_EVENT } from '../../services/wishlistService';
 
 export default function HomePage() {
   const location = useLocation();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [selectedProduct, setSelectedProduct] = useState(null);
-  const [wishlistedIds, setWishlistedIds] = useState([1, 2]);
+  const [wishlistedIds, setWishlistedIds] = useState(() => getWishlistIds());
+  const [toastMessage, setToastMessage] = useState(null);
+
+  const showToast = (msg) => {
+    setToastMessage(msg);
+    setTimeout(() => {
+      setToastMessage(null);
+    }, 3200);
+  };
+
+  // Đồng bộ trạng thái yêu thích với toàn hệ thống
+  useEffect(() => {
+    const refresh = () => setWishlistedIds(getWishlistIds());
+    window.addEventListener(WISHLIST_EVENT, refresh);
+    window.addEventListener('storage', refresh);
+    return () => {
+      window.removeEventListener(WISHLIST_EVENT, refresh);
+      window.removeEventListener('storage', refresh);
+    };
+  }, []);
 
   // Tự động cuộn đến mục khi URL có hash (ví dụ: /#collection, /#silhouettes, /#brides)
   useEffect(() => {
@@ -38,8 +59,11 @@ export default function HomePage() {
   };
 
   const handleToggleWishlist = (id) => {
-    setWishlistedIds((prev) =>
-      prev.includes(id) ? prev.filter((item) => item !== id) : [...prev, id]
+    const result = toggleWishlist(id);
+    showToast(
+      result?.isAdded
+        ? 'Đã thêm váy vào danh sách yêu thích ♥'
+        : 'Đã xóa váy khỏi danh sách yêu thích'
     );
   };
 
@@ -58,6 +82,21 @@ export default function HomePage() {
         onOpenBooking={() => handleOpenBooking(null)}
         wishlistCount={wishlistedIds.length}
       />
+
+      {/* Toast Notification */}
+      {toastMessage && (
+        <div className="fixed bottom-6 right-6 z-50 bg-[#2C2523] text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-[#E6DAC8]/40 animate-bounce text-[13px] font-medium">
+          <Sparkles className="w-4 h-4 text-[#B8737D]" />
+          <span>{toastMessage}</span>
+          <button
+            type="button"
+            onClick={() => setToastMessage(null)}
+            className="text-white/60 hover:text-white ml-2 bg-transparent border-0 cursor-pointer p-0"
+          >
+            <X className="w-4 h-4" />
+          </button>
+        </div>
+      )}
 
       {/* 2. Main Page Content */}
       <main className="flex-1 w-full">

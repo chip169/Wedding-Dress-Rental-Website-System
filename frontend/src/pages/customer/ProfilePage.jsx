@@ -5,7 +5,36 @@ import { BadgeCheck, Camera, Check, IdCard, Upload } from 'lucide-react';
 import AccountLayout from '../../components/layout/AccountLayout';
 import emblemImg from '../../assets/images/unibridal-emblem-transparent.png';
 import { clearProfile, loadProfile, saveProfile } from '../../services/profileService';
-import './ProfilePage.css';
+
+const profileStyles = `
+:where(.profile-page) :is(h1, h2, h3, h4, p) { margin: 0; }
+:where(.profile-page) button { background-color: transparent; font-family: inherit; cursor: pointer; }
+.profile-page { background: #fff8f6; }
+.profile-main { min-height: 809.5px; }
+.profile-page button, .profile-page a, .profile-page input { -webkit-tap-highlight-color: transparent; }
+.profile-page :is(button, a, input):focus-visible { outline: 2px solid #874e57; outline-offset: 4px; }
+.profile-form .ant-form-item { margin-bottom: 16px; }
+.profile-form .ant-form-item-label { padding-bottom: 4px; }
+.profile-form .ant-form-item-label > label { font-size: 11px; height: auto; color: #514344; }
+.profile-form .ant-input { background: #fff8f6; }
+.profile-form .ant-select { width: 100%; }
+.profile-form .ant-select-selector { background: #fff8f6 !important; }
+.profile-form .ant-input:hover, .profile-form .ant-input:focus { border-color: #b8737d; }
+.profile-footer { background: #fff1ed; min-height: 378px; }
+@media (min-width: 1024px) {
+  .profile-identity { padding-top: 14px; padding-bottom: 14px; }
+  .profile-contact-title { margin-bottom: 8px; }
+  .profile-form .ant-form-item { margin-bottom: 9px; }
+  .profile-form .ant-form-item-label, .profile-form .ant-form-item-label > label { line-height: 16px; }
+  .profile-sidebar nav > button { padding-top: 8.5px; padding-bottom: 8.5px; }
+  .profile-sidebar nav > button:last-child { padding-top: 9px; padding-bottom: 8px; }
+}
+@media (max-width: 1023px) { .profile-main { min-height: auto; } }
+@media (max-width: 479px) {
+  .profile-cancel { min-width: 95px; }
+  .profile-card { padding-left: 18px; padding-right: 18px; }
+}
+`;
 
 export default function ProfilePage() {
   const [initial] = useState(loadProfile);
@@ -76,6 +105,7 @@ export default function ProfilePage() {
 
   return <ConfigProvider theme={{ token: { colorPrimary: '#874e57', colorText: '#302725', colorBorder: '#eadbd8', borderRadius: 2, controlHeight: 44, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14 }, components: { Input: { activeShadow: '0 0 0 2px #b8737d20' }, Select: { selectorBg: '#fff8f6' } } }}>
     <AccountLayout onLogout={logout} breadcrumb={[{ label: 'Chỉnh Sửa Hồ Sơ' }]}>
+          <style>{profileStyles}</style>
           <section className="profile-card rounded-lg bg-white px-5 py-8 sm:px-7" aria-labelledby="profile-title">
             <p className="mb-2 text-[11px] uppercase tracking-[1px] text-[#874e57]">Thông tin cá nhân</p>
             <h1 id="profile-title" className="font-playfair text-[23px] font-normal leading-tight">Chỉnh Sửa Hồ Sơ</h1>

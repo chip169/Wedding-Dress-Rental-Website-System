@@ -1,11 +1,12 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Heart } from 'lucide-react';
-import { getAllDresses } from '../services/dressService';
-import card1Img from '../assets/card1_elysian.jpg';
-import card2Img from '../assets/card2_celeste.jpg';
-import card3Img from '../assets/card3_lumiere.jpg';
-import card4Img from '../assets/card4_monet.jpg';
+import { getAllDresses } from '../../services/dressService';
+import { getWishlistIds, toggleWishlist, WISHLIST_EVENT } from '../../services/wishlistService';
+import card1Img from '../../assets/card1_elysian.jpg';
+import card2Img from '../../assets/card2_celeste.jpg';
+import card3Img from '../../assets/card3_lumiere.jpg';
+import card4Img from '../../assets/card4_monet.jpg';
 
 const products = [
   {
@@ -76,9 +77,22 @@ const renderDepositWithDong = (amountStr) => {
   );
 };
 
-const TrendingCollection = ({ onBookProduct, onToggleWishlist, wishlistedIds = [1] }) => {
+const TrendingCollection = ({ onBookProduct, onToggleWishlist, wishlistedIds: propWishlistedIds }) => {
   const navigate = useNavigate();
   const [items, setItems] = useState(products);
+  const [internalWishlistIds, setInternalWishlistIds] = useState(() => getWishlistIds());
+
+  useEffect(() => {
+    const refresh = () => setInternalWishlistIds(getWishlistIds());
+    window.addEventListener(WISHLIST_EVENT, refresh);
+    window.addEventListener('storage', refresh);
+    return () => {
+      window.removeEventListener(WISHLIST_EVENT, refresh);
+      window.removeEventListener('storage', refresh);
+    };
+  }, []);
+
+  const wishlistedIds = propWishlistedIds || internalWishlistIds;
 
   useEffect(() => {
     let isMounted = true;
@@ -116,9 +130,6 @@ const TrendingCollection = ({ onBookProduct, onToggleWishlist, wishlistedIds = [
 
         {/* Section Header */}
         <div className="max-w-[700px] mb-10 sm:mb-12 text-left">
-          <span className="font-jakarta font-semibold text-[11px] sm:text-[11.5px] tracking-[0.2em] uppercase text-[#B8737D] block mb-0.5 leading-none">
-            WEDDING DRESS RENTAL
-          </span>
           <h2 className="font-playfair text-[38px] sm:text-[44px] leading-[1.15] font-normal tracking-tight text-[#221816] mb-3 m-0">
             Xu Hướng Váy Cưới 2026
           </h2>
@@ -130,7 +141,13 @@ const TrendingCollection = ({ onBookProduct, onToggleWishlist, wishlistedIds = [
         {/* 4-Column Product Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5 sm:gap-6">
           {items.map((item) => {
-            const isWishlisted = wishlistedIds.includes(item.id);
+            const isWishlisted = Boolean(
+              Array.isArray(wishlistedIds) &&
+              wishlistedIds.some((w) => {
+                const wId = typeof w === 'object' && w !== null ? w?.id : w;
+                return String(wId) === String(item.id) || Number(wId) === Number(item.id);
+              })
+            );
             return (
               <div
                 key={item.id}
@@ -145,22 +162,25 @@ const TrendingCollection = ({ onBookProduct, onToggleWishlist, wishlistedIds = [
                     className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500 ease-out"
                   />
 
-                  {/* Left Badges */}
-                  <div className="absolute top-4 left-4 flex flex-col items-start gap-2 z-10">
-                    <span className="h-[36px] px-4 rounded-full bg-white text-[#B26B74] font-jakarta font-bold text-[11px] tracking-[0.5px] uppercase shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex items-center justify-center">
-                      {item.badgeMain}
-                    </span>
-                    <span className="h-[32px] px-3.5 rounded-full bg-[#FDF2F0] border border-[#F7D8D4] text-[#B26B74] font-jakarta font-medium text-[11.5px] tracking-normal shadow-[0_1px_4px_rgba(0,0,0,0.02)] flex items-center justify-center">
-                      {item.badgeSub}
-                    </span>
-                  </div>
+                  {/* Left Badge */}
+                  {item.badgeSub && (
+                    <div className="absolute top-4 left-4 z-10">
+                      <span className="h-[32px] px-3.5 rounded-full bg-[#FDF2F0] border border-[#F7D8D4] text-[#B26B74] font-jakarta font-medium text-[11.5px] tracking-normal shadow-[0_1px_4px_rgba(0,0,0,0.02)] flex items-center justify-center">
+                        {item.badgeSub}
+                      </span>
+                    </div>
+                  )}
 
                   {/* Right Heart Button (Rounded rectangle squircle matching reference) */}
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      onToggleWishlist && onToggleWishlist(item.id);
+                      if (onToggleWishlist) {
+                        onToggleWishlist(item.id);
+                      } else {
+                        toggleWishlist(item.id);
+                      }
                     }}
                     className="absolute top-4 right-4 w-[36px] h-[36px] rounded-[12px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex items-center justify-center text-[#4A3E3D] hover:text-[#B26B74] border-0 cursor-pointer z-10 transition-transform hover:scale-105 active:scale-90 p-0"
                     title="Yêu thích"

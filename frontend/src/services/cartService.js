@@ -92,6 +92,10 @@ export function removeFromCart(id) {
   return saveCart(getCart().filter((item) => item.id !== String(id)));
 }
 
+export function clearCart() {
+  return saveCart([]);
+}
+
 export function resolveCartItem(item) {
   return { ...CART_CATALOG[item.id], ...item };
 }

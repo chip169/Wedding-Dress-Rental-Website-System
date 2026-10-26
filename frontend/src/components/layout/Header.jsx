@@ -1,11 +1,12 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
-import { ShoppingBag, Heart, User, Calendar, ChevronDown, Menu, X, LogOut } from 'lucide-react';
+import { ShoppingBag, Heart, User, Calendar, ChevronDown, Menu, X, LogOut, Bell, MessageSquare } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import { clearProfile } from '../../services/profileService';
 import { CART_EVENT, getCart } from '../../services/cartService';
+import { getWishlistIds, WISHLIST_EVENT } from '../../services/wishlistService';
 
-const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCount = 2 }) => {
+const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCount: propWishlistCount }) => {
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -16,6 +17,7 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
   const [isUserMenuOpen, setIsUserMenuOpen] = useState(false);
   const userTimeoutRef = useRef(null);
   const [internalCartCount, setInternalCartCount] = useState(() => getCart().length);
+  const [internalWishlistCount, setInternalWishlistCount] = useState(() => getWishlistIds().length);
 
   useEffect(() => {
     const refreshCart = () => setInternalCartCount(getCart().length);
@@ -27,7 +29,23 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
     };
   }, []);
 
+  useEffect(() => {
+    const refreshWishlist = () => setInternalWishlistCount(getWishlistIds().length);
+    window.addEventListener(WISHLIST_EVENT, refreshWishlist);
+    window.addEventListener('storage', refreshWishlist);
+    return () => {
+      window.removeEventListener(WISHLIST_EVENT, refreshWishlist);
+      window.removeEventListener('storage', refreshWishlist);
+    };
+  }, []);
+
   const cartCount = propCartCount !== undefined ? propCartCount : internalCartCount;
+  const wishlistCount = propWishlistCount !== undefined ? propWishlistCount : internalWishlistCount;
+  const isWishlistPage = location.pathname === '/wishlist' || location.pathname === '/yeu-thich';
+  const isMessagesPage = location.pathname === '/tin-nhan' || location.pathname === '/messages' || location.pathname === '/chat';
+  const isAboutPage = location.pathname === '/about' || location.pathname === '/ve-chung-toi';
+  const isCollectionPage = location.pathname === '/collection' || location.pathname === '/bo-suu-tap';
+  const isHomePage = location.pathname === '/';
 
   const categories = [
     {
@@ -67,6 +85,11 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
       title: 'Lịch sử đơn hàng',
       subtitle: 'Tiến độ thuê & thử váy cưới',
       href: '/profile/orders',
+    },
+    {
+      title: 'Quản lý đơn thuê (Staff)',
+      subtitle: 'Bàn giao, kiểm định & định danh số đo',
+      href: '/admin/don-thue',
     },
     {
       title: 'Đổi mật khẩu',
@@ -177,10 +200,14 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
           <Link
             to="/"
             onClick={(e) => {
-              e.preventDefault();
-              handleNavClick('');
+              if (location.pathname === '/') {
+                e.preventDefault();
+                handleNavClick('');
+              }
             }}
-            className="font-jakarta text-[15.5px] font-medium text-[#2C2523] no-underline hover:text-[#B8737D] transition-colors cursor-pointer"
+            className={`font-jakarta text-[15.5px] no-underline transition-colors cursor-pointer ${
+              isHomePage ? 'text-[#804E55] font-semibold' : 'font-medium text-[#2C2523] hover:text-[#B8737D]'
+            }`}
           >
             Trang chủ
           </Link>
@@ -188,35 +215,53 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
           {/* Bộ Sưu Tập - 1 Nút bấm trực tiếp */}
           <Link
             to="/collection"
-            className="font-jakarta text-[15.5px] font-medium text-[#2C2523] no-underline hover:text-[#B8737D] transition-colors cursor-pointer"
+            className={`font-jakarta text-[15.5px] no-underline transition-colors cursor-pointer ${
+              isCollectionPage ? 'text-[#804E55] font-semibold' : 'font-medium text-[#2C2523] hover:text-[#B8737D]'
+            }`}
           >
             Bộ Sưu Tập
           </Link>
 
-          <a
-            href="/#brides"
-            onClick={(e) => {
-              e.preventDefault();
-              handleNavClick('#brides');
-            }}
-            className="font-jakarta text-[15.5px] font-medium text-[#2C2523] no-underline hover:text-[#B8737D] transition-colors cursor-pointer"
+          <Link
+            to="/about"
+            className={`font-jakarta text-[15.5px] no-underline transition-colors cursor-pointer ${
+              isAboutPage ? 'text-[#804E55] font-semibold' : 'font-medium text-[#2C2523] hover:text-[#B8737D]'
+            }`}
           >
             Về chúng tôi
-          </a>
+          </Link>
         </nav>
 
         {/* Action Elements Right */}
-        <div className="flex items-center gap-3 sm:gap-4">
-          {/* Wishlist Heart with badge */}
-          <Link
-            to="/profile/orders"
-            className="relative p-1.5 flex items-center justify-center text-[#2C2523] hover:text-[#B8737D] transition-colors border-0 bg-transparent cursor-pointer no-underline"
-            title="Danh sách yêu thích & Đơn hàng"
+        <div className="flex items-center gap-2.5 sm:gap-3.5">
+          {/* Notification Bell */}
+          <button
+            type="button"
+            className="p-1.5 flex items-center justify-center text-[#2C2523] hover:text-[#B8737D] transition-colors border-0 bg-transparent cursor-pointer"
+            title="Thông báo hệ thống"
+            onClick={() => onOpenBooking ? onOpenBooking() : navigate('/dat-lich')}
           >
-            <Heart className="w-[19px] h-[19px] stroke-[1.8]" />
-            <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-0.5 rounded-full bg-[#B8737D] text-white font-jakarta text-[9.5px] font-bold flex items-center justify-center leading-none">
-              {wishlistCount}
-            </span>
+            <Bell className="w-[19px] h-[19px] stroke-[1.8]" />
+          </button>
+
+          {/* Chat / Support */}
+          <Link
+            to="/tin-nhan"
+            className={`relative w-[36px] h-[36px] sm:w-[38px] sm:h-[38px] flex items-center justify-center rounded-[12px] transition-all duration-300 cursor-pointer no-underline active:scale-95 ${
+              isMessagesPage
+                ? 'bg-[#FFF2F0] border border-[#D498A0] text-[#2C2523] shadow-[0_0_14px_rgba(218,142,150,0.55)]'
+                : 'text-[#2C2523] hover:text-[#B8737D] hover:bg-[#FFF5F3] hover:border hover:border-[#D498A0]/50 hover:shadow-[0_0_10px_rgba(218,142,150,0.35)] border border-transparent'
+            }`}
+            style={
+              isMessagesPage
+                ? {
+                    boxShadow: '0 0 14px rgba(218, 142, 150, 0.55), 0 1px 6px rgba(186, 122, 131, 0.25)',
+                  }
+                : undefined
+            }
+            title="Trò chuyện cùng chuyên viên"
+          >
+            <MessageSquare className="w-[18px] h-[18px] stroke-[1.8] text-[#2C2523]" />
           </Link>
 
           {/* Shopping Bag with badge */}
@@ -229,6 +274,26 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
             <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-0.5 rounded-full bg-[#B8737D] text-white font-jakarta text-[9.5px] font-bold flex items-center justify-center leading-none">
               {cartCount}
             </span>
+          </Link>
+
+          {/* Wishlist Heart (Hiệu ứng active hình vuông bo góc viền hồng + bóng đổ hồng tỏa sáng chuẩn 100% theo mẫu) */}
+          <Link
+            to="/wishlist"
+            className={`relative w-[36px] h-[36px] sm:w-[38px] sm:h-[38px] flex items-center justify-center rounded-[12px] transition-all duration-300 cursor-pointer no-underline active:scale-95 ${
+              isWishlistPage
+                ? 'bg-[#FFF2F0] border border-[#D498A0] text-[#2C2523] shadow-[0_0_14px_rgba(218,142,150,0.55)]'
+                : 'text-[#2C2523] hover:text-[#B8737D] hover:bg-[#FFF5F3] hover:border hover:border-[#D498A0]/50 hover:shadow-[0_0_10px_rgba(218,142,150,0.35)] border border-transparent'
+            }`}
+            style={
+              isWishlistPage
+                ? {
+                    boxShadow: '0 0 14px rgba(218, 142, 150, 0.55), 0 1px 6px rgba(186, 122, 131, 0.25)',
+                  }
+                : undefined
+            }
+            title="Tủ đồ trong mơ (Danh sách yêu thích)"
+          >
+            <Heart className="w-[18px] h-[18px] stroke-[1.8] text-[#2C2523]" />
           </Link>
 
           {/* User Profile Dropdown */}
@@ -349,16 +414,15 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
           </Link>
 
 
-          <a
-            href="/#brides"
-            onClick={(e) => {
-              e.preventDefault();
-              handleNavClick('#brides');
-            }}
-            className="block font-jakarta text-[16px] font-semibold text-[#2C2523] no-underline hover:text-[#B8737D] cursor-pointer"
+          <Link
+            to="/about"
+            onClick={() => setMobileMenuOpen(false)}
+            className={`block font-jakarta text-[16px] no-underline ${
+              isAboutPage ? 'text-[#804E55] font-semibold' : 'font-semibold text-[#2C2523] hover:text-[#B8737D]'
+            }`}
           >
             Về chúng tôi
-          </a>
+          </Link>
 
           <div>
             <div className="text-[11px] font-bold tracking-wider text-[#B8737D] uppercase mb-2">

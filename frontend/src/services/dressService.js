@@ -10,6 +10,7 @@ import card8LaceDream from '../assets/card8_lace_dream.jpg';
 import card9MannequinAtelier from '../assets/card9_mannequin_atelier.jpg';
 import laceDetail from '../assets/lace_detail.jpg';
 import heroBride from '../assets/hero_bride.jpg';
+import { DRESS_CATALOG } from '../data/dressCatalog';
 
 export const MOCK_DRESSES = [
   {
@@ -402,16 +403,139 @@ export const MOCK_DRESSES = [
 ];
 
 /**
+ * Chuyển đổi một phần tử trong DRESS_CATALOG (72 mẫu) thành đối tượng Dress hoàn chỉnh
+ */
+export function convertCatalogItemToDress(item) {
+  if (!item) return null;
+
+  const priceNum = item.priceNumber || (typeof item.price === 'number' ? item.price : parseInt(String(item.price || '5200000').replace(/\D/g, ''), 10)) || 5200000;
+  const depositNum = parseInt(String(item.depositAmount || '15000000').replace(/\D/g, ''), 10) || 15000000;
+  const rentCountNum = parseInt(String(item.rentCount || '89').replace(/\D/g, ''), 10) || 89;
+
+  return {
+    id: item.id,
+    code: `WD-${202600 + item.id}`,
+    name: item.name,
+    slug: item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, ''),
+    categorySlug: item.category || 'ballgown',
+    silhouette: item.categoryName || 'Váy Cưới Cao Cấp',
+    silhouetteCategory: item.categoryName || 'Váy Cưới Thiết Kế Hoàng Gia',
+    description: `Tuyệt phẩm ${item.name} là mẫu thiết kế Haute Couture độc bản năm 2026. Được may đo tinh xảo với cấu trúc siết eo corsetry Pháp tôn trọn vóc dáng kiều diễm, kết hợp chất liệu ${item.material || 'lụa Mikado Ý'} thượng hạng.`,
+    material: item.material || 'Lụa Mikado Ý & Ren Chantilly',
+    color: 'Trắng Ngọc Tinh Khôi',
+    sizes: [
+      { id: 'XS', label: 'XS', note: 'Dưới 46kg', bust: '80-82cm', waist: '58-62cm' },
+      { id: 'S', label: 'S', note: '46 - 52kg', bust: '83-86cm', waist: '63-67cm' },
+      { id: 'M', label: 'M', note: '52 - 58kg', bust: '87-90cm', waist: '68-73cm' },
+      { id: 'L', label: 'L', note: '58 - 65kg', bust: '91-95cm', waist: '74-78cm' },
+    ],
+    images: [
+      item.image,
+      laceDetail,
+      card9MannequinAtelier,
+      heroBride,
+    ],
+    price: priceNum,
+    depositAmount: depositNum,
+    originalPrice: priceNum * 12,
+    status: 'available',
+    rentCount: rentCountNum,
+    isFeatured: true,
+    collectionTag: item.badgeMain || 'THE HAUTE COUTURE BRIDAL 2026',
+    rating: parseFloat(item.rating) || 4.9,
+    reviewCount: 48,
+    highlights: [
+      {
+        icon: 'diamond',
+        label: 'Chất Liệu Cao Cấp',
+        value: item.material || 'Lụa Mikado Ý',
+        sub: 'Tơ tằm tự nhiên 100%',
+      },
+      {
+        icon: 'ruler',
+        label: 'Phom Dáng Thiết Kế',
+        value: item.categoryName || 'Dáng Váy Chuẩn Hoàng Gia',
+        sub: 'Cấu trúc siết eo corsetry Pháp',
+      },
+      {
+        icon: 'sparkles',
+        label: 'Kỹ Thuật Hoàn Thiện',
+        value: 'Đính Kết Thủ Công Độc Bản',
+        sub: 'Hạt pha lê Swarovski cao cấp',
+      },
+    ],
+    colors: [
+      { name: 'Trắng Ngọc Tinh Khôi', hex: '#FFFFFF', border: '#D9D9D9' },
+      { name: 'Trắng Kem Ivory', hex: '#FDFBF7', border: '#E7DEC8' },
+      { name: 'Hồng Pastel Nhẹ Nhàng', hex: '#F5D6D8', border: '#E8B6BC' },
+    ],
+    story: {
+      collection: `BỘ SƯU TẬP ${item.name.toUpperCase()}`,
+      title: `Vẻ Đẹp Quý Phái & Thuần Khiết Của ${item.name}`,
+      content: [
+        `Mỗi đường kim mũi chỉ trên thiết kế ${item.name} kết tinh hơn 380 giờ miệt mài may đo đính kết từ những nghệ nhân thủ công bậc thầy.`,
+        `Chất vải ${item.material || 'thượng hạng'} rủ mềm tôn vinh tối đa những bước đi uyển chuyển, kiêu sa của nàng dâu trong giây phút thiêng liêng bước vào lễ đường thành hôn.`,
+      ],
+      atelierImage: card9MannequinAtelier,
+      stats: [
+        { value: '380h', label: 'ĐÍNH KẾT THỦ CÔNG' },
+        { value: '1.600+', label: 'HẠT SWAROVSKI' },
+        { value: '100%', label: 'LỤA TƠ TẰM NHẬP KHẨU' },
+      ],
+    },
+    realBrides: [
+      {
+        brideName: 'Cô dâu Hà My & Lê Anh',
+        date: '15/10/2026',
+        image: card8LaceDream,
+        quote: `Váy ${item.name} đẹp xuất sắc! Cả hội trường cưới ai cũng khen lộng lẫy. Form siết eo tôn dáng cực kỳ.`,
+      },
+      {
+        brideName: 'Cô dâu Thục Quyên',
+        date: '02/10/2026',
+        image: heroBride,
+        quote: 'Đuôi váy dài thướt tha khi bước vào lễ đường tạo cảm giác như một nàng công chúa đích thực.',
+      },
+      {
+        brideName: 'Cô dâu Lan Chi',
+        date: '28/09/2026',
+        image: card7Vivienne,
+        quote: 'Mặc vào cảm thấy mình như một nữ hoàng trong buổi tiệc tối! Từng đường đính kết bắt sáng lung linh dưới ánh đèn.',
+      },
+    ],
+  };
+}
+
+/**
  * Lấy chi tiết mẫu váy cưới theo ID hoặc Slug
  */
 export async function getDressById(idOrSlug) {
-  const target = String(idOrSlug || '1').toLowerCase();
-  const found = MOCK_DRESSES.find(
+  const target = String(idOrSlug || '1').trim().toLowerCase();
+
+  // 1. Tìm trong MOCK_DRESSES (mục 1-5 có chi tiết thủ công)
+  let found = MOCK_DRESSES.find(
     (d) =>
       String(d.id).toLowerCase() === target ||
       String(d.code).toLowerCase() === target ||
       String(d.slug).toLowerCase() === target
-  ) || MOCK_DRESSES[0];
+  );
+
+  // 2. Tìm trong DRESS_CATALOG (toàn bộ 72 thiết kế)
+  if (!found) {
+    const catalogItem = DRESS_CATALOG.find(
+      (item) =>
+        String(item.id).toLowerCase() === target ||
+        String(item.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') === target
+    );
+    if (catalogItem) {
+      found = convertCatalogItemToDress(catalogItem);
+    }
+  }
+
+  // 3. Dự phòng mặc định
+  if (!found) {
+    found = convertCatalogItemToDress(DRESS_CATALOG[0]) || MOCK_DRESSES[0];
+  }
 
   return {
     success: true,
@@ -424,20 +548,43 @@ export async function getDressById(idOrSlug) {
  */
 export async function getRelatedDresses(currentId) {
   const targetId = Number(currentId) || 1;
-  const filtered = MOCK_DRESSES.filter((d) => d.id !== targetId);
+  const currentItem = DRESS_CATALOG.find((d) => d.id === targetId);
+  const currentCategory = currentItem?.category;
+
+  // Lọc sản phẩm cùng phom dáng trước
+  let related = DRESS_CATALOG.filter(
+    (d) => d.id !== targetId && (!currentCategory || d.category === currentCategory)
+  );
+
+  if (related.length < 4) {
+    const remaining = DRESS_CATALOG.filter(
+      (d) => d.id !== targetId && !related.some((r) => r.id === d.id)
+    );
+    related = [...related, ...remaining];
+  }
+
+  const selected = related.slice(0, 4).map((item) => {
+    const mock = MOCK_DRESSES.find((m) => m.id === item.id);
+    return mock || convertCatalogItemToDress(item);
+  });
+
   return {
     success: true,
-    data: filtered.slice(0, 4),
+    data: selected,
   };
 }
 
 /**
- * Lấy tất cả mẫu váy cưới
+ * Lấy tất cả mẫu váy cưới (toàn bộ 72 thiết kế)
  */
 export async function getAllDresses() {
+  const all = DRESS_CATALOG.map((item) => {
+    const mock = MOCK_DRESSES.find((m) => m.id === item.id);
+    return mock || convertCatalogItemToDress(item);
+  });
   return {
     success: true,
-    data: MOCK_DRESSES,
+    data: all,
   };
 }
 
@@ -448,3 +595,4 @@ export function formatCurrencyVND(amount) {
   if (typeof amount !== 'number') return amount;
   return new Intl.NumberFormat('vi-VN').format(amount) + '₫';
 }
+
