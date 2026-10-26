@@ -1,0 +1,86 @@
+.ub-revenue-page { --wine:#87565c; --ink:#302626; --muted:#786a66; color:var(--ink); }
+.ub-revenue-page button,.ub-revenue-page input,.ub-revenue-page select { font:inherit; }
+.ub-revenue-page button:focus-visible,.ub-revenue-page a:focus-visible,.ub-revenue-page input:focus-visible,.ub-revenue-page select:focus-visible,.ub-revenue-chart-scroll:focus-visible,.ub-revenue-table-scroll:focus-visible,.ub-revenue-modal button:focus-visible { outline:2px solid var(--wine); outline-offset:2px; }
+.ub-revenue-metrics { margin-top:8px; }
+.ub-revenue-metric { min-width:0; min-height:220px; padding:25px 24px 20px; border:1px solid #f7eeea; border-radius:8px; background:#fff; box-shadow:0 2px 8px #6e454608; }
+.ub-revenue-metric-head { display:flex; align-items:flex-start; justify-content:space-between; gap:12px; min-height:44px; color:#806a64; font-size:11px; font-weight:700; letter-spacing:.12em; line-height:1.45; }
+.ub-revenue-metric-head i { display:grid; flex:none; place-items:center; width:33px; height:33px; border-radius:5px; background:#f8e9e6; color:#9d646b; font-style:normal; }
+.ub-revenue-metric > strong { display:block; margin:8px 0 19px; color:#8d555e; font-family:'Playfair Display',Georgia,serif; font-size:clamp(22px,2.15vw,32px); font-weight:500; letter-spacing:-.02em; white-space:nowrap; }
+.ub-revenue-metric-foot p { margin:6px 0; color:#75615c; font-size:11px; line-height:1.55; }
+.ub-revenue-metric-foot p span:not(.ub-revenue-growth) { float:right; }
+.ub-revenue-share { display:flex; align-items:baseline; justify-content:space-between; gap:12px; color:#75615c; font-size:11px; line-height:1.5; }
+.ub-revenue-share span:last-child { flex:none; }
+.ub-revenue-growth { display:inline-flex; align-items:center; gap:3px; margin-right:5px; padding:2px 6px; border-radius:3px; background:#f3eadb; color:#795f46; font-weight:700; }
+.ub-revenue-progress { height:5px; margin:8px 0; border-radius:3px; background:#f6eae6; }
+.ub-revenue-progress span { display:block; height:100%; border-radius:3px; background:#ba7580; }
+.ub-revenue-metric-foot .ub-revenue-protect { display:flex; align-items:center; gap:5px; color:var(--wine); font-weight:700; }
+.ub-revenue-filter { margin-top:28px; padding:16px 18px; border:1px solid #f6ede8; border-radius:8px; background:#fff; }
+.ub-revenue-periods { display:flex; flex-wrap:wrap; gap:3px; width:max-content; max-width:100%; padding:4px; border-radius:5px; background:#f9e9e5; }
+.ub-revenue-periods button { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:34px; padding:7px 11px; border-radius:4px; color:#64514e; font-size:11px; }
+.ub-revenue-periods button.is-active { background:var(--wine); color:#fff; }
+.ub-revenue-periods button:hover:not(.is-active) { background:#f1d8d3; }
+.ub-revenue-filter-bottom { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:12px; }
+.ub-revenue-filter-bottom p { margin:0; color:#8c7872; font-size:11px; }
+.ub-revenue-filter-bottom > div { display:flex; gap:6px; }
+.ub-revenue-filter-bottom button { display:inline-flex; align-items:center; justify-content:center; gap:5px; min-height:29px; padding:5px 9px; border-radius:3px; background:#f9ece9; color:#6f5754; font-size:10px; white-space:nowrap; }
+.ub-revenue-filter-bottom button:hover { background:#efddd8; }
+.ub-revenue-advanced { display:flex; flex-wrap:wrap; gap:10px; margin-top:15px; padding-top:15px; border-top:1px solid #f0e6e1; }
+.ub-revenue-advanced label { display:flex; flex-direction:column; gap:4px; min-width:150px; color:#675450; font-size:10px; font-weight:700; }
+.ub-revenue-advanced input,.ub-revenue-advanced select { min-height:34px; padding:6px 8px; border:1px solid #ead8d1; border-radius:4px; background:#fffaf8; color:#403330; font-size:11px; }
+.ub-revenue-advanced p { flex-basis:100%; margin:0; color:#927e79; font-size:10px; }
+.ub-revenue-chart-card,.ub-revenue-journal { margin-top:26px; padding:23px 23px 18px; border:1px solid #f1e8e4; border-radius:8px; background:#fff; box-shadow:0 2px 7px #79545108; }
+.ub-revenue-chart-top,.ub-revenue-journal-head { display:flex; align-items:flex-start; justify-content:space-between; gap:20px; }
+.ub-revenue-chart-card h2,.ub-revenue-journal h2 { margin:0; color:#392e2b; font-family:'Playfair Display',Georgia,serif; font-size:22px; font-weight:500; line-height:1.25; }
+.ub-revenue-chart-top p,.ub-revenue-journal-head p { margin:5px 0 0; color:#85736e; font-size:11px; line-height:1.5; }
+.ub-revenue-chart-legend { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:14px; padding-top:7px; color:#5e4e49; font-size:10px; white-space:nowrap; }
+.ub-revenue-chart-legend span { display:inline-flex; align-items:center; gap:5px; }
+.ub-revenue-chart-legend i.bar { width:9px; height:9px; border-radius:2px; background:var(--wine); }
+.ub-revenue-chart-legend i.line { width:15px; border-top:2px solid #8b6d45; }
+.ub-revenue-chart-scroll { overflow-x:auto; margin-top:12px; scrollbar-color:#b99892 #f8efeb; }
+.ub-revenue-chart { display:block; width:100%; min-width:620px; height:auto; }
+.ub-revenue-axis { fill:#8d817c; font:10px 'Plus Jakarta Sans',sans-serif; }
+.ub-revenue-bar-label { fill:#fff; font:700 11px 'Plus Jakarta Sans',sans-serif; }
+.ub-revenue-chart-foot { display:flex; align-items:center; justify-content:space-between; gap:18px; margin-top:7px; padding-top:14px; border-top:1px solid #f2e8e4; }
+.ub-revenue-chart-foot p { max-width:55%; margin:0; color:#766863; font-size:11px; line-height:1.5; }
+.ub-revenue-chart-foot a { max-width:40%; color:var(--wine); font-size:11px; font-weight:700; line-height:1.4; text-decoration:none; text-transform:uppercase; }
+.ub-revenue-chart-foot a:hover { text-decoration:underline; }
+.ub-revenue-scroll-hint { display:none; margin:10px 0 0; color:#876e69; font-size:10px; }
+.ub-revenue-journal { margin-top:32px; scroll-margin-top:20px; padding:26px 24px 17px; }
+.ub-revenue-journal h2 { font-size:20px; }
+.ub-revenue-journal-controls { display:flex; flex-wrap:wrap; justify-content:flex-end; gap:6px; }
+.ub-revenue-journal-controls label { display:flex; align-items:center; gap:6px; min-width:200px; height:33px; padding:0 9px; border-radius:3px; background:#fbefec; color:#9d7770; }
+.ub-revenue-journal-controls input { width:100%; min-width:0; border:0; outline:none; background:transparent; color:#463632; font-size:11px; }
+.ub-revenue-journal-controls input::placeholder { color:#9b8881; }
+.ub-revenue-journal-controls select { max-width:145px; height:33px; padding:0 7px; border:0; border-radius:3px; background:#fbefec; color:#685652; font-size:10px; }
+.ub-revenue-table-scroll { width:100%; overflow-x:auto; margin-top:18px; scrollbar-color:#caa9a2 #f9efeb; }
+.ub-revenue-journal table { width:100%; min-width:880px; border-collapse:collapse; text-align:left; }
+.ub-revenue-journal th { padding:13px 10px; background:#f9ece8; color:#836f69; font-size:9px; font-weight:700; letter-spacing:.085em; line-height:1.3; }
+.ub-revenue-journal td { padding:15px 10px; border-bottom:1px solid #f4ebe7; color:#392d2a; font-size:10px; vertical-align:top; line-height:1.5; }
+.ub-revenue-journal td strong { display:block; font-size:11px; font-weight:700; line-height:1.45; }
+.ub-revenue-journal td small { display:block; margin-top:3px; color:#9b8983; font-size:9px; line-height:1.4; }
+.ub-revenue-journal td .ub-revenue-id { color:#a45e66; }
+.ub-revenue-type { display:block; max-width:105px; padding:6px; border-radius:3px; background:#f9eeea; color:#69534e; }
+.ub-revenue-journal td.ub-revenue-amount { text-align:right; white-space:nowrap; }
+.ub-revenue-status { display:inline-block; max-width:95px; padding:6px 9px; border-radius:15px; background:#f5e2cd; color:#705338; font-weight:700; line-height:1.35; text-align:center; }
+.ub-revenue-status.pending { background:#f7e9e6; color:#895c5c; }
+.ub-revenue-status.refund { background:#f8e9e7; color:#a26768; }
+.ub-revenue-detail { display:grid; place-items:center; width:27px; height:27px; border-radius:4px; color:#825b60; }
+.ub-revenue-detail:hover { background:#f9e9e5; }
+.ub-revenue-empty { padding:24px 10px; color:#816e68; font-size:12px; }
+.ub-revenue-pagination { display:flex; align-items:center; justify-content:space-between; gap:12px; margin-top:15px; }
+.ub-revenue-pagination p { margin:0; color:#9b8983; font-size:10px; }
+.ub-revenue-pagination > div { display:flex; gap:3px; }
+.ub-revenue-pagination button { display:grid; place-items:center; min-width:25px; height:25px; border-radius:3px; background:#f9ece9; color:#775e59; font-size:10px; }
+.ub-revenue-pagination button.is-active { background:var(--wine); color:#fff; }
+.ub-revenue-pagination button:disabled { cursor:not-allowed; opacity:.45; }
+.ub-revenue-modal-backdrop { position:fixed; z-index:100; inset:0; display:grid; place-items:center; padding:20px; background:#251b1baa; }
+.ub-revenue-modal { position:relative; width:min(100%,480px); max-height:90vh; overflow:auto; padding:27px; border-radius:8px; background:#fffaf8; box-shadow:0 15px 45px #180c0c33; }
+.ub-revenue-modal-close { position:absolute; top:14px; right:14px; display:grid; place-items:center; width:30px; height:30px; color:#87565c; }
+.ub-revenue-modal > p:first-of-type { margin:0; color:#936d68; font-size:10px; letter-spacing:.12em; }
+.ub-revenue-modal h2 { margin:5px 0 18px; color:#87565c; font-family:'Playfair Display',Georgia,serif; font-size:28px; }
+.ub-revenue-modal dl { display:grid; grid-template-columns:120px 1fr; gap:9px; font-size:12px; }
+.ub-revenue-modal dt { color:#8d746e; }
+.ub-revenue-modal dd { margin:0; color:#372b28; font-weight:600; }
+.ub-revenue-modal > p:last-child { margin:20px 0 0; padding:10px; background:#f8eeea; color:#866a63; font-size:11px; }
+@media(max-width:1120px) { .ub-revenue-metric { padding:18px 15px; } .ub-revenue-metric > strong { font-size:clamp(18px,2.3vw,28px); } .ub-revenue-metric-foot p,.ub-revenue-share { font-size:12px; } .ub-revenue-share { align-items:flex-start; flex-direction:column; gap:1px; } .ub-revenue-chart-top,.ub-revenue-journal-head { flex-direction:column; } .ub-revenue-chart-legend,.ub-revenue-journal-controls { justify-content:flex-start; } }
+@media(max-width:700px) { .ub-revenue-metric { min-height:0; } .ub-revenue-metric > strong { font-size:27px; } .ub-revenue-filter { padding:12px; } .ub-revenue-periods { width:100%; } .ub-revenue-periods button { flex:1 1 40%; font-size:10px; } .ub-revenue-filter-bottom { align-items:flex-start; flex-direction:column; } .ub-revenue-chart-card,.ub-revenue-journal { margin-top:20px; padding:18px 14px; } .ub-revenue-chart-card h2,.ub-revenue-journal h2 { font-size:20px; } .ub-revenue-scroll-hint { display:block; } .ub-revenue-chart-foot { align-items:flex-start; flex-direction:column; } .ub-revenue-chart-foot p,.ub-revenue-chart-foot a { max-width:100%; } .ub-revenue-journal-controls { width:100%; } .ub-revenue-journal-controls label { flex:1; } .ub-revenue-pagination { align-items:flex-start; flex-direction:column; } }
