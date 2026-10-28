@@ -115,7 +115,7 @@ const Footer = ({ variant }) => {
         {/* Bottom Bar */}
         <div className="pt-8 border-t border-[#E6DAC8]/60 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="font-jakarta text-[11px] text-[#514344] m-0 text-center md:text-left">
-            © 2026 UniBridal Haute Couture Atelier. All rights reserved. Nghiêm cấm sao chép bản quyền thiết kế.
+            © 2026 UniBridal Haute Couture Atelier. Bảo lưu mọi quyền. Nghiêm cấm sao chép bản quyền thiết kế.
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-3 font-jakarta text-[11px] text-[#514344]">
