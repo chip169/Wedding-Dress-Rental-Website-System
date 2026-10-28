@@ -131,3 +131,7 @@ export const checkPermission = (requiredPermissionCode) => {
     next();
   };
 };
+
+export const verifyToken = authenticate;
+
+
