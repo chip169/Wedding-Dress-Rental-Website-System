@@ -868,50 +868,6 @@ export default function CheckoutPage() {
 
                 {/* 2. LỊCH TRÌNH THUÊ & PHƯƠNG THỨC BÀN GIAO */}
                 <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
-                  <div className="flex items-center justify-between pb-5 border-b border-[#F5EDE8] mb-6">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#FAF0EC] flex items-center justify-center text-[#B8737D]">
-                        <Calendar className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h2 className="font-playfair text-[19px] sm:text-[21px] font-semibold text-[#2C2523] m-0">
-                          Lịch Trình Đặt Thuê & Bàn Giao
-                        </h2>
-                        <p className="text-[12px] text-[#847374] m-0 mt-0.5">
-                          Thời gian thuê: <strong className="text-[#733F49]">{rentalDays} ngày</strong> • Nhận từ {rentalSchedule.startDate} đến {rentalSchedule.endDate}
-                        </p>
-                      </div>
-                    </div>
-
-                    {/* Bộ tăng giảm nhanh số ngày */}
-                    <div className="flex items-center gap-2 bg-[#FCF9F6] border border-[#EEDECF] px-3.5 py-2 rounded-xl self-start sm:self-auto shadow-2xs">
-                      <span className="text-[11px] font-bold text-[#847374] uppercase tracking-wider">Số ngày thuê:</span>
-                      <div className="flex items-center gap-1.5">
-                        <button
-                          type="button"
-                          onClick={() => handleRentalDaysChange(rentalDays - 1)}
-                          disabled={rentalDays <= 2}
-                          aria-label="Giảm ngày thuê"
-                          className="w-7 h-7 rounded-lg border border-[#EEDECF] bg-white text-[#733F49] flex items-center justify-center hover:bg-[#FAF0EC] disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
-                        >
-                          <Minus className="w-3.5 h-3.5" />
-                        </button>
-                        <span className="font-jakarta font-extrabold text-[17px] text-[#733F49] min-w-[65px] text-center tabular-nums">
-                          {rentalDays} Ngày
-                        </span>
-                        <button
-                          type="button"
-                          onClick={() => handleRentalDaysChange(rentalDays + 1)}
-                          disabled={rentalDays >= 14}
-                          aria-label="Tăng ngày thuê"
-                          className="w-7 h-7 rounded-lg border border-[#EEDECF] bg-white text-[#733F49] flex items-center justify-center hover:bg-[#FAF0EC] disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
-                        >
-                          <Plus className="w-3.5 h-3.5" />
-                        </button>
-                      </div>
-                    </div>
-                  </div>
-
                   {/* 3 Thẻ Chọn Ngày Tương Tác Kèm DatePicker */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
 
