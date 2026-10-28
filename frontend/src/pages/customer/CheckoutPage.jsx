@@ -503,7 +503,7 @@ export default function CheckoutPage() {
                             setBrideName(e.target.value);
                             setContractSignature(e.target.value);
                           }}
-                          className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
+                          className="w-full bg-white border border-[#E2D2C2] rounded-xl px-4 py-3 font-jakarta text-[15px] text-[#2C2523] font-semibold tabular-nums focus:outline-none focus:border-[#733F49] focus:ring-2 focus:ring-[#733F49]/15 shadow-2xs transition-all"
                           placeholder="Lê Nguyễn Thảo My"
                         />
                       </div>
@@ -517,7 +517,7 @@ export default function CheckoutPage() {
                           required
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
-                          className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
+                          className="w-full bg-white border border-[#E2D2C2] rounded-xl px-4 py-3 font-jakarta text-[15px] text-[#2C2523] font-semibold tabular-nums focus:outline-none focus:border-[#733F49] focus:ring-2 focus:ring-[#733F49]/15 shadow-2xs transition-all"
                           placeholder="09xx xxx xxx"
                         />
                       </div>
@@ -533,7 +533,7 @@ export default function CheckoutPage() {
                           required
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
+                          className="w-full bg-white border border-[#E2D2C2] rounded-xl px-4 py-3 font-jakarta text-[15px] text-[#2C2523] font-semibold tabular-nums focus:outline-none focus:border-[#733F49] focus:ring-2 focus:ring-[#733F49]/15 shadow-2xs transition-all"
                           placeholder="thaomy.bride@gmail.com"
                         />
                       </div>
@@ -547,7 +547,7 @@ export default function CheckoutPage() {
                           required
                           value={cccd}
                           onChange={(e) => setCccd(e.target.value)}
-                          className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
+                          className="w-full bg-white border border-[#E2D2C2] rounded-xl px-4 py-3 font-jakarta text-[15px] text-[#2C2523] font-semibold tabular-nums focus:outline-none focus:border-[#733F49] focus:ring-2 focus:ring-[#733F49]/15 shadow-2xs transition-all"
                           placeholder="079201019888"
                         />
                       </div>
@@ -562,7 +562,7 @@ export default function CheckoutPage() {
                         required
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
-                        className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
+                        className="w-full bg-white border border-[#E2D2C2] rounded-xl px-4 py-3 font-jakarta text-[15px] text-[#2C2523] font-semibold tabular-nums focus:outline-none focus:border-[#733F49] focus:ring-2 focus:ring-[#733F49]/15 shadow-2xs transition-all"
                         placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố"
                       />
                     </div>
@@ -599,7 +599,7 @@ export default function CheckoutPage() {
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
-                        <span className="font-playfair font-bold text-[15px] text-[#733F49] min-w-[55px] text-center">
+                        <span className="font-jakarta font-extrabold text-[17px] text-[#733F49] min-w-[65px] text-center tabular-nums">
                           {rentalDays} Ngày
                         </span>
                         <button
@@ -664,7 +664,7 @@ export default function CheckoutPage() {
                             )}
                             <div className="flex items-center justify-between">
                               <span
-                                className={`font-playfair font-bold text-[15px] ${
+                                className={`font-jakarta font-extrabold text-[16px] tabular-nums ${
                                   isSelected ? 'text-[#733F49]' : 'text-[#2C2523]'
                                 }`}
                               >
@@ -687,7 +687,7 @@ export default function CheckoutPage() {
                     
                     {/* Thẻ 1: Ngày bắt đầu nhận váy */}
                     <div className="relative bg-[#FCF9F6] p-4 rounded-2xl border border-[#EEDECF] transition-all hover:shadow-xs focus-within:ring-2 focus-within:ring-[#733F49]/20">
-                      <label className="block text-[10.5px] font-bold text-[#847374] uppercase tracking-wider mb-1">
+                      <label className="block text-[11.5px] font-bold text-[#6B464E] uppercase tracking-wider mb-1.5">
                         NGÀY BẮT ĐẦU NHẬN VÁY
                       </label>
                       <div className="relative flex items-center">
@@ -703,7 +703,7 @@ export default function CheckoutPage() {
                               });
                             }
                           }}
-                          className="w-full bg-white border border-[#EEDECF] rounded-xl px-3 py-2 text-[14px] font-bold text-[#2C2523] focus:outline-none focus:border-[#733F49] cursor-pointer"
+                          className="w-full bg-white border border-[#E2D2C2] rounded-xl px-3.5 py-2.5 font-jakarta font-bold text-[15.5px] text-[#2C2523] tabular-nums tracking-wide focus:outline-none focus:border-[#733F49] focus:ring-2 focus:ring-[#733F49]/15 cursor-pointer shadow-2xs"
                         />
                       </div>
                       <span className="text-[10.5px] font-medium text-[#2E7D32] mt-1.5 flex items-center gap-1">
@@ -714,7 +714,7 @@ export default function CheckoutPage() {
                     {/* Thẻ 2: Ngày cưới chính thức (Tiêu điểm) */}
                     <div className="relative bg-[#FAF0EC] p-4 rounded-2xl border-2 border-[#F2D8D4] transition-all shadow-xs focus-within:ring-2 focus-within:ring-[#733F49]/30">
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-[10.5px] font-bold text-[#733F49] uppercase tracking-wider">
+                        <label className="block text-[11.5px] font-bold text-[#733F49] uppercase tracking-wider">
                           NGÀY CƯỚI CHÍNH THỨC
                         </label>
                         <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-md bg-[#733F49] text-white uppercase tracking-wider">
@@ -730,7 +730,7 @@ export default function CheckoutPage() {
                               handleSelectWeddingDate(e.target.value);
                             }
                           }}
-                          className="w-full bg-white border border-[#F2D8D4] rounded-xl px-3 py-2 text-[14.5px] font-bold text-[#733F49] focus:outline-none focus:border-[#733F49] cursor-pointer shadow-2xs"
+                          className="w-full bg-white border-2 border-[#EAB8B8] rounded-xl px-3.5 py-2.5 font-jakarta font-extrabold text-[16.5px] text-[#733F49] tabular-nums tracking-wide focus:outline-none focus:border-[#733F49] focus:ring-2 focus:ring-[#733F49]/20 cursor-pointer shadow-xs"
                         />
                       </div>
                       <span className="text-[10.5px] font-bold text-[#733F49] mt-1.5 flex items-center gap-1">
@@ -771,7 +771,7 @@ export default function CheckoutPage() {
                               });
                             }
                           }}
-                          className="w-full bg-white border border-[#EEDECF] rounded-xl px-3 py-2 text-[14px] font-bold text-[#2C2523] focus:outline-none focus:border-[#733F49] cursor-pointer"
+                          className="w-full bg-white border border-[#E2D2C2] rounded-xl px-3.5 py-2.5 font-jakarta font-bold text-[15.5px] text-[#2C2523] tabular-nums tracking-wide focus:outline-none focus:border-[#733F49] focus:ring-2 focus:ring-[#733F49]/15 cursor-pointer shadow-2xs"
                         />
                       </div>
                       <span className="text-[10.5px] font-medium text-[#6B5C5D] mt-1.5 flex items-center gap-1">
@@ -870,7 +870,7 @@ export default function CheckoutPage() {
                             key={dateStr}
                             type="button"
                             onClick={() => handleSelectWeddingDate(dateStr)}
-                            className={`relative h-10 sm:h-12 rounded-xl flex flex-col items-center justify-center text-[12px] sm:text-[13px] font-semibold transition-all border-0 cursor-pointer ${
+                            className={`relative h-11 sm:h-13 rounded-xl flex flex-col items-center justify-center font-jakarta text-[14px] sm:text-[15px] font-bold tabular-nums transition-all border-0 cursor-pointer ${
                               isWedding
                                 ? 'bg-[#733F49] text-white shadow-md ring-2 ring-[#D4AF37] z-10 scale-105'
                                 : isStart
@@ -1001,57 +1001,57 @@ export default function CheckoutPage() {
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-4">
                     <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">CHIỀU CAO (CM)</label>
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">CHIỀU CAO (CM)</label>
                       <input
                         type="text"
                         value={measurements.height}
                         onChange={(e) => setMeasurements({ ...measurements, height: e.target.value })}
-                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
+                        className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
                       />
                     </div>
                     <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">CÂN NẶNG (KG)</label>
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">CÂN NẶNG (KG)</label>
                       <input
                         type="text"
                         value={measurements.weight}
                         onChange={(e) => setMeasurements({ ...measurements, weight: e.target.value })}
-                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
+                        className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
                       />
                     </div>
                     <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">VÒNG 1 (NGỰC)</label>
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">VÒNG 1 (NGỰC)</label>
                       <input
                         type="text"
                         value={measurements.bust}
                         onChange={(e) => setMeasurements({ ...measurements, bust: e.target.value })}
-                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
+                        className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
                       />
                     </div>
                     <div className="bg-[#FAF0EC] p-3 rounded-xl border border-[#F2D8D4]">
-                      <label className="text-[10px] font-bold uppercase text-[#733F49] block mb-1">VÒNG 2 (EO * QUAN TRỌNG)</label>
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-[#733F49] block mb-1.5">VÒNG 2 (EO * QUAN TRỌNG)</label>
                       <input
                         type="text"
                         value={measurements.waist}
                         onChange={(e) => setMeasurements({ ...measurements, waist: e.target.value })}
-                        className="w-full bg-white border border-[#F2D8D4] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#733F49] text-center"
+                        className="w-full bg-white border-2 border-[#EAB8B8] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#733F49] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
                       />
                     </div>
                     <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">VÒNG 3 (MÔNG)</label>
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">VÒNG 3 (MÔNG)</label>
                       <input
                         type="text"
                         value={measurements.hips}
                         onChange={(e) => setMeasurements({ ...measurements, hips: e.target.value })}
-                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
+                        className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
                       />
                     </div>
                     <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">CAO GIÀY CƯỚI</label>
+                      <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">CAO GIÀY CƯỚI</label>
                       <input
                         type="text"
                         value={measurements.heel}
                         onChange={(e) => setMeasurements({ ...measurements, heel: e.target.value })}
-                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
+                        className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
                       />
                     </div>
                   </div>
@@ -1095,7 +1095,7 @@ export default function CheckoutPage() {
                     <h2 className="font-playfair text-[22px] sm:text-[26px] font-bold text-[#733F49] mt-3 mb-1">
                       HỢP ĐỒNG THUÊ LỄ PHỤC CƯỚI CAO CẤP
                     </h2>
-                    <span className="font-mono text-[12px] text-[#847374] block">
+                    <span className="font-jakarta font-semibold text-[13px] text-[#6B5C5D] block tracking-wide tabular-nums">
                       Số: HĐ-UB-2026/8992 • Cấp ngày: {new Date().toLocaleDateString('vi-VN')}
                     </span>
                   </div>
@@ -1470,7 +1470,7 @@ export default function CheckoutPage() {
                       <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-[#EEDECF]">
                         <div>
                           <span className="text-[10px] text-[#847374] block uppercase font-bold">SỐ TÀI KHOẢN:</span>
-                          <strong className="font-mono text-[16px] text-[#733F49] tracking-wider">
+                          <strong className="font-jakarta font-extrabold text-[18px] text-[#733F49] tracking-wider tabular-nums">
                             1903 8899 2200 88
                           </strong>
                         </div>
@@ -1486,7 +1486,7 @@ export default function CheckoutPage() {
                       <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-[#EEDECF]">
                         <div>
                           <span className="text-[10px] text-[#847374] block uppercase font-bold">SỐ TIỀN CỌC HÔM NAY:</span>
-                          <strong className="font-mono text-[16px] text-[#2E7D32]">
+                          <strong className="font-jakarta font-extrabold text-[19px] text-[#2E7D32] tabular-nums tracking-tight">
                             {amountToPayToday.toLocaleString('vi-VN')}₫
                           </strong>
                         </div>
@@ -1502,7 +1502,7 @@ export default function CheckoutPage() {
                       <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-[#EEDECF]">
                         <div>
                           <span className="text-[10px] text-[#847374] block uppercase font-bold">NỘI DUNG CHUYỂN KHOẢN:</span>
-                          <strong className="font-mono text-[14px] text-[#733F49]">
+                          <strong className="font-jakarta font-bold text-[15px] text-[#733F49] tracking-wide">
                             UB COC 8992 {phone.replace(/\s/g, '')}
                           </strong>
                         </div>
@@ -1582,12 +1582,12 @@ export default function CheckoutPage() {
                       {activeDress?.name}
                     </div>
                     <div className="text-[12px] text-[#847374] mt-0.5">
-                      Mã: <span className="font-mono text-[#733F49] font-bold">{activeDress?.code || 'UB-HC-2026'}</span>
+                      Mã: <span className="font-jakarta font-bold text-[#733F49] tracking-wide">{activeDress?.code || 'UB-HC-2026'}</span>
                     </div>
                     <div className="text-[11.5px] text-[#6B5C5D] mt-1">
                       Size: <strong>{selectedSize}</strong> • Gói {rentalDays} ngày
                     </div>
-                    <div className="font-playfair font-bold text-[17px] text-[#733F49] mt-2">
+                    <div className="font-jakarta font-extrabold text-[19px] text-[#733F49] mt-1.5 tabular-nums tracking-tight">
                       {totalRentPrice.toLocaleString('vi-VN')}₫
                     </div>
                   </div>
@@ -1639,7 +1639,7 @@ export default function CheckoutPage() {
                         {depositOption === 'deposit30' ? '(Tạm ứng cọc giữ lịch 50%)' : '(Thanh toán 100% trọn gói)'}
                       </span>
                     </div>
-                    <span className="font-playfair font-bold text-[22px] text-[#733F49]">
+                    <span className="font-jakarta font-extrabold text-[24px] sm:text-[26px] text-[#733F49] tabular-nums tracking-tight">
                       {amountToPayToday.toLocaleString('vi-VN')}₫
                     </span>
                   </div>
@@ -1690,7 +1690,7 @@ export default function CheckoutPage() {
             <div className="bg-[#FAF4EE] p-4.5 rounded-2xl border border-[#EEDECF] text-left text-[12.5px] space-y-2">
               <div className="flex items-center justify-between pb-2 border-b border-[#EEDECF]">
                 <span className="text-[#847374]">Mã Đơn / Hợp Đồng:</span>
-                <strong className="font-mono text-[#733F49] text-[14px]">{createdOrder?.contractCode || createdOrder?.orderCode || 'HĐ-UB-2026/8992'}</strong>
+                <strong className="font-jakarta font-bold text-[#733F49] text-[15px] tabular-nums tracking-wide">{createdOrder?.contractCode || createdOrder?.orderCode || 'HĐ-UB-2026/8992'}</strong>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[#847374]">Trang phục:</span>
