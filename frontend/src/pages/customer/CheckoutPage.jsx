@@ -995,10 +995,12 @@ export default function CheckoutPage() {
                           <Calendar className="w-4 h-4" />
                         </div>
                         <div>
-                          <h4 className="font-playfair text-[15.5px] font-bold text-[#2C2523] m-0">
-                            Bảng Lịch Thuê Váy:    Tháng {calendarViewDate.getMonth() + 1}/{calendarViewDate.getFullYear()}
+                          <h4 className="font-playfair text-[15.5px] font-bold text-[#2C2523] m-0 leading-tight">
+                            Bảng Lịch Thuê Váy
                           </h4>
-
+                          <span className="text-[12px] font-jakarta font-bold text-[#733F49] block mt-0.5">
+                            Tháng {calendarViewDate.getMonth() + 1}/{calendarViewDate.getFullYear()}
+                          </span>
                         </div>
                       </div>
 
