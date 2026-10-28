@@ -13,6 +13,9 @@ router.get('/my', authenticate, orderController.getMyOrders);
 // 3. Nhân viên / Quản trị viên xem tất cả đơn thuê
 router.get('/', authenticate, authorize('STAFF', 'ADMIN'), orderController.getAllOrders);
 
+// 3.1. Lấy danh sách các ngày đã kín lịch của váy
+router.get('/booked-dates', orderController.getDressBookedDates);
+
 // 4. Xem chi tiết đơn thuê theo ID hoặc Mã Đơn
 router.get('/:id', optionalAuthenticate, orderController.getOrderById);
 

@@ -42,6 +42,7 @@ import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { MOCK_DRESSES } from '../../services/dressService';
 import { getCart } from '../../services/cartService';
+import { getDressBookedDates } from '../../services/orderService';
 
 // Helper: Chuyển đổi định dạng ngày DD/MM/YYYY sang YYYY-MM-DD và ngược lại
 function toIsoDateString(val) {
@@ -248,6 +249,83 @@ export default function CheckoutPage() {
   });
   const [showFullCalendar, setShowFullCalendar] = useState(true);
 
+  // Danh sách các khoảng ngày đã kín lịch của chiếc váy này
+  const [bookedIntervals, setBookedIntervals] = useState([
+    { startDate: '2026-11-05', endDate: '2026-11-08', bride: 'Cô dâu Khánh Linh' },
+    { startDate: '2026-11-25', endDate: '2026-11-28', bride: 'Cô dâu Mai Anh' },
+  ]);
+
+  // Tự động tải lịch đã đặt từ Backend API khi chiếc váy thay đổi
+  React.useEffect(() => {
+    let isMounted = true;
+    const fetchBooked = async () => {
+      try {
+        const dressId = activeDress?.id || activeDress?._id;
+        if (!dressId) return;
+        const apiDates = await getDressBookedDates(dressId);
+        if (isMounted && Array.isArray(apiDates) && apiDates.length > 0) {
+          const formatted = apiDates
+            .map((item) => ({
+              startDate: toIsoDateString(item.startDate),
+              endDate: toIsoDateString(item.endDate),
+              orderCode: item.orderCode,
+            }))
+            .filter((item) => item.startDate && item.endDate);
+          if (formatted.length > 0) {
+            setBookedIntervals((prev) => {
+              const combined = [...formatted];
+              prev.forEach((p) => {
+                if (!combined.some((c) => c.startDate === p.startDate)) {
+                  combined.push(p);
+                }
+              });
+              return combined;
+            });
+          }
+        }
+      } catch (err) {
+        console.warn('Lấy lịch kín từ API lỗi, dùng lịch mẫu:', err);
+      }
+    };
+    fetchBooked();
+    return () => {
+      isMounted = false;
+    };
+  }, [activeDress]);
+
+  // Kiểm tra 1 ngày cụ thể (YYYY-MM-DD) có bị kín lịch hay không
+  const getBookedInfoForDate = (dateStr) => {
+    if (!dateStr) return null;
+    return bookedIntervals.find((interval) => {
+      const s = toIsoDateString(interval.startDate);
+      const e = toIsoDateString(interval.endDate);
+      return dateStr >= s && dateStr <= e;
+    });
+  };
+
+  // Kiểm tra dải ngày thuê đang chọn [startDate -> endDate] có bị trùng lịch đã đặt không
+  const scheduleConflict = useMemo(() => {
+    const userStart = toIsoDateString(rentalSchedule.startDate);
+    const userEnd = toIsoDateString(rentalSchedule.endDate);
+    if (!userStart || !userEnd) return null;
+
+    for (const interval of bookedIntervals) {
+      const bStart = toIsoDateString(interval.startDate);
+      const bEnd = toIsoDateString(interval.endDate);
+      if (!bStart || !bEnd) continue;
+
+      // Hai dải thời gian giao nhau nếu userStart <= bEnd và userEnd >= bStart
+      if (userStart <= bEnd && userEnd >= bStart) {
+        return {
+          conflict: true,
+          interval,
+          formattedRange: `${toDisplayDateString(bStart)} – ${toDisplayDateString(bEnd)}`,
+        };
+      }
+    }
+    return null;
+  }, [rentalSchedule.startDate, rentalSchedule.endDate, bookedIntervals]);
+
   // Xử lý khi người dùng chọn ngày cưới chính thức (Tự động lùi 2 ngày nhận váy và dời ngày trả theo đúng rentalDays)
   const handleSelectWeddingDate = (selectedIsoOrDisplay) => {
     const iso = toIsoDateString(selectedIsoOrDisplay);
@@ -274,6 +352,14 @@ export default function CheckoutPage() {
   // - Nếu click ngày sau ngày nhận: tự động hiểu là chọn Ngày Hoàn Trả Mới và tự tính số ngày thuê
   // - Ngược lại: đặt làm Ngày Cưới và dải ngày tự co giãn theo rentalDays
   const handleCalendarCellClick = (dateStr) => {
+    const booked = getBookedInfoForDate(dateStr);
+    if (booked) {
+      message.warning(
+        `Váy cưới đã kín lịch từ ${toDisplayDateString(booked.startDate)} đến ${toDisplayDateString(booked.endDate)}. Nàng vui lòng chọn ngày khác trên lịch nhé!`
+      );
+      return;
+    }
+
     const startIso = toIsoDateString(rentalSchedule.startDate);
     const weddingIso = toIsoDateString(rentalSchedule.weddingDate);
 
@@ -356,6 +442,12 @@ export default function CheckoutPage() {
   // Validation Step 1
   const handleProceedToContract = (e) => {
     e?.preventDefault();
+    if (scheduleConflict) {
+      message.error(
+        `Khoảng ngày nàng chọn bị trùng với lịch đã đặt trước (${scheduleConflict.formattedRange}). Vui lòng chọn ngày còn trống trên bảng lịch để tiếp tục!`
+      );
+      return;
+    }
     if (!brideName.trim() || !phone.trim() || !email.trim()) {
       message.error('Vui lòng điền đầy đủ họ tên, số điện thoại và email của cô dâu.');
       return;
@@ -927,20 +1019,56 @@ export default function CheckoutPage() {
 
                   </div>
 
-                  {/* Live Dress Availability Badge */}
-                  <div className="mb-5 bg-[#E8F5E9]/70 border border-[#C8E6C9] rounded-2xl p-3.5 flex items-center justify-between gap-3 text-[12.5px] animate-fade-in">
-                    <div className="flex items-center gap-2.5">
-                      <div className="w-6 h-6 rounded-full bg-[#2E7D32] text-white flex items-center justify-center shrink-0">
-                        <Check className="w-3.5 h-3.5" />
+                  {/* Live Dress Availability Status Banner */}
+                  {scheduleConflict ? (
+                    <div className="mb-5 bg-[#FDF2F0] border-2 border-[#FEB2B2] rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-[12.5px] shadow-xs animate-fade-in">
+                      <div className="flex items-start sm:items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-[#FEE2E2] text-[#DC2626] flex items-center justify-center shrink-0 font-bold">
+                          <AlertCircle className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-jakarta font-extrabold text-[13.5px] text-[#B91C1C] uppercase tracking-wide">
+                              TRẠNG THÁI: ĐÃ CÓ NGƯỜI ĐẶT TRÙNG LỊCH
+                            </span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#DC2626] text-white">
+                              KHÔNG KHẢ DỤNG
+                            </span>
+                          </div>
+                          <span className="text-[#7F1D1D] font-medium block mt-0.5">
+                            Khoảng ngày nàng chọn bị trùng với lịch váy đã đặt trước (<strong>{scheduleConflict.formattedRange}</strong>). Nàng vui lòng nhấp chọn ngày khác trên bảng lịch bên dưới!
+                          </span>
+                        </div>
                       </div>
-                      <span className="text-[#2E7D32] font-semibold">
-                        Trạng thái lịch: Tác phẩm sẵn sàng trao nhận ngày <strong>{rentalSchedule.startDate}</strong> và khóa lịch độc quyền cho ngày trọng đại <strong>{rentalSchedule.weddingDate}</strong>.
+                      <span className="px-3 py-1.5 rounded-xl bg-white border border-[#FEB2B2] font-bold text-[#DC2626] text-[11px] uppercase tracking-wider shrink-0 shadow-2xs">
+                        ⚠ TRÙNG LỊCH
                       </span>
                     </div>
-                    <span className="hidden sm:inline-block px-2.5 py-1 rounded-lg bg-white border border-[#C8E6C9] font-bold text-[#2E7D32] text-[11px] uppercase tracking-wider shadow-2xs">
-                      ✓ ĐÃ SẴN SÀNG
-                    </span>
-                  </div>
+                  ) : (
+                    <div className="mb-5 bg-[#F0FDF4] border-2 border-[#BBF7D0] rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-[12.5px] shadow-xs animate-fade-in">
+                      <div className="flex items-start sm:items-center gap-3">
+                        <div className="w-8 h-8 rounded-xl bg-[#DCFCE7] text-[#16A34A] flex items-center justify-center shrink-0 font-bold">
+                          <CheckCircle2 className="w-5 h-5" />
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <span className="font-jakarta font-extrabold text-[13.5px] text-[#15803D] uppercase tracking-wide">
+                              TRẠNG THÁI LỊCH: CÒN TRỐNG HOÀN TOÀN
+                            </span>
+                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#16A34A] text-white">
+                              ✓ SẴN SÀNG CHO THUÊ
+                            </span>
+                          </div>
+                          <span className="text-[#166534] font-medium block mt-0.5">
+                            Tác phẩm sẵn sàng trao nhận ngày <strong>{rentalSchedule.startDate}</strong>, ngày cưới <strong>{rentalSchedule.weddingDate}</strong> và hoàn trả <strong>{rentalSchedule.endDate}</strong>.
+                          </span>
+                        </div>
+                      </div>
+                      <span className="px-3 py-1.5 rounded-xl bg-white border border-[#86EFAC] font-bold text-[#15803D] text-[11px] uppercase tracking-wider shrink-0 shadow-2xs">
+                        ✓ KHÓA LỊCH ĐỘC QUYỀN
+                      </span>
+                    </div>
+                  )}
 
                   {/* Bảng Lịch Trực Quan Tháng Tự Động Co Giãn Theo Số Ngày Thuê */}
                   <div className="bg-[#FCF9F6] rounded-2xl border border-[#EEDECF] p-4 sm:p-5 mb-6">
@@ -1069,10 +1197,30 @@ export default function CheckoutPage() {
 
                       for (let d = 1; d <= daysInMonth; d++) {
                         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                        const bookedInfo = getBookedInfoForDate(dateStr);
+                        const isBooked = Boolean(bookedInfo);
                         const isStart = dateStr === startIso;
                         const isWedding = dateStr === weddingIso;
                         const isEnd = dateStr === endIso;
                         const isInRange = startIso && endIso && dateStr >= startIso && dateStr <= endIso;
+
+                        if (isBooked) {
+                          cells.push(
+                            <button
+                              key={dateStr}
+                              type="button"
+                              onClick={() => handleCalendarCellClick(dateStr)}
+                              title={`Ngày đã có cô dâu đặt thuê: ${bookedInfo.bride || 'Kín lịch'}`}
+                              className="relative h-10 sm:h-12 rounded-xl flex flex-col items-center justify-center text-[12px] sm:text-[13px] font-bold transition-all border border-[#F8D7DA] bg-[#FDF2F0] text-[#B91C1C] cursor-not-allowed opacity-85 hover:opacity-100"
+                            >
+                              <span className="line-through decoration-[#B91C1C]/60">{d}</span>
+                              <span className="text-[7.5px] font-extrabold leading-none text-[#B91C1C] tracking-tight uppercase">
+                                KÍN LỊCH
+                              </span>
+                            </button>
+                          );
+                          continue;
+                        }
 
                         cells.push(
                           <button
@@ -1131,7 +1279,11 @@ export default function CheckoutPage() {
                         </span>
                         <span className="inline-flex items-center gap-1.5 text-[#847374] font-semibold">
                           <span className="w-2.5 h-2.5 rounded-full bg-[#847374]" />
-                          Ngày hoàn trả váy ({rentalSchedule.endDate})
+                          Ngày hoàn trả ({rentalSchedule.endDate})
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 text-[#B91C1C] font-semibold">
+                          <span className="w-2.5 h-2.5 rounded-full bg-[#B91C1C]" />
+                          Đã có người đặt (Kín lịch)
                         </span>
                       </div>
                       <div className="font-bold text-[#733F49] bg-[#FAF0EC] px-2.5 py-1 rounded-lg border border-[#F2D8D4]">
@@ -1344,10 +1496,24 @@ export default function CheckoutPage() {
                   <button
                     type="button"
                     onClick={handleProceedToContract}
-                    className="w-full py-4 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer border-0 flex items-center justify-center gap-2 active:scale-[0.99]"
+                    disabled={Boolean(scheduleConflict)}
+                    className={`w-full py-4 rounded-xl font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-2 border-0 ${
+                      scheduleConflict
+                        ? 'bg-stone-300 text-stone-500 cursor-not-allowed shadow-none'
+                        : 'bg-[#733F49] hover:bg-[#5F323B] text-white shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer active:scale-[0.99]'
+                    }`}
                   >
-                    <span>TIẾP TỤC: XEM & KÝ HỢP ĐỒNG ĐIỆN TỬ (BƯỚC 2)</span>
-                    <ArrowRight className="w-4 h-4" />
+                    {scheduleConflict ? (
+                      <>
+                        <AlertCircle className="w-4 h-4 text-stone-500" />
+                        <span>LỊCH BỊ TRÙNG — VUI LÒNG ĐỔI NGÀY TRÊN BẢNG LỊCH</span>
+                      </>
+                    ) : (
+                      <>
+                        <span>TIẾP TỤC: XEM & KÝ HỢP ĐỒNG ĐIỆN TỬ (BƯỚC 2)</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </>
+                    )}
                   </button>
                 </div>
 
@@ -1896,6 +2062,19 @@ export default function CheckoutPage() {
                     </div>
                   </div>
                 </div>
+
+                {/* Live Availability Status in Summary Card */}
+                {scheduleConflict ? (
+                  <div className="bg-[#FFF5F5] border border-[#FEB2B2] p-2.5 rounded-xl text-[#B91C1C] text-[11.5px] flex items-center gap-2 font-bold">
+                    <AlertCircle className="w-4 h-4 shrink-0 text-[#DC2626]" />
+                    <span>Trùng lịch đã đặt ({scheduleConflict.formattedRange})</span>
+                  </div>
+                ) : (
+                  <div className="bg-[#F0FDF4] border border-[#BBF7D0] p-2.5 rounded-xl text-[#15803D] text-[11.5px] flex items-center gap-2 font-bold">
+                    <CheckCircle2 className="w-4 h-4 shrink-0 text-[#16A34A]" />
+                    <span>Lịch còn trống: {rentalSchedule.startDate} – {rentalSchedule.endDate}</span>
+                  </div>
+                )}
 
                 {/* Progress / Step Overview Badge */}
                 <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF] space-y-1 text-[12px]">

@@ -71,3 +71,16 @@ export const updateOrderStatus = async (req, res, next) => {
   }
 };
 
+export const getDressBookedDates = async (req, res, next) => {
+  try {
+    const bookedDates = await orderService.getDressBookedDates(req.query.dressId);
+    res.status(200).json({
+      success: true,
+      message: 'Lấy lịch đặt thuê của váy thành công',
+      data: bookedDates,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

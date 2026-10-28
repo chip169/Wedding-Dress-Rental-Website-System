@@ -159,3 +159,18 @@ export const updateOrderStatus = async (idOrCode, status) => {
   return order;
 };
 
+export const getDressBookedDates = async (dressId) => {
+  const query = {
+    status: { $nin: ['CANCELLED', 'RETURNED'] },
+  };
+  if (dressId) {
+    query['items.dressId'] = dressId;
+  }
+  const orders = await Order.find(query).select('orderCode rentalStartDate rentalEndDate');
+  return orders.map((o) => ({
+    orderCode: o.orderCode,
+    startDate: o.rentalStartDate,
+    endDate: o.rentalEndDate,
+  }));
+};
+

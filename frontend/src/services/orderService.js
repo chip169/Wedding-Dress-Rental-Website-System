@@ -132,6 +132,21 @@ export async function submitReturnInspection(orderId, inspectionData) {
   }
 }
 
+/**
+ * Lấy danh sách khoảng thời gian váy đã có người đặt thuê kín lịch
+ * @param {string} dressId
+ */
+export async function getDressBookedDates(dressId) {
+  try {
+    const res = await axiosClient.get('/orders/booked-dates', {
+      params: { dressId },
+    });
+    return res.data?.data || res.data || [];
+  } catch (error) {
+    return [];
+  }
+}
+
 // Giữ lại các hàm cũ để tương thích hoàn toàn với các component đang gọi
 export function getDemoOrders() {
   return DEMO_ORDERS;
