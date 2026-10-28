@@ -203,14 +203,15 @@ export default function CheckoutPage() {
   const [cccd, setCccd] = useState('079201019888');
   const [address, setAddress] = useState('120/4 Lê Lai, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh');
 
-  // Helper tính ngày kết thúc thuê dựa vào ngày bắt đầu và số ngày
+  // Helper tính ngày kết thúc thuê dựa vào ngày bắt đầu và số ngày bằng local date
   const computeEndDate = (startDisplayOrIso, days) => {
     const iso = toIsoDateString(startDisplayOrIso);
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return '21/11/2026';
-    const endD = new Date(d);
-    endD.setDate(endD.getDate() + (days - 1));
-    return toDisplayDateString(endD.toISOString().split('T')[0]);
+    if (!iso) return '21/11/2026';
+    const parts = iso.split('-').map(Number);
+    if (parts.length !== 3) return '21/11/2026';
+    const endD = new Date(parts[0], parts[1] - 1, parts[2] + (days - 1));
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(endD.getDate())}/${pad(endD.getMonth() + 1)}/${endD.getFullYear()}`;
   };
 
   // Schedule state (Định dạng hiển thị DD/MM/YYYY)
@@ -225,7 +226,7 @@ export default function CheckoutPage() {
     };
   });
 
-  // Cập nhật số ngày thuê và tự động dời ngày hoàn trả
+  // Cập nhật số ngày thuê và tự động dời ngày hoàn trả trên cả bảng lịch và form
   const handleRentalDaysChange = (newDays) => {
     const clamped = Math.max(2, Math.min(30, newDays));
     setRentalDays(clamped);
@@ -239,29 +240,62 @@ export default function CheckoutPage() {
   // State cho tháng đang xem trên lịch tương tác
   const [calendarViewDate, setCalendarViewDate] = useState(() => {
     const initialIso = toIsoDateString(rentalSchedule.weddingDate || '20/11/2026');
-    const d = new Date(initialIso || Date.now());
-    return isNaN(d.getTime()) ? new Date(2026, 10, 1) : new Date(d.getFullYear(), d.getMonth(), 1);
+    if (initialIso) {
+      const parts = initialIso.split('-').map(Number);
+      return new Date(parts[0], parts[1] - 1, 1);
+    }
+    return new Date(2026, 10, 1);
   });
   const [showFullCalendar, setShowFullCalendar] = useState(true);
 
-  // Xử lý khi người dùng chọn ngày cưới chính thức (Tự động lùi 2 ngày nhận váy và tính ngày trả theo rentalDays)
+  // Xử lý khi người dùng chọn ngày cưới chính thức (Tự động lùi 2 ngày nhận váy và dời ngày trả theo đúng rentalDays)
   const handleSelectWeddingDate = (selectedIsoOrDisplay) => {
     const iso = toIsoDateString(selectedIsoOrDisplay);
-    const d = new Date(iso);
-    if (isNaN(d.getTime())) return;
+    if (!iso) return;
+    const parts = iso.split('-').map(Number);
+    if (parts.length !== 3) return;
 
-    const startObj = new Date(d);
-    startObj.setDate(startObj.getDate() - 2);
+    const startD = new Date(parts[0], parts[1] - 1, parts[2] - 2);
+    const endD = new Date(startD.getFullYear(), startD.getMonth(), startD.getDate() + (rentalDays - 1));
 
-    const endObj = new Date(startObj);
-    endObj.setDate(endObj.getDate() + (rentalDays - 1));
+    const pad = (n) => String(n).padStart(2, '0');
+    const startDisplay = `${pad(startD.getDate())}/${pad(startD.getMonth() + 1)}/${startD.getFullYear()}`;
+    const endDisplay = `${pad(endD.getDate())}/${pad(endD.getMonth() + 1)}/${endD.getFullYear()}`;
 
     setRentalSchedule({
-      startDate: toDisplayDateString(startObj.toISOString().split('T')[0]),
+      startDate: startDisplay,
       weddingDate: toDisplayDateString(iso),
-      endDate: toDisplayDateString(endObj.toISOString().split('T')[0]),
+      endDate: endDisplay,
     });
-    setCalendarViewDate(new Date(d.getFullYear(), d.getMonth(), 1));
+    setCalendarViewDate(new Date(parts[0], parts[1] - 1, 1));
+  };
+
+  // Xử lý khi người dùng click trực tiếp vào ô ngày trên bảng lịch:
+  // - Nếu click ngày sau ngày nhận: tự động hiểu là chọn Ngày Hoàn Trả Mới và tự tính số ngày thuê
+  // - Ngược lại: đặt làm Ngày Cưới và dải ngày tự co giãn theo rentalDays
+  const handleCalendarCellClick = (dateStr) => {
+    const startIso = toIsoDateString(rentalSchedule.startDate);
+    const weddingIso = toIsoDateString(rentalSchedule.weddingDate);
+
+    if (startIso && dateStr > startIso && dateStr !== weddingIso) {
+      const startParts = startIso.split('-').map(Number);
+      const clickParts = dateStr.split('-').map(Number);
+      const sD = new Date(startParts[0], startParts[1] - 1, startParts[2]);
+      const eD = new Date(clickParts[0], clickParts[1] - 1, clickParts[2]);
+      const diffDays = Math.round((eD.getTime() - sD.getTime()) / (1000 * 3600 * 24)) + 1;
+
+      if (diffDays >= 2 && diffDays <= 14) {
+        setRentalDays(diffDays);
+        setRentalSchedule((prev) => ({
+          ...prev,
+          endDate: toDisplayDateString(dateStr),
+        }));
+        message.success(`Đã chọn dải thuê ${diffDays} ngày (Hoàn trả: ${toDisplayDateString(dateStr)})`);
+        return;
+      }
+    }
+
+    handleSelectWeddingDate(dateStr);
   };
 
 
@@ -908,60 +942,108 @@ export default function CheckoutPage() {
                     </span>
                   </div>
 
-                  {/* Bảng Lịch Trực Quan Tháng (Interactive Calendar Visual Picker) */}
+                  {/* Bảng Lịch Trực Quan Tháng Tự Động Co Giãn Theo Số Ngày Thuê */}
                   <div className="bg-[#FCF9F6] rounded-2xl border border-[#EEDECF] p-4 sm:p-5 mb-6">
-                    <div className="flex items-center justify-between pb-3 border-b border-[#EEDECF] mb-3">
-                      <div className="flex items-center gap-2">
-                        <div className="w-7 h-7 rounded-lg bg-[#FAF0EC] text-[#733F49] flex items-center justify-center font-bold">
+                    <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-3.5 border-b border-[#EEDECF] mb-3.5 gap-3">
+                      <div className="flex items-center gap-2.5">
+                        <div className="w-8 h-8 rounded-lg bg-[#FAF0EC] text-[#733F49] flex items-center justify-center font-bold">
                           <Calendar className="w-4 h-4" />
                         </div>
                         <div>
-                          <h4 className="font-playfair text-[15px] font-bold text-[#2C2523] m-0">
+                          <h4 className="font-playfair text-[15.5px] font-bold text-[#2C2523] m-0">
                             Bảng Lịch Thuê & Ngày Hôn Lễ: Tháng {calendarViewDate.getMonth() + 1}/{calendarViewDate.getFullYear()}
                           </h4>
-                          <span className="text-[11px] text-[#847374]">
-                            Nhấp vào ngày bất kỳ để đổi ngày cưới, hệ thống sẽ tự động cập nhật dải ngày thuê
+                          <span className="text-[11.5px] text-[#847374]">
+                            Nhấp ngày cưới hoặc ngày trả để dải lịch tự động co giãn theo số ngày thuê
                           </span>
                         </div>
                       </div>
 
-                      <div className="flex items-center gap-1">
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const prev = new Date(calendarViewDate);
-                            prev.setMonth(prev.getMonth() - 1);
-                            setCalendarViewDate(prev);
-                          }}
-                          className="w-7 h-7 rounded-lg border border-[#EEDECF] bg-white hover:bg-[#FAF0EC] text-[#733F49] flex items-center justify-center cursor-pointer transition-colors"
-                          title="Tháng trước"
-                        >
-                          ‹
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const weddingD = new Date(toIsoDateString(rentalSchedule.weddingDate));
-                            if (!isNaN(weddingD.getTime())) {
-                              setCalendarViewDate(new Date(weddingD.getFullYear(), weddingD.getMonth(), 1));
-                            }
-                          }}
-                          className="px-2 py-1 text-[11px] font-bold text-[#733F49] bg-white border border-[#EEDECF] rounded-lg hover:bg-[#FAF0EC] cursor-pointer"
-                        >
-                          Về tháng cưới
-                        </button>
-                        <button
-                          type="button"
-                          onClick={() => {
-                            const next = new Date(calendarViewDate);
-                            next.setMonth(next.getMonth() + 1);
-                            setCalendarViewDate(next);
-                          }}
-                          className="w-7 h-7 rounded-lg border border-[#EEDECF] bg-white hover:bg-[#FAF0EC] text-[#733F49] flex items-center justify-center cursor-pointer transition-colors"
-                          title="Tháng sau"
-                        >
-                          ›
-                        </button>
+                      {/* Bộ điều khiển số ngày thuê gắn liền trên thanh Bảng Lịch */}
+                      <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
+                        {/* 4 Nút chọn nhanh số ngày */}
+                        <div className="flex items-center bg-white p-1 rounded-xl border border-[#EEDECF] text-[11px] font-bold shadow-2xs">
+                          {[3, 4, 5, 7].map((d) => (
+                            <button
+                              key={d}
+                              type="button"
+                              onClick={() => handleRentalDaysChange(d)}
+                              className={`px-2.5 py-1 rounded-lg border-0 cursor-pointer transition-all ${
+                                rentalDays === d
+                                  ? 'bg-[#733F49] text-white shadow-xs'
+                                  : 'bg-transparent text-[#6B5C5D] hover:text-[#733F49] hover:bg-[#FAF0EC]'
+                              }`}
+                            >
+                              {d} Ngày
+                            </button>
+                          ))}
+                        </div>
+
+                        {/* Bộ tăng giảm nhanh Stepper */}
+                        <div className="flex items-center gap-1 bg-white border border-[#EEDECF] px-2 py-1 rounded-xl shadow-2xs">
+                          <button
+                            type="button"
+                            onClick={() => handleRentalDaysChange(rentalDays - 1)}
+                            disabled={rentalDays <= 2}
+                            aria-label="Giảm ngày thuê"
+                            className="w-6 h-6 rounded-md border border-[#EEDECF] bg-white text-[#733F49] flex items-center justify-center hover:bg-[#FAF0EC] disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                          >
+                            <Minus className="w-3 h-3" />
+                          </button>
+                          <span className="font-jakarta font-extrabold text-[13px] text-[#733F49] px-1 tabular-nums min-w-[48px] text-center">
+                            {rentalDays} Ngày
+                          </span>
+                          <button
+                            type="button"
+                            onClick={() => handleRentalDaysChange(rentalDays + 1)}
+                            disabled={rentalDays >= 14}
+                            aria-label="Tăng ngày thuê"
+                            className="w-6 h-6 rounded-md border border-[#EEDECF] bg-white text-[#733F49] flex items-center justify-center hover:bg-[#FAF0EC] disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                          >
+                            <Plus className="w-3 h-3" />
+                          </button>
+                        </div>
+
+                        {/* Chuyển tháng */}
+                        <div className="flex items-center gap-1">
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const prev = new Date(calendarViewDate);
+                              prev.setMonth(prev.getMonth() - 1);
+                              setCalendarViewDate(prev);
+                            }}
+                            className="w-7 h-7 rounded-lg border border-[#EEDECF] bg-white hover:bg-[#FAF0EC] text-[#733F49] flex items-center justify-center cursor-pointer transition-colors"
+                            title="Tháng trước"
+                          >
+                            ‹
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const weddingIso = toIsoDateString(rentalSchedule.weddingDate);
+                              if (weddingIso) {
+                                const parts = weddingIso.split('-').map(Number);
+                                setCalendarViewDate(new Date(parts[0], parts[1] - 1, 1));
+                              }
+                            }}
+                            className="px-2 py-1 text-[11px] font-bold text-[#733F49] bg-white border border-[#EEDECF] rounded-lg hover:bg-[#FAF0EC] cursor-pointer"
+                          >
+                            Về tháng cưới
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              const next = new Date(calendarViewDate);
+                              next.setMonth(next.getMonth() + 1);
+                              setCalendarViewDate(next);
+                            }}
+                            className="w-7 h-7 rounded-lg border border-[#EEDECF] bg-white hover:bg-[#FAF0EC] text-[#733F49] flex items-center justify-center cursor-pointer transition-colors"
+                            title="Tháng sau"
+                          >
+                            ›
+                          </button>
+                        </div>
                       </div>
                     </div>
 
@@ -996,7 +1078,7 @@ export default function CheckoutPage() {
                           <button
                             key={dateStr}
                             type="button"
-                            onClick={() => handleSelectWeddingDate(dateStr)}
+                            onClick={() => handleCalendarCellClick(dateStr)}
                             className={`relative h-10 sm:h-12 rounded-xl flex flex-col items-center justify-center text-[12px] sm:text-[13px] font-semibold transition-all border-0 cursor-pointer ${isWedding
                                 ? 'bg-[#733F49] text-white shadow-md ring-2 ring-[#D4AF37] z-10 scale-105'
                                 : isStart
