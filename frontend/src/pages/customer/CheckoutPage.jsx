@@ -1779,11 +1779,10 @@ export default function CheckoutPage() {
                         <div className="space-y-2">
                           <div className="relative w-full h-32 bg-[#FFFDFB] rounded-xl border-2 border-dashed border-[#EEDECF] overflow-hidden flex items-center justify-center shadow-inner">
                             {!hasDrawnSignature && (
-                              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-[#A39284] select-none text-[11.5px] space-y-1">
-                                <span className="font-playfair italic text-[15px] text-[#C5A880]">
+                              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-[#A39284] select-none text-[11.5px] px-4 text-center">
+                                <span className="font-playfair italic text-[14px] sm:text-[15px] text-[#C5A880] text-center w-full block">
                                   ✍️ Dùng chuột, ngón tay hoặc bút cảm ứng để vẽ chữ ký của nàng tại đây
                                 </span>
-
                               </div>
                             )}
                             <canvas
