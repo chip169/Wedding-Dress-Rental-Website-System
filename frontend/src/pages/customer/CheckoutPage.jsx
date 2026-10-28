@@ -548,9 +548,7 @@ export default function CheckoutPage() {
                         </p>
                       </div>
                     </div>
-                    <span className="hidden sm:inline-flex px-3 py-1 rounded-full bg-[#FDF2F0] border border-[#F7D8D4] text-[#B8737D] font-bold text-[10.5px]">
-                      BẢO MẬT 100%
-                    </span>
+                    
                   </div>
 
                   <div className="space-y-4">
@@ -663,7 +661,7 @@ export default function CheckoutPage() {
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
-                        <span className="font-playfair font-bold text-[15px] text-[#733F49] min-w-[55px] text-center">
+                        <span className="font-jakarta font-extrabold text-[17px] text-[#733F49] min-w-[65px] text-center tabular-nums">
                           {rentalDays} Ngày
                         </span>
                         <button
@@ -727,8 +725,9 @@ export default function CheckoutPage() {
                             )}
                             <div className="flex items-center justify-between">
                               <span
-                                className={`font-playfair font-bold text-[15px] ${isSelected ? 'text-[#733F49]' : 'text-[#2C2523]'
-                                  }`}
+                                className={`font-jakarta font-extrabold text-[16px] tabular-nums ${
+                                  isSelected ? 'text-[#733F49]' : 'text-[#2C2523]'
+                                }`}
                               >
                                 {pkg.title}
                               </span>
@@ -1597,7 +1596,7 @@ export default function CheckoutPage() {
                           PHỔ BIẾN NHẤT
                         </span>
                       </div>
-                      <div className="font-playfair font-bold text-[24px] text-[#733F49] mb-1">
+                      <div className="font-jakarta font-extrabold text-[22px] text-[#733F49] mb-1 tabular-nums tracking-tight">
                         {Math.round(totalRentPrice * 0.5).toLocaleString('vi-VN')}₫
                       </div>
                       <p className="text-[11.5px] text-[#6B5C5D] m-0 leading-relaxed">
@@ -1621,7 +1620,7 @@ export default function CheckoutPage() {
                           TẶNG VOAN REN CAO CẤP
                         </span>
                       </div>
-                      <div className="font-playfair font-bold text-[24px] text-[#733F49] mb-1">
+                      <div className="font-jakarta font-extrabold text-[22px] text-[#733F49] mb-1 tabular-nums tracking-tight">
                         {totalRentPrice.toLocaleString('vi-VN')}₫
                       </div>
                       <p className="text-[11.5px] text-[#6B5C5D] m-0 leading-relaxed">
@@ -1750,21 +1749,7 @@ export default function CheckoutPage() {
 
             <div className="bg-white rounded-3xl border border-[#F0E5DC] shadow-[0_8px_32px_rgba(44,37,35,0.06)] overflow-hidden">
 
-              {/* Card Header Bar */}
-              <div className="bg-[#FAF4EE] px-5 py-3.5 border-b border-[#EEDECF] flex items-center justify-between gap-2 text-[12px]">
-                <div className="truncate">
-                  <span className="font-bold text-[#733F49] uppercase tracking-wide text-[11px]">
-                    LỄ PHỤC THUÊ ĐỘC BẢN
-                  </span>
-                  <span className="text-[#847374] ml-1.5 hidden sm:inline">
-                    • {activeDress?.silhouette || 'Ballgown'}
-                  </span>
-                </div>
-                <div className="shrink-0 flex items-center gap-1 text-[10.5px] font-bold text-[#B8737D] bg-white px-2 py-0.5 rounded-full border border-[#F2D8D4]">
-                  <ShieldCheck className="w-3 h-3" />
-                  <span>Cọc bảo lãnh: {depositCollateral.toLocaleString('vi-VN')}₫</span>
-                </div>
-              </div>
+
 
               {/* Card Body */}
               <div className="p-5 sm:p-6 space-y-5">
@@ -1788,7 +1773,7 @@ export default function CheckoutPage() {
                     <div className="text-[11.5px] text-[#6B5C5D] mt-1">
                       Size: <strong>{selectedSize}</strong> • Gói {rentalDays} ngày
                     </div>
-                    <div className="font-playfair font-bold text-[17px] text-[#733F49] mt-2">
+                    <div className="font-jakarta font-extrabold text-[19px] text-[#733F49] mt-1.5 tabular-nums tracking-tight">
                       {totalRentPrice.toLocaleString('vi-VN')}₫
                     </div>
                   </div>
@@ -1840,7 +1825,7 @@ export default function CheckoutPage() {
                         {depositOption === 'deposit30' ? '(Tạm ứng cọc giữ lịch 50%)' : '(Thanh toán 100% trọn gói)'}
                       </span>
                     </div>
-                    <span className="font-playfair font-bold text-[22px] text-[#733F49]">
+                    <span className="font-jakarta font-extrabold text-[24px] sm:text-[26px] text-[#733F49] tabular-nums tracking-tight">
                       {amountToPayToday.toLocaleString('vi-VN')}₫
                     </span>
                   </div>
