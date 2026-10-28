@@ -391,7 +391,7 @@ export default function CheckoutPage() {
       <main className="flex-1 max-w-[1320px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-9">
 
         {/* Breadcrumb */}
-        <nav className="flex items-center gap-2 text-[12.5px] text-[#847374] mb-6 print:hidden">
+        <nav className="flex items-center gap-2 text-[12.5px] text-[#847374] mb-4 print:hidden">
           <Link to="/" className="hover:text-[#B8737D] transition-colors no-underline text-[#847374]">
             Trang chủ
           </Link>
@@ -403,23 +403,8 @@ export default function CheckoutPage() {
           <span className="text-[#2C2523] font-medium">Đặt Thuê, Ký Hợp Đồng & Thanh Toán</span>
         </nav>
 
-        {/* Header Title Section */}
-        <div className="mb-8 print:hidden">
-
-          <h1 className="font-playfair text-[28px] sm:text-[38px] lg:text-[42px] font-medium text-[#2C2523] leading-tight mb-2.5">
-            {currentStep === 1 && 'Thông Tin Đặt Thuê & Số Đo May Đo'}
-            {currentStep === 2 && 'Xem & Ký Hợp Đồng Thuê Điện Tử'}
-            {currentStep === 3 && 'Đặt Cọc Giữ Lịch & Thanh Toán'}
-          </h1>
-          <p className="text-[13.5px] sm:text-[14.5px] text-[#6B5C5D] font-normal leading-relaxed m-0 max-w-[850px]">
-            {currentStep === 1 && 'Cung cấp số đo cơ thể chuẩn xác để đội ngũ nghệ nhân Haute Couture may đo, chỉnh sửa vừa khít vóc dáng.'}
-            {currentStep === 2 && 'Văn bản hợp đồng bảo hộ pháp lý song phương, cam kết hoàn cọc 100% và bảo quản trang phục nguyên bản.'}
-            {currentStep === 3 && 'Ký hợp đồng thành công! Tiến hành đặt cọc để Atelier khóa lịch độc quyền cho hôn lễ của nàng.'}
-          </p>
-        </div>
-
         {/* Stepper Bar (3 Clear Steps) */}
-        <div className="w-full max-w-[820px] mx-auto mb-10 print:hidden">
+        <div className="w-full max-w-[820px] mx-auto mb-6 sm:mb-8 print:hidden">
           <div className="bg-white rounded-full border border-[#EEDECF]/80 shadow-[0_2px_12px_rgba(44,37,35,0.04)] px-4 sm:px-8 py-3 flex items-center justify-between text-[12px] sm:text-[13.5px]">
 
             {/* Step 1 */}
