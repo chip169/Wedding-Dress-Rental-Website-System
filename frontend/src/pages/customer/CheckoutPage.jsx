@@ -102,48 +102,7 @@ export default function CheckoutPage() {
   // 2. Chế độ cung cấp số đo: 'input' (tự điền) | 'showroom' (chuyên viên đo tại showroom / video call)
   const [measurementMode, setMeasurementMode] = useState('input');
 
-  // 3. Danh mục phụ kiện & dịch vụ cưới cao cấp (Add-ons)
-  const AVAILABLE_ADDONS = [
-    {
-      id: 'veil',
-      name: 'Khăn Voan Hoàng Gia 3M Thêu Ren Thủ Công',
-      desc: 'Voan tơ tằm dài 3m đính ngọc trai & thêu tên CD-CR',
-      price: 500000,
-      icon: '🌸',
-      tag: 'Bán chạy nhất',
-    },
-    {
-      id: 'tiara',
-      name: 'Vương Miện Pha Lê Swarovski Pháp Cao Cấp',
-      desc: 'Mạ vàng trắng 18K lấp lánh sân khấu tiệc cưới',
-      price: 800000,
-      icon: '👑',
-      tag: 'Hoàng gia',
-    },
-    {
-      id: 'stylist',
-      name: 'Chuyên Viên Stylist Mặc Váy Tận Nơi Ngày Cưới',
-      desc: 'Hỗ trợ thắt corsetry & căn chỉnh tùng váy hoàn hảo tại tư gia',
-      price: 1200000,
-      icon: '💎',
-      tag: 'VIP Concierge',
-    },
-  ];
 
-  const [selectedAddons, setSelectedAddons] = useState(['veil']);
-
-  const toggleAddon = (addonId) => {
-    setSelectedAddons((prev) =>
-      prev.includes(addonId) ? prev.filter((id) => id !== addonId) : [...prev, addonId]
-    );
-  };
-
-  const addonTotal = useMemo(() => {
-    return selectedAddons.reduce((sum, id) => {
-      const found = AVAILABLE_ADDONS.find((a) => a.id === id);
-      return sum + (found ? found.price : 0);
-    }, 0);
-  }, [selectedAddons]);
 
   // 4. Trạng thái kiểm tra thanh toán VietQR giả lập
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
@@ -354,7 +313,7 @@ export default function CheckoutPage() {
   const extraDayRate = 800000;
   const extraDaysCount = Math.max(0, rentalDays - 4);
   const extraDayFee = extraDaysCount * extraDayRate;
-  const totalRentPrice = baseRentPrice + extraDayFee + addonTotal;
+  const totalRentPrice = baseRentPrice + extraDayFee;
   const depositCollateral = activeDress?.depositAmount || 15000000;
 
   // Amount to pay today based on depositOption (30% or 100%)
@@ -414,7 +373,6 @@ export default function CheckoutPage() {
       rentalStartDate: rentalSchedule.startDate,
       rentalEndDate: rentalSchedule.endDate,
       rentalDays,
-      addons: selectedAddons,
       items: [
         {
           dressId: activeDress.id || activeDress._id,
@@ -1306,67 +1264,6 @@ export default function CheckoutPage() {
                   </div>
                 </section>
 
-                {/* 4. PHỤ KIỆN CƯỚI & DỊCH VỤ ĐẶC QUYỀN (LUXURY ADD-ONS) */}
-                <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
-                  <div className="flex items-center justify-between pb-4 border-b border-[#F5EDE8] mb-5">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-xl bg-[#FAF0EC] flex items-center justify-center text-[#B8737D]">
-                        <Crown className="w-5 h-5" />
-                      </div>
-                      <div>
-                        <h2 className="font-playfair text-[19px] sm:text-[21px] font-semibold text-[#2C2523] m-0">
-                          Phụ Kiện Cưới & Dịch Vụ Đặc Quyền
-                        </h2>
-                        <p className="text-[12px] text-[#847374] m-0 mt-0.5">
-                          Tùy chọn phụ kiện đồng bộ với tác phẩm váy cưới để ngày trọng đại thêm lộng lẫy
-                        </p>
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
-                    {AVAILABLE_ADDONS.map((addon) => {
-                      const isChecked = selectedAddons.includes(addon.id);
-                      return (
-                        <div
-                          key={addon.id}
-                          onClick={() => toggleAddon(addon.id)}
-                          className={`relative p-4 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${
-                            isChecked
-                              ? 'border-[#733F49] bg-[#FAF3F0] ring-2 ring-[#733F49]/20 shadow-xs'
-                              : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
-                          }`}
-                        >
-                          <div>
-                            <div className="flex items-center justify-between mb-2">
-                              <span className="text-[20px]">{addon.icon}</span>
-                              <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-white border border-[#EEDECF] text-[#733F49] uppercase tracking-wider">
-                                {addon.tag}
-                              </span>
-                            </div>
-                            <h4 className="font-playfair font-bold text-[14.5px] text-[#2C2523] m-0 mb-1 leading-snug">
-                              {addon.name}
-                            </h4>
-                            <p className="text-[11.5px] text-[#6B5C5D] m-0 leading-relaxed">
-                              {addon.desc}
-                            </p>
-                          </div>
-                          <div className="mt-4 pt-3 border-t border-[#F2D8D4] flex items-center justify-between">
-                            <span className="font-jakarta font-extrabold text-[14px] text-[#733F49] tabular-nums">
-                              +{addon.price.toLocaleString('vi-VN')}₫
-                            </span>
-                            <div className={`w-5 h-5 rounded-md flex items-center justify-center border ${
-                              isChecked ? 'bg-[#733F49] border-[#733F49] text-white' : 'border-[#D5C2B5] bg-white'
-                            }`}>
-                              {isChecked && <Check className="w-3.5 h-3.5" />}
-                            </div>
-                          </div>
-                        </div>
-                      );
-                    })}
-                  </div>
-                </section>
-
                 {/* Continue Button to Step 2 */}
                 <div className="pt-2">
                   <button
@@ -1919,14 +1816,8 @@ export default function CheckoutPage() {
                 <div className="space-y-2.5 text-[13px]">
                   <div className="flex items-center justify-between text-[#6B5C5D]">
                     <span>Giá thuê lễ phục ({rentalDays} ngày):</span>
-                    <span className="font-bold text-[#2C2523]">{(baseRentPrice + extraDayFee).toLocaleString('vi-VN')}₫</span>
+                    <span className="font-bold text-[#2C2523]">{totalRentPrice.toLocaleString('vi-VN')}₫</span>
                   </div>
-                  {addonTotal > 0 && (
-                    <div className="flex items-center justify-between text-[11px] text-[#733F49] pl-2 border-l-2 border-[#B8737D]">
-                      <span>Phụ kiện & Dịch vụ đi kèm ({selectedAddons.length} món):</span>
-                      <span className="font-bold">+{addonTotal.toLocaleString('vi-VN')}₫</span>
-                    </div>
-                  )}
                   {rentalDays > 4 && (
                     <div className="flex items-center justify-between text-[11px] text-[#847374] pl-2 border-l-2 border-[#EEDECF]">
                       <span>Bao gồm {rentalDays - 4} ngày gia hạn (+800k/ngày):</span>
