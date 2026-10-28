@@ -37,6 +37,7 @@ import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { MOCK_DRESSES } from '../../services/dressService';
 import { getCart } from '../../services/cartService';
+import { createOrder } from '../../services/orderService';
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
@@ -63,6 +64,8 @@ export default function CheckoutPage() {
 
   // Current Active Wizard Step: 1 = Thông Tin & Số Đo, 2 = Ký Hợp Đồng Điện Tử, 3 = Đặt Cọc & Thanh Toán
   const [currentStep, setCurrentStep] = useState(1);
+  const [createdOrder, setCreatedOrder] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Step 1: Form state
   const [brideName, setBrideName] = useState('Lê Nguyễn Thảo My');
@@ -145,10 +148,69 @@ export default function CheckoutPage() {
   };
 
   // Confirm final booking & payment
-  const handleConfirmFinalPayment = (e) => {
+  const handleConfirmFinalPayment = async (e) => {
     e?.preventDefault();
-    setIsSuccessModalOpen(true);
-    message.success('Xác nhận đặt thuê & thanh toán cọc thành công!');
+    if (isSubmitting) return;
+    setIsSubmitting(true);
+
+    const generatedOrderCode = `UB-2026-${Math.floor(100 + Math.random() * 900)}`;
+    const generatedContractCode = `HĐ-${generatedOrderCode}`;
+
+    const orderPayload = {
+      orderCode: generatedOrderCode,
+      customerName: brideName.trim(),
+      brideName: brideName.trim(),
+      customerPhone: phone.trim(),
+      phone: phone.trim(),
+      customerEmail: email.trim(),
+      email: email.trim(),
+      customerCccd: cccd.trim(),
+      cccd: cccd.trim(),
+      shippingAddress: address.trim(),
+      contractCode: generatedContractCode,
+      contractSignature: contractSignature || brideName,
+      measurements,
+      depositOption,
+      rentalStartDate: rentalSchedule.startDate,
+      rentalEndDate: rentalSchedule.endDate,
+      items: [
+        {
+          dressId: activeDress.id || activeDress._id,
+          name: activeDress.name,
+          size: selectedSize,
+          rentPrice: totalRentPrice,
+          depositAmount: depositCollateral,
+          image: activeDress.images?.[0] || activeDress.image,
+        },
+      ],
+      totalRentPrice,
+      totalDeposit: depositCollateral,
+      depositPaidAmount: amountToPayToday,
+      totalPayment: totalRentPrice + depositCollateral,
+      deliveryMethod: 'showroom',
+      notes: `Hôn lễ ngày ${rentalSchedule.weddingDate}. Đặt cọc ${depositOption === 'deposit30' ? '50%' : '100%'}.`,
+    };
+
+    try {
+      const res = await createOrder(orderPayload);
+      const savedOrder = res?.data || orderPayload;
+      setCreatedOrder(savedOrder);
+
+      // Xóa giỏ hàng sau khi đặt thuê thành công
+      try {
+        localStorage.removeItem('unibridal_cart');
+        window.dispatchEvent(new Event('unibridal-cart-updated'));
+      } catch (err) {
+        // ignore
+      }
+
+      setIsSuccessModalOpen(true);
+      message.success('Xác nhận đặt thuê & thanh toán cọc thành công!');
+    } catch (error) {
+      message.error(error.message || 'Không thể tạo đơn thuê, vui lòng thử lại.');
+    } finally {
+      setIsSubmitting(false);
+    }
   };
 
   const copyToClipboard = (text) => {
@@ -1108,8 +1170,8 @@ export default function CheckoutPage() {
             {/* Contract Ticket Voucher */}
             <div className="bg-[#FAF4EE] p-4.5 rounded-2xl border border-[#EEDECF] text-left text-[12.5px] space-y-2">
               <div className="flex items-center justify-between pb-2 border-b border-[#EEDECF]">
-                <span className="text-[#847374]">Mã Hợp Đồng:</span>
-                <strong className="font-mono text-[#733F49] text-[14px]">HĐ-UB-2026/8992</strong>
+                <span className="text-[#847374]">Mã Đơn / Hợp Đồng:</span>
+                <strong className="font-mono text-[#733F49] text-[14px]">{createdOrder?.contractCode || createdOrder?.orderCode || 'HĐ-UB-2026/8992'}</strong>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[#847374]">Trang phục:</span>
@@ -1140,9 +1202,19 @@ export default function CheckoutPage() {
                 type="button"
                 onClick={() => {
                   setIsSuccessModalOpen(false);
+                  navigate('/profile/orders');
+                }}
+                className="w-full sm:w-auto px-6 py-3 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white text-[13px] font-bold transition-all cursor-pointer border-0 shadow-md"
+              >
+                Xem Đơn Hàng Của Tôi
+              </button>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsSuccessModalOpen(false);
                   navigate('/');
                 }}
-                className="w-full sm:w-auto px-7 py-3 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white text-[13px] font-bold transition-all cursor-pointer border-0 shadow-md"
+                className="w-full sm:w-auto px-5 py-3 rounded-xl bg-stone-100 hover:bg-stone-200 text-[#2C2523] text-[13px] font-semibold transition-all cursor-pointer border-0"
               >
                 Về Trang Chủ
               </button>

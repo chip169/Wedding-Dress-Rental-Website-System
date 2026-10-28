@@ -37,6 +37,7 @@ import {
   TIME_SLOTS,
   VIP_SERVICES,
   createAppointment,
+  createAppointmentApi,
 } from '../../services/appointmentService';
 import { MOCK_DRESSES } from '../../services/dressService';
 
@@ -220,7 +221,7 @@ export default function AppointmentPage() {
   };
 
   // Submit appointment
-  const handleSubmitBooking = (e) => {
+  const handleSubmitBooking = async (e) => {
     e.preventDefault();
     if (!validateForm()) {
       message.error('Vui lòng kiểm tra lại thông tin còn thiếu trên biểu mẫu.');
@@ -229,14 +230,19 @@ export default function AppointmentPage() {
 
     const appointmentData = {
       fullName: fullName.trim(),
+      customerName: fullName.trim(),
       phone: phone.trim(),
+      customerPhone: phone.trim(),
       email: email.trim(),
+      customerEmail: email.trim(),
       branchId: selectedBranch.id,
+      branch: selectedBranch.id,
       branchName: selectedBranch.name,
       branchAddress: selectedBranch.address,
       branchPhone: selectedBranch.phone,
       branchMapUrl: selectedBranch.mapUrl,
       date: selectedDate,
+      appointmentDate: selectedDate,
       timeSlot: selectedTimeSlot.time,
       timeSlotPeriod: selectedTimeSlot.period,
       guestsCount,
@@ -253,10 +259,18 @@ export default function AppointmentPage() {
       notes: notes.trim(),
     };
 
-    const result = createAppointment(appointmentData);
-    setConfirmedBooking(result);
-    message.success('Đặt lịch hẹn Private Suite thành công!');
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    try {
+      const res = await createAppointmentApi(appointmentData);
+      const result = res?.data || createAppointment(appointmentData);
+      setConfirmedBooking(result);
+      message.success('Đặt lịch hẹn Private Suite thành công!');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    } catch (err) {
+      const localResult = createAppointment(appointmentData);
+      setConfirmedBooking(localResult);
+      message.success('Đặt lịch hẹn Private Suite thành công!');
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+    }
   };
 
   // Print invitation handler

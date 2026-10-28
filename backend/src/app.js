@@ -1,6 +1,8 @@
 import express from 'express';
 import cors from 'cors';
 import authRoutes from './routes/auth.routes.js';
+import appointmentRoutes from './routes/appointment.routes.js';
+import orderRoutes from './routes/order.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
@@ -35,6 +37,8 @@ app.get('/health', (req, res) => {
 
 // Gắn các Routers API
 app.use('/api/auth', authRoutes);
+app.use('/api/appointments', appointmentRoutes);
+app.use('/api/orders', orderRoutes);
 
 // Bắt lỗi tập trung
 app.use(errorHandler);

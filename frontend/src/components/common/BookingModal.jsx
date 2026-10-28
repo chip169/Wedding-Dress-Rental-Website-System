@@ -26,7 +26,7 @@ import {
 import { message } from 'antd';
 import { MOCK_DRESSES } from '../../services/dressService';
 import { addToCart } from '../../services/cartService';
-import { SHOWROOM_BRANCHES, TIME_SLOTS, createAppointment } from '../../services/appointmentService';
+import { SHOWROOM_BRANCHES, TIME_SLOTS, createAppointment, createAppointmentApi } from '../../services/appointmentService';
 import { useAuth } from '../../contexts/AuthContext';
 
 export default function BookingModal({ isOpen, onClose, preselectedProduct, initialMode = 'both' }) {
@@ -97,7 +97,7 @@ export default function BookingModal({ isOpen, onClose, preselectedProduct, init
 
   if (!isOpen) return null;
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
 
     if (!fullName.trim() || !phone.trim() || !email.trim()) {
@@ -114,18 +114,23 @@ export default function BookingModal({ isOpen, onClose, preselectedProduct, init
     const requestId = `UB-GUEST-2026-${Math.floor(1000 + Math.random() * 9000)}`;
     const selectedBranchObj = SHOWROOM_BRANCHES.find((b) => b.id === branchId) || SHOWROOM_BRANCHES[0];
 
-    // If fitting is included, save appointment
+    // If fitting is included, save appointment to API & Local
     if (serviceType === 'both' || serviceType === 'fitting') {
-      createAppointment({
+      const aptPayload = {
         id: `APT-2026-${Math.floor(1000 + Math.random() * 9000)}`,
         fullName: fullName.trim(),
+        customerName: fullName.trim(),
         phone: phone.trim(),
+        customerPhone: phone.trim(),
         email: email.trim(),
+        customerEmail: email.trim(),
         branchId: selectedBranchObj.id,
+        branch: selectedBranchObj.id,
         branchName: selectedBranchObj.name,
         branchAddress: selectedBranchObj.address,
         branchPhone: selectedBranchObj.phone,
         date: fittingDate,
+        appointmentDate: fittingDate,
         timeSlot: fittingTimeSlot,
         guestsCount: Number(guestsCount),
         selectedDresses: [
@@ -137,7 +142,13 @@ export default function BookingModal({ isOpen, onClose, preselectedProduct, init
           },
         ],
         notes: `Khách vãng lai (Guest). ${notes}`,
-      });
+      };
+
+      try {
+        await createAppointmentApi(aptPayload);
+      } catch {
+        createAppointment(aptPayload);
+      }
     }
 
     // If rental is included, add to cart
