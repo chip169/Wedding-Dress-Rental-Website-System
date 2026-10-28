@@ -94,6 +94,75 @@ export default function CheckoutPage() {
 
   // Current Active Wizard Step: 1 = Thông Tin & Số Đo, 2 = Ký Hợp Đồng Điện Tử, 3 = Đặt Cọc & Thanh Toán
   const [currentStep, setCurrentStep] = useState(1);
+  // Chữ ký tay điện tử (Digital Signature Pad)
+  const signatureCanvasRef = React.useRef(null);
+  const [signatureMode, setSignatureMode] = useState('draw'); // 'draw' (vẽ tay) | 'type' (gõ phím)
+  const [isCanvasDrawing, setIsCanvasDrawing] = useState(false);
+  const [hasDrawnSignature, setHasDrawnSignature] = useState(false);
+  const [drawnSignatureData, setDrawnSignatureData] = useState('');
+
+  const getCanvasCoords = (e) => {
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return { x: 0, y: 0 };
+    const rect = canvas.getBoundingClientRect();
+    const clientX = e.touches ? e.touches[0].clientX : e.clientX;
+    const clientY = e.touches ? e.touches[0].clientY : e.clientY;
+    return {
+      x: (clientX - rect.left) * (canvas.width / rect.width),
+      y: (clientY - rect.top) * (canvas.height / rect.height),
+    };
+  };
+
+  const handleStartDraw = (e) => {
+    e.preventDefault();
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const { x, y } = getCanvasCoords(e);
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineWidth = 2.5;
+    ctx.lineCap = 'round';
+    ctx.lineJoin = 'round';
+    ctx.strokeStyle = '#1D2A44'; // Mực xanh đen bút ký cao cấp
+    setIsCanvasDrawing(true);
+  };
+
+  const handleMoveDraw = (e) => {
+    if (!isCanvasDrawing) return;
+    e.preventDefault();
+    const canvas = signatureCanvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const { x, y } = getCanvasCoords(e);
+    ctx.lineTo(x, y);
+    ctx.stroke();
+    setHasDrawnSignature(true);
+  };
+
+  const handleEndDraw = () => {
+    if (isCanvasDrawing) {
+      setIsCanvasDrawing(false);
+      const canvas = signatureCanvasRef.current;
+      if (canvas) {
+        const dataUrl = canvas.toDataURL('image/png');
+        setDrawnSignatureData(dataUrl);
+        setContractSignature(dataUrl);
+      }
+    }
+  };
+
+  const handleClearSignature = () => {
+    const canvas = signatureCanvasRef.current;
+    if (canvas) {
+      const ctx = canvas.getContext('2d');
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+      setHasDrawnSignature(false);
+      setDrawnSignatureData('');
+      setContractSignature(brideName);
+    }
+  };
+
   const [createdOrder, setCreatedOrder] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -912,7 +981,7 @@ export default function CheckoutPage() {
                       <strong className="text-[#2C2523] block text-[13.5px]">CÔNG TY TNHH UNIBRIDAL HAUTE COUTURE</strong>
                       <span className="text-[#6B5C5D] block mt-0.5">Mã số thuế: 0316889988</span>
                       <span className="text-[#6B5C5D] block">Showroom Flagship: 88 Nam Kỳ Khởi Nghĩa, Q.1, TP. HCM</span>
-                      <span className="text-[#6B5C5D] block">Đại diện: NTK. Hoàng Yến (Lead Haute Couture Stylist)</span>
+                      <span className="text-[#6B5C5D] block">Đại diện: <strong>Ông Kim Xuân Hiếu</strong> (Tổng Giám Đốc UniBridal)</span>
                     </div>
 
                     <div>
@@ -992,31 +1061,107 @@ export default function CheckoutPage() {
                           </span>
                         </div>
                       </div>
-                      <span className="font-bold text-[12px] text-[#2C2523] block">
-                        NTK. Hoàng Yến (Lead Designer)
+                      <span className="font-bold text-[12.5px] text-[#2C2523] block">
+                        Ông Kim Xuân Hiếu (Tổng Giám Đốc)
                       </span>
                     </div>
 
-                    {/* Bên B Signature */}
-                    <div className="p-4 rounded-2xl bg-[#FAF0EC] border-2 border-[#F2D8D4] text-center space-y-2">
-                      <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#733F49] block">
-                        ĐẠI DIỆN BÊN THUÊ (BÊN B - CÔ DÂU KÝ SỐ)
-                      </span>
-                      <div className="h-16 flex flex-col items-center justify-center">
-                        <div className="font-playfair italic font-bold text-[22px] text-[#733F49] tracking-wider select-none">
-                          {contractSignature || brideName}
-                        </div>
-                        <span className="text-[9.5px] font-mono text-[#2E7D32] font-semibold">
-                          ✓ XÁC THỰC CHỮ KÝ ĐIỆN TỬ CÔ DÂU
+                    {/* Bên B Signature Pad (Ký Điện Tử Tự Tay) */}
+                    <div className="p-4 rounded-2xl bg-[#FAF0EC] border-2 border-[#F2D8D4] space-y-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-[#F2D8D4]">
+                        <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#733F49] block">
+                          ĐẠI DIỆN BÊN THUÊ (BÊN B - CÔ DÂU KÝ TAY)
                         </span>
+                        
+                        {/* Chuyển chế độ Ký tay / Ký gõ tên */}
+                        <div className="flex items-center bg-white/80 p-0.5 rounded-lg border border-[#F2D8D4] text-[10.5px] font-bold">
+                          <button
+                            type="button"
+                            onClick={() => setSignatureMode('draw')}
+                            className={`px-2 py-0.5 rounded-md transition-colors border-0 cursor-pointer ${
+                              signatureMode === 'draw'
+                                ? 'bg-[#733F49] text-white'
+                                : 'bg-transparent text-[#733F49] hover:bg-[#FAF0EC]'
+                            }`}
+                          >
+                            ✍️ Ký tay
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => setSignatureMode('type')}
+                            className={`px-2 py-0.5 rounded-md transition-colors border-0 cursor-pointer ${
+                              signatureMode === 'type'
+                                ? 'bg-[#733F49] text-white'
+                                : 'bg-transparent text-[#733F49] hover:bg-[#FAF0EC]'
+                            }`}
+                          >
+                            ⌨️ Gõ họ tên
+                          </button>
+                        </div>
                       </div>
-                      <input
-                        type="text"
-                        value={contractSignature}
-                        onChange={(e) => setContractSignature(e.target.value)}
-                        placeholder="Nhập họ tên cô dâu để xác thực chữ ký"
-                        className="w-full text-center bg-white border border-[#F2D8D4] rounded-lg px-2.5 py-1 text-[12px] font-semibold text-[#733F49] focus:outline-none focus:border-[#733F49]"
-                      />
+
+                      {signatureMode === 'draw' ? (
+                        /* BẢNG KÝ TAY CANVAS ĐIỆN TỬ */
+                        <div className="space-y-2">
+                          <div className="relative w-full h-32 bg-[#FFFDFB] rounded-xl border-2 border-dashed border-[#EEDECF] overflow-hidden flex items-center justify-center shadow-inner">
+                            {!hasDrawnSignature && (
+                              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-[#A39284] select-none text-[11.5px] space-y-1">
+                                <span className="font-playfair italic text-[15px] text-[#C5A880]">
+                                  ✍️ Dùng chuột, ngón tay hoặc bút cảm ứng để vẽ chữ ký của nàng tại đây
+                                </span>
+                                <span className="text-[10px] text-[#A39284] font-mono">
+                                  Hỗ trợ ký cảm ứng đa điểm trên điện thoại, máy tính bảng & máy tính
+                                </span>
+                              </div>
+                            )}
+                            <canvas
+                              ref={signatureCanvasRef}
+                              width={480}
+                              height={130}
+                              onMouseDown={handleStartDraw}
+                              onMouseMove={handleMoveDraw}
+                              onMouseUp={handleEndDraw}
+                              onMouseLeave={handleEndDraw}
+                              onTouchStart={handleStartDraw}
+                              onTouchMove={handleMoveDraw}
+                              onTouchEnd={handleEndDraw}
+                              className="w-full h-full cursor-crosshair touch-none"
+                            />
+                          </div>
+
+                          <div className="flex items-center justify-between text-[11px] pt-1">
+                            <span className="font-semibold text-[#2E7D32] flex items-center gap-1">
+                              {hasDrawnSignature ? '✓ Chữ ký điện tử đã được ghi nhận' : 'Vui lòng ký vào ô phía trên'}
+                            </span>
+                            <button
+                              type="button"
+                              onClick={handleClearSignature}
+                              className="text-[#733F49] font-bold hover:underline bg-transparent border-0 cursor-pointer flex items-center gap-1"
+                            >
+                              <span>↺</span> Xóa ký lại
+                            </button>
+                          </div>
+                        </div>
+                      ) : (
+                        /* CHẾ ĐỘ GÕ HỌ TÊN */
+                        <div className="space-y-2 py-1">
+                          <div className="h-20 flex flex-col items-center justify-center bg-[#FFFDFB] rounded-xl border border-[#F2D8D4] p-2">
+                            <div className="font-playfair italic font-bold text-[24px] text-[#733F49] tracking-wider select-none">
+                              {contractSignature && !contractSignature.startsWith('data:image') ? contractSignature : brideName}
+                            </div>
+                            <span className="text-[9.5px] font-mono text-[#2E7D32] font-semibold mt-1">
+                              ✓ XÁC THỰC CHỮ KÝ ĐIỆN TỬ THEO TÊN CÔ DÂU
+                            </span>
+                          </div>
+                          <input
+                            type="text"
+                            value={contractSignature && !contractSignature.startsWith('data:image') ? contractSignature : ''}
+                            onChange={(e) => setContractSignature(e.target.value)}
+                            placeholder="Nhập họ tên cô dâu để xác thực chữ ký"
+                            className="w-full text-center bg-white border border-[#F2D8D4] rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold text-[#733F49] focus:outline-none focus:border-[#733F49]"
+                          />
+                        </div>
+                      )}
                     </div>
 
                   </div>
@@ -1423,7 +1568,18 @@ export default function CheckoutPage() {
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[#847374]">Chữ ký số bên B:</span>
-                <strong className="text-[#2E7D32]">✓ Đã ký bởi {brideName}</strong>
+                {contractSignature && contractSignature.startsWith('data:image') ? (
+                  <div className="flex items-center gap-2">
+                    <img src={contractSignature} alt="Chữ ký cô dâu" className="h-8 object-contain bg-white px-2 rounded border border-[#EEDECF]" />
+                    <span className="text-[#2E7D32] text-[11px] font-bold">✓ Ký tay hợp lệ</span>
+                  </div>
+                ) : (
+                  <strong className="text-[#2E7D32]">✓ Đã ký bởi {brideName}</strong>
+                )}
+              </div>
+              <div className="flex items-center justify-between">
+                <span className="text-[#847374]">Đại diện Bên A:</span>
+                <strong className="text-[#2C2523]">Ông Kim Xuân Hiếu (Tổng Giám Đốc)</strong>
               </div>
             </div>
 
