@@ -608,7 +608,7 @@ export default function GuestBookingPage() {
                         required
                         value={fullName}
                         onChange={(e) => setFullName(e.target.value)}
-                        placeholder="VD: Lê Nguyễn Thảo My"
+                        placeholder="Họ và tên của nàng"
                         className="w-full pl-10 pr-4 py-2.5 bg-[#FCF9F6] border border-[#EEDECF] rounded-xl text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white transition-colors"
                       />
                     </div>
@@ -625,7 +625,7 @@ export default function GuestBookingPage() {
                         required
                         value={phone}
                         onChange={(e) => setPhone(e.target.value)}
-                        placeholder="VD: 0938 128 899"
+                        placeholder="Số điện thoại liên hệ"
                         className="w-full pl-10 pr-4 py-2.5 bg-[#FCF9F6] border border-[#EEDECF] rounded-xl text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white transition-colors"
                       />
                     </div>
@@ -644,7 +644,7 @@ export default function GuestBookingPage() {
                         required
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
-                        placeholder="VD: thaomy.bride@gmail.com"
+                        placeholder="Địa chỉ Email chính thức"
                         className="w-full pl-10 pr-4 py-2.5 bg-[#FCF9F6] border border-[#EEDECF] rounded-xl text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white transition-colors"
                       />
                     </div>

@@ -1,3 +1,4 @@
+import axiosClient from '../api/axiosClient';
 // Import hình ảnh asset để đảm bảo hiển thị sắc nét trong bundle của Vite
 import card1Elysian from '../assets/card1_elysian.jpg';
 import card2Celeste from '../assets/card2_celeste.jpg';
@@ -510,6 +511,12 @@ export function convertCatalogItemToDress(item) {
  * Lấy chi tiết mẫu váy cưới theo ID hoặc Slug
  */
 export async function getDressById(idOrSlug) {
+  try {
+    const res = await axiosClient.get(`/dresses/${idOrSlug}`);
+    if (res?.data) return res;
+  } catch (error) {
+    // Fallback
+  }
   const target = String(idOrSlug || '1').trim().toLowerCase();
 
   // 1. Tìm trong MOCK_DRESSES (mục 1-5 có chi tiết thủ công)
@@ -577,7 +584,13 @@ export async function getRelatedDresses(currentId) {
 /**
  * Lấy tất cả mẫu váy cưới (toàn bộ 72 thiết kế)
  */
-export async function getAllDresses() {
+export async function getAllDresses(params = {}) {
+  try {
+    const res = await axiosClient.get('/dresses', { params });
+    if (res?.data?.length) return res;
+  } catch (error) {
+    // Fallback
+  }
   const all = DRESS_CATALOG.map((item) => {
     const mock = MOCK_DRESSES.find((m) => m.id === item.id);
     return mock || convertCatalogItemToDress(item);
@@ -596,3 +609,43 @@ export function formatCurrencyVND(amount) {
   return new Intl.NumberFormat('vi-VN').format(amount) + '₫';
 }
 
+
+/**
+ * Lấy danh mục áo cưới
+ */
+export async function getCategories() {
+  try {
+    return await axiosClient.get('/categories');
+  } catch (error) {
+    return {
+      success: true,
+      data: [
+        { slug: 'ballgown', name: 'Công Chúa Bồng Xòe (Ballgown)' },
+        { slug: 'mermaid', name: 'Đuôi Cá Điêu Khắc (Mermaid)' },
+        { slug: 'a-line', name: 'Chữ A Thanh Lịch (A-Line)' },
+        { slug: 'sheath', name: 'Satin Suông Tối Giản (Minimal Slip)' },
+      ],
+    };
+  }
+}
+
+/**
+ * Thêm mới mẫu váy cưới (Admin)
+ */
+export async function createDress(data) {
+  return await axiosClient.post('/dresses', data);
+}
+
+/**
+ * Cập nhật thông tin váy cưới (Admin)
+ */
+export async function updateDress(id, data) {
+  return await axiosClient.put(`/dresses/${id}`, data);
+}
+
+/**
+ * Xóa hoặc ẩn váy cưới (Admin)
+ */
+export async function deleteDress(id) {
+  return await axiosClient.delete(`/dresses/${id}`);
+}
