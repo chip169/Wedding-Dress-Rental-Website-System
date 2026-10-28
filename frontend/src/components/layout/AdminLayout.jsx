@@ -123,7 +123,7 @@ export default function AdminLayout({
                 />
               </div>
               <div className="flex flex-col">
-                <span className="font-serif text-[19px] font-bold tracking-normal text-[#733F49] select-none leading-none">
+                <span className="font-serif text-[19px] font-bold tracking-normal text-[#BE807C] select-none leading-none">
                   UniBridal
                 </span>
                 <span className="text-[10px] uppercase tracking-wider text-[#A39192] mt-1 font-semibold">

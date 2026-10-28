@@ -17,7 +17,7 @@ const Footer = ({ variant }) => {
                 alt="UniBridal Logo"
                 className="h-[36px] w-auto object-contain"
               />
-              <span className="font-playfair text-[22px] font-bold text-[#2C2523] tracking-[0.5px]">
+              <span className="font-playfair text-[22px] font-bold text-[#BE807C] tracking-[0.5px]">
                 UniBridal
               </span>
             </div>
@@ -60,10 +60,10 @@ const Footer = ({ variant }) => {
             </div>
           </div>
 
-          {/* Column 3: Chính Sách & Cam Kết (col-span-3) */}
+          {/* Column 3: Chính Sách và Cam Kết (col-span-3) */}
           <div className="lg:col-span-3">
             <h4 className="font-playfair font-normal text-[20px] text-[#2C2523] mb-4">
-              Chính Sách & Cam Kết
+              Chính Sách và Cam Kết
             </h4>
             <ul className="list-none p-0 m-0 space-y-2">
               {[
@@ -71,7 +71,7 @@ const Footer = ({ variant }) => {
                 'Hợp đồng bảo hiểm váy cưới',
                 'Gói thử váy Private Suite',
                 'Điều khoản giao nhận toàn quốc',
-                'Bảo quản & Xử lý lụa tơ tằm',
+                'Bảo quản và Xử lý lụa tơ tằm',
               ].map((text, idx) => (
                 <li key={idx}>
                   <a
@@ -93,10 +93,10 @@ const Footer = ({ variant }) => {
             <ul className="list-none p-0 m-0 space-y-2">
               {[
                 'Về UniBridal Haute Couture',
-                'Bảng giá & Gói dịch vụ',
+                'Bảng giá và Gói dịch vụ',
                 'Hướng dẫn đặt lịch thử váy',
                 'Câu hỏi thường gặp (FAQ)',
-                'Tuyển dụng & Hợp tác',
+                'Tuyển dụng và Hợp tác',
               ].map((text, idx) => (
                 <li key={idx}>
                   <a

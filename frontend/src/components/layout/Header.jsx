@@ -55,7 +55,7 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
     },
     {
       title: 'Váy Cưới Haute Couture',
-      subtitle: 'Độc bản may đo & ren Pháp cao cấp',
+      subtitle: 'Độc bản may đo và ren Pháp cao cấp',
       href: '/collection',
     },
     {
@@ -64,7 +64,7 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
       href: '#silhouettes',
     },
     {
-      title: 'Vest Cưới & Tuxedo',
+      title: 'Vest Cưới và Tuxedo',
       subtitle: 'Phong cách quý ông Châu Âu thanh lịch',
       href: '/collection',
     },
@@ -78,17 +78,17 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
   const userAccountItems = [
     {
       title: 'Trang cá nhân',
-      subtitle: 'Quản lý thông tin & hồ sơ',
+      subtitle: 'Quản lý thông tin và hồ sơ',
       href: '/profile',
     },
     {
       title: 'Lịch sử đơn hàng',
-      subtitle: 'Tiến độ thuê & thử váy cưới',
+      subtitle: 'Tiến độ thuê và thử váy cưới',
       href: '/profile/orders',
     },
     {
       title: 'Quản lý đơn thuê (Staff)',
-      subtitle: 'Bàn giao, kiểm định & định danh số đo',
+      subtitle: 'Bàn giao, kiểm định và định danh số đo',
       href: '/admin/don-thue',
     },
     {
@@ -190,7 +190,7 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
             alt="UniBridal Emblem"
             className="h-[32px] w-auto object-contain"
           />
-          <span className="font-playfair text-[24px] font-bold tracking-[0.2px] text-[#2C2523] leading-none group-hover:text-[#B8737D] transition-colors">
+          <span className="font-playfair text-[24px] font-bold tracking-[0.2px] text-[#BE807C] leading-none group-hover:opacity-80 transition-opacity">
             UniBridal
           </span>
         </Link>

@@ -22,7 +22,7 @@ export const MOCK_DRESSES = [
     silhouette: 'Ballgown',
     silhouetteCategory: 'Váy Cưới Công Chúa (Ballgown)',
     description: 'Vẻ đẹp kiêu hãnh của đóa hồng trong sương sớm. Thiết kế bồng bềnh hoàng gia với cấu trúc siết eo corsetry Pháp.',
-    material: 'Ren Chantilly Pháp & Lót tơ tằm Ý',
+    material: 'Ren Chantilly Pháp và Lót tơ tằm Ý',
     color: 'Hồng Pastel',
     sizes: [
       { id: 'XS', label: 'XS', note: 'Dưới 46kg', bust: '80-82cm', waist: '58-62cm' },
@@ -56,7 +56,7 @@ export const MOCK_DRESSES = [
       {
         icon: 'sparkles',
         label: 'Kỹ Thuật Đính Kết',
-        value: 'Pha Lê & Kim Sa 100% Thủ Công',
+        value: 'Pha Lê và Kim Sa 100% Thủ Công',
         sub: 'Hạt Swarovski bắt sáng',
       },
     ],
@@ -81,7 +81,7 @@ export const MOCK_DRESSES = [
     },
     realBrides: [
       {
-        brideName: 'Cô dâu Hà My & Lê Anh',
+        brideName: 'Cô dâu Hà My và Lê Anh',
         date: '15/10/2026',
         image: card8LaceDream,
         quote: 'Váy đẹp xuất sắc! Cả hội trường cưới ai cũng khen lộng lẫy. Form siết eo tôn dáng cực kỳ mà mặc rất thoải mái suốt cả ngày dài.',
@@ -108,8 +108,8 @@ export const MOCK_DRESSES = [
     categorySlug: 'mermaid',
     silhouette: 'Mermaid',
     silhouetteCategory: 'Váy Cưới Đuôi Cá (Mermaid)',
-    description: 'Bản giao hưởng giữa kỹ thuật corset siết eo hoàng gia và chất liệu thượng hạng từ Ý & Pháp.',
-    material: 'Lụa Mikado & Ren Ý',
+    description: 'Bản giao hưởng giữa kỹ thuật corset siết eo hoàng gia và chất liệu thượng hạng từ Ý và Pháp.',
+    material: 'Lụa Mikado và Ren Ý',
     color: 'Trắng Ngà Tinh Khôi',
     sizes: [
       { id: 'XS', label: 'XS', note: 'Dưới 46kg', bust: '80-82cm', waist: '58-62cm' },
@@ -131,7 +131,7 @@ export const MOCK_DRESSES = [
       {
         icon: 'diamond',
         label: 'Chất Liệu Cao Cấp',
-        value: 'Lụa Mikado & Ren Ý',
+        value: 'Lụa Mikado và Ren Ý',
         sub: 'Ôm dáng tuyệt đối',
       },
       {
@@ -143,7 +143,7 @@ export const MOCK_DRESSES = [
       {
         icon: 'sparkles',
         label: 'Kỹ Thuật Đính Kết',
-        value: 'Ngọc Trai Biển & Pha Lê',
+        value: 'Ngọc Trai Biển và Pha Lê',
         sub: 'Đính viền cúp ngực tinh xảo',
       },
     ],
@@ -263,7 +263,7 @@ export const MOCK_DRESSES = [
     silhouette: 'A-Line',
     silhouetteCategory: 'Váy Cưới Chữ A (A-Line)',
     description: 'Hàng ngàn cánh hoa 3D thủ công nở rộ trên tùng váy chữ A bay bổng.',
-    material: 'Tulle Pháp & Organza Thêu Hoa',
+    material: 'Tulle Pháp và Organza Thêu Hoa',
     color: 'Trắng Ngà Kem',
     sizes: [
       { id: 'XS', label: 'XS', note: 'Dưới 46kg', bust: '80-82cm', waist: '58-62cm' },
@@ -285,7 +285,7 @@ export const MOCK_DRESSES = [
       {
         icon: 'diamond',
         label: 'Chất Liệu Cao Cấp',
-        value: 'Tulle Pháp & Organza Thêu Hoa',
+        value: 'Tulle Pháp và Organza Thêu Hoa',
         sub: 'Bồng bềnh tự nhiên không nặng',
       },
       {
@@ -336,7 +336,7 @@ export const MOCK_DRESSES = [
     silhouette: 'Other',
     silhouetteCategory: 'Váy Cưới Suông Đính Ngọc Trai',
     description: 'Dáng suông thanh mảnh đính ngọc trai nước ngọt chuyển sắc gradient.',
-    material: 'Crepe Lụa Pháp & Tulle Mịn',
+    material: 'Crepe Lụa Pháp và Tulle Mịn',
     color: 'Trắng Ngọc Trai',
     sizes: [
       { id: 'XS', label: 'XS', note: 'Dưới 46kg', bust: '80-82cm', waist: '58-62cm' },
@@ -358,7 +358,7 @@ export const MOCK_DRESSES = [
       {
         icon: 'diamond',
         label: 'Chất Liệu Cao Cấp',
-        value: 'Crepe Lụa Pháp & Tulle Mịn',
+        value: 'Crepe Lụa Pháp và Tulle Mịn',
         sub: 'Độ rũ mềm mượt tôn dáng',
       },
       {
@@ -421,7 +421,7 @@ export function convertCatalogItemToDress(item) {
     silhouette: item.categoryName || 'Váy Cưới Cao Cấp',
     silhouetteCategory: item.categoryName || 'Váy Cưới Thiết Kế Hoàng Gia',
     description: `Tuyệt phẩm ${item.name} là mẫu thiết kế Haute Couture độc bản năm 2026. Được may đo tinh xảo với cấu trúc siết eo corsetry Pháp tôn trọn vóc dáng kiều diễm, kết hợp chất liệu ${item.material || 'lụa Mikado Ý'} thượng hạng.`,
-    material: item.material || 'Lụa Mikado Ý & Ren Chantilly',
+    material: item.material || 'Lụa Mikado Ý và Ren Chantilly',
     color: 'Trắng Ngọc Tinh Khôi',
     sizes: [
       { id: 'XS', label: 'XS', note: 'Dưới 46kg', bust: '80-82cm', waist: '58-62cm' },
@@ -471,7 +471,7 @@ export function convertCatalogItemToDress(item) {
     ],
     story: {
       collection: `BỘ SƯU TẬP ${item.name.toUpperCase()}`,
-      title: `Vẻ Đẹp Quý Phái & Thuần Khiết Của ${item.name}`,
+      title: `Vẻ Đẹp Quý Phái và Thuần Khiết Của ${item.name}`,
       content: [
         `Mỗi đường kim mũi chỉ trên thiết kế ${item.name} kết tinh hơn 380 giờ miệt mài may đo đính kết từ những nghệ nhân thủ công bậc thầy.`,
         `Chất vải ${item.material || 'thượng hạng'} rủ mềm tôn vinh tối đa những bước đi uyển chuyển, kiêu sa của nàng dâu trong giây phút thiêng liêng bước vào lễ đường thành hôn.`,
@@ -485,7 +485,7 @@ export function convertCatalogItemToDress(item) {
     },
     realBrides: [
       {
-        brideName: 'Cô dâu Hà My & Lê Anh',
+        brideName: 'Cô dâu Hà My và Lê Anh',
         date: '15/10/2026',
         image: card8LaceDream,
         quote: `Váy ${item.name} đẹp xuất sắc! Cả hội trường cưới ai cũng khen lộng lẫy. Form siết eo tôn dáng cực kỳ.`,

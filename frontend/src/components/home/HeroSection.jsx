@@ -55,7 +55,7 @@ const HeroSection = () => {
                   100%
                 </span>
                 <span className="font-jakarta text-[11.5px] sm:text-[12px] leading-[17px] text-[#514344] block whitespace-nowrap">
-                  Lụa tơ tằm & ren nhập khẩu Pháp
+                  Lụa tơ tằm và ren nhập khẩu Pháp
                 </span>
               </div>
 
