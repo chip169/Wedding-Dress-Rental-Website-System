@@ -954,57 +954,6 @@ export default function CheckoutPage() {
 
                   </div>
 
-                  {/* Live Dress Availability Status Banner */}
-                  {scheduleConflict ? (
-                    <div className="mb-5 bg-[#FDF2F0] border-2 border-[#FEB2B2] rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-[12.5px] shadow-xs animate-fade-in">
-                      <div className="flex items-start sm:items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-[#FEE2E2] text-[#DC2626] flex items-center justify-center shrink-0 font-bold">
-                          <AlertCircle className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-jakarta font-extrabold text-[13.5px] text-[#B91C1C] uppercase tracking-wide">
-                              TRẠNG THÁI: ĐÃ CÓ NGƯỜI ĐẶT TRÙNG LỊCH
-                            </span>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#DC2626] text-white">
-                              KHÔNG KHẢ DỤNG
-                            </span>
-                          </div>
-                          <span className="text-[#7F1D1D] font-medium block mt-0.5">
-                            Khoảng ngày nàng chọn bị trùng với lịch váy đã đặt trước (<strong>{scheduleConflict.formattedRange}</strong>). Nàng vui lòng nhấp chọn ngày khác trên bảng lịch bên dưới!
-                          </span>
-                        </div>
-                      </div>
-                      <span className="px-3 py-1.5 rounded-xl bg-white border border-[#FEB2B2] font-bold text-[#DC2626] text-[11px] uppercase tracking-wider shrink-0 shadow-2xs">
-                        ⚠ TRÙNG LỊCH
-                      </span>
-                    </div>
-                  ) : (
-                    <div className="mb-5 bg-[#F0FDF4] border-2 border-[#BBF7D0] rounded-2xl p-4 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-[12.5px] shadow-xs animate-fade-in">
-                      <div className="flex items-start sm:items-center gap-3">
-                        <div className="w-8 h-8 rounded-xl bg-[#DCFCE7] text-[#16A34A] flex items-center justify-center shrink-0 font-bold">
-                          <CheckCircle2 className="w-5 h-5" />
-                        </div>
-                        <div>
-                          <div className="flex items-center gap-2">
-                            <span className="font-jakarta font-extrabold text-[13.5px] text-[#15803D] uppercase tracking-wide">
-                              TRẠNG THÁI LỊCH: CÒN TRỐNG HOÀN TOÀN
-                            </span>
-                            <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#16A34A] text-white">
-                              ✓ SẴN SÀNG CHO THUÊ
-                            </span>
-                          </div>
-                          <span className="text-[#166534] font-medium block mt-0.5">
-                            Tác phẩm sẵn sàng trao nhận ngày <strong>{rentalSchedule.startDate}</strong>, ngày cưới <strong>{rentalSchedule.weddingDate}</strong> và hoàn trả <strong>{rentalSchedule.endDate}</strong>.
-                          </span>
-                        </div>
-                      </div>
-                      <span className="px-3 py-1.5 rounded-xl bg-white border border-[#86EFAC] font-bold text-[#15803D] text-[11px] uppercase tracking-wider shrink-0 shadow-2xs">
-                        ✓ KHÓA LỊCH ĐỘC QUYỀN
-                      </span>
-                    </div>
-                  )}
-
                   {/* Bảng Lịch Trực Quan Tháng Tự Động Co Giãn Theo Số Ngày Thuê */}
                   <div className="bg-[#FCF9F6] rounded-2xl border border-[#EEDECF] p-4 sm:p-5 mb-6">
                     <div className="flex flex-col lg:flex-row lg:items-center justify-between pb-3.5 border-b border-[#EEDECF] mb-3.5 gap-3">
