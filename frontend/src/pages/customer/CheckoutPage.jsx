@@ -1201,63 +1201,6 @@ export default function CheckoutPage() {
                     </>
                   )}
 
-                  <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-4">
-                    <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">CHIỀU CAO (CM)</label>
-                      <input
-                        type="text"
-                        value={measurements.height}
-                        onChange={(e) => setMeasurements({ ...measurements, height: e.target.value })}
-                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
-                      />
-                    </div>
-                    <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">CÂN NẶNG (KG)</label>
-                      <input
-                        type="text"
-                        value={measurements.weight}
-                        onChange={(e) => setMeasurements({ ...measurements, weight: e.target.value })}
-                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
-                      />
-                    </div>
-                    <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">VÒNG 1 (NGỰC)</label>
-                      <input
-                        type="text"
-                        value={measurements.bust}
-                        onChange={(e) => setMeasurements({ ...measurements, bust: e.target.value })}
-                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
-                      />
-                    </div>
-                    <div className="bg-[#FAF0EC] p-3 rounded-xl border border-[#F2D8D4]">
-                      <label className="text-[10px] font-bold uppercase text-[#733F49] block mb-1">VÒNG 2 (EO * QUAN TRỌNG)</label>
-                      <input
-                        type="text"
-                        value={measurements.waist}
-                        onChange={(e) => setMeasurements({ ...measurements, waist: e.target.value })}
-                        className="w-full bg-white border border-[#F2D8D4] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#733F49] text-center"
-                      />
-                    </div>
-                    <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">VÒNG 3 (MÔNG)</label>
-                      <input
-                        type="text"
-                        value={measurements.hips}
-                        onChange={(e) => setMeasurements({ ...measurements, hips: e.target.value })}
-                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
-                      />
-                    </div>
-                    <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">CAO GIÀY CƯỚI</label>
-                      <input
-                        type="text"
-                        value={measurements.heel}
-                        onChange={(e) => setMeasurements({ ...measurements, heel: e.target.value })}
-                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
-                      />
-                    </div>
-                  </div>
-
                   <div className="text-[11.5px] text-[#6B5C5D] italic">
                     ✦ Nếu nàng chưa đo chính xác, chuyên viên Atelier sẽ gọi video hướng dẫn hoặc đo trực tiếp tại buổi thử váy.
                   </div>
