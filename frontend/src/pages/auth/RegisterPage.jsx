@@ -1,5 +1,8 @@
-import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { CheckCircle2, RefreshCw } from 'lucide-react';
+import { useAuth } from '../../contexts/AuthContext';
+import { register as apiRegister, verifyEmailOtp, resendVerificationOtp } from '../../services/authService';
 import { Sparkles, Lock, Mail, Phone, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import Logo from '../../components/common/Logo';
 
@@ -15,16 +18,90 @@ const ArrowBackIcon = () => <ArrowLeft size={14} strokeWidth={2} />;
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login: setAuth } = useAuth();
 
-  // Form states
+  // Multi-step states: 1 = Register Form, 2 = Verify Email OTP, 3 = Success
+  const [step, setStep] = useState(() => location.state?.step || 1);
+  const [email, setEmail] = useState(() => location.state?.verifyEmail || '');
   const [fullName, setFullName] = useState('');
   const [phone, setPhone] = useState('');
-  const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
   const [agreedToTerms, setAgreedToTerms] = useState(false);
+
+  // OTP & Feedback states
+  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [devOtp, setDevOtp] = useState('');
+  const [phoneError, setPhoneError] = useState('');
+  const [emailError, setEmailError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [successMsg, setSuccessMsg] = useState(() => location.state?.verifyEmail ? 'Tài khoản chưa kích hoạt. Mã OTP mới đã được gửi về email của bạn.' : '');
+  const [countdown, setCountdown] = useState(60); // Đếm ngược gửi lại mã: 60s
+  const [canResend, setCanResend] = useState(false);
+  const [otpExpiresIn, setOtpExpiresIn] = useState(180); // Hiệu lực mã OTP: 3 phút (180s)
+
+  const otpInputRefs = useRef([]);
+
+  // Hàm định dạng thời gian mm:ss
+  const formatTime = (secs) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`;
+  };
+
+  // Hàm validate số điện thoại di động Việt Nam
+  const validatePhone = (val) => {
+    const clean = (val || '').replace(/[\s.-]/g, '');
+    if (!clean) return 'Vui lòng nhập số điện thoại liên hệ.';
+    const phoneRegex = /^(0|\+84)(3|5|7|8|9)[0-9]{8}$/;
+    if (!phoneRegex.test(clean)) {
+      return 'Số điện thoại không hợp lệ (10 số, bắt đầu bằng 03, 05, 07, 08, 09 hoặc +84).';
+    }
+    return '';
+  };
+
+  // Hàm validate email / gmail
+  const validateEmail = (val) => {
+    const clean = (val || '').trim().toLowerCase();
+    if (!clean) return 'Vui lòng nhập địa chỉ Email.';
+    const emailRegex = /^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$/;
+    if (!emailRegex.test(clean)) {
+      return 'Địa chỉ Email không đúng định dạng (Ví dụ: name@gmail.com).';
+    }
+    return '';
+  };
+
+  // Countdown cho việc gửi lại mã (60s)
+  useEffect(() => {
+    let timer;
+    if (step === 2 && countdown > 0) {
+      timer = setInterval(() => {
+        setCountdown((prev) => {
+          if (prev <= 1) {
+            setCanResend(true);
+            return 0;
+          }
+          return prev - 1;
+        });
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [step, countdown]);
+
+  // Countdown thời hạn hiệu lực của mã OTP (3 phút = 180s)
+  useEffect(() => {
+    let timer;
+    if (step === 2 && otpExpiresIn > 0) {
+      timer = setInterval(() => {
+        setOtpExpiresIn((prev) => Math.max(0, prev - 1));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [step, otpExpiresIn]);
 
   // Evaluate password strength (0 to 4)
   const getPasswordStrength = (pass) => {
@@ -43,17 +120,152 @@ export default function RegisterPage() {
 
   const strength = getPasswordStrength(password);
 
-  const handleSubmit = (e) => {
+  // Xử lý gửi form đăng ký (Step 1)
+  const handleSubmit = async (e) => {
     e.preventDefault();
+    setError('');
+    setSuccessMsg('');
+
+    // 1. Validate Họ và tên
+    if (!fullName.trim() || fullName.trim().length < 2) {
+      setError('Vui lòng nhập họ và tên của bạn (tối thiểu 2 ký tự).');
+      return;
+    }
+
+    // 2. Validate Số điện thoại
+    const pErr = validatePhone(phone);
+    if (pErr) {
+      setError(pErr);
+      setPhoneError(pErr);
+      return;
+    }
+    setPhoneError('');
+
+    // 3. Validate Gmail / Email
+    const eErr = validateEmail(email);
+    if (eErr) {
+      setError(eErr);
+      setEmailError(eErr);
+      return;
+    }
+    setEmailError('');
+
+    // 4. Validate Mật khẩu
+    if (password.length < 6) {
+      setError('Mật khẩu phải có tối thiểu 6 ký tự.');
+      return;
+    }
+
     if (password !== confirmPassword) {
-      alert('Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại!');
+      setError('Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại!');
       return;
     }
     if (!agreedToTerms) {
-      alert('Vui lòng đồng ý với Điều khoản dịch vụ và Chính sách bảo mật.');
+      setError('Vui lòng đồng ý với Điều khoản dịch vụ và Chính sách bảo mật.');
       return;
     }
-    console.log('Register submitted:', { fullName, phone, email, password });
+
+    setIsLoading(true);
+    try {
+      const cleanPhone = phone.replace(/[\s.-]/g, '');
+      const cleanEmail = email.trim().toLowerCase();
+      const res = await apiRegister({ fullName: fullName.trim(), phone: cleanPhone, email: cleanEmail, password });
+      setIsLoading(false);
+      setStep(2);
+      setCountdown(60);
+      setOtpExpiresIn(180);
+      setCanResend(false);
+      if (res?.data?.devOtp) {
+        setDevOtp(res.data.devOtp);
+      }
+      setSuccessMsg(res.message || 'Mã xác thực 6 số đã được gửi tới email của bạn.');
+    } catch (err) {
+      setIsLoading(false);
+      setError(err.message || 'Đăng ký thất bại. Vui lòng kiểm tra lại thông tin.');
+    }
+  };
+
+  // Xử lý khi nhập từng ô OTP (Step 2)
+  const handleOtpChange = (index, val) => {
+    if (val && !/^\d+$/.test(val)) return;
+    const next = [...otp];
+    next[index] = val ? val.slice(-1) : '';
+    setOtp(next);
+
+    if (val && index < 5) {
+      otpInputRefs.current[index + 1]?.focus();
+    }
+  };
+
+  const handleOtpKeyDown = (index, e) => {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      otpInputRefs.current[index - 1]?.focus();
+    }
+  };
+
+  const handleOtpPaste = (e) => {
+    e.preventDefault();
+    const paste = e.clipboardData.getData('text').trim().replace(/[^0-9]/g, '');
+    if (paste.length > 0) {
+      const arr = paste.slice(0, 6).split('');
+      while (arr.length < 6) arr.push('');
+      setOtp(arr);
+      const focusIndex = Math.min(paste.length, 5);
+      otpInputRefs.current[focusIndex]?.focus();
+    }
+  };
+
+  // Xử lý xác thực OTP (Step 2)
+  const handleVerifyOtp = async (e) => {
+    e.preventDefault();
+    if (otpExpiresIn === 0) {
+      setError('Mã OTP đã hết hiệu lực (sau 3 phút). Vui lòng bấm "Gửi lại mã OTP mới" bên dưới.');
+      return;
+    }
+    const cleanOtp = Array.isArray(otp) ? otp.join('').trim() : String(otp).trim();
+    if (cleanOtp.length < 6) {
+      setError('Vui lòng nhập đủ 6 chữ số mã xác thực OTP.');
+      return;
+    }
+
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const res = await verifyEmailOtp({ email: email.trim().toLowerCase(), otp: cleanOtp });
+      setIsLoading(false);
+      if (res?.data?.user && res?.data?.token) {
+        setAuth(res.data.user, res.data.token);
+      }
+      setStep(3);
+    } catch (err) {
+      setIsLoading(false);
+      setError(err.message || 'Mã OTP không chính xác hoặc đã hết hiệu lực.');
+    }
+  };
+
+  // Gửi lại mã OTP
+  const handleResendOtp = async () => {
+    if (!canResend) return;
+    setIsLoading(true);
+    setError('');
+
+    try {
+      const res = await resendVerificationOtp(email.trim().toLowerCase());
+      setIsLoading(false);
+      setCountdown(60);
+      setOtpExpiresIn(180);
+      setCanResend(false);
+      setOtp(['', '', '', '', '', '']);
+      if (res?.data?.devOtp) {
+        setDevOtp(res.data.devOtp);
+      }
+      setSuccessMsg(res.message || 'Đã gửi lại mã OTP mới về email của bạn.');
+      otpInputRefs.current[0]?.focus();
+    } catch (err) {
+      setIsLoading(false);
+      setError(err.message || 'Lỗi gửi lại mã OTP. Vui lòng thử lại.');
+    }
   };
 
   return (
@@ -67,13 +279,14 @@ export default function RegisterPage() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          min-height: 100vh;
+          height: 100vh;
+          max-height: 100vh;
           width: 100vw;
           background-color: #EFE7E3;
           font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
           box-sizing: border-box;
-          padding: 24px;
-          overflow-x: hidden;
+          padding: clamp(6px, 1.8vh, 18px) 24px;
+          overflow: hidden;
         }
 
         .ub-reg-screen .ub-bg-glow {
@@ -99,11 +312,11 @@ export default function RegisterPage() {
         .ub-reg-screen .ub-top-nav-bar {
           position: relative;
           z-index: 15;
-          width: 1152px;
+          width: min(1152px, 94vw);
           max-width: 1152px;
           display: flex;
           align-items: center;
-          margin-bottom: 14px;
+          margin-bottom: clamp(6px, 1.2vh, 12px);
         }
 
         .ub-reg-screen .ub-back-btn {
@@ -132,9 +345,11 @@ export default function RegisterPage() {
           z-index: 10;
           display: flex;
           flex-direction: row;
-          width: 1152px;
+          width: min(1152px, 94vw);
           max-width: 1152px;
-          min-height: 740px;
+          height: min(650px, calc(100vh - 56px));
+          max-height: calc(100vh - 56px);
+          min-height: 0;
           background: #FFFFFF;
           border-radius: 16px;
           box-shadow:
@@ -149,9 +364,10 @@ export default function RegisterPage() {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          width: 576px;
-          min-height: 740px;
-          padding: 44px 48px;
+          width: 50%;
+          height: 100%;
+          min-height: 0;
+          padding: clamp(20px, 3.2vh, 40px) clamp(24px, 3.5vw, 48px);
           background: radial-gradient(130% 130% at 20% 15%, #FFF6F3 0%, #FCEAE4 55%, #F7DDD5 100%);
           overflow: hidden;
           box-sizing: border-box;
@@ -259,16 +475,16 @@ export default function RegisterPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 144px;
-          height: 134px;
+          width: clamp(100px, 13vh, 134px);
+          height: clamp(92px, 12vh, 124px);
           background: #FFFFFF;
-          border-radius: 22px;
+          border-radius: 20px;
           border: 1px solid rgba(255, 255, 255, 0.95);
           box-shadow:
             0 16px 36px -8px rgba(133, 79, 85, 0.16),
             0 4px 12px rgba(0, 0, 0, 0.03);
-          margin-bottom: 24px;
-          padding: 16px;
+          margin-bottom: clamp(10px, 1.8vh, 20px);
+          padding: 12px;
           box-sizing: border-box;
           transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease;
         }
@@ -297,9 +513,9 @@ export default function RegisterPage() {
         .ub-reg-card .ub-brand-title {
           font-family: 'Cinzel', 'Playfair Display', serif;
           font-weight: 500;
-          font-size: 38px;
-          line-height: 44px;
-          letter-spacing: 8px;
+          font-size: clamp(26px, 3.8vh, 36px);
+          line-height: 1.2;
+          letter-spacing: clamp(5px, 0.8vw, 8px);
           text-transform: uppercase;
           color: #1E1617;
           margin: 0;
@@ -397,10 +613,13 @@ export default function RegisterPage() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          width: 576px;
-          padding: 36px 48px;
+          width: 50%;
+          height: 100%;
+          min-height: 0;
+          padding: clamp(16px, 2.8vh, 32px) clamp(24px, 3.5vw, 48px);
           background: #FFFFFF;
           box-sizing: border-box;
+          overflow-y: auto;
           animation: swapFormToRight 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
 
@@ -427,7 +646,7 @@ export default function RegisterPage() {
           flex-direction: column;
           align-items: center;
           text-align: center;
-          margin-bottom: 24px;
+          margin-bottom: clamp(8px, 1.6vh, 16px);
         }
 
         .ub-reg-form-container .ub-form-overhead {
@@ -438,23 +657,23 @@ export default function RegisterPage() {
           letter-spacing: 2.5px;
           text-transform: uppercase;
           color: #854F55;
-          margin-bottom: 6px;
+          margin-bottom: 4px;
         }
 
         .ub-reg-form-container .ub-form-heading {
           font-family: 'Playfair Display', Georgia, serif;
           font-weight: 500;
-          font-size: 32px;
-          line-height: 40px;
+          font-size: clamp(24px, 3.2vh, 30px);
+          line-height: 1.2;
           color: #1C1415;
-          margin: 0 0 8px;
+          margin: 0 0 4px;
           letter-spacing: -0.2px;
         }
 
         .ub-form-description {
           font-family: 'Plus Jakarta Sans', sans-serif;
-          font-size: 12.5px;
-          line-height: 18px;
+          font-size: 12px;
+          line-height: 16px;
           color: #6E5A5D;
           margin: 0;
           text-align: center;
@@ -464,14 +683,14 @@ export default function RegisterPage() {
         .ub-reg-form-container .ub-form {
           display: flex;
           flex-direction: column;
-          gap: 14px;
+          gap: clamp(8px, 1.4vh, 12px);
           width: 100%;
         }
 
         .ub-form-row {
           display: flex;
           flex-direction: row;
-          gap: 14px;
+          gap: 12px;
           width: 100%;
         }
 
@@ -482,7 +701,7 @@ export default function RegisterPage() {
         .ub-reg-form-container .ub-field-group {
           display: flex;
           flex-direction: column;
-          gap: 6px;
+          gap: 4px;
           width: 100%;
         }
 
@@ -505,7 +724,7 @@ export default function RegisterPage() {
           display: flex;
           align-items: center;
           width: 100%;
-          height: 44px;
+          height: clamp(38px, 4.6vh, 42px);
           background: #FDF3EF;
           border: 1px solid rgba(133, 79, 85, 0.12);
           border-radius: 6px;
@@ -689,7 +908,7 @@ export default function RegisterPage() {
           justify-content: center;
           gap: 8px;
           width: 100%;
-          height: 46px;
+          height: clamp(38px, 4.6vh, 44px);
           background: linear-gradient(135deg, #C58187 0%, #B36F75 100%);
           color: #FFFFFF;
           border: 1px solid rgba(255, 255, 255, 0.2);
@@ -728,7 +947,10 @@ export default function RegisterPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-top: 24px;
+          margin-top: clamp(8px, 1.6vh, 16px);
+          padding-top: 8px;
+          border-top: 1px solid rgba(133, 79, 85, 0.08);
+          width: 100%;
         }
 
         .ub-prompt-text {
@@ -853,187 +1075,388 @@ export default function RegisterPage() {
         <div className="ub-panel-right">
           <div className="ub-reg-form-container">
 
-            {/* Form Header */}
-            <div className="ub-header-group">
-              <span className="ub-form-overhead">UNIBRIDAL HAUTE COUTURE</span>
-              <h2 className="ub-form-heading">Đăng Ký Tài Khoản</h2>
-              <p className="ub-form-description">
-                Tạo tài khoản để lưu giữ danh sách váy cưới mơ ước, đặt lịch thử váy riêng tư và nhận đặc quyền độc bản.
-              </p>
-            </div>
-
-            {/* Registration Form */}
-            <form className="ub-form" onSubmit={handleSubmit} id="register-form">
-
-              {/* Row 1: Full Name & Phone Number */}
-              <div className="ub-form-row">
-                <div className="ub-field-group">
-                  <label className="ub-label" htmlFor="reg-fullname">
-                    Họ và tên
-                  </label>
-                  <div className="ub-input-box">
-                    <input
-                      id="reg-fullname"
-                      type="text"
-                      className="ub-input ub-input--no-icon"
-                      placeholder="Nguyễn Mai Phương"
-                      value={fullName}
-                      onChange={(e) => setFullName(e.target.value)}
-                      required
-                    />
-                  </div>
+            {/* STEP 1: Registration Form */}
+            {step === 1 && (
+              <>
+                <div className="ub-header-group">
+                  <span className="ub-form-overhead">UNIBRIDAL HAUTE COUTURE</span>
+                  <h2 className="ub-form-heading">Đăng Ký Tài Khoản</h2>
+                  <p className="ub-form-description">
+                    Tạo tài khoản để lưu giữ danh sách váy cưới mơ ước, đặt lịch thử váy riêng tư và nhận đặc quyền độc bản.
+                  </p>
                 </div>
 
-                <div className="ub-field-group">
-                  <label className="ub-label" htmlFor="reg-phone">
-                    Số điện thoại <span className="ub-required-star">*</span>
-                  </label>
-                  <div className="ub-input-box">
-                    <input
-                      id="reg-phone"
-                      type="tel"
-                      className="ub-input"
-                      placeholder="090 123 4567"
-                      value={phone}
-                      onChange={(e) => setPhone(e.target.value)}
-                      required
-                    />
-                    <span className="ub-input-icon ub-input-icon--right">
-                      <PhoneIcon />
+                {error && (
+                  <div style={{ background: '#FFF0F0', border: '1px solid #FFC2C2', color: '#D32F2F', padding: '10px 14px', borderRadius: '8px', fontSize: '13px', marginBottom: '16px' }}>
+                    ⚠️ {error}
+                  </div>
+                )}
+
+                <form className="ub-form" onSubmit={handleSubmit} id="register-form">
+
+                  {/* Row 1: Full Name & Phone Number */}
+                  <div className="ub-form-row">
+                    <div className="ub-field-group">
+                      <label className="ub-label" htmlFor="reg-fullname">
+                        Họ và tên
+                      </label>
+                      <div className="ub-input-box">
+                        <input
+                          id="reg-fullname"
+                          type="text"
+                          className="ub-input ub-input--no-icon"
+                          placeholder="Họ và tên của bạn"
+                          value={fullName}
+                          onChange={(e) => setFullName(e.target.value)}
+                          required
+                        />
+                      </div>
+                    </div>
+
+                    <div className="ub-field-group">
+                      <label className="ub-label" htmlFor="reg-phone">
+                        Số điện thoại <span className="ub-required-star">*</span>
+                      </label>
+                      <div className="ub-input-box">
+                        <input
+                          id="reg-phone"
+                          type="tel"
+                          className={`ub-input ${phoneError ? 'border-red-400' : ''}`}
+                          placeholder="Số điện thoại di động"
+                          value={phone}
+                          onChange={(e) => {
+                            setPhone(e.target.value);
+                            if (phoneError) setPhoneError(validatePhone(e.target.value));
+                          }}
+                          onBlur={(e) => setPhoneError(validatePhone(e.target.value))}
+                          required
+                        />
+                        <span className="ub-input-icon ub-input-icon--right">
+                          <PhoneIcon />
+                        </span>
+                      </div>
+                      {phoneError && (
+                        <div style={{ color: '#D32F2F', fontSize: '11.5px', marginTop: '4px', textAlign: 'left' }}>
+                          ✕ {phoneError}
+                        </div>
+                      )}
+                    </div>
+                  </div>
+
+                  {/* Row 2: Email Address */}
+                  <div className="ub-field-group">
+                    <label className="ub-label" htmlFor="reg-email">
+                      Địa chỉ Email / Gmail <span className="ub-required-star">*</span>
+                    </label>
+                    <div className="ub-input-box">
+                      <input
+                        id="reg-email"
+                        type="email"
+                        className={`ub-input ${emailError ? 'border-red-400' : ''}`}
+                        placeholder="Địa chỉ Email chính thức"
+                        value={email}
+                        onChange={(e) => {
+                          setEmail(e.target.value);
+                          if (emailError) setEmailError(validateEmail(e.target.value));
+                        }}
+                        onBlur={(e) => setEmailError(validateEmail(e.target.value))}
+                        required
+                      />
+                      <span className="ub-input-icon ub-input-icon--right">
+                        <MailIcon />
+                      </span>
+                    </div>
+                    {emailError && (
+                      <div style={{ color: '#D32F2F', fontSize: '11.5px', marginTop: '4px', textAlign: 'left' }}>
+                        ✕ {emailError}
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Row 3: Password & Confirm Password */}
+                  <div className="ub-form-row">
+                    <div className="ub-field-group">
+                      <label className="ub-label" htmlFor="reg-password">
+                        Mật khẩu <span className="ub-required-star">*</span>
+                      </label>
+                      <div className="ub-input-box">
+                        <input
+                          id="reg-password"
+                          type={showPassword ? 'text' : 'password'}
+                          className="ub-input"
+                          placeholder="Mật khẩu bảo mật"
+                          value={password}
+                          onChange={(e) => setPassword(e.target.value)}
+                          required
+                        />
+                        <button
+                          type="button"
+                          className="ub-eye-toggle"
+                          id="toggle-reg-password"
+                          onClick={() => setShowPassword(!showPassword)}
+                          aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                        >
+                          <EyeIcon visible={showPassword} />
+                        </button>
+                      </div>
+                    </div>
+
+                    <div className="ub-field-group">
+                      <label className="ub-label" htmlFor="reg-confirm-password">
+                        Xác nhận mật khẩu <span className="ub-required-star">*</span>
+                      </label>
+                      <div className="ub-input-box">
+                        <input
+                          id="reg-confirm-password"
+                          type={showConfirmPassword ? 'text' : 'password'}
+                          className="ub-input"
+                          placeholder="Xác nhận lại mật khẩu"
+                          value={confirmPassword}
+                          onChange={(e) => setConfirmPassword(e.target.value)}
+                          required
+                        />
+                        <button
+                          type="button"
+                          className="ub-eye-toggle"
+                          id="toggle-reg-confirm-password"
+                          onClick={() => setShowConfirmPassword(!showConfirmPassword)}
+                          aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
+                        >
+                          <EyeIcon visible={showConfirmPassword} />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Password Strength Indicator Row */}
+                  <div className="ub-strength-row">
+                    <div className="ub-strength-bars">
+                      <span className={`ub-strength-bar ${strength.level >= 1 ? 'is-active' : ''}`} />
+                      <span className={`ub-strength-bar ${strength.level >= 2 ? 'is-active' : ''}`} />
+                      <span className={`ub-strength-bar ${strength.level >= 3 ? 'is-active' : ''}`} />
+                      <span className={`ub-strength-bar ${strength.level >= 4 ? 'is-active' : ''}`} />
+                    </div>
+                    <span className="ub-strength-text">
+                      Độ bảo mật: {strength.text}
                     </span>
                   </div>
-                </div>
-              </div>
 
-              {/* Row 2: Email Address */}
-              <div className="ub-field-group">
-                <label className="ub-label" htmlFor="reg-email">
-                  Địa chỉ Email <span className="ub-required-star">*</span>
-                </label>
-                <div className="ub-input-box">
-                  <input
-                    id="reg-email"
-                    type="email"
-                    className="ub-input"
-                    placeholder="maiphuong@example.com"
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    required
-                  />
-                  <span className="ub-input-icon ub-input-icon--right">
-                    <MailIcon />
-                  </span>
-                </div>
-              </div>
+                  {/* Terms and Policies Agreement */}
+                  <div className="ub-terms-row">
+                    <label className="ub-checkbox-label" htmlFor="reg-terms">
+                      <input
+                        id="reg-terms"
+                        type="checkbox"
+                        className="ub-checkbox-input"
+                        checked={agreedToTerms}
+                        onChange={(e) => setAgreedToTerms(e.target.checked)}
+                        required
+                      />
+                      <span className="ub-custom-checkbox" />
+                      <span className="ub-terms-text">
+                        Tôi đồng ý với{' '}
+                        <a href="/terms" className="ub-terms-link" onClick={(e) => e.preventDefault()}>
+                          Điều khoản dịch vụ
+                        </a>{' '}
+                        và{' '}
+                        <a href="/privacy" className="ub-terms-link" onClick={(e) => e.preventDefault()}>
+                          Chính sách bảo mật
+                        </a>{' '}
+                        của UniBridal Haute Couture.
+                      </span>
+                    </label>
+                  </div>
 
-              {/* Row 3: Password & Confirm Password */}
-              <div className="ub-form-row">
-                <div className="ub-field-group">
-                  <label className="ub-label" htmlFor="reg-password">
-                    Mật khẩu <span className="ub-required-star">*</span>
-                  </label>
-                  <div className="ub-input-box">
-                    <input
-                      id="reg-password"
-                      type={showPassword ? 'text' : 'password'}
-                      className="ub-input"
-                      placeholder="Tối thiểu 8 ký tự"
-                      value={password}
-                      onChange={(e) => setPassword(e.target.value)}
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="ub-eye-toggle"
-                      id="toggle-reg-password"
-                      onClick={() => setShowPassword(!showPassword)}
-                      aria-label={showPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                    >
-                      <EyeIcon visible={showPassword} />
-                    </button>
+                  {/* Submit Button */}
+                  <button type="submit" className="ub-submit-btn" id="register-submit-btn">
+                    <span className="ub-submit-btn__text">TẠO TÀI KHOẢN THÀNH VIÊN</span>
+                    <span className="ub-submit-btn__arrow">→</span>
+                  </button>
+                </form>
+
+              </>
+            )}
+
+            {/* STEP 2: Email OTP Verification */}
+            {step === 2 && (
+              <div style={{ textAlign: 'center', padding: '10px 0' }}>
+                {/* Luxury Icon Badge */}
+                <div style={{ display: 'inline-flex', alignItems: 'center', justifyContent: 'center', width: '56px', height: '56px', borderRadius: '16px', background: '#FFF5F4', border: '1px solid #F3DDDB', color: '#B8737D', marginBottom: '16px', boxShadow: '0 4px 14px rgba(184, 115, 125, 0.10)' }}>
+                  <Mail size={24} strokeWidth={1.8} />
+                </div>
+
+                <div className="ub-header-group" style={{ marginBottom: '18px' }}>
+                  <span className="ub-form-overhead">BẢO MẬT &amp; KÍCH HOẠT</span>
+                  <h2 className="ub-form-heading" style={{ margin: '6px 0 8px' }}>Xác Thực Địa Chỉ Email</h2>
+                  <p className="ub-form-description" style={{ maxWidth: '380px', margin: '0 auto', lineHeight: '1.5', fontSize: '13.5px' }}>
+                    Mã xác thực gồm 6 chữ số đã được gửi tới:
+                  </p>
+                  <div style={{ display: 'inline-block', background: '#F8F1EE', color: '#733F49', padding: '4px 14px', borderRadius: '20px', fontWeight: 600, fontSize: '13px', marginTop: '6px', border: '1px solid #EADBDA' }}>
+                    {email}
                   </div>
                 </div>
 
-                <div className="ub-field-group">
-                  <label className="ub-label" htmlFor="reg-confirm-password">
-                    Xác nhận mật khẩu <span className="ub-required-star">*</span>
-                  </label>
-                  <div className="ub-input-box">
-                    <input
-                      id="reg-confirm-password"
-                      type={showConfirmPassword ? 'text' : 'password'}
-                      className="ub-input"
-                      placeholder="Nhập lại mật khẩu"
-                      value={confirmPassword}
-                      onChange={(e) => setConfirmPassword(e.target.value)}
-                      required
-                    />
-                    <button
-                      type="button"
-                      className="ub-eye-toggle"
-                      id="toggle-reg-confirm-password"
-                      onClick={() => setShowConfirmPassword(!showConfirmPassword)}
-                      aria-label={showConfirmPassword ? 'Ẩn mật khẩu' : 'Hiện mật khẩu'}
-                    >
-                      <EyeIcon visible={showConfirmPassword} />
-                    </button>
+                {devOtp && (
+                  <div style={{ background: '#FFF9E6', border: '1px solid #FFE58F', color: '#D48806', padding: '12px 16px', borderRadius: '12px', fontSize: '13px', marginBottom: '16px', textAlign: 'left', lineHeight: 1.5 }}>
+                    <div style={{ fontWeight: 700, marginBottom: '4px' }}>🔔 [Môi trường thử nghiệm] Mã OTP kích hoạt:</div>
+                    Mã OTP của bạn là: <strong style={{ fontSize: '18px', letterSpacing: '3px', color: '#AD4E00', background: '#FFF1B8', padding: '2px 8px', borderRadius: '4px' }}>{devOtp}</strong>
+                    <div style={{ fontSize: '11.5px', color: '#874D00', marginTop: '6px' }}>
+                      * Hệ thống chưa cấu hình EMAIL_USER &amp; EMAIL_PASS trong backend/.env nên mã hiển thị tại đây để bạn kiểm thử ngay.
+                    </div>
                   </div>
+                )}
+
+                {error && (
+                  <div style={{ background: '#FFF0F0', border: '1px solid #FFC2C2', color: '#D32F2F', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', marginBottom: '16px', textAlign: 'left' }}>
+                    ⚠️ {error}
+                  </div>
+                )}
+
+                {successMsg && (
+                  <div style={{ background: '#F0FFF4', border: '1px solid #B7EB8F', color: '#389E0D', padding: '10px 14px', borderRadius: '10px', fontSize: '13px', marginBottom: '16px', textAlign: 'left' }}>
+                    ✓ {successMsg}
+                  </div>
+                )}
+
+                <form onSubmit={handleVerifyOtp} style={{ display: 'grid', gap: '20px' }}>
+                  <div>
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: '10px', padding: '0 4px' }}>
+                      <label style={{ fontSize: '11px', fontWeight: 600, letterSpacing: '1.2px', textTransform: 'uppercase', color: '#7A6663' }}>
+                        NHẬP 6 CHỮ SỐ XÁC THỰC
+                      </label>
+                      <div style={{ fontSize: '12px', fontWeight: 600, color: otpExpiresIn <= 30 ? (otpExpiresIn === 0 ? '#D32F2F' : '#E65100') : '#854F55', display: 'flex', alignItems: 'center', gap: '4px' }}>
+                        <span>⏱️</span>
+                        <span>
+                          {otpExpiresIn > 0 ? `Hiệu lực: ${formatTime(otpExpiresIn)}` : 'Đã hết hạn!'}
+                        </span>
+                      </div>
+                    </div>
+
+                    {/* 6 Individual Digit Boxes */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px' }} onPaste={handleOtpPaste}>
+                      {otp.map((digit, idx) => (
+                        <input
+                          key={idx}
+                          ref={(el) => (otpInputRefs.current[idx] = el)}
+                          type="text"
+                          inputMode="numeric"
+                          maxLength={1}
+                          value={digit}
+                          placeholder={digit ? '' : '•'}
+                          autoFocus={idx === 0}
+                          onChange={(e) => handleOtpChange(idx, e.target.value)}
+                          onKeyDown={(e) => handleOtpKeyDown(idx, e)}
+                          style={{
+                            width: '48px',
+                            height: '56px',
+                            textAlign: 'center',
+                            fontFamily: "'Plus Jakarta Sans', system-ui, -apple-system, sans-serif",
+                            fontVariantNumeric: 'tabular-nums',
+                            fontSize: '24px',
+                            fontWeight: 700,
+                            background: digit ? '#FFFFFF' : '#FAF8F7',
+                            border: digit ? '2px solid #854F55' : '1.5px solid #E5DCD8',
+                            borderRadius: '12px',
+                            color: '#2C2523',
+                            outline: 'none',
+                            boxShadow: digit ? '0 2px 8px rgba(133, 79, 85, 0.12)' : 'none',
+                            transition: 'all 0.2s ease',
+                          }}
+                        />
+                      ))}
+                    </div>
+
+                    {/* Resend Timer right below boxes */}
+                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px', fontSize: '13px', color: '#7A6663', marginTop: '14px' }}>
+                      <span>{otpExpiresIn === 0 ? 'Mã đã hết hạn?' : 'Chưa nhận được mã?'}</span>
+                      <button
+                        type="button"
+                        disabled={!canResend || isLoading}
+                        onClick={handleResendOtp}
+                        style={{
+                          background: 'none',
+                          border: 'none',
+                          color: canResend ? '#854F55' : '#A39290',
+                          cursor: canResend ? 'pointer' : 'not-allowed',
+                          fontWeight: 700,
+                          textDecoration: canResend ? 'underline' : 'none',
+                          padding: 0,
+                          fontSize: '13px',
+                        }}
+                      >
+                        {canResend ? 'Gửi lại mã OTP mới' : `Gửi lại mã (${countdown}s)`}
+                      </button>
+                    </div>
+                  </div>
+
+                  <button
+                    type="submit"
+                    disabled={isLoading || otpExpiresIn === 0}
+                    className="ub-submit-btn"
+                    style={{ width: '100%', cursor: (isLoading || otpExpiresIn === 0) ? 'not-allowed' : 'pointer', opacity: otpExpiresIn === 0 ? 0.6 : 1 }}
+                  >
+                    <span className="ub-submit-btn__text">
+                      {isLoading ? 'ĐANG KÍCH HOẠT...' : otpExpiresIn === 0 ? 'MÃ ĐÃ HẾT HẠN - HÃY GỬI LẠI' : 'XÁC NHẬN & KÍCH HOẠT TÀI KHOẢN'}
+                    </span>
+                    <span className="ub-submit-btn__arrow">→</span>
+                  </button>
+                </form>
+
+                {/* Back to Edit Registration Info */}
+                <div style={{ marginTop: '20px', paddingTop: '14px', borderTop: '1px solid #F0E6E8', display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '8px', fontSize: '13px' }}>
+                  <span style={{ color: '#7A6663' }}>Nhập sai email hoặc thông tin?</span>
+                  <button
+                    type="button"
+                    onClick={() => setStep(1)}
+                    style={{
+                      background: 'none',
+                      border: 'none',
+                      color: '#854F55',
+                      fontWeight: 600,
+                      cursor: 'pointer',
+                      textDecoration: 'underline',
+                      padding: 0,
+                    }}
+                  >
+                    Quay lại chỉnh sửa
+                  </button>
                 </div>
               </div>
+            )}
 
-              {/* Password Strength Indicator Row */}
-              <div className="ub-strength-row">
-                <div className="ub-strength-bars">
-                  <span className={`ub-strength-bar ${strength.level >= 1 ? 'is-active' : ''}`} />
-                  <span className={`ub-strength-bar ${strength.level >= 2 ? 'is-active' : ''}`} />
-                  <span className={`ub-strength-bar ${strength.level >= 3 ? 'is-active' : ''}`} />
-                  <span className={`ub-strength-bar ${strength.level >= 4 ? 'is-active' : ''}`} />
+            {/* STEP 3: Success Screen */}
+            {step === 3 && (
+              <div style={{ textAlign: 'center', padding: '30px 10px' }}>
+                <div style={{ width: '64px', height: '64px', borderRadius: '50%', background: '#F0FFF4', border: '2px solid #52C41A', display: 'flex', alignItems: 'center', justifyContent: 'center', margin: '0 auto 20px', color: '#52C41A' }}>
+                  <CheckCircle2 size={36} />
                 </div>
-                <span className="ub-strength-text">
-                  Độ bảo mật: {strength.text}
-                </span>
+                <span className="ub-form-overhead">XÁC THỰC THÀNH CÔNG</span>
+                <h2 className="ub-form-heading" style={{ margin: '10px 0 14px' }}>Chào Mừng Nàng Đến UniBridal!</h2>
+                <p className="ub-form-description" style={{ marginBottom: '28px' }}>
+                  Tài khoản của nàng đã được kích hoạt hoàn tất. Hãy bắt đầu khám phá hơn 72 tuyệt tác váy cưới Haute Couture và đặt lịch thử váy riêng tư tại phòng fitting VIP.
+                </p>
+
+                <button
+                  type="button"
+                  onClick={() => navigate('/', { replace: true })}
+                  className="ub-submit-btn"
+                  style={{ width: '100%', cursor: 'pointer' }}
+                >
+                  <span className="ub-submit-btn__text">BẮT ĐẦU TRẢI NGHIỆM</span>
+                  <span className="ub-submit-btn__arrow">→</span>
+                </button>
               </div>
+            )}
 
-              {/* Terms and Policies Agreement */}
-              <div className="ub-terms-row">
-                <label className="ub-checkbox-label" htmlFor="reg-terms">
-                  <input
-                    id="reg-terms"
-                    type="checkbox"
-                    className="ub-checkbox-input"
-                    checked={agreedToTerms}
-                    onChange={(e) => setAgreedToTerms(e.target.checked)}
-                    required
-                  />
-                  <span className="ub-custom-checkbox" />
-                  <span className="ub-terms-text">
-                    Tôi đồng ý với{' '}
-                    <a href="/terms" className="ub-terms-link" onClick={(e) => e.preventDefault()}>
-                      Điều khoản dịch vụ
-                    </a>{' '}
-                    và{' '}
-                    <a href="/privacy" className="ub-terms-link" onClick={(e) => e.preventDefault()}>
-                      Chính sách bảo mật
-                    </a>{' '}
-                    của UniBridal Haute Couture.
-                  </span>
-                </label>
+            {/* Bottom Login Prompt (Chỉ hiển thị tại Step 1) */}
+            {step === 1 && (
+              <div className="ub-bottom-link-row" style={{ display: 'flex', alignItems: 'center', justifyContent: 'center', gap: '6px' }}>
+                <span className="ub-prompt-text">Bạn đã có tài khoản tại UniBridal?</span>
+                <Link to="/login" className="ub-login-link" id="login-link">
+                  Đăng nhập ngay
+                </Link>
               </div>
-
-              {/* Submit Button */}
-              <button type="submit" className="ub-submit-btn" id="register-submit-btn">
-                <span className="ub-submit-btn__text">TẠO TÀI KHOẢN THÀNH VIÊN</span>
-                <span className="ub-submit-btn__arrow">→</span>
-              </button>
-            </form>
-
-            {/* Bottom Login Prompt */}
-            <div className="ub-bottom-link-row">
-              <span className="ub-prompt-text">Nàng đã có tài khoản tại UniBridal? </span>
-              <Link to="/login" className="ub-login-link" id="login-link">
-                Đăng nhập ngay
-              </Link>
-            </div>
+            )}
 
           </div>
         </div>

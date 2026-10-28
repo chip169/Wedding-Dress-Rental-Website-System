@@ -1,6 +1,8 @@
 import { useState } from 'react';
-import { useNavigate, Link } from 'react-router-dom';
-import { Mail, Lock, Eye, EyeOff, ArrowLeft, Sparkles, Gem } from 'lucide-react';
+import { useNavigate, Link, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
+import { login as apiLogin } from '../../services/authService';
+import { Mail, Lock, Eye, EyeOff, ArrowLeft, Sparkles, Gem, Crown, UserCheck, User } from 'lucide-react';
 import Logo from '../../components/common/Logo';
 
 const SparkleIcon = () => <Sparkles size={12} fill="currentColor" stroke="none" />;
@@ -15,14 +17,81 @@ const ArrowBackIcon = () => <ArrowLeft size={14} strokeWidth={2} />;
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { login: setAuth } = useAuth();
+
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [error, setError] = useState('');
+  const [isLoading, setIsLoading] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Login submitted:', { email, password, rememberMe });
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const res = await apiLogin({ email, password });
+      if (res?.data?.user && res?.data?.token) {
+        setAuth(res.data.user, res.data.token);
+
+        const userRole = (res.data.user.role || res.data.user.roleId?.code || '').toLowerCase();
+        if (userRole === 'admin') {
+          navigate('/admin/dashboard', { replace: true });
+        } else if (userRole === 'staff') {
+          navigate('/staff/dashboard', { replace: true });
+        } else {
+          const from = location.state?.from?.pathname || '/';
+          navigate(from, { replace: true });
+        }
+      }
+    } catch (err) {
+      if (err.code === 'EMAIL_NOT_VERIFIED') {
+        navigate('/register', { state: { verifyEmail: err.email || email, step: 2 } });
+        return;
+      }
+      setError(err.message || 'Email hoặc mật khẩu không chính xác');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleQuickLogin = async (role) => {
+    const credentials = {
+      ADMIN: { email: 'admin@unibridal.vn', password: 'Admin@123' },
+      STAFF: { email: 'staff@unibridal.vn', password: 'Staff@123' },
+      CUSTOMER: { email: 'customer@unibridal.vn', password: 'Customer@123' },
+    }[role];
+
+    if (!credentials) return;
+
+    setEmail(credentials.email);
+    setPassword(credentials.password);
+    setError('');
+    setIsLoading(true);
+
+    try {
+      const res = await apiLogin(credentials);
+      if (res?.data?.user && res?.data?.token) {
+        setAuth(res.data.user, res.data.token);
+
+        const userRole = (res.data.user.role || res.data.user.roleId?.code || '').toLowerCase();
+        if (userRole === 'admin') {
+          navigate('/admin/dashboard', { replace: true });
+        } else if (userRole === 'staff') {
+          navigate('/staff/dashboard', { replace: true });
+        } else {
+          const from = location.state?.from?.pathname || '/';
+          navigate(from, { replace: true });
+        }
+      }
+    } catch (err) {
+      setError(err.message || 'Đăng nhập nhanh thất bại');
+    } finally {
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -36,13 +105,14 @@ export default function LoginPage() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          min-height: 100vh;
+          height: 100vh;
+          max-height: 100vh;
           width: 100vw;
           background-color: #EFE7E3;
           font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
           box-sizing: border-box;
-          padding: 24px;
-          overflow-x: hidden;
+          padding: clamp(6px, 1.8vh, 18px) 24px;
+          overflow: hidden;
         }
 
         .ub-login-screen .ub-bg-glow {
@@ -68,11 +138,11 @@ export default function LoginPage() {
         .ub-login-screen .ub-top-nav-bar {
           position: relative;
           z-index: 15;
-          width: 1152px;
+          width: min(1152px, 94vw);
           max-width: 1152px;
           display: flex;
           align-items: center;
-          margin-bottom: 14px;
+          margin-bottom: clamp(6px, 1.2vh, 12px);
         }
 
         .ub-login-screen .ub-back-btn {
@@ -101,9 +171,10 @@ export default function LoginPage() {
           z-index: 10;
           display: flex;
           flex-direction: row;
-          width: 1152px;
+          width: min(1152px, 94vw);
           max-width: 1152px;
-          height: 740px;
+          height: min(650px, calc(100vh - 56px));
+          max-height: calc(100vh - 56px);
           background: #FFFFFF;
           border-radius: 16px;
           box-shadow:
@@ -119,11 +190,12 @@ export default function LoginPage() {
           flex-direction: column;
           align-items: center;
           justify-content: center;
-          width: 576px;
-          height: 740px;
-          padding: 48px;
+          width: 50%;
+          height: 100%;
+          padding: clamp(20px, 3.5vh, 40px) clamp(24px, 3.5vw, 48px);
           background: #FFFFFF;
           box-sizing: border-box;
+          overflow-y: auto;
           animation: swapFormToLeft 0.6s cubic-bezier(0.16, 1, 0.3, 1) both;
         }
 
@@ -172,7 +244,7 @@ export default function LoginPage() {
           flex-direction: column;
           align-items: center;
           text-align: center;
-          margin-bottom: 30px;
+          margin-bottom: clamp(14px, 2.2vh, 24px);
         }
 
         .ub-panel-form-left .ub-form-overhead {
@@ -183,14 +255,14 @@ export default function LoginPage() {
           letter-spacing: 2.6px;
           text-transform: uppercase;
           color: #854F55;
-          margin-bottom: 8px;
+          margin-bottom: 6px;
         }
 
         .ub-panel-form-left .ub-form-heading {
           font-family: 'Playfair Display', Georgia, serif;
           font-weight: 500;
-          font-size: 36px;
-          line-height: 44px;
+          font-size: clamp(26px, 3.8vh, 34px);
+          line-height: 1.2;
           color: #1C1415;
           margin: 0;
           letter-spacing: -0.2px;
@@ -200,7 +272,7 @@ export default function LoginPage() {
           display: flex;
           align-items: center;
           gap: 8px;
-          margin-top: 10px;
+          margin-top: 8px;
         }
 
         .ub-panel-form-left .ub-ornament-line {
@@ -220,7 +292,7 @@ export default function LoginPage() {
         .ub-panel-form-left .ub-form {
           display: flex;
           flex-direction: column;
-          gap: 18px;
+          gap: clamp(10px, 1.6vh, 16px);
           width: 100%;
         }
 
@@ -447,11 +519,109 @@ export default function LoginPage() {
           transform: translateX(3px);
         }
 
+        .ub-panel-form-left .ub-quick-login-wrap {
+          margin-top: clamp(8px, 1.4vh, 14px);
+          width: 100%;
+        }
+
+        .ub-panel-form-left .ub-quick-divider {
+          display: flex;
+          align-items: center;
+          gap: 8px;
+          margin-bottom: 8px;
+        }
+
+        .ub-panel-form-left .ub-quick-line {
+          flex: 1;
+          height: 1px;
+          background: rgba(133, 79, 85, 0.12);
+        }
+
+        .ub-panel-form-left .ub-quick-label {
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-size: 10px;
+          font-weight: 700;
+          letter-spacing: 1.2px;
+          color: #9C8583;
+          text-transform: uppercase;
+        }
+
+        .ub-panel-form-left .ub-quick-btn-grid {
+          display: grid;
+          grid-template-columns: repeat(3, 1fr);
+          gap: 8px;
+          width: 100%;
+        }
+
+        .ub-panel-form-left .ub-quick-btn {
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          gap: 5px;
+          height: 34px;
+          padding: 0 6px;
+          border-radius: 8px;
+          font-family: 'Plus Jakarta Sans', sans-serif;
+          font-size: 11.5px;
+          font-weight: 600;
+          cursor: pointer;
+          transition: all 0.2s ease;
+          user-select: none;
+        }
+
+        .ub-panel-form-left .ub-quick-btn:disabled {
+          opacity: 0.6;
+          cursor: not-allowed;
+        }
+
+        .ub-panel-form-left .ub-quick-btn--admin {
+          border: 1px solid #E2D1B8;
+          background: #FAF7F2;
+          color: #7A5B30;
+        }
+        .ub-panel-form-left .ub-quick-btn--admin:hover:not(:disabled) {
+          border-color: #C59B27;
+          color: #946E13;
+          background: #FFFDF9;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 10px rgba(197, 155, 39, 0.18);
+        }
+
+        .ub-panel-form-left .ub-quick-btn--staff {
+          border: 1px solid #D6E0EA;
+          background: #F4F7FA;
+          color: #385E7E;
+        }
+        .ub-panel-form-left .ub-quick-btn--staff:hover:not(:disabled) {
+          border-color: #4A90E2;
+          color: #2368B5;
+          background: #FFFFFF;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 10px rgba(74, 144, 226, 0.18);
+        }
+
+        .ub-panel-form-left .ub-quick-btn--customer {
+          border: 1px solid #ECDAD8;
+          background: #FAF5F4;
+          color: #854F55;
+        }
+        .ub-panel-form-left .ub-quick-btn--customer:hover:not(:disabled) {
+          border-color: #B8737D;
+          color: #A35763;
+          background: #FFFFFF;
+          transform: translateY(-1px);
+          box-shadow: 0 4px 10px rgba(184, 115, 125, 0.18);
+        }
+
         .ub-panel-form-left .ub-bottom-link-row {
           display: flex;
           align-items: center;
           justify-content: center;
-          margin-top: 42px;
+          gap: 6px;
+          margin-top: clamp(8px, 1.4vh, 16px);
+          padding-top: 8px;
+          border-top: 1px solid rgba(133, 79, 85, 0.08);
+          width: 100%;
         }
 
         .ub-panel-form-left .ub-prompt-text {
@@ -482,9 +652,9 @@ export default function LoginPage() {
           display: flex;
           flex-direction: column;
           justify-content: space-between;
-          width: 576px;
-          height: 740px;
-          padding: 44px 48px;
+          width: 50%;
+          height: 100%;
+          padding: clamp(20px, 3.2vh, 40px) clamp(24px, 3.5vw, 48px);
           background: radial-gradient(130% 130% at 80% 15%, #FFF6F3 0%, #FCEAE4 55%, #F7DDD5 100%);
           overflow: hidden;
           box-sizing: border-box;
@@ -618,16 +788,16 @@ export default function LoginPage() {
           display: flex;
           align-items: center;
           justify-content: center;
-          width: 144px;
-          height: 134px;
+          width: clamp(100px, 13vh, 134px);
+          height: clamp(92px, 12vh, 124px);
           background: #FFFFFF;
-          border-radius: 22px;
+          border-radius: 20px;
           border: 1px solid rgba(255, 255, 255, 0.95);
           box-shadow:
             0 16px 36px -8px rgba(133, 79, 85, 0.16),
             0 4px 12px rgba(0, 0, 0, 0.03);
-          margin-bottom: 24px;
-          padding: 16px;
+          margin-bottom: clamp(10px, 1.8vh, 20px);
+          padding: 12px;
           box-sizing: border-box;
           transition: transform 0.25s cubic-bezier(0.2, 0.8, 0.2, 1), box-shadow 0.25s ease;
         }
@@ -656,9 +826,9 @@ export default function LoginPage() {
         .ub-panel-brand-right .ub-brand-title {
           font-family: 'Cinzel', 'Playfair Display', serif;
           font-weight: 500;
-          font-size: 38px;
-          line-height: 44px;
-          letter-spacing: 8px;
+          font-size: clamp(26px, 3.8vh, 36px);
+          line-height: 1.2;
+          letter-spacing: clamp(5px, 0.8vw, 8px);
           text-transform: uppercase;
           color: #1E1617;
           margin: 0;
@@ -836,7 +1006,7 @@ export default function LoginPage() {
                     id="login-identity"
                     type="text"
                     className="ub-input"
-                    placeholder="marie@atelier.vn hoặc 090 123 4567"
+                    placeholder="Địa chỉ Email của bạn"
                     value={email}
                     onChange={(e) => setEmail(e.target.value)}
                     autoComplete="username"
@@ -863,7 +1033,7 @@ export default function LoginPage() {
                     id="login-password"
                     type={showPassword ? 'text' : 'password'}
                     className="ub-input ub-input--pass"
-                    placeholder="••••••••"
+                    placeholder="Mật khẩu tài khoản"
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="current-password"
@@ -898,10 +1068,53 @@ export default function LoginPage() {
 
               {/* Submit Button */}
               <button type="submit" className="ub-submit-btn" id="login-submit-btn">
-                <span className="ub-submit-btn__text">ĐĂNG NHẬP TÀI KHOẢN</span>
+                <span className="ub-submit-btn__text">{isLoading ? "ĐANG ĐĂNG NHẬP..." : "ĐĂNG NHẬP TÀI KHOẢN"}</span>
                 <span className="ub-submit-btn__arrow">→</span>
               </button>
             </form>
+
+            {/* Quick Login for 3 Roles (Admin / Staff / Customer) */}
+            <div className="ub-quick-login-wrap">
+              <div className="ub-quick-divider">
+                <span className="ub-quick-line" />
+                <span className="ub-quick-label">ĐĂNG NHẬP NHANH (3 VAI TRÒ)</span>
+                <span className="ub-quick-line" />
+              </div>
+              <div className="ub-quick-btn-grid">
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('ADMIN')}
+                  className="ub-quick-btn ub-quick-btn--admin"
+                  disabled={isLoading}
+                  title="Đăng nhập tài khoản Quản trị viên (admin@unibridal.vn)"
+                >
+                  <Crown size={13} strokeWidth={2.2} />
+                  <span>Admin</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('STAFF')}
+                  className="ub-quick-btn ub-quick-btn--staff"
+                  disabled={isLoading}
+                  title="Đăng nhập tài khoản Nhân viên showroom (staff@unibridal.vn)"
+                >
+                  <UserCheck size={13} strokeWidth={2.2} />
+                  <span>Staff</span>
+                </button>
+
+                <button
+                  type="button"
+                  onClick={() => handleQuickLogin('CUSTOMER')}
+                  className="ub-quick-btn ub-quick-btn--customer"
+                  disabled={isLoading}
+                  title="Đăng nhập tài khoản Khách hàng (customer@unibridal.vn)"
+                >
+                  <User size={13} strokeWidth={2.2} />
+                  <span>Khách hàng</span>
+                </button>
+              </div>
+            </div>
 
             {/* Bottom Register Prompt */}
             <div className="ub-bottom-link-row">

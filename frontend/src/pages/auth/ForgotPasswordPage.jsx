@@ -13,9 +13,11 @@ import {
   KeyRound,
   Crown,
   Heart,
-  ChevronLeft
+  Home,
+  Check
 } from 'lucide-react';
 import heroBrideImg from '../../assets/hero_bride.jpg';
+import { forgotPassword as apiForgotPassword, verifyResetOtp, resetPassword } from '../../services/authService';
 
 export default function ForgotPasswordPage() {
   const navigate = useNavigate();
@@ -24,6 +26,7 @@ export default function ForgotPasswordPage() {
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [devOtp, setDevOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -32,12 +35,20 @@ export default function ForgotPasswordPage() {
   // Status & feedback
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', text: '' });
-  const [countdown, setCountdown] = useState(60);
+  const [countdown, setCountdown] = useState(60); // Đếm ngược gửi lại: 60s
   const [canResend, setCanResend] = useState(false);
+  const [otpExpiresIn, setOtpExpiresIn] = useState(180); // Hiệu lực mã OTP: 3 phút (180s)
 
   const otpInputRefs = useRef([]);
 
-  // Countdown timer for OTP
+  // Hàm định dạng thời gian mm:ss
+  const formatTime = (secs) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m < 10 ? '0' + m : m}:${s < 10 ? '0' + s : s}`;
+  };
+
+  // Countdown timer cho việc gửi lại mã (60s)
   useEffect(() => {
     let timer;
     if (step === 2 && countdown > 0) {
@@ -53,6 +64,17 @@ export default function ForgotPasswordPage() {
     }
     return () => clearInterval(timer);
   }, [step, countdown]);
+
+  // Countdown timer cho thời hạn hiệu lực OTP (180s = 3 phút)
+  useEffect(() => {
+    let timer;
+    if (step === 2 && otpExpiresIn > 0) {
+      timer = setInterval(() => {
+        setOtpExpiresIn((prev) => Math.max(0, prev - 1));
+      }, 1000);
+    }
+    return () => clearInterval(timer);
+  }, [step, otpExpiresIn]);
 
   // General Back Handler: Goes to previous step, or back to login if at Step 1 or 4
   const handleBack = () => {
@@ -103,9 +125,9 @@ export default function ForgotPasswordPage() {
   const strength = getStrength(newPassword);
 
   // STEP 1: Handle Send OTP via Gmail
-  const handleRequestOtp = (e) => {
+  const handleRequestOtp = async (e) => {
     e.preventDefault();
-    const cleanEmail = email.trim();
+    const cleanEmail = email.trim().toLowerCase();
     if (!cleanEmail) {
       setFeedback({ type: 'error', text: 'Vui lòng nhập địa chỉ Gmail của bạn.' });
       return;
@@ -119,16 +141,27 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
     setFeedback({ type: '', text: '' });
 
-    setTimeout(() => {
+    try {
+      const res = await apiForgotPassword(cleanEmail);
       setIsLoading(false);
       setStep(2);
       setCountdown(60);
+      setOtpExpiresIn(180);
       setCanResend(false);
+      if (res?.data?.devOtp) {
+        setDevOtp(res.data.devOtp);
+      }
       setFeedback({
         type: 'success',
-        text: `Mã bảo mật gồm 6 chữ số đã được gửi tới ${cleanEmail}.`,
+        text: res.message || `Mã bảo mật gồm 6 chữ số đã được gửi tới ${cleanEmail}.`,
       });
-    }, 850);
+    } catch (err) {
+      setIsLoading(false);
+      setFeedback({
+        type: 'error',
+        text: err.message || 'Không tìm thấy tài khoản liên kết với địa chỉ email này.',
+      });
+    }
   };
 
   // STEP 2: Handle OTP input
@@ -159,21 +192,33 @@ export default function ForgotPasswordPage() {
     }
   };
 
-  const handleResend = () => {
+  const handleResend = async () => {
     if (!canResend) return;
     setIsLoading(true);
-    setTimeout(() => {
+    try {
+      const res = await apiForgotPassword(email.trim().toLowerCase());
       setIsLoading(false);
       setCountdown(60);
+      setOtpExpiresIn(180);
       setCanResend(false);
       setOtp(['', '', '', '', '', '']);
-      setFeedback({ type: 'success', text: 'Đã gửi lại mã xác thực mới vào hộp thư của bạn.' });
+      if (res?.data?.devOtp) {
+        setDevOtp(res.data.devOtp);
+      }
+      setFeedback({ type: 'success', text: res.message || 'Đã gửi lại mã xác thực mới vào hộp thư của bạn.' });
       otpInputRefs.current[0]?.focus();
-    }, 700);
+    } catch (err) {
+      setIsLoading(false);
+      setFeedback({ type: 'error', text: err.message || 'Lỗi gửi lại mã OTP.' });
+    }
   };
 
-  const handleVerifyOtp = (e) => {
+  const handleVerifyOtp = async (e) => {
     e.preventDefault();
+    if (otpExpiresIn === 0) {
+      setFeedback({ type: 'error', text: 'Mã OTP đã hết hiệu lực (sau 3 phút). Vui lòng bấm "Gửi lại mã" bên dưới.' });
+      return;
+    }
     const code = otp.join('');
     if (code.length < 6) {
       setFeedback({ type: 'error', text: 'Vui lòng nhập đủ 6 chữ số mã xác thực OTP.' });
@@ -183,18 +228,22 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
     setFeedback({ type: '', text: '' });
 
-    setTimeout(() => {
+    try {
+      const res = await verifyResetOtp({ email: email.trim(), otp: code });
       setIsLoading(false);
       setStep(3);
-      setFeedback({ type: 'success', text: 'Xác thực OTP thành công. Hãy thiết lập mật khẩu mới.' });
-    }, 800);
+      setFeedback({ type: 'success', text: res.message || 'Xác thực OTP thành công. Hãy thiết lập mật khẩu mới.' });
+    } catch (err) {
+      setIsLoading(false);
+      setFeedback({ type: 'error', text: err.message || 'Mã OTP không chính xác hoặc đã hết hạn.' });
+    }
   };
 
   // STEP 3: Handle Reset Password
-  const handleResetPassword = (e) => {
+  const handleResetPassword = async (e) => {
     e.preventDefault();
-    if (newPassword.length < 8) {
-      setFeedback({ type: 'error', text: 'Mật khẩu phải có tối thiểu 8 ký tự.' });
+    if (newPassword.length < 6) {
+      setFeedback({ type: 'error', text: 'Mật khẩu phải có tối thiểu 6 ký tự.' });
       return;
     }
     if (newPassword !== confirmPassword) {
@@ -205,48 +254,24 @@ export default function ForgotPasswordPage() {
     setIsLoading(true);
     setFeedback({ type: '', text: '' });
 
-    setTimeout(() => {
+    try {
+      const code = otp.join('');
+      await resetPassword({ email: email.trim(), otp: code, newPassword });
       setIsLoading(false);
       setStep(4);
-    }, 850);
+    } catch (err) {
+      setIsLoading(false);
+      setFeedback({ type: 'error', text: err.message || 'Không thể đặt lại mật khẩu. Vui lòng thử lại.' });
+    }
   };
 
   return (
-    <div className="min-h-screen w-full flex flex-col lg:flex-row bg-[#FAF8F5] text-[#2C2523] font-jakarta selection:bg-[#FCEEE9] selection:text-[#B8737D] relative">
+    <div className="h-screen max-h-screen w-full flex flex-col lg:flex-row bg-[#FAF8F5] text-[#2C2523] font-jakarta selection:bg-[#FCEEE9] selection:text-[#B8737D] relative overflow-hidden">
       
-      {/* ─────────────────────────────────────────────────────────────
-          FIXED PROMINENT BACK BUTTON (Always visible at top-left)
-      ───────────────────────────────────────────────────────────── */}
-      <div className="fixed top-5 left-5 z-50 flex items-center gap-3">
-        <button
-          type="button"
-          onClick={handleBack}
-          id="btn-global-back"
-          className="inline-flex items-center gap-2 px-4 py-2.5 rounded-full bg-white/95 hover:bg-white text-[#2C2523] hover:text-[#B8737D] text-xs font-bold tracking-[1.2px] uppercase shadow-[0_8px_25px_rgba(0,0,0,0.15)] border border-[#E6DAC8] backdrop-blur-md transition-all duration-200 hover:-translate-x-1 cursor-pointer group"
-          title="Quay lại"
-        >
-          <ArrowLeft className="w-4 h-4 text-[#B8737D] group-hover:-translate-x-1 transition-transform" />
-          <span>
-            {step === 2
-              ? 'QUAY LẠI BƯỚC 1'
-              : step === 3
-              ? 'QUAY LẠI BƯỚC 2'
-              : 'QUAY LẠI ĐĂNG NHẬP'}
-          </span>
-        </button>
-
-        <Link
-          to="/"
-          className="hidden sm:inline-flex items-center gap-1.5 px-3.5 py-2.5 rounded-full bg-white/80 hover:bg-white text-[#6E5A56] hover:text-[#2C2523] text-xs font-medium tracking-wider uppercase shadow-[0_4px_16px_rgba(0,0,0,0.08)] border border-[#E6DAC8]/80 backdrop-blur-md transition-all duration-200 cursor-pointer"
-        >
-          <span>Trang chủ</span>
-        </Link>
-      </div>
-
       {/* ─────────────────────────────────────────────────────────────
           LEFT PANEL: HIGH-FASHION EDITORIAL VISUAL (Visible on lg+)
       ───────────────────────────────────────────────────────────── */}
-      <div className="relative hidden lg:flex lg:w-1/2 xl:w-5/12 min-h-screen overflow-hidden bg-neutral-900 flex-col justify-between p-12 pt-24 text-white">
+      <div className="relative hidden lg:flex lg:w-1/2 xl:w-5/12 h-screen max-h-screen overflow-hidden bg-neutral-900 flex-col justify-between p-8 xl:p-12 text-white">
         {/* Background Wedding Dress Hero Image */}
         <img
           src={heroBrideImg}
@@ -279,24 +304,24 @@ export default function ForgotPasswordPage() {
 
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-[11px] font-medium tracking-wider uppercase text-white/90">
             <Sparkles className="w-3.5 h-3.5 text-[#E6DAC8]" />
-            <span>Atelier Security</span>
+            <span>Dịch Vụ Thuê Cao Cấp</span>
           </div>
         </div>
 
         {/* Middle Editorial Quote */}
-        <div className="relative z-10 my-auto py-12 max-w-lg">
+        <div className="relative z-10 my-auto py-4 xl:py-8 max-w-lg">
           <div className="w-12 h-[1px] bg-[#E6DAC8] mb-6" />
           <span className="text-[12px] font-medium tracking-[3px] uppercase text-[#E6DAC8] mb-3 block">
-            An tâm tỏa sáng trong ngày trọng đại
+            Đẳng cấp thuê trang phục cưới Haute Couture
           </span>
           <h2 className="font-playfair text-3xl xl:text-4xl leading-tight font-normal mb-6 text-white drop-shadow-sm">
-            Mỗi thiết kế là một giấc mơ, <br />
+            Tuyệt tác váy cưới độc bản, <br />
             <span className="italic text-[#E6DAC8] font-light">
-              mỗi trải nghiệm là sự vẹn tròn.
+              trọn vẹn từng khoảnh khắc.
             </span>
           </h2>
-          <p className="text-sm font-light leading-relaxed text-white/80 max-w-md">
-            Hệ thống UniBridal áp dụng chuẩn mã hóa bảo mật hiện đại nhất để đảm bảo thông tin cá nhân và lịch hẹn thử váy của quý nàng luôn được bảo vệ an toàn tuyệt đối.
+          <p className="text-sm font-light leading-relaxed text-white/85 max-w-md">
+            UniBridal tự hào là thương hiệu cho thuê váy cưới cao cấp uy tín hàng đầu, mang đến hơn 70+ thiết kế độc quyền với chất liệu ren Pháp thượng hạng, phom corset tôn dáng chuẩn mực và quy trình giặt hấp, kiểm định chuẩn bảo tàng sau mỗi lần sử dụng.
           </p>
         </div>
 
@@ -304,21 +329,21 @@ export default function ForgotPasswordPage() {
         <div className="relative z-10 pt-6 border-t border-white/15 grid grid-cols-2 gap-4">
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 flex items-center justify-center flex-shrink-0">
-              <ShieldCheck className="w-4 h-4 text-[#E6DAC8]" />
+              <Crown className="w-4 h-4 text-[#E6DAC8]" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-white">Xác thực Gmail 2 lớp</p>
-              <p className="text-[11px] text-white/70">Mã hóa TLS bảo mật cao</p>
+              <p className="text-xs font-semibold text-white">Chất lượng Haute Couture</p>
+              <p className="text-[11px] text-white/70">Ren Pháp &amp; pha lê đính kết thủ công</p>
             </div>
           </div>
 
           <div className="flex items-center gap-3">
             <div className="w-9 h-9 rounded-xl bg-white/10 backdrop-blur-md border border-white/15 flex items-center justify-center flex-shrink-0">
-              <Heart className="w-4 h-4 text-[#E6DAC8]" />
+              <ShieldCheck className="w-4 h-4 text-[#E6DAC8]" />
             </div>
             <div>
-              <p className="text-xs font-semibold text-white">Concierge 24/7</p>
-              <p className="text-[11px] text-white/70">Hỗ trợ khôi phục ưu tiên</p>
+              <p className="text-xs font-semibold text-white">Uy tín dịch vụ 100%</p>
+              <p className="text-[11px] text-white/70">Bảo chứng độ mới &amp; chỉnh sửa số đo</p>
             </div>
           </div>
         </div>
@@ -327,25 +352,25 @@ export default function ForgotPasswordPage() {
       {/* ─────────────────────────────────────────────────────────────
           RIGHT PANEL: MODERN LUXURY INTERACTIVE RECOVERY FORM
       ───────────────────────────────────────────────────────────── */}
-      <div className="flex-1 flex flex-col justify-between p-6 sm:p-10 lg:p-14 xl:p-16 pt-20 sm:pt-24 lg:pt-16 relative overflow-y-auto">
+      <div className="flex-1 flex flex-col justify-between p-4 sm:p-6 lg:p-8 xl:p-10 h-screen max-h-screen relative overflow-y-auto lg:overflow-hidden">
         {/* Soft Ambient Radial Lights */}
         <div className="absolute top-0 right-0 w-[450px] h-[450px] rounded-full bg-[rgba(184,115,125,0.06)] blur-[90px] pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-[350px] h-[350px] rounded-full bg-[rgba(230,218,200,0.15)] blur-[80px] pointer-events-none" />
 
         {/* Top Action Bar (Mobile & Right Panel Header) */}
-        <div className="flex items-center justify-between mb-8 relative z-10">
+        <div className="flex items-center justify-between mb-4 xl:mb-6 relative z-10">
           <button
             type="button"
             onClick={handleBack}
-            className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-white/90 hover:bg-white text-xs font-semibold tracking-wider text-[#685355] hover:text-[#B8737D] border border-[#EADBDA] shadow-sm transition-all duration-200 cursor-pointer"
+            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 hover:bg-white text-xs font-semibold tracking-wider text-[#685355] hover:text-[#B8737D] border border-[#EADBDA] shadow-[0_2px_8px_rgba(184,115,125,0.06)] hover:shadow-md transition-all duration-200 cursor-pointer group select-none"
           >
-            <ArrowLeft className="w-3.5 h-3.5 text-[#B8737D]" />
+            <ArrowLeft className="w-3.5 h-3.5 text-[#B8737D] transition-transform group-hover:-translate-x-0.5" />
             <span>
               {step === 2
-                ? '← QUAY LẠI BƯỚC 1'
+                ? 'QUAY LẠI BƯỚC 1'
                 : step === 3
-                ? '← QUAY LẠI BƯỚC 2'
-                : '← VỀ ĐĂNG NHẬP'}
+                ? 'QUAY LẠI BƯỚC 2'
+                : 'VỀ ĐĂNG NHẬP'}
             </span>
           </button>
 
@@ -359,53 +384,64 @@ export default function ForgotPasswordPage() {
 
           <Link
             to="/"
-            className="text-xs font-semibold text-[#8F797B] hover:text-[#B8737D] transition-colors underline underline-offset-4"
+            className="inline-flex items-center gap-1.5 px-3.5 py-1.5 rounded-full bg-white/95 hover:bg-white text-xs font-medium text-[#685355] hover:text-[#B8737D] border border-[#EADBDA] shadow-[0_2px_8px_rgba(184,115,125,0.06)] hover:shadow-md transition-all duration-200 no-underline cursor-pointer group select-none"
           >
-            Về Trang chủ
+            <Home className="w-3.5 h-3.5 text-[#B8737D] transition-transform group-hover:scale-110" />
+            <span>Về Trang chủ</span>
           </Link>
         </div>
 
         {/* Center Main Card Container */}
-        <div className="w-full max-w-[460px] mx-auto my-auto relative z-10 py-4">
+        <div className="w-full max-w-[460px] mx-auto my-auto relative z-10 py-1">
           
           {/* Stepper Indicator (for Steps 1, 2, 3) */}
           {step < 4 && (
-            <div className="flex items-center justify-center gap-3 mb-8">
-              {[
-                { num: 1, label: 'Gmail' },
-                { num: 2, label: 'Xác thực OTP' },
-                { num: 3, label: 'Mật khẩu mới' },
-              ].map((s, idx) => (
-                <React.Fragment key={s.num}>
-                  <div className="flex items-center gap-2">
-                    <div
-                      className={`w-7 h-7 rounded-full flex items-center justify-center text-xs font-semibold transition-all duration-300 ${
-                        step === s.num
-                          ? 'bg-[#B8737D] text-white shadow-md shadow-[#B8737D]/25 ring-4 ring-[#B8737D]/10'
-                          : step > s.num
-                          ? 'bg-[#FAF0F1] text-[#B8737D] border border-[#B8737D]/40'
-                          : 'bg-[#EFE8E4] text-[#9A8688]'
-                      }`}
-                    >
-                      {step > s.num ? '✓' : s.num}
-                    </div>
-                    <span
-                      className={`text-[11px] font-medium hidden sm:inline ${
-                        step === s.num ? 'text-[#2C2523] font-semibold' : 'text-[#9A8688]'
-                      }`}
-                    >
-                      {s.label}
-                    </span>
-                  </div>
-                  {idx < 2 && (
-                    <div
-                      className={`w-8 sm:w-10 h-[1.5px] transition-colors duration-300 ${
-                        step > s.num ? 'bg-[#B8737D]' : 'bg-[#EADBDA]'
-                      }`}
-                    />
-                  )}
-                </React.Fragment>
-              ))}
+            <div className="flex justify-center mb-5 xl:mb-7">
+              <div className="inline-flex items-center gap-2 sm:gap-3 px-3.5 sm:px-5 py-2 rounded-2xl bg-white/95 backdrop-blur-md border border-[#EADBDA] shadow-[0_4px_16px_rgba(184,115,125,0.06)]">
+                {[
+                  { num: 1, label: 'Gmail' },
+                  { num: 2, label: 'Xác thực OTP' },
+                  { num: 3, label: 'Mật khẩu mới' },
+                ].map((s, idx) => {
+                  const isActive = step === s.num;
+                  const isCompleted = step > s.num;
+                  return (
+                    <React.Fragment key={s.num}>
+                      <div className="flex items-center gap-2">
+                        <div
+                          className={`w-6.5 h-6.5 sm:w-7 sm:h-7 rounded-full flex items-center justify-center text-xs font-bold transition-all duration-300 ${
+                            isActive
+                              ? 'bg-gradient-to-r from-[#C58187] to-[#B36F75] text-white shadow-md shadow-[#B8737D]/30 ring-3 ring-[#B8737D]/20'
+                              : isCompleted
+                              ? 'bg-[#FAF0F1] text-[#854F55] border border-[#B8737D]/40'
+                              : 'bg-[#F2ECE8] text-[#9A8688]'
+                          }`}
+                        >
+                          {isCompleted ? <Check className="w-3.5 h-3.5 stroke-[2.5]" /> : s.num}
+                        </div>
+                        <span
+                          className={`text-[11.5px] sm:text-xs transition-colors ${
+                            isActive
+                              ? 'text-[#2C2523] font-bold tracking-wide'
+                              : isCompleted
+                              ? 'text-[#854F55] font-semibold'
+                              : 'text-[#9A8688]'
+                          }`}
+                        >
+                          {s.label}
+                        </span>
+                      </div>
+                      {idx < 2 && (
+                        <div
+                          className={`w-5 sm:w-8 h-[2px] rounded-full transition-colors duration-300 ${
+                            step > s.num ? 'bg-gradient-to-r from-[#B8737D] to-[#D498A0]' : 'bg-[#EADBDA]'
+                          }`}
+                        />
+                      )}
+                    </React.Fragment>
+                  );
+                })}
+              </div>
             </div>
           )}
 
@@ -463,7 +499,7 @@ export default function ForgotPasswordPage() {
                       type="email"
                       required
                       autoFocus
-                      placeholder="vd: thuytrang.bride@gmail.com"
+                      placeholder="Địa chỉ Email đã đăng ký"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full pl-10 pr-4 py-3.5 bg-[#FDFBF9] hover:bg-white focus:bg-white border border-[#EADBDA] rounded-xl text-sm text-[#2C2523] placeholder-[#A49491] focus:outline-none focus:border-[#B8737D] focus:ring-4 focus:ring-[#B8737D]/10 transition-all duration-200"
@@ -486,24 +522,6 @@ export default function ForgotPasswordPage() {
                   )}
                 </button>
               </form>
-
-              <div className="mt-6 pt-5 border-t border-[#F0E6DE] text-center flex items-center justify-between">
-                <button
-                  type="button"
-                  onClick={() => navigate('/login')}
-                  className="text-xs font-semibold text-[#8F797B] hover:text-[#B8737D] transition-colors flex items-center gap-1 cursor-pointer"
-                >
-                  <ChevronLeft className="w-3.5 h-3.5" />
-                  <span>Quay lại Đăng nhập</span>
-                </button>
-
-                <Link
-                  to="/register"
-                  className="text-xs font-semibold text-[#B8737D] hover:text-[#8E4953] transition-colors"
-                >
-                  Tạo tài khoản mới
-                </Link>
-              </div>
             </div>
           )}
 
@@ -526,6 +544,16 @@ export default function ForgotPasswordPage() {
                 </p>
               </div>
 
+              {devOtp && (
+                <div style={{ background: '#FFF9E6', border: '1px solid #FFE58F', color: '#D48806', padding: '12px 16px', borderRadius: '14px', fontSize: '13px', marginBottom: '20px', textAlign: 'left', lineHeight: 1.5 }}>
+                  <div style={{ fontWeight: 700, marginBottom: '4px' }}>🔔 [Môi trường thử nghiệm] Mã OTP:</div>
+                  Mã OTP đặt lại mật khẩu là: <strong style={{ fontSize: '18px', letterSpacing: '3px', color: '#AD4E00', background: '#FFF1B8', padding: '2px 8px', borderRadius: '4px' }}>{devOtp}</strong>
+                  <div style={{ fontSize: '11px', color: '#874D00', marginTop: '4px' }}>
+                    * Hệ thống chưa cấu hình EMAIL_USER &amp; EMAIL_PASS trong backend/.env nên mã hiển thị tại đây để bạn kiểm thử.
+                  </div>
+                </div>
+              )}
+
               {/* OTP Form */}
               <form onSubmit={handleVerifyOtp} className="space-y-6">
                 <div>
@@ -546,7 +574,7 @@ export default function ForgotPasswordPage() {
                         autoFocus={idx === 0}
                         onChange={(e) => handleOtpChange(idx, e.target.value)}
                         onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                        className="w-11 h-13 sm:w-12 sm:h-14 text-center font-playfair text-xl font-bold bg-[#FDFBF9] hover:bg-white focus:bg-white border-2 border-[#EADBDA] focus:border-[#B8737D] rounded-xl text-[#2C2523] focus:outline-none focus:ring-4 focus:ring-[#B8737D]/15 transition-all duration-200"
+                        className="w-11 h-13 sm:w-12 sm:h-14 text-center font-jakarta text-2xl font-bold bg-[#FDFBF9] hover:bg-white focus:bg-white border-2 border-[#EADBDA] focus:border-[#854F55] rounded-xl text-[#2C2523] focus:outline-none focus:ring-4 focus:ring-[#B8737D]/20 transition-all duration-200"
                       />
                     ))}
                   </div>
@@ -554,11 +582,11 @@ export default function ForgotPasswordPage() {
                   {/* Resend & Countdown */}
                   <div className="flex items-center justify-between text-xs text-[#7A6663] mt-4 px-1">
                     <span>
-                      {countdown > 0 ? (
+                      {otpExpiresIn > 0 ? (
                         <>
                           Hiệu lực còn:{' '}
                           <span className="font-semibold text-[#B8737D]">
-                            0:{countdown < 10 ? `0${countdown}` : countdown}
+                            {formatTime(otpExpiresIn)}
                           </span>
                         </>
                       ) : (
@@ -572,7 +600,7 @@ export default function ForgotPasswordPage() {
                       disabled={!canResend || isLoading}
                       className="font-semibold text-[#B8737D] hover:text-[#8E4953] disabled:text-[#C5B4B2] disabled:cursor-not-allowed transition-colors cursor-pointer"
                     >
-                      Gửi lại mã
+                      {canResend ? 'Gửi lại mã OTP mới' : `Gửi lại mã (${countdown}s)`}
                     </button>
                   </div>
                 </div>
@@ -592,7 +620,7 @@ export default function ForgotPasswordPage() {
 
                   <button
                     type="submit"
-                    disabled={isLoading}
+                    disabled={isLoading || otpExpiresIn === 0}
                     className="flex-1 py-3.5 px-6 rounded-xl bg-[#B8737D] hover:bg-[#A35E68] text-white font-medium text-xs tracking-[2px] uppercase shadow-[0_8px_20px_rgba(184,115,125,0.28)] hover:shadow-[0_12px_28px_rgba(184,115,125,0.36)] transition-all duration-300 disabled:opacity-60 cursor-pointer flex items-center justify-center gap-2"
                   >
                     {isLoading ? (
@@ -600,6 +628,8 @@ export default function ForgotPasswordPage() {
                         <RefreshCw className="w-4 h-4 animate-spin" />
                         <span>ĐANG XÁC THỰC...</span>
                       </>
+                    ) : otpExpiresIn === 0 ? (
+                      <span>MÃ ĐÃ HẾT HẠN</span>
                     ) : (
                       <span>XÁC NHẬN MÃ OTP</span>
                     )}
@@ -646,7 +676,7 @@ export default function ForgotPasswordPage() {
                       type={showPassword ? 'text' : 'password'}
                       required
                       autoFocus
-                      placeholder="Tối thiểu 8 ký tự an toàn"
+                      placeholder="Mật khẩu mới"
                       value={newPassword}
                       onChange={(e) => setNewPassword(e.target.value)}
                       className="w-full pl-10 pr-11 py-3.5 bg-[#FDFBF9] hover:bg-white focus:bg-white border border-[#EADBDA] rounded-xl text-sm text-[#2C2523] placeholder-[#A49491] focus:outline-none focus:border-[#B8737D] focus:ring-4 focus:ring-[#B8737D]/10 transition-all duration-200"
@@ -697,7 +727,7 @@ export default function ForgotPasswordPage() {
                       id="confirm-password-input"
                       type={showConfirmPassword ? 'text' : 'password'}
                       required
-                      placeholder="Nhập lại mật khẩu mới"
+                      placeholder="Xác nhận lại mật khẩu mới"
                       value={confirmPassword}
                       onChange={(e) => setConfirmPassword(e.target.value)}
                       className="w-full pl-10 pr-11 py-3.5 bg-[#FDFBF9] hover:bg-white focus:bg-white border border-[#EADBDA] rounded-xl text-sm text-[#2C2523] placeholder-[#A49491] focus:outline-none focus:border-[#B8737D] focus:ring-4 focus:ring-[#B8737D]/10 transition-all duration-200"
@@ -788,8 +818,8 @@ export default function ForgotPasswordPage() {
         </div>
 
         {/* Bottom Footer */}
-        <div className="relative z-10 pt-6 text-center text-[11px] text-[#A08E8F]">
-          © {new Date().getFullYear()} UniBridal Haute Couture. All rights reserved.
+        <div className="relative z-10 pt-2 text-center text-[11px] text-[#A08E8F]">
+          © {new Date().getFullYear()} UniBridal Haute Couture. Bảo lưu mọi quyền.
         </div>
       </div>
     </div>
