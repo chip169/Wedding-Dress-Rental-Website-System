@@ -20,3 +20,4 @@ router.get('/:id', optionalAuthenticate, orderController.getOrderById);
 router.patch('/:id/status', authenticate, authorize('STAFF', 'ADMIN'), orderController.updateOrderStatus);
 
 export default router;
+

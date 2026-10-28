@@ -102,3 +102,4 @@ export const updateAppointmentStatus = async (id, status, staffId = null) => {
 
   return appointment;
 };
+

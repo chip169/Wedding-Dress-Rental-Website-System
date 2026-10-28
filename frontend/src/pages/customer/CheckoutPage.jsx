@@ -37,6 +37,36 @@ import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { MOCK_DRESSES } from '../../services/dressService';
 import { getCart } from '../../services/cartService';
+
+// Helper: Chuyển đổi định dạng ngày DD/MM/YYYY sang YYYY-MM-DD và ngược lại
+function toIsoDateString(val) {
+  if (!val) return '';
+  if (val.includes('-')) return val.split('T')[0];
+  if (val.includes('/')) {
+    const parts = val.split('/');
+    if (parts.length === 3) {
+      const d = parts[0].padStart(2, '0');
+      const m = parts[1].padStart(2, '0');
+      const y = parts[2];
+      return `${y}-${m}-${d}`;
+    }
+  }
+  const d = new Date(val);
+  return isNaN(d.getTime()) ? '' : d.toISOString().split('T')[0];
+}
+
+function toDisplayDateString(val) {
+  if (!val) return '';
+  if (val.includes('/')) return val;
+  if (val.includes('-')) {
+    const parts = val.split('T')[0].split('-');
+    if (parts.length === 3) {
+      return `${parts[2]}/${parts[1]}/${parts[0]}`;
+    }
+  }
+  return val;
+}
+
 import { createOrder } from '../../services/orderService';
 
 export default function CheckoutPage() {
@@ -73,13 +103,46 @@ export default function CheckoutPage() {
   const [email, setEmail] = useState('thaomy.bride@gmail.com');
   const [cccd, setCccd] = useState('079201019888');
   const [address, setAddress] = useState('120/4 Lê Lai, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh');
-  
-  // Schedule state
-  const [rentalSchedule, setRentalSchedule] = useState({
-    startDate: startDateParam || '18/11/2026',
-    endDate: endDateParam || '21/11/2026',
-    weddingDate: '20/11/2026',
+
+  // Schedule state (Định dạng hiển thị DD/MM/YYYY)
+  const [rentalSchedule, setRentalSchedule] = useState(() => {
+    const start = startDateParam ? toDisplayDateString(startDateParam) : '18/11/2026';
+    const end = endDateParam ? toDisplayDateString(endDateParam) : '21/11/2026';
+    return {
+      startDate: start,
+      weddingDate: '20/11/2026',
+      endDate: end,
+    };
   });
+
+  // State cho tháng đang xem trên lịch tương tác
+  const [calendarViewDate, setCalendarViewDate] = useState(() => {
+    const initialIso = toIsoDateString(rentalSchedule.weddingDate || '20/11/2026');
+    const d = new Date(initialIso || Date.now());
+    return isNaN(d.getTime()) ? new Date(2026, 10, 1) : new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [showFullCalendar, setShowFullCalendar] = useState(true);
+
+  // Xử lý khi người dùng chọn ngày cưới chính thức (Tự động tính ngày nhận trước 2 ngày và trả sau 1 ngày)
+  const handleSelectWeddingDate = (selectedIsoOrDisplay) => {
+    const iso = toIsoDateString(selectedIsoOrDisplay);
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return;
+
+    const startObj = new Date(d);
+    startObj.setDate(startObj.getDate() - 2);
+
+    const endObj = new Date(d);
+    endObj.setDate(endObj.getDate() + 1);
+
+    setRentalSchedule({
+      startDate: toDisplayDateString(startObj.toISOString().split('T')[0]),
+      weddingDate: toDisplayDateString(iso),
+      endDate: toDisplayDateString(endObj.toISOString().split('T')[0]),
+    });
+    setCalendarViewDate(new Date(d.getFullYear(), d.getMonth(), 1));
+  };
+
 
   // Selected dress size
   const [selectedSize, setSelectedSize] = useState(sizeParam || 'S');
@@ -116,7 +179,7 @@ export default function CheckoutPage() {
   // Financial calculations
   const totalRentPrice = activeDress?.price || 5200000;
   const depositCollateral = activeDress?.depositAmount || 15000000;
-  
+
   // Amount to pay today based on depositOption (30% or 100%)
   const amountToPayToday = depositOption === 'deposit30' ? Math.round(totalRentPrice * 0.5) : totalRentPrice;
 
@@ -226,7 +289,7 @@ export default function CheckoutPage() {
 
       {/* Main Content */}
       <main className="flex-1 max-w-[1320px] w-full mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-9">
-        
+
         {/* Breadcrumb */}
         <nav className="flex items-center gap-2 text-[12.5px] text-[#847374] mb-6 print:hidden">
           <Link to="/" className="hover:text-[#B8737D] transition-colors no-underline text-[#847374]">
@@ -242,10 +305,7 @@ export default function CheckoutPage() {
 
         {/* Header Title Section */}
         <div className="mb-8 print:hidden">
-          <div className="text-[11.5px] sm:text-[12px] font-bold tracking-[1.2px] text-[#B8737D] uppercase mb-1.5 font-jakarta flex items-center gap-1.5">
-            <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
-            <span>QUY TRÌNH THUÊ LỄ PHỤC CHUẨN QUỐC TẾ • 3 BƯỚC BẢO CHỨNG</span>
-          </div>
+
           <h1 className="font-playfair text-[28px] sm:text-[38px] lg:text-[42px] font-medium text-[#2C2523] leading-tight mb-2.5">
             {currentStep === 1 && 'Thông Tin Đặt Thuê & Số Đo May Đo'}
             {currentStep === 2 && 'Xem & Ký Hợp Đồng Thuê Điện Tử'}
@@ -261,27 +321,24 @@ export default function CheckoutPage() {
         {/* Stepper Bar (3 Clear Steps) */}
         <div className="w-full max-w-[820px] mx-auto mb-10 print:hidden">
           <div className="bg-white rounded-full border border-[#EEDECF]/80 shadow-[0_2px_12px_rgba(44,37,35,0.04)] px-4 sm:px-8 py-3 flex items-center justify-between text-[12px] sm:text-[13.5px]">
-            
+
             {/* Step 1 */}
             <button
               type="button"
               onClick={() => setCurrentStep(1)}
-              className={`flex items-center gap-2 border-0 bg-transparent cursor-pointer font-medium transition-colors ${
-                currentStep >= 1 ? 'text-[#733F49]' : 'text-[#847374]'
-              }`}
+              className={`flex items-center gap-2 border-0 bg-transparent cursor-pointer font-medium transition-colors ${currentStep >= 1 ? 'text-[#733F49]' : 'text-[#847374]'
+                }`}
             >
-              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
-                currentStep > 1 ? 'bg-[#2E7D32] text-white' : 'bg-[#733F49] text-white shadow-xs'
-              }`}>
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${currentStep > 1 ? 'bg-[#2E7D32] text-white' : 'bg-[#733F49] text-white shadow-xs'
+                }`}>
                 {currentStep > 1 ? '✓' : '1'}
               </span>
               <span className={currentStep === 1 ? 'font-bold text-[#733F49]' : ''}>1. Thông tin & Số đo</span>
             </button>
 
             {/* Line 1 */}
-            <div className={`flex-1 h-[2px] mx-2 sm:mx-4 transition-colors ${
-              currentStep >= 2 ? 'bg-[#733F49]' : 'bg-[#EEDECF]'
-            }`} />
+            <div className={`flex-1 h-[2px] mx-2 sm:mx-4 transition-colors ${currentStep >= 2 ? 'bg-[#733F49]' : 'bg-[#EEDECF]'
+              }`} />
 
             {/* Step 2 */}
             <button
@@ -289,30 +346,25 @@ export default function CheckoutPage() {
               onClick={() => {
                 if (brideName && phone) setCurrentStep(2);
               }}
-              className={`flex items-center gap-2 border-0 bg-transparent cursor-pointer font-medium transition-colors ${
-                currentStep >= 2 ? 'text-[#733F49]' : 'text-[#847374]'
-              }`}
+              className={`flex items-center gap-2 border-0 bg-transparent cursor-pointer font-medium transition-colors ${currentStep >= 2 ? 'text-[#733F49]' : 'text-[#847374]'
+                }`}
             >
-              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
-                currentStep > 2 ? 'bg-[#2E7D32] text-white' : currentStep === 2 ? 'bg-[#733F49] text-white shadow-xs' : 'bg-[#EAE0D5] text-[#847374]'
-              }`}>
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${currentStep > 2 ? 'bg-[#2E7D32] text-white' : currentStep === 2 ? 'bg-[#733F49] text-white shadow-xs' : 'bg-[#EAE0D5] text-[#847374]'
+                }`}>
                 {currentStep > 2 ? '✓' : '2'}
               </span>
               <span className={currentStep === 2 ? 'font-bold text-[#733F49]' : ''}>2. Ký hợp đồng số</span>
             </button>
 
             {/* Line 2 */}
-            <div className={`flex-1 h-[2px] mx-2 sm:mx-4 transition-colors ${
-              currentStep >= 3 ? 'bg-[#733F49]' : 'bg-[#EEDECF]'
-            }`} />
+            <div className={`flex-1 h-[2px] mx-2 sm:mx-4 transition-colors ${currentStep >= 3 ? 'bg-[#733F49]' : 'bg-[#EEDECF]'
+              }`} />
 
             {/* Step 3 */}
-            <div className={`flex items-center gap-2 font-medium ${
-              currentStep === 3 ? 'text-[#733F49] font-bold' : 'text-[#847374]'
-            }`}>
-              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${
-                currentStep === 3 ? 'bg-[#733F49] text-white shadow-xs' : 'bg-[#EAE0D5] text-[#847374]'
+            <div className={`flex items-center gap-2 font-medium ${currentStep === 3 ? 'text-[#733F49] font-bold' : 'text-[#847374]'
               }`}>
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${currentStep === 3 ? 'bg-[#733F49] text-white shadow-xs' : 'bg-[#EAE0D5] text-[#847374]'
+                }`}>
                 3
               </span>
               <span>3. Đặt cọc & Thanh toán</span>
@@ -323,14 +375,14 @@ export default function CheckoutPage() {
 
         {/* Two-Column Grid: Form Left & Sticky Order Summary Right */}
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-          
+
           {/* ================= LEFT COLUMN ================= */}
           <div className="lg:col-span-7 xl:col-span-8 space-y-8">
-            
+
             {/* ================= STEP 1: THÔNG TIN & SỐ ĐO ================= */}
             {currentStep === 1 && (
               <div className="space-y-8 animate-fade-in">
-                
+
                 {/* 1. THÔNG TIN NGƯỜI THUÊ */}
                 <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
                   <div className="flex items-center justify-between pb-5 border-b border-[#F5EDE8] mb-6">
@@ -450,44 +502,236 @@ export default function CheckoutPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
-                    <div className="bg-[#FCF9F6] p-4 rounded-xl border border-[#EEDECF]">
+                  {/* 3 Thẻ Chọn Ngày Tương Tác Kèm DatePicker */}
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
+                    
+                    {/* Thẻ 1: Ngày bắt đầu nhận váy */}
+                    <div className="relative bg-[#FCF9F6] p-4 rounded-2xl border border-[#EEDECF] transition-all hover:shadow-xs focus-within:ring-2 focus-within:ring-[#733F49]/20">
                       <label className="block text-[10.5px] font-bold text-[#847374] uppercase tracking-wider mb-1">
                         NGÀY BẮT ĐẦU NHẬN VÁY
                       </label>
-                      <input
-                        type="text"
-                        value={rentalSchedule.startDate}
-                        onChange={(e) => setRentalSchedule({ ...rentalSchedule, startDate: e.target.value })}
-                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-3 py-1.5 text-[13.5px] font-bold text-[#2C2523] focus:outline-none focus:border-[#733F49]"
-                      />
-                      <span className="text-[10.5px] text-[#2E7D32] mt-1 block">✦ Thử vừa vặn lần cuối</span>
+                      <div className="relative flex items-center">
+                        <input
+                          type="date"
+                          value={toIsoDateString(rentalSchedule.startDate)}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setRentalSchedule({
+                                ...rentalSchedule,
+                                startDate: toDisplayDateString(e.target.value),
+                              });
+                            }
+                          }}
+                          className="w-full bg-white border border-[#EEDECF] rounded-xl px-3 py-2 text-[14px] font-bold text-[#2C2523] focus:outline-none focus:border-[#733F49] cursor-pointer"
+                        />
+                      </div>
+                      <span className="text-[10.5px] font-medium text-[#2E7D32] mt-1.5 flex items-center gap-1">
+                        <span>✦</span> Thử vừa vặn lần cuối
+                      </span>
                     </div>
 
-                    <div className="bg-[#FAF0EC] p-4 rounded-xl border border-[#F2D8D4]">
-                      <label className="block text-[10.5px] font-bold text-[#733F49] uppercase tracking-wider mb-1">
-                        NGÀY CƯỚI CHÍNH THỨC
-                      </label>
-                      <input
-                        type="text"
-                        value={rentalSchedule.weddingDate}
-                        onChange={(e) => setRentalSchedule({ ...rentalSchedule, weddingDate: e.target.value })}
-                        className="w-full bg-white border border-[#F2D8D4] rounded-lg px-3 py-1.5 text-[13.5px] font-bold text-[#733F49] focus:outline-none focus:border-[#733F49]"
-                      />
-                      <span className="text-[10.5px] text-[#733F49] mt-1 block">★ Ngày trọng đại nhất</span>
+                    {/* Thẻ 2: Ngày cưới chính thức (Tiêu điểm) */}
+                    <div className="relative bg-[#FAF0EC] p-4 rounded-2xl border-2 border-[#F2D8D4] transition-all shadow-xs focus-within:ring-2 focus-within:ring-[#733F49]/30">
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[10.5px] font-bold text-[#733F49] uppercase tracking-wider">
+                          NGÀY CƯỚI CHÍNH THỨC
+                        </label>
+                        <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-md bg-[#733F49] text-white uppercase tracking-wider">
+                          TỰ ĐỘNG CÂN CHỈNH
+                        </span>
+                      </div>
+                      <div className="relative flex items-center">
+                        <input
+                          type="date"
+                          value={toIsoDateString(rentalSchedule.weddingDate)}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              handleSelectWeddingDate(e.target.value);
+                            }
+                          }}
+                          className="w-full bg-white border border-[#F2D8D4] rounded-xl px-3 py-2 text-[14.5px] font-bold text-[#733F49] focus:outline-none focus:border-[#733F49] cursor-pointer shadow-2xs"
+                        />
+                      </div>
+                      <span className="text-[10.5px] font-bold text-[#733F49] mt-1.5 flex items-center gap-1">
+                        <span>★</span> Ngày trọng đại nhất (Click để chọn lịch)
+                      </span>
                     </div>
 
-                    <div className="bg-[#FCF9F6] p-4 rounded-xl border border-[#EEDECF]">
+                    {/* Thẻ 3: Ngày hoàn trả váy */}
+                    <div className="relative bg-[#FCF9F6] p-4 rounded-2xl border border-[#EEDECF] transition-all hover:shadow-xs focus-within:ring-2 focus-within:ring-[#733F49]/20">
                       <label className="block text-[10.5px] font-bold text-[#847374] uppercase tracking-wider mb-1">
                         NGÀY HOÀN TRẢ VÁY
                       </label>
-                      <input
-                        type="text"
-                        value={rentalSchedule.endDate}
-                        onChange={(e) => setRentalSchedule({ ...rentalSchedule, endDate: e.target.value })}
-                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-3 py-1.5 text-[13.5px] font-bold text-[#2C2523] focus:outline-none focus:border-[#733F49]"
-                      />
-                      <span className="text-[10.5px] text-[#6B5C5D] mt-1 block">✦ Hoàn cọc ngay khi nhận</span>
+                      <div className="relative flex items-center">
+                        <input
+                          type="date"
+                          value={toIsoDateString(rentalSchedule.endDate)}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setRentalSchedule({
+                                ...rentalSchedule,
+                                endDate: toDisplayDateString(e.target.value),
+                              });
+                            }
+                          }}
+                          className="w-full bg-white border border-[#EEDECF] rounded-xl px-3 py-2 text-[14px] font-bold text-[#2C2523] focus:outline-none focus:border-[#733F49] cursor-pointer"
+                        />
+                      </div>
+                      <span className="text-[10.5px] font-medium text-[#6B5C5D] mt-1.5 flex items-center gap-1">
+                        <span>✦</span> Hoàn cọc ngay khi nhận
+                      </span>
+                    </div>
+
+                  </div>
+
+                  {/* Bảng Lịch Trực Quan Tháng (Interactive Calendar Visual Picker) */}
+                  <div className="bg-[#FCF9F6] rounded-2xl border border-[#EEDECF] p-4 sm:p-5 mb-6">
+                    <div className="flex items-center justify-between pb-3 border-b border-[#EEDECF] mb-3">
+                      <div className="flex items-center gap-2">
+                        <div className="w-7 h-7 rounded-lg bg-[#FAF0EC] text-[#733F49] flex items-center justify-center font-bold">
+                          <Calendar className="w-4 h-4" />
+                        </div>
+                        <div>
+                          <h4 className="font-playfair text-[15px] font-bold text-[#2C2523] m-0">
+                            Bảng Lịch Thuê & Ngày Hôn Lễ: Tháng {calendarViewDate.getMonth() + 1}/{calendarViewDate.getFullYear()}
+                          </h4>
+                          <span className="text-[11px] text-[#847374]">
+                            Nhấp vào ngày bất kỳ để đổi ngày cưới, hệ thống sẽ tự động cập nhật dải ngày thuê
+                          </span>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-1">
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const prev = new Date(calendarViewDate);
+                            prev.setMonth(prev.getMonth() - 1);
+                            setCalendarViewDate(prev);
+                          }}
+                          className="w-7 h-7 rounded-lg border border-[#EEDECF] bg-white hover:bg-[#FAF0EC] text-[#733F49] flex items-center justify-center cursor-pointer transition-colors"
+                          title="Tháng trước"
+                        >
+                          ‹
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const weddingD = new Date(toIsoDateString(rentalSchedule.weddingDate));
+                            if (!isNaN(weddingD.getTime())) {
+                              setCalendarViewDate(new Date(weddingD.getFullYear(), weddingD.getMonth(), 1));
+                            }
+                          }}
+                          className="px-2 py-1 text-[11px] font-bold text-[#733F49] bg-white border border-[#EEDECF] rounded-lg hover:bg-[#FAF0EC] cursor-pointer"
+                        >
+                          Về tháng cưới
+                        </button>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            const next = new Date(calendarViewDate);
+                            next.setMonth(next.getMonth() + 1);
+                            setCalendarViewDate(next);
+                          }}
+                          className="w-7 h-7 rounded-lg border border-[#EEDECF] bg-white hover:bg-[#FAF0EC] text-[#733F49] flex items-center justify-center cursor-pointer transition-colors"
+                          title="Tháng sau"
+                        >
+                          ›
+                        </button>
+                      </div>
+                    </div>
+
+                    {/* Calendar Day Grid */}
+                    {(() => {
+                      const year = calendarViewDate.getFullYear();
+                      const month = calendarViewDate.getMonth();
+                      const firstDayIndex = new Date(year, month, 1).getDay(); // 0 = Sun, 1 = Mon...
+                      // Adjust so Monday is 0
+                      const startOffset = firstDayIndex === 0 ? 6 : firstDayIndex - 1;
+                      const daysInMonth = new Date(year, month + 1, 0).getDate();
+
+                      const startIso = toIsoDateString(rentalSchedule.startDate);
+                      const weddingIso = toIsoDateString(rentalSchedule.weddingDate);
+                      const endIso = toIsoDateString(rentalSchedule.endDate);
+
+                      const dayNames = ['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'];
+                      const cells = [];
+
+                      for (let i = 0; i < startOffset; i++) {
+                        cells.push(<div key={`empty-${i}`} className="h-10 sm:h-12" />);
+                      }
+
+                      for (let d = 1; d <= daysInMonth; d++) {
+                        const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                        const isStart = dateStr === startIso;
+                        const isWedding = dateStr === weddingIso;
+                        const isEnd = dateStr === endIso;
+                        const isInRange = startIso && endIso && dateStr >= startIso && dateStr <= endIso;
+
+                        cells.push(
+                          <button
+                            key={dateStr}
+                            type="button"
+                            onClick={() => handleSelectWeddingDate(dateStr)}
+                            className={`relative h-10 sm:h-12 rounded-xl flex flex-col items-center justify-center text-[12px] sm:text-[13px] font-semibold transition-all border-0 cursor-pointer ${
+                              isWedding
+                                ? 'bg-[#733F49] text-white shadow-md ring-2 ring-[#D4AF37] z-10 scale-105'
+                                : isStart
+                                ? 'bg-[#2E7D32] text-white shadow-xs z-10'
+                                : isEnd
+                                ? 'bg-[#847374] text-white shadow-xs z-10'
+                                : isInRange
+                                ? 'bg-[#FAF0EC] text-[#733F49] font-bold border-y border-[#F2D8D4]'
+                                : 'bg-white text-[#2C2523] hover:bg-[#FAF0EC] hover:text-[#733F49]'
+                            }`}
+                          >
+                            <span>{d}</span>
+                            {isWedding && (
+                              <span className="text-[9px] font-bold leading-none text-amber-200">★ CƯỚI</span>
+                            )}
+                            {isStart && (
+                              <span className="text-[8.5px] font-bold leading-none text-emerald-100">NHẬN</span>
+                            )}
+                            {isEnd && (
+                              <span className="text-[8.5px] font-bold leading-none text-stone-200">TRẢ</span>
+                            )}
+                          </button>
+                        );
+                      }
+
+                      return (
+                        <div>
+                          <div className="grid grid-cols-7 gap-1 sm:gap-1.5 text-center text-[11px] font-bold text-[#847374] mb-1.5">
+                            {dayNames.map((n) => (
+                              <div key={n} className="py-1">
+                                {n}
+                              </div>
+                            ))}
+                          </div>
+                          <div className="grid grid-cols-7 gap-1 sm:gap-1.5">{cells}</div>
+                        </div>
+                      );
+                    })()}
+
+                    {/* Timeline Legend Footer */}
+                    <div className="mt-3.5 pt-3 border-t border-[#EEDECF] flex flex-wrap items-center justify-between gap-2.5 text-[11.5px]">
+                      <div className="flex flex-wrap items-center gap-3">
+                        <span className="inline-flex items-center gap-1.5 text-[#2E7D32] font-semibold">
+                          <span className="w-2.5 h-2.5 rounded-full bg-[#2E7D32]" />
+                          Ngày nhận váy ({rentalSchedule.startDate})
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 text-[#733F49] font-bold">
+                          <span className="w-2.5 h-2.5 rounded-full bg-[#733F49] ring-2 ring-[#D4AF37]" />
+                          Ngày cưới chính thức ({rentalSchedule.weddingDate})
+                        </span>
+                        <span className="inline-flex items-center gap-1.5 text-[#847374] font-semibold">
+                          <span className="w-2.5 h-2.5 rounded-full bg-[#847374]" />
+                          Ngày hoàn trả váy ({rentalSchedule.endDate})
+                        </span>
+                      </div>
+                      <div className="font-bold text-[#733F49] bg-[#FAF0EC] px-2.5 py-1 rounded-lg border border-[#F2D8D4]">
+                        ✓ Trọn gói thuê 4 ngày cao cấp
+                      </div>
                     </div>
                   </div>
 
@@ -499,11 +743,10 @@ export default function CheckoutPage() {
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
                       <div
                         onClick={() => setDeliveryMethod('direct')}
-                        className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                          deliveryMethod === 'direct'
+                        className={`p-4 rounded-xl border cursor-pointer transition-all ${deliveryMethod === 'direct'
                             ? 'border-[#733F49] bg-[#FAF3F0] ring-1 ring-[#733F49]'
                             : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-bold text-[13.5px] text-[#2C2523]">
@@ -520,11 +763,10 @@ export default function CheckoutPage() {
 
                       <div
                         onClick={() => setDeliveryMethod('delivery')}
-                        className={`p-4 rounded-xl border cursor-pointer transition-all ${
-                          deliveryMethod === 'delivery'
+                        className={`p-4 rounded-xl border cursor-pointer transition-all ${deliveryMethod === 'delivery'
                             ? 'border-[#733F49] bg-[#FAF3F0] ring-1 ring-[#733F49]'
                             : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
-                        }`}
+                          }`}
                       >
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-bold text-[13.5px] text-[#2C2523]">
@@ -640,10 +882,10 @@ export default function CheckoutPage() {
             {/* ================= STEP 2: XEM & KÝ HỢP ĐỒNG ĐIỆN TỬ ================= */}
             {currentStep === 2 && (
               <div className="space-y-8 animate-fade-in">
-                
+
                 {/* Contract Paper Box */}
                 <section className="bg-white rounded-3xl border-2 border-[#D4AF37]/40 shadow-[0_12px_45px_rgba(115,63,73,0.08)] p-6 sm:p-10 space-y-6">
-                  
+
                   {/* National Emblem & Title */}
                   <div className="text-center pb-6 border-b border-[#F0E5DC] space-y-1.5">
                     <div className="font-playfair text-[12.5px] font-bold uppercase tracking-wider text-[#2C2523]">
@@ -686,7 +928,7 @@ export default function CheckoutPage() {
 
                   {/* Contract Clauses */}
                   <div className="space-y-4 text-[12.5px] leading-relaxed text-[#4A3B3D]">
-                    
+
                     <div className="p-3.5 rounded-xl bg-[#FAF4EE] border border-[#EEDECF]">
                       <strong className="text-[#733F49] block mb-1">
                         ĐIỀU 1: THÔNG TIN TRANG PHỤC & THỜI HẠN THUÊ
@@ -734,7 +976,7 @@ export default function CheckoutPage() {
 
                   {/* Digital Signature Box */}
                   <div className="pt-4 border-t border-[#F0E5DC] grid grid-cols-1 sm:grid-cols-2 gap-6">
-                    
+
                     {/* Bên A Signature */}
                     <div className="p-4 rounded-2xl bg-[#FCF9F6] border border-[#EEDECF] text-center space-y-2">
                       <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#847374] block">
@@ -823,7 +1065,7 @@ export default function CheckoutPage() {
             {/* ================= STEP 3: ĐẶT CỌC & THANH TOÁN ================= */}
             {currentStep === 3 && (
               <div className="space-y-8 animate-fade-in">
-                
+
                 {/* Contract Signed Success Banner */}
                 <div className="bg-[#E8F5E9] border border-[#C8E6C9] p-4.5 rounded-2xl flex items-center justify-between gap-3">
                   <div className="flex items-center gap-3">
@@ -868,11 +1110,10 @@ export default function CheckoutPage() {
                     {/* Option 1: 50% deposit */}
                     <div
                       onClick={() => setDepositOption('deposit30')}
-                      className={`rounded-2xl p-5 border cursor-pointer transition-all relative ${
-                        depositOption === 'deposit30'
+                      className={`rounded-2xl p-5 border cursor-pointer transition-all relative ${depositOption === 'deposit30'
                           ? 'border-[#733F49] bg-[#FAF3F0] ring-2 ring-[#733F49]/20 shadow-xs'
                           : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-jakarta font-bold text-[14px] text-[#2C2523]">
@@ -893,11 +1134,10 @@ export default function CheckoutPage() {
                     {/* Option 2: 100% full pay */}
                     <div
                       onClick={() => setDepositOption('full100')}
-                      className={`rounded-2xl p-5 border cursor-pointer transition-all relative ${
-                        depositOption === 'full100'
+                      className={`rounded-2xl p-5 border cursor-pointer transition-all relative ${depositOption === 'full100'
                           ? 'border-[#733F49] bg-[#FAF3F0] ring-2 ring-[#733F49]/20 shadow-xs'
                           : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
-                      }`}
+                        }`}
                     >
                       <div className="flex items-center justify-between mb-2">
                         <span className="font-jakarta font-bold text-[14px] text-[#2C2523]">
@@ -1033,9 +1273,9 @@ export default function CheckoutPage() {
 
           {/* ================= RIGHT COLUMN: STICKY SUMMARY CARD ================= */}
           <div className="lg:col-span-5 xl:col-span-4 sticky top-24 space-y-4 print:hidden">
-            
+
             <div className="bg-white rounded-3xl border border-[#F0E5DC] shadow-[0_8px_32px_rgba(44,37,35,0.06)] overflow-hidden">
-              
+
               {/* Card Header Bar */}
               <div className="bg-[#FAF4EE] px-5 py-3.5 border-b border-[#EEDECF] flex items-center justify-between gap-2 text-[12px]">
                 <div className="truncate">
@@ -1054,7 +1294,7 @@ export default function CheckoutPage() {
 
               {/* Card Body */}
               <div className="p-5 sm:p-6 space-y-5">
-                
+
                 {/* Product Info Row */}
                 <div className="flex gap-4 pb-5 border-b border-[#F5EDE8]">
                   <div className="relative w-20 h-26 rounded-xl overflow-hidden shrink-0 border border-[#EEDECF]">
@@ -1150,7 +1390,7 @@ export default function CheckoutPage() {
       {isSuccessModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
           <div className="relative w-full max-w-[620px] bg-white rounded-3xl shadow-2xl border border-[#EEDECF] overflow-hidden p-6 sm:p-8 text-center space-y-5">
-            
+
             <div className="w-16 h-16 rounded-full bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center mx-auto shadow-md">
               <CheckCircle2 className="w-10 h-10" />
             </div>

@@ -17,3 +17,4 @@ router.get('/', authenticate, authorize('STAFF', 'ADMIN'), appointmentController
 router.patch('/:id/status', authenticate, authorize('STAFF', 'ADMIN'), appointmentController.updateAppointmentStatus);
 
 export default router;
+

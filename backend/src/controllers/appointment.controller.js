@@ -61,3 +61,4 @@ export const updateAppointmentStatus = async (req, res, next) => {
     next(error);
   }
 };
+
