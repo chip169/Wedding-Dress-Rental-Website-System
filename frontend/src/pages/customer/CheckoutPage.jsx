@@ -1453,7 +1453,7 @@ export default function CheckoutPage() {
                   {/* Parties Info */}
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[12.5px] bg-[#FCF9F6] p-4.5 rounded-2xl border border-[#EEDECF]">
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#847374] block mb-1">
+                      <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#847374] block mb-1">
                         BÊN CHO THUÊ (BÊN A):
                       </span>
                       <strong className="text-[#2C2523] block text-[13.5px]">CÔNG TY TNHH UNIBRIDAL HAUTE COUTURE</strong>
@@ -1463,78 +1463,66 @@ export default function CheckoutPage() {
                     </div>
 
                     <div>
-                      <span className="text-[10px] font-bold uppercase tracking-wider text-[#733F49] block mb-1">
+                      <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#733F49] block mb-1">
                         BÊN THUÊ LỄ PHỤC (BÊN B):
                       </span>
                       <strong className="text-[#733F49] block text-[13.5px]">{brideName}</strong>
                       <span className="text-[#6B5C5D] block mt-0.5">Số CCCD / CMND: <strong>{cccd}</strong></span>
                       <span className="text-[#6B5C5D] block">Số điện thoại: {phone} • Email: {email}</span>
-                      <span className="text-[#6B5C5D] block truncate">Địa chỉ: {address}</span>
+                      <span className="text-[#6B5C5D] block">Địa chỉ: {address}</span>
                     </div>
                   </div>
 
-                  {/* TÓM TẮT CÁC ĐIỀU KHOẢN CỐT LÕI (SÚC TÍCH) */}
-                  <div className="space-y-3 text-[12.5px] leading-relaxed text-[#4A3B3D]">
+                  {/* CÁC ĐIỀU KHOẢN HỢP ĐỒNG CHUẨN MỰC */}
+                  <div className="space-y-3.5 text-[12.5px] leading-relaxed text-[#4A3B3D]">
 
-                    {/* Điều 1 tóm tắt */}
-                    <div className="p-3.5 rounded-xl bg-[#FAF4EE] border border-[#EEDECF] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div>
-                        <strong className="text-[#733F49] block text-[13px] mb-0.5">
-                          1. THỜI GIAN NHẬN TRẢ & TÁC PHẨM VÁY CƯỚI
-                        </strong>
-                        <span className="text-[#6B5C5D] block">
-                          Thuê váy <strong>{activeDress?.name}</strong> (Size <strong>{selectedSize}</strong>) trọn gói <strong>{rentalDays} ngày</strong>. Nhận từ <strong>{rentalSchedule.startDate}</strong> ➔ Trả trước 20:00 ngày <strong>{rentalSchedule.endDate}</strong>.
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white border border-[#EEDECF] text-[#733F49] uppercase tracking-wider shrink-0 self-start sm:self-auto">
-                        GÓI {rentalDays} NGÀY
-                      </span>
+                    {/* Điều 1 */}
+                    <div className="p-4 rounded-2xl bg-[#FCF9F6] border border-[#EEDECF] space-y-1.5">
+                      <strong className="text-[#733F49] block text-[13px]">
+                        ĐIỀU 1: THÔNG TIN TRANG PHỤC & THỜI HẠN THUÊ
+                      </strong>
+                      <p className="text-[#6B5C5D] m-0 space-y-1">
+                        <span className="block">1.1. Bên A đồng ý cho Bên B thuê tác phẩm váy cưới <strong>{activeDress?.name}</strong> (Mã: <strong>{activeDress?.code || 'UB-HC-2026'}</strong>), Kích cỡ: <strong>Size {selectedSize}</strong>.</span>
+                        <span className="block">1.2. Thời gian thuê: <strong>{rentalDays} ngày</strong>, nhận váy từ ngày <strong>{rentalSchedule.startDate}</strong> và hoàn trả trước 20:00 ngày <strong>{rentalSchedule.endDate}</strong>.</span>
+                        <span className="block">1.3. Lễ phục được giặt sấy tiệt trùng sinh học, ủi phẳng phiu và tinh chỉnh số đo hoàn thiện trước giờ trao nhận 2 giờ.</span>
+                      </p>
                     </div>
 
-                    {/* Điều 2 tóm tắt */}
-                    <div className="p-3.5 rounded-xl bg-[#FAF4EE] border border-[#EEDECF] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div>
-                        <strong className="text-[#733F49] block text-[13px] mb-0.5">
-                          2. GIÁ THUÊ & CAM KẾT HOÀN TRẢ CỌC 100%
-                        </strong>
-                        <span className="text-[#6B5C5D] block">
-                          Giá thuê: <strong>{totalRentPrice.toLocaleString('vi-VN')}₫</strong> • Cọc giữ lịch hôm nay: <strong className="text-[#2E7D32]">{amountToPayToday.toLocaleString('vi-VN')}₫</strong>. Cọc bảo lãnh {depositCollateral.toLocaleString('vi-VN')}₫ cam kết <strong>hoàn tiền 100%</strong> trong vòng 24h sau khi nhận lại lễ phục.
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#E8F5E9] border border-[#C8E6C9] text-[#2E7D32] uppercase tracking-wider shrink-0 self-start sm:self-auto">
-                        HOÀN CỌC 100%
-                      </span>
+                    {/* Điều 2 */}
+                    <div className="p-4 rounded-2xl bg-[#FCF9F6] border border-[#EEDECF] space-y-1.5">
+                      <strong className="text-[#733F49] block text-[13px]">
+                        ĐIỀU 2: GIÁ THUÊ, TIỀN CỌC GIỮ LỊCH & CỌC BẢO LÃNH HOÀN TRẢ
+                      </strong>
+                      <p className="text-[#6B5C5D] m-0 space-y-1">
+                        <span className="block">2.1. Tổng chi phí thuê váy: <strong>{totalRentPrice.toLocaleString('vi-VN')}₫</strong>.</span>
+                        <span className="block">2.2. Tiền đặt cọc giữ lịch: <strong>{amountToPayToday.toLocaleString('vi-VN')}₫</strong> (thanh toán tại Bước 3).</span>
+                        <span className="block">2.3. Tiền cọc bảo lãnh hoàn trả: <strong>{depositCollateral.toLocaleString('vi-VN')}₫</strong>. Bên A cam kết <strong>hoàn trả 100%</strong> tự động qua tài khoản ngân hàng của Bên B trong vòng 24 giờ sau khi kiểm tra váy nguyên vẹn khi hoàn trả.</span>
+                      </p>
                     </div>
 
-                    {/* Điều 3 tóm tắt */}
-                    <div className="p-3.5 rounded-xl bg-[#FAF4EE] border border-[#EEDECF] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
-                      <div>
-                        <strong className="text-[#733F49] block text-[13px] mb-0.5">
-                          3. BẢO HIỂM VẢI REN & QUYỀN ĐỔI NGÀY CƯỚI MIỄN PHÍ
-                        </strong>
-                        <span className="text-[#6B5C5D] block">
-                          Miễn phí xử lý các vết bẩn bùn đất/rượu vang thông thường. Cô dâu được <strong>đổi ngày thuê váy miễn phí</strong> khi thông báo trước 15 ngày.
-                        </span>
-                      </div>
-                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white border border-[#EEDECF] text-[#733F49] uppercase tracking-wider shrink-0 self-start sm:self-auto">
-                        ĐỔI LỊCH FREE
-                      </span>
+                    {/* Điều 3 */}
+                    <div className="p-4 rounded-2xl bg-[#FCF9F6] border border-[#EEDECF] space-y-1.5">
+                      <strong className="text-[#733F49] block text-[13px]">
+                        ĐIỀU 3: QUY ĐỊNH BẢO QUẢN & BỒI THƯỜNG
+                      </strong>
+                      <p className="text-[#6B5C5D] m-0 space-y-1">
+                        <span className="block">3.1. Bên B có trách nhiệm bảo quản lễ phục trong suốt thời gian tổ chức hôn lễ.</span>
+                        <span className="block">3.2. Tuyệt đối không tự ý cắt may, tẩy nhuộm hoặc đem váy tới tiệm giặt ủi thông thường.</span>
+                        <span className="block">3.3. Miễn phí xử lý các vết bẩn thông thường. Cho phép đổi ngày thuê miễn phí khi báo trước tối thiểu 15 ngày.</span>
+                      </p>
                     </div>
 
                     {/* THẺ ĐÍNH KÈM VĂN BẢN WORD (.DOC) & NÚT XEM CHI TIẾT */}
-                    <div className="p-4 rounded-2xl bg-gradient-to-r from-[#FAF3F0] via-[#FCF9F6] to-[#FAF8F5] border border-[#F2D8D4] flex flex-col sm:flex-row items-center justify-between gap-3 text-[12.5px] shadow-2xs">
+                    <div className="p-4 rounded-2xl bg-[#FAF4EE] border border-[#EEDECF] flex flex-col sm:flex-row items-center justify-between gap-3 text-[12.5px] shadow-2xs">
                       <div className="flex items-center gap-3 w-full sm:w-auto">
-                        <div className="w-10 h-10 rounded-xl bg-[#E8F0FE] text-[#1A73E8] flex items-center justify-center shrink-0 shadow-2xs font-bold text-[14px]">
-                          W
+                        <div className="w-9 h-9 rounded-xl bg-[#FAF0EC] text-[#733F49] border border-[#F2D8D4] flex items-center justify-center shrink-0 font-bold text-[13px] shadow-2xs">
+                          <FileText className="w-4 h-4 text-[#733F49]" />
                         </div>
                         <div>
-                          <div className="flex items-center gap-2">
-                            <strong className="text-[#2C2523] text-[13.5px]">Toàn văn Điều lệ Hợp đồng thuê đầy đủ (8 Điều)</strong>
-                            <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-[#E8F0FE] text-[#1A73E8] uppercase tracking-wider">
-                              FILE WORD .DOC
-                            </span>
-                          </div>
-                          <p className="text-[#6B5C5D] text-[11.5px] m-0 mt-0.5">
+                          <strong className="text-[#2C2523] text-[13px] block">
+                            Toàn văn Điều lệ Hợp đồng thuê đầy đủ (8 Điều)
+                          </strong>
+                          <p className="text-[#847374] text-[11.5px] m-0 mt-0.5">
                             Bao gồm phụ lục bồi hoàn chi tiết, quy chuẩn bảo quản vali và chứng thư bảo lãnh.
                           </p>
                         </div>
@@ -1553,7 +1541,7 @@ export default function CheckoutPage() {
                         <button
                           type="button"
                           onClick={handleDownloadWordContract}
-                          className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-[#1A73E8] hover:bg-[#1557B0] text-white text-[12px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                          className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white text-[12px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
                         >
                           <Download className="w-4 h-4 text-white" />
                           <span>Tải File Word (.doc)</span>
