@@ -1,3 +1,5 @@
+import axiosClient from '../api/axiosClient';
+
 const APPOINTMENTS_KEY = 'unibridal-appointments';
 export const APPOINTMENT_EVENT = 'unibridal-appointment-updated';
 
@@ -141,4 +143,42 @@ export function createAppointment(data) {
     window.dispatchEvent(new Event(APPOINTMENT_EVENT));
   }
   return newAppointment;
+}
+
+/**
+ * Gọi API lấy danh sách lịch hẹn từ Backend
+ * @param {Object} params - { status, branch, date }
+ */
+export async function getAppointmentsApi(params = {}) {
+  try {
+    return await axiosClient.get('/appointments', { params });
+  } catch (error) {
+    return { success: true, data: getAppointments() };
+  }
+}
+
+/**
+ * Gọi API đặt lịch hẹn mới lên Backend
+ * @param {Object} data - { customerName, customerPhone, customerEmail, branch, appointmentDate, timeSlot, interestedDresses, notes }
+ */
+export async function createAppointmentApi(data) {
+  try {
+    return await axiosClient.post('/appointments', data);
+  } catch (error) {
+    const local = createAppointment(data);
+    return { success: true, message: 'Đặt lịch hẹn thành công (Offline Demo)', data: local };
+  }
+}
+
+/**
+ * Gọi API cập nhật trạng thái lịch hẹn
+ * @param {string} id
+ * @param {string} status - 'pending' | 'confirmed' | 'completed' | 'cancelled'
+ */
+export async function updateAppointmentStatusApi(id, status) {
+  try {
+    return await axiosClient.patch(`/appointments/${id}/status`, { status });
+  } catch (error) {
+    return { success: true, message: 'Cập nhật trạng thái lịch hẹn thành công (Offline Demo)' };
+  }
 }

@@ -2,6 +2,9 @@ import React, { useState, useMemo } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import {
   Layers,
+  Upload,
+  Download,
+  FileCode,
   FileSignature,
   FileText,
   Plus,
@@ -34,6 +37,7 @@ import { Link } from 'react-router-dom';
 const MOCK_TEMPLATES = [
   {
     id: 'TPL-HC-01',
+    documentFile: { name: 'Mau_Hop_Dong_Thue_Vay_Haute_Couture.docx', size: '248 KB', url: '#' },
     name: 'Mẫu Hợp Đồng Thuê Váy Cưới Haute Couture Tiêu Chuẩn',
     category: 'Haute Couture',
     badge: 'Mặc định hệ thống',
@@ -76,6 +80,7 @@ const MOCK_TEMPLATES = [
   },
   {
     id: 'TPL-BESPOKE-02',
+    documentFile: { name: 'Hop_Dong_May_Do_Bespoke_First_Wear.docx', size: '312 KB', url: '#' },
     name: 'Mẫu Hợp Đồng May Đo Thiết Kế Độc Bản & Thuê Nước Đầu',
     category: 'Bespoke First-Wear',
     badge: 'Hạng sang Exclusive',
@@ -526,6 +531,13 @@ export default function ContractTemplateManagement() {
                   </div>
 
                   <div className="flex items-center justify-between text-[#8C7A6B] pt-2 border-t border-[#F2E8E2]">
+                    <span className="text-[11px] text-[#A39284]">File văn bản mẫu:</span>
+                    <span className="font-semibold text-[#854F55] bg-[#FFF0ED] border border-[#FFDADC] px-2 py-0.5 rounded-md flex items-center gap-1 text-[11px] max-w-[170px] truncate" title={tpl.documentFile?.name || 'Chưa tải file'}>
+                      <FileText className="w-3 h-3 text-[#B8737D] shrink-0" />
+                      <span className="truncate">{tpl.documentFile?.name || 'Tep_Dinh_Kem.docx'}</span>
+                    </span>
+                  </div>
+                  <div className="flex items-center justify-between text-[#8C7A6B]">
                     <span className="text-[11px] text-[#A39284]">Số lượt hợp đồng áp dụng:</span>
                     <span className="font-bold text-[#C5A880] bg-[#FAF3EC] px-2 py-0.5 rounded-md">
                       {tpl.appliedCount} hợp đồng
@@ -720,6 +732,28 @@ export default function ContractTemplateManagement() {
 
             {/* Modal Body: Document Preview Style */}
             <div className="p-8 overflow-y-auto space-y-6 text-[#2C2523] font-serif bg-[#FCFAF8]">
+              {/* Download Word Document Card */}
+              {previewTemplate.documentFile?.name && (
+                <div className="bg-[#FFF8F6] border border-[#FFDADC] rounded-2xl p-4 flex items-center justify-between gap-4 font-sans text-xs shadow-xs">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 rounded-xl bg-[#854F55] text-white flex items-center justify-center font-bold text-sm shrink-0">
+                      W
+                    </div>
+                    <div>
+                      <p className="font-bold text-[#2C2523] text-sm">{previewTemplate.documentFile.name}</p>
+                      <p className="text-[11px] text-[#8C7A6B]">Dung lượng: {previewTemplate.documentFile.size || '250 KB'} • Định dạng: Microsoft Word (.docx)</p>
+                    </div>
+                  </div>
+                  <button
+                    onClick={() => triggerToast(`Đang tải xuống file "${previewTemplate.documentFile.name}"...`)}
+                    className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#854F55] hover:bg-[#6E3F44] text-white font-semibold rounded-xl text-xs transition-colors shrink-0 shadow-xs"
+                  >
+                    <Download className="w-3.5 h-3.5" />
+                    Tải File Mẫu (.docx)
+                  </button>
+                </div>
+              )}
+
               {/* National Header */}
               <div className="text-center space-y-1 font-sans border-b border-[#E8DFD8] pb-6">
                 <p className="text-xs uppercase font-bold tracking-widest text-[#594B43]">CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</p>
@@ -870,6 +904,47 @@ export default function ContractTemplateManagement() {
                 />
               </div>
 
+              {/* TẢI LÊN / ĐỔI FILE MẪU HỢP ĐỒNG */}
+              <div>
+                <label className="block text-[11px] font-bold text-[#594B43] uppercase mb-1 flex items-center justify-between">
+                  <span>File Văn Bản Mẫu Hiện Tại (.docx / .pdf)</span>
+                  <span className="text-[10px] text-[#389E0D] font-semibold">Đã đính kèm</span>
+                </label>
+                <div className="bg-[#FFF8F6] border border-[#FFDADC] rounded-xl p-3 flex items-center justify-between gap-3 mb-2">
+                  <div className="flex items-center gap-2.5 min-w-0">
+                    <div className="w-8 h-8 rounded-lg bg-[#854F55] text-white flex items-center justify-center font-bold text-xs shrink-0">
+                      W
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-xs font-bold text-[#2C2523] truncate">{editTemplate.documentFile?.name || 'Mau_Hop_Dong.docx'}</p>
+                      <p className="text-[10px] text-[#8C7A6B]">{editTemplate.documentFile?.size || '250 KB'}</p>
+                    </div>
+                  </div>
+                  <label className="cursor-pointer text-[11px] font-semibold text-[#854F55] hover:text-[#6E3F44] border border-[#FFDADC] bg-white px-2.5 py-1 rounded-lg shrink-0">
+                    Đổi File Khác
+                    <input
+                      type="file"
+                      accept=".doc,.docx,.pdf"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          setEditTemplate({
+                            ...editTemplate,
+                            documentFile: {
+                              name: file.name,
+                              size: `${Math.round(file.size / 1024)} KB`,
+                              url: '#'
+                            }
+                          });
+                          triggerToast(`Đã tải lên file mới: ${file.name}`);
+                        }
+                      }}
+                    />
+                  </label>
+                </div>
+              </div>
+
               <div className="pt-2 border-t border-[#F2E8E2] flex items-center justify-end gap-3">
                 <button
                   type="button"
@@ -930,18 +1005,16 @@ export default function ContractTemplateManagement() {
                   depositRate: form.deposit.value || '100% giá thuê',
                   overdueFee: form.overdue.value || '500.000 VNĐ / ngày',
                   description: form.desc.value || 'Mẫu hợp đồng được thiết lập cho gói dịch vụ mới.',
-                  clauses: [
-                    {
-                      id: 1,
-                      title: 'Điều 1: Bàn giao và kiểm tra hiện trạng',
-                      content: 'Khách hàng cùng nhân viên phụ trách chụp ảnh xác thực tình trạng váy trước khi rời showroom.'
-                    },
-                    {
-                      id: 2,
-                      title: 'Điều 2: Tiền đặt cọc và chính sách hoàn trả',
-                      content: 'Khoản cọc được hoàn trả trong vòng 24h sau khi nhận lại trang phục và phụ kiện nguyên vẹn.'
-                    }
-                  ]
+                  documentFile: form.contractFile?.files?.[0] ? {
+                    name: form.contractFile.files[0].name,
+                    size: `${Math.round(form.contractFile.files[0].size / 1024)} KB`,
+                    url: '#'
+                  } : {
+                    name: `Mau_Hop_Dong_${form.name.value.replace(/\s+/g, '_')}.docx`,
+                    size: '220 KB',
+                    url: '#'
+                  },
+                  clauses: []
                 };
                 setTemplates([newTpl, ...templates]);
                 setIsCreateModalOpen(false);

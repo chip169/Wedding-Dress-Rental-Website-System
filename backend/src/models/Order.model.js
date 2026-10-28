@@ -2,8 +2,7 @@ import mongoose from 'mongoose';
 
 const orderItemSchema = new mongoose.Schema({
   dressId: {
-    type: mongoose.Schema.Types.ObjectId,
-    ref: 'Dress',
+    type: mongoose.Schema.Types.Mixed,
     required: true,
   },
   name: {
@@ -22,6 +21,10 @@ const orderItemSchema = new mongoose.Schema({
     type: Number,
     required: true,
   },
+  image: {
+    type: String,
+    default: '',
+  },
 });
 
 const orderSchema = new mongoose.Schema(
@@ -36,8 +39,36 @@ const orderSchema = new mongoose.Schema(
     customerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      default: null,
       index: true,
+    },
+    customerName: {
+      type: String,
+      default: '',
+    },
+    customerPhone: {
+      type: String,
+      default: '',
+    },
+    customerEmail: {
+      type: String,
+      default: '',
+    },
+    customerCccd: {
+      type: String,
+      default: '',
+    },
+    contractCode: {
+      type: String,
+      default: '',
+    },
+    contractSignature: {
+      type: String,
+      default: '',
+    },
+    measurements: {
+      type: mongoose.Schema.Types.Mixed,
+      default: {},
     },
     items: [orderItemSchema],
     rentalStartDate: {
@@ -49,6 +80,11 @@ const orderSchema = new mongoose.Schema(
       type: Date,
       required: [true, 'Ngày hẹn trả váy không được để trống'],
       index: true,
+    },
+    rentalDays: {
+      type: Number,
+      default: 4,
+      min: 1,
     },
     actualReturnDate: {
       type: Date,
@@ -63,6 +99,10 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       required: true,
       min: 0,
+    },
+    depositPaidAmount: {
+      type: Number,
+      default: 0,
     },
     shippingFee: {
       type: Number,
@@ -80,25 +120,28 @@ const orderSchema = new mongoose.Schema(
     status: {
       type: String,
       enum: [
-        'pending_payment', // Chờ thanh toán cọc
-        'deposit_paid',    // Đã thanh toán cọc thành công, giữ váy
-        'preparing',       // Đang chuẩn bị / là ủi váy
-        'delivered',       // Khách đã nhận đồ
-        'renting',         // Trong thời gian thuê
-        'returned',        // Đã trả váy về showroom
-        'completed',       // Đã kiểm tra và hoàn cọc xong, đóng đơn
-        'cancelled',       // Đã hủy đơn
+        'pending_payment',
+        'deposit_paid',
+        'active',
+        'confirmed',
+        'preparing',
+        'delivered',
+        'renting',
+        'returned',
+        'complete',
+        'completed',
+        'cancelled',
       ],
-      default: 'pending_payment',
+      default: 'deposit_paid',
       index: true,
     },
     shippingAddress: {
-      recipientName: { type: String, required: true },
-      recipientPhone: { type: String, required: true },
-      street: String,
-      ward: String,
-      district: String,
-      city: String,
+      type: mongoose.Schema.Types.Mixed,
+      default: '',
+    },
+    deliveryMethod: {
+      type: String,
+      default: 'showroom',
     },
     rentalAgreementAccepted: {
       type: Boolean,

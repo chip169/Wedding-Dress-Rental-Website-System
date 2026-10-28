@@ -28,6 +28,8 @@ export default {
         },
       },
       fontFamily: {
+        playfair: ['"Playfair Display"', 'Georgia', 'serif'],
+        jakarta: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
         serif: ['"Playfair Display"', 'Georgia', 'serif'],
         sans: ['"Plus Jakarta Sans"', 'Inter', 'sans-serif'],
       },

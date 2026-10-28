@@ -70,6 +70,26 @@ const userSchema = new mongoose.Schema(
         ref: 'Dress',
       },
     ],
+    isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    emailVerificationOtp: {
+      type: String,
+      default: null,
+    },
+    emailVerificationExpires: {
+      type: Date,
+      default: null,
+    },
+    resetPasswordOtp: {
+      type: String,
+      default: null,
+    },
+    resetPasswordExpires: {
+      type: Date,
+      default: null,
+    },
     isActive: {
       type: Boolean,
       default: true,

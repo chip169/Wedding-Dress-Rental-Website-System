@@ -1,8 +1,9 @@
-import React, { useMemo, useState } from 'react';
+import React, { useMemo, useState, useEffect } from 'react';
 import { Link } from 'react-router-dom';
 import { CalendarDays, Heart, Search } from 'lucide-react';
 import AccountLayout from '../../components/layout/AccountLayout';
-import { formatVnd, getDemoOrders } from '../../services/orderService';
+import { formatVnd, getDemoOrders, getOrders } from '../../services/orderService';
+import elysianImage from '../../assets/card1_elysian.jpg';
 
 const tabs = [
   { id: 'all', label: 'Tất cả' },
@@ -33,11 +34,44 @@ function OrderCard({ order }) {
 }
 
 export default function OrderHistoryPage() {
-  const orders = getDemoOrders();
+  const [orders, setOrders] = useState(() => getDemoOrders());
   const [tab, setTab] = useState('all');
   const [query, setQuery] = useState('');
   const [date, setDate] = useState('');
-  const filtered = useMemo(() => orders.filter((order) => (tab === 'all' || order.status === tab) && `${order.id} ${order.dress}`.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi').trim()) && (!date || order.date.slice(3).split('/').reverse().join('-') === date.slice(0, 7))), [orders, tab, query, date]);
+
+  useEffect(() => {
+    async function fetchOrders() {
+      try {
+        const res = await getOrders();
+        const raw = res?.data || [];
+        if (Array.isArray(raw) && raw.length > 0) {
+          const normalized = raw.map((ord) => ({
+            id: ord.orderCode || ord.id || ord._id,
+            _id: ord._id,
+            status: ord.status === 'completed' || ord.status === 'complete' ? 'complete' : ord.status === 'cancelled' ? 'cancelled' : 'active',
+            statusLabel: ord.statusLabel || (ord.status === 'deposit_paid' ? 'Đã Thanh Toán Cọc' : ord.status === 'completed' || ord.status === 'complete' ? 'Đã Hoàn Tất & Hoàn Cọc' : 'Đang Chuẩn Bị Bàn Giao'),
+            date: ord.date || (ord.rentalStartDate ? new Date(ord.rentalStartDate).toLocaleDateString('vi-VN') : '20/11/2026'),
+            dress: ord.dress || ord.items?.[0]?.name || 'Váy cưới Haute Couture',
+            image: ord.image || ord.items?.[0]?.image || elysianImage,
+            imageAlt: ord.imageAlt || 'Váy cưới UniBridal',
+            category: ord.category || 'Haute Couture',
+            size: ord.size || ord.items?.[0]?.size || 'S (Eo 64–68cm)',
+            style: ord.style || 'Corsetry Siết Eo',
+            amount: ord.amount || ord.totalRentPrice || 5200000,
+            deposit: ord.deposit || ord.totalDeposit || 15000000,
+            rentalDates: ord.rentalDates || `${ord.rentalStartDate ? new Date(ord.rentalStartDate).toLocaleDateString('vi-VN') : '18/11/2026'} – ${ord.rentalEndDate ? new Date(ord.rentalEndDate).toLocaleDateString('vi-VN') : '21/11/2026'}`,
+            contractCode: ord.contractCode,
+          }));
+          setOrders(normalized);
+        }
+      } catch (err) {
+        setOrders(getDemoOrders());
+      }
+    }
+    fetchOrders();
+  }, []);
+
+  const filtered = useMemo(() => orders.filter((order) => (tab === 'all' || order.status === tab) && `${order.id} ${order.dress}`.toLocaleLowerCase('vi').includes(query.toLocaleLowerCase('vi').trim()) && (!date || (order.date && order.date.slice(3).split('/').reverse().join('-') === date.slice(0, 7)))), [orders, tab, query, date]);
   return <AccountLayout breadcrumb={[{ label: 'Lịch Sử Đơn Hàng' }]}>
     <section className="profile-card rounded-lg bg-white px-5 py-7 sm:px-7" aria-labelledby="order-history-title">
       <p className="account-overline text-[#874e57]">Lịch sử đặt thuê & mua lễ phục</p>

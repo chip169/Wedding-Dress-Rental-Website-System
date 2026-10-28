@@ -1,32 +1,82 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { loadProfile, saveProfile, clearProfile } from '../services/profileService';
+import { getMe, logout as serviceLogout } from '../services/authService';
 
 const AuthContext = createContext();
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => loadProfile()?.profile);
-  const [token, setToken] = useState(() => localStorage.getItem('token') || localStorage.getItem('accessToken') || null);
+  const [user, setUser] = useState(() => {
+    try {
+      const saved = localStorage.getItem('user');
+      return saved ? JSON.parse(saved) : null;
+    } catch {
+      return null;
+    }
+  });
 
-  const login = (userData, authToken = 'mock_jwt_token_unibridal_2026') => {
-    localStorage.setItem('token', authToken);
-    saveProfile(userData);
-    setUser(userData);
-    setToken(authToken);
+  const [token, setToken] = useState(() => {
+    return localStorage.getItem('token') || localStorage.getItem('accessToken') || null;
+  });
+
+  const [isLoading, setIsLoading] = useState(true);
+
+  // Đồng bộ thông tin người dùng từ backend khi mở app
+  useEffect(() => {
+    const syncUser = async () => {
+      if (token) {
+        try {
+          const res = await getMe();
+          if (res?.data) {
+            setUser(res.data);
+            localStorage.setItem('user', JSON.stringify(res.data));
+          }
+        } catch (err) {
+          // Nếu token không hợp lệ (401), đăng xuất an toàn
+          if (err.status === 401) {
+            logout();
+          }
+        }
+      }
+      setIsLoading(false);
+    };
+
+    syncUser();
+  }, [token]);
+
+  const login = (userData, authToken) => {
+    if (authToken) {
+      localStorage.setItem('token', authToken);
+      setToken(authToken);
+    }
+    if (userData) {
+      localStorage.setItem('user', JSON.stringify(userData));
+      setUser(userData);
+    }
   };
 
   const logout = () => {
-    localStorage.removeItem('token');
-    localStorage.removeItem('accessToken');
-    clearProfile();
+    serviceLogout();
     setUser(null);
     setToken(null);
   };
 
-  const isLoggedIn = !!token;
-  const role = user?.role || (token ? 'admin' : 'guest');
+  const isLoggedIn = !!token && !!user;
+  const role = (user?.role || user?.roleId?.code || (token ? 'customer' : 'guest')).toLowerCase();
 
   return (
-    <AuthContext.Provider value={{ user, token, isLoggedIn, role, login, logout }}>
+    <AuthContext.Provider
+      value={{
+        user,
+        token,
+        isLoggedIn,
+        role,
+        isLoading,
+        isAdmin: role === 'admin',
+        isStaff: role === 'staff' || role === 'admin',
+        isCustomer: role === 'customer',
+        login,
+        logout,
+      }}
+    >
       {children}
     </AuthContext.Provider>
   );

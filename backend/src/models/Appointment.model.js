@@ -25,23 +25,41 @@ const appointmentSchema = new mongoose.Schema(
     },
     branch: {
       type: String,
-      enum: ['HCM_DISTRICT_1', 'HN_HOAN_KIEM'],
-      default: 'HCM_DISTRICT_1',
+      default: 'hcm-q1',
+      trim: true,
+    },
+    appointmentCode: {
+      type: String,
+      unique: true,
+      sparse: true,
+      trim: true,
     },
     appointmentDate: {
       type: Date,
       required: [true, 'Ngày hẹn thử váy không được để trống'],
       index: true,
     },
+    weddingDate: {
+      type: Date,
+      default: null,
+    },
     timeSlot: {
       type: String,
       required: [true, 'Khung giờ thử váy không được để trống'],
       trim: true,
     },
+    guestsCount: {
+      type: Number,
+      default: 2,
+    },
     interestedDresses: [
       {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Dress',
+        type: mongoose.Schema.Types.Mixed,
+      },
+    ],
+    vipServices: [
+      {
+        type: mongoose.Schema.Types.Mixed,
       },
     ],
     notes: {

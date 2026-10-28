@@ -25,6 +25,8 @@ import InventoryManagement from './pages/admin/InventoryManagement';
 import CustomerCareManagement from './pages/admin/CustomerCareManagement';
 import ContractManagement from './pages/admin/ContractManagement';
 import ContractTemplateManagement from './pages/admin/ContractTemplateManagement';
+import ProtectedRoute from './components/common/ProtectedRoute';
+import ScrollToTop from './components/common/ScrollToTop';
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
@@ -35,6 +37,7 @@ export default function App() {
       <CartProvider>
         <WishlistProvider>
           <Router>
+            <ScrollToTop />
             <Routes>
               <Route path="/" element={<HomePage />} />
               <Route path="/about" element={<AboutUsPage />} />
@@ -60,48 +63,56 @@ export default function App() {
               <Route path="/tin-nhan" element={<MessagesPage />} />
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/chat" element={<MessagesPage />} />
-              <Route path="/staff" element={<Navigate to="/staff/dashboard" replace />} />
-              <Route path="/staff/dashboard" element={<StaffDashboardPage />} />
-              <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-              <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-              <Route path="/admin/reports/revenue" element={<RevenueReportPage />} />
-              <Route path="/admin/revenue" element={<Navigate to="/admin/reports/revenue" replace />} />
               <Route path="/dresses/:id" element={<DressDetailPage />} />
               <Route path="/dress/:id" element={<DressDetailPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/profile/orders" element={<OrderHistoryPage />} />
-              <Route path="/profile/orders/:orderId" element={<OrderDetailPage />} />
-              <Route path="/profile/password" element={<ChangePasswordPage />} />
+
+              {/* Protected Customer Profile */}
+              <Route path="/profile" element={<ProtectedRoute allowedRoles={['customer', 'staff', 'admin']}><ProfilePage /></ProtectedRoute>} />
+              <Route path="/profile/orders" element={<ProtectedRoute allowedRoles={['customer', 'staff', 'admin']}><OrderHistoryPage /></ProtectedRoute>} />
+              <Route path="/profile/orders/:orderId" element={<ProtectedRoute allowedRoles={['customer', 'staff', 'admin']}><OrderDetailPage /></ProtectedRoute>} />
+              <Route path="/profile/password" element={<ProtectedRoute allowedRoles={['customer', 'staff', 'admin']}><ChangePasswordPage /></ProtectedRoute>} />
+
+              {/* Auth Routes */}
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />
               
-              {/* Admin & Staff Management */}
-              <Route path="/admin/don-thue" element={<OrderRentalManagement />} />
-              <Route path="/admin/orders" element={<OrderRentalManagement />} />
-              <Route path="/admin/kho-hang" element={<InventoryManagement />} />
-              <Route path="/admin/inventory" element={<InventoryManagement />} />
-              <Route path="/staff/don-thue" element={<OrderRentalManagement />} />
-              <Route path="/staff/orders" element={<OrderRentalManagement />} />
-              <Route path="/staff/kho-hang" element={<InventoryManagement />} />
-              <Route path="/staff/inventory" element={<InventoryManagement />} />
-              <Route path="/quan-ly-don-thue" element={<OrderRentalManagement />} />
-              <Route path="/quan-ly-kho-hang" element={<InventoryManagement />} />
-              <Route path="/admin/cham-soc-khach-hang" element={<CustomerCareManagement />} />
-              <Route path="/admin/customer-care" element={<CustomerCareManagement />} />
-              <Route path="/staff/cham-soc-khach-hang" element={<CustomerCareManagement />} />
-              <Route path="/staff/customer-care" element={<CustomerCareManagement />} />
-              <Route path="/cham-soc-khach-hang" element={<CustomerCareManagement />} />
-              <Route path="/admin/hop-dong" element={<ContractManagement />} />
-              <Route path="/admin/contracts" element={<ContractManagement />} />
-              <Route path="/staff/hop-dong" element={<ContractManagement />} />
-              <Route path="/staff/contracts" element={<ContractManagement />} />
-              <Route path="/quan-ly-hop-dong" element={<ContractManagement />} />
-              <Route path="/hop-dong" element={<ContractManagement />} />
-              <Route path="/admin/mau-hop-dong" element={<ContractTemplateManagement />} />
-              <Route path="/admin/contract-templates" element={<ContractTemplateManagement />} />
-              <Route path="/quan-ly-mau-hop-dong" element={<ContractTemplateManagement />} />
-              <Route path="/mau-hop-dong" element={<ContractTemplateManagement />} />
+              {/* Staff Routes */}
+              <Route path="/staff" element={<Navigate to="/staff/dashboard" replace />} />
+              <Route path="/staff/dashboard" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><StaffDashboardPage /></ProtectedRoute>} />
+              <Route path="/staff/don-thue" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><OrderRentalManagement /></ProtectedRoute>} />
+              <Route path="/staff/orders" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><OrderRentalManagement /></ProtectedRoute>} />
+              <Route path="/staff/kho-hang" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><InventoryManagement /></ProtectedRoute>} />
+              <Route path="/staff/inventory" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><InventoryManagement /></ProtectedRoute>} />
+              <Route path="/staff/cham-soc-khach-hang" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><CustomerCareManagement /></ProtectedRoute>} />
+              <Route path="/staff/customer-care" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><CustomerCareManagement /></ProtectedRoute>} />
+              <Route path="/staff/hop-dong" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><ContractManagement /></ProtectedRoute>} />
+              <Route path="/staff/contracts" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><ContractManagement /></ProtectedRoute>} />
+
+              {/* Admin Routes */}
+              <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
+              <Route path="/admin/dashboard" element={<ProtectedRoute allowedRoles={['admin']}><AdminDashboardPage /></ProtectedRoute>} />
+              <Route path="/admin/reports/revenue" element={<ProtectedRoute allowedRoles={['admin']}><RevenueReportPage /></ProtectedRoute>} />
+              <Route path="/admin/revenue" element={<Navigate to="/admin/reports/revenue" replace />} />
+              <Route path="/admin/don-thue" element={<ProtectedRoute allowedRoles={['admin']}><OrderRentalManagement /></ProtectedRoute>} />
+              <Route path="/admin/orders" element={<ProtectedRoute allowedRoles={['admin']}><OrderRentalManagement /></ProtectedRoute>} />
+              <Route path="/admin/kho-hang" element={<ProtectedRoute allowedRoles={['admin']}><InventoryManagement /></ProtectedRoute>} />
+              <Route path="/admin/inventory" element={<ProtectedRoute allowedRoles={['admin']}><InventoryManagement /></ProtectedRoute>} />
+              <Route path="/admin/cham-soc-khach-hang" element={<ProtectedRoute allowedRoles={['admin']}><CustomerCareManagement /></ProtectedRoute>} />
+              <Route path="/admin/customer-care" element={<ProtectedRoute allowedRoles={['admin']}><CustomerCareManagement /></ProtectedRoute>} />
+              <Route path="/admin/hop-dong" element={<ProtectedRoute allowedRoles={['admin']}><ContractManagement /></ProtectedRoute>} />
+              <Route path="/admin/contracts" element={<ProtectedRoute allowedRoles={['admin']}><ContractManagement /></ProtectedRoute>} />
+              <Route path="/admin/mau-hop-dong" element={<ProtectedRoute allowedRoles={['admin']}><ContractTemplateManagement /></ProtectedRoute>} />
+              <Route path="/admin/contract-templates" element={<ProtectedRoute allowedRoles={['admin']}><ContractTemplateManagement /></ProtectedRoute>} />
+              
+              {/* Common Aliases */}
+              <Route path="/quan-ly-don-thue" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><OrderRentalManagement /></ProtectedRoute>} />
+              <Route path="/quan-ly-kho-hang" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><InventoryManagement /></ProtectedRoute>} />
+              <Route path="/cham-soc-khach-hang" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><CustomerCareManagement /></ProtectedRoute>} />
+              <Route path="/quan-ly-hop-dong" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><ContractManagement /></ProtectedRoute>} />
+              <Route path="/hop-dong" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><ContractManagement /></ProtectedRoute>} />
+              <Route path="/quan-ly-mau-hop-dong" element={<ProtectedRoute allowedRoles={['admin']}><ContractTemplateManagement /></ProtectedRoute>} />
+              <Route path="/mau-hop-dong" element={<ProtectedRoute allowedRoles={['admin']}><ContractTemplateManagement /></ProtectedRoute>} />
 
               <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
