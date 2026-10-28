@@ -1004,23 +1004,6 @@ export default function CheckoutPage() {
 
                       {/* Bộ điều khiển số ngày thuê gắn liền trên thanh Bảng Lịch */}
                       <div className="flex flex-wrap items-center gap-2 self-start lg:self-auto">
-                        {/* 4 Nút chọn nhanh số ngày */}
-                        <div className="flex items-center bg-white p-1 rounded-xl border border-[#EEDECF] text-[11px] font-bold shadow-2xs">
-                          {[3, 4, 5, 7].map((d) => (
-                            <button
-                              key={d}
-                              type="button"
-                              onClick={() => handleRentalDaysChange(d)}
-                              className={`px-2.5 py-1 rounded-lg border-0 cursor-pointer transition-all ${rentalDays === d
-                                ? 'bg-[#733F49] text-white shadow-xs'
-                                : 'bg-transparent text-[#6B5C5D] hover:text-[#733F49] hover:bg-[#FAF0EC]'
-                                }`}
-                            >
-                              {d} Ngày
-                            </button>
-                          ))}
-                        </div>
-
                         {/* Bộ tăng giảm nhanh Stepper */}
                         <div className="flex items-center gap-1 bg-white border border-[#EEDECF] px-2 py-1 rounded-xl shadow-2xs">
                           <button
