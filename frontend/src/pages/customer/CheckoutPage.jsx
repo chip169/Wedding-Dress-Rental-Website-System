@@ -31,6 +31,8 @@ import {
   AlertCircle,
   ArrowLeft,
   Copy,
+  Plus,
+  Minus,
 } from 'lucide-react';
 import { message } from 'antd';
 import Header from '../../components/layout/Header';
@@ -76,6 +78,8 @@ export default function CheckoutPage() {
   const sizeParam = searchParams.get('size');
   const startDateParam = searchParams.get('startDate');
   const endDateParam = searchParams.get('endDate');
+  const daysParam = parseInt(searchParams.get('days'), 10);
+  const [rentalDays, setRentalDays] = useState(!isNaN(daysParam) && daysParam >= 2 && daysParam <= 30 ? daysParam : 4);
 
   // Dynamic Selected Dress
   const activeDress = useMemo(() => {
@@ -173,16 +177,38 @@ export default function CheckoutPage() {
   const [cccd, setCccd] = useState('079201019888');
   const [address, setAddress] = useState('120/4 Lê Lai, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh');
 
+  // Helper tính ngày kết thúc thuê dựa vào ngày bắt đầu và số ngày
+  const computeEndDate = (startDisplayOrIso, days) => {
+    const iso = toIsoDateString(startDisplayOrIso);
+    const d = new Date(iso);
+    if (isNaN(d.getTime())) return '21/11/2026';
+    const endD = new Date(d);
+    endD.setDate(endD.getDate() + (days - 1));
+    return toDisplayDateString(endD.toISOString().split('T')[0]);
+  };
+
   // Schedule state (Định dạng hiển thị DD/MM/YYYY)
   const [rentalSchedule, setRentalSchedule] = useState(() => {
     const start = startDateParam ? toDisplayDateString(startDateParam) : '18/11/2026';
-    const end = endDateParam ? toDisplayDateString(endDateParam) : '21/11/2026';
+    const initialDays = !isNaN(daysParam) && daysParam >= 2 && daysParam <= 30 ? daysParam : 4;
+    const end = endDateParam ? toDisplayDateString(endDateParam) : computeEndDate(start, initialDays);
     return {
       startDate: start,
       weddingDate: '20/11/2026',
       endDate: end,
     };
   });
+
+  // Cập nhật số ngày thuê và tự động dời ngày hoàn trả
+  const handleRentalDaysChange = (newDays) => {
+    const clamped = Math.max(2, Math.min(30, newDays));
+    setRentalDays(clamped);
+    const newEnd = computeEndDate(rentalSchedule.startDate, clamped);
+    setRentalSchedule((prev) => ({
+      ...prev,
+      endDate: newEnd,
+    }));
+  };
 
   // State cho tháng đang xem trên lịch tương tác
   const [calendarViewDate, setCalendarViewDate] = useState(() => {
@@ -192,7 +218,7 @@ export default function CheckoutPage() {
   });
   const [showFullCalendar, setShowFullCalendar] = useState(true);
 
-  // Xử lý khi người dùng chọn ngày cưới chính thức (Tự động tính ngày nhận trước 2 ngày và trả sau 1 ngày)
+  // Xử lý khi người dùng chọn ngày cưới chính thức (Tự động lùi 2 ngày nhận váy và tính ngày trả theo rentalDays)
   const handleSelectWeddingDate = (selectedIsoOrDisplay) => {
     const iso = toIsoDateString(selectedIsoOrDisplay);
     const d = new Date(iso);
@@ -201,8 +227,8 @@ export default function CheckoutPage() {
     const startObj = new Date(d);
     startObj.setDate(startObj.getDate() - 2);
 
-    const endObj = new Date(d);
-    endObj.setDate(endObj.getDate() + 1);
+    const endObj = new Date(startObj);
+    endObj.setDate(endObj.getDate() + (rentalDays - 1));
 
     setRentalSchedule({
       startDate: toDisplayDateString(startObj.toISOString().split('T')[0]),
@@ -246,7 +272,11 @@ export default function CheckoutPage() {
   const [isSuccessModalOpen, setIsSuccessModalOpen] = useState(false);
 
   // Financial calculations
-  const totalRentPrice = activeDress?.price || 5200000;
+  const baseRentPrice = activeDress?.price || 5200000;
+  const extraDayRate = 800000;
+  const extraDaysCount = Math.max(0, rentalDays - 4);
+  const extraDayFee = extraDaysCount * extraDayRate;
+  const totalRentPrice = baseRentPrice + extraDayFee;
   const depositCollateral = activeDress?.depositAmount || 15000000;
 
   // Amount to pay today based on depositOption (30% or 100%)
@@ -305,6 +335,7 @@ export default function CheckoutPage() {
       depositOption,
       rentalStartDate: rentalSchedule.startDate,
       rentalEndDate: rentalSchedule.endDate,
+      rentalDays,
       items: [
         {
           dressId: activeDress.id || activeDress._id,
@@ -565,9 +596,104 @@ export default function CheckoutPage() {
                           Lịch Trình Đặt Thuê & Bàn Giao
                         </h2>
                         <p className="text-[12px] text-[#847374] m-0 mt-0.5">
-                          Gói thuê tiêu chuẩn 4 ngày (Nhận trước ngày cưới 2 ngày để thử lại phom)
+                          Thời gian thuê: <strong className="text-[#733F49]">{rentalDays} ngày</strong> • Nhận từ {rentalSchedule.startDate} đến {rentalSchedule.endDate}
                         </p>
                       </div>
+                    </div>
+
+                    {/* Bộ tăng giảm nhanh số ngày */}
+                    <div className="flex items-center gap-2 bg-[#FCF9F6] border border-[#EEDECF] px-3.5 py-2 rounded-xl self-start sm:self-auto shadow-2xs">
+                      <span className="text-[11px] font-bold text-[#847374] uppercase tracking-wider">Số ngày thuê:</span>
+                      <div className="flex items-center gap-1.5">
+                        <button
+                          type="button"
+                          onClick={() => handleRentalDaysChange(rentalDays - 1)}
+                          disabled={rentalDays <= 2}
+                          aria-label="Giảm ngày thuê"
+                          className="w-7 h-7 rounded-lg border border-[#EEDECF] bg-white text-[#733F49] flex items-center justify-center hover:bg-[#FAF0EC] disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                        >
+                          <Minus className="w-3.5 h-3.5" />
+                        </button>
+                        <span className="font-playfair font-bold text-[15px] text-[#733F49] min-w-[55px] text-center">
+                          {rentalDays} Ngày
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => handleRentalDaysChange(rentalDays + 1)}
+                          disabled={rentalDays >= 14}
+                          aria-label="Tăng ngày thuê"
+                          className="w-7 h-7 rounded-lg border border-[#EEDECF] bg-white text-[#733F49] flex items-center justify-center hover:bg-[#FAF0EC] disabled:opacity-30 disabled:cursor-not-allowed transition-all cursor-pointer"
+                        >
+                          <Plus className="w-3.5 h-3.5" />
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* KHỐI CHỌN GÓI SỐ NGÀY THUÊ LINH HOẠT */}
+                  <div className="mb-6 bg-[#FCF9F6] p-4.5 rounded-2xl border border-[#EEDECF]">
+                    <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-1.5 mb-3">
+                      <div className="flex items-center gap-2">
+                        <Clock className="w-4 h-4 text-[#733F49]" />
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#733F49]">
+                          CHỌN GÓI THỜI GIAN THUÊ LỄ PHỤC
+                        </span>
+                      </div>
+                      <span className="text-[11.5px] font-medium text-[#733F49]">
+                        {rentalDays === 4 ? (
+                          <span className="text-[#2E7D32] font-semibold">✓ Gói chuẩn 4 ngày (Giá niêm yết chuẩn)</span>
+                        ) : rentalDays > 4 ? (
+                          <span className="text-[#733F49] font-bold">
+                            +{(extraDaysCount * 800000).toLocaleString('vi-VN')}₫ phụ phí ({extraDaysCount} ngày gia hạn x 800k)
+                          </span>
+                        ) : (
+                          <span className="text-[#6B5C5D]">Gói tinh gọn {rentalDays} ngày</span>
+                        )}
+                      </span>
+                    </div>
+
+                    {/* 4 Thẻ Gói Ngày Thuê */}
+                    <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+                      {[
+                        { days: 3, title: '3 Ngày', desc: 'Studio / Tiệc Gọn', note: 'Tinh gọn' },
+                        { days: 4, title: '4 Ngày', desc: 'Chuẩn Hôn Lễ', tag: 'Khuyên Dùng' },
+                        { days: 5, title: '5 Ngày', desc: 'Đãi Tiệc Ngoại Ô', note: '+800.000₫' },
+                        { days: 7, title: '7 Ngày', desc: 'Tuần Lễ Cưới 2 Nhà', note: '+2.400.000₫' },
+                      ].map((pkg) => {
+                        const isSelected = rentalDays === pkg.days;
+                        return (
+                          <button
+                            key={pkg.days}
+                            type="button"
+                            onClick={() => handleRentalDaysChange(pkg.days)}
+                            className={`relative p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                              isSelected
+                                ? 'border-[#733F49] bg-white ring-2 ring-[#733F49]/20 shadow-xs'
+                                : 'border-[#EEDECF] bg-[#FAF8F5] hover:bg-white hover:border-[#D5C2B5]'
+                            }`}
+                          >
+                            {pkg.tag && (
+                              <span className="absolute -top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#733F49] text-white uppercase tracking-wider shadow-2xs">
+                                {pkg.tag}
+                              </span>
+                            )}
+                            <div className="flex items-center justify-between">
+                              <span
+                                className={`font-playfair font-bold text-[15px] ${
+                                  isSelected ? 'text-[#733F49]' : 'text-[#2C2523]'
+                                }`}
+                              >
+                                {pkg.title}
+                              </span>
+                              {isSelected && <Check className="w-3.5 h-3.5 text-[#733F49]" />}
+                            </div>
+                            <p className="text-[11px] text-[#6B5C5D] m-0 mt-0.5 font-medium">{pkg.desc}</p>
+                            {pkg.note && (
+                              <span className="text-[10px] text-[#847374] block mt-0.5">{pkg.note}</span>
+                            )}
+                          </button>
+                        );
+                      })}
                     </div>
                   </div>
 
@@ -588,6 +714,7 @@ export default function CheckoutPage() {
                               setRentalSchedule({
                                 ...rentalSchedule,
                                 startDate: toDisplayDateString(e.target.value),
+                                endDate: computeEndDate(e.target.value, rentalDays),
                               });
                             }
                           }}
@@ -628,18 +755,34 @@ export default function CheckoutPage() {
 
                     {/* Thẻ 3: Ngày hoàn trả váy */}
                     <div className="relative bg-[#FCF9F6] p-4 rounded-2xl border border-[#EEDECF] transition-all hover:shadow-xs focus-within:ring-2 focus-within:ring-[#733F49]/20">
-                      <label className="block text-[10.5px] font-bold text-[#847374] uppercase tracking-wider mb-1">
-                        NGÀY HOÀN TRẢ VÁY
-                      </label>
+                      <div className="flex items-center justify-between mb-1">
+                        <label className="block text-[10.5px] font-bold text-[#847374] uppercase tracking-wider">
+                          NGÀY HOÀN TRẢ VÁY
+                        </label>
+                        <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-md bg-[#FAF0EC] text-[#733F49] border border-[#F2D8D4]">
+                          {rentalDays} NGÀY THUÊ
+                        </span>
+                      </div>
                       <div className="relative flex items-center">
                         <input
                           type="date"
                           value={toIsoDateString(rentalSchedule.endDate)}
                           onChange={(e) => {
                             if (e.target.value) {
+                              const newEndIso = e.target.value;
+                              const startIso = toIsoDateString(rentalSchedule.startDate);
+                              const sD = new Date(startIso);
+                              const eD = new Date(newEndIso);
+                              if (!isNaN(sD.getTime()) && !isNaN(eD.getTime())) {
+                                const diffTime = eD.getTime() - sD.getTime();
+                                const diffDays = Math.round(diffTime / (1000 * 3600 * 24)) + 1;
+                                if (diffDays >= 2 && diffDays <= 30) {
+                                  setRentalDays(diffDays);
+                                }
+                              }
                               setRentalSchedule({
                                 ...rentalSchedule,
-                                endDate: toDisplayDateString(e.target.value),
+                                endDate: toDisplayDateString(newEndIso),
                               });
                             }
                           }}
@@ -799,7 +942,7 @@ export default function CheckoutPage() {
                         </span>
                       </div>
                       <div className="font-bold text-[#733F49] bg-[#FAF0EC] px-2.5 py-1 rounded-lg border border-[#F2D8D4]">
-                        ✓ Trọn gói thuê 4 ngày cao cấp
+                        ✓ Trọn gói thuê {rentalDays} ngày cao cấp
                       </div>
                     </div>
                   </div>
@@ -1004,7 +1147,7 @@ export default function CheckoutPage() {
                       </strong>
                       <p className="m-0 text-[#6B5C5D]">
                         1.1. Bên A đồng ý cho Bên B thuê tác phẩm váy cưới <strong>{activeDress?.name}</strong> (Mã: <strong>{activeDress?.code || 'UB-HC-2026'}</strong>), Size: <strong>{selectedSize}</strong>.<br />
-                        1.2. Thời gian thuê: <strong>4 ngày</strong>, nhận váy từ ngày <strong>{rentalSchedule.startDate}</strong> và hoàn trả trước 20:00 ngày <strong>{rentalSchedule.endDate}</strong>.<br />
+                        1.2. Thời gian thuê: <strong>{rentalDays} ngày</strong>, nhận váy từ ngày <strong>{rentalSchedule.startDate}</strong> và hoàn trả trước 20:00 ngày <strong>{rentalSchedule.endDate}</strong>.<br />
                         1.3. Lễ phục được giặt sấy tiệt trùng sinh học, ủi phẳng phiu và tinh chỉnh số đo hoàn thiện trước giờ trao nhận 2 giờ.
                       </p>
                     </div>
@@ -1457,7 +1600,7 @@ export default function CheckoutPage() {
                       Mã: <span className="font-mono text-[#733F49] font-bold">{activeDress?.code || 'UB-HC-2026'}</span>
                     </div>
                     <div className="text-[11.5px] text-[#6B5C5D] mt-1">
-                      Size: <strong>{selectedSize}</strong> • Gói 4 ngày
+                      Size: <strong>{selectedSize}</strong> • Gói {rentalDays} ngày
                     </div>
                     <div className="font-playfair font-bold text-[17px] text-[#733F49] mt-2">
                       {totalRentPrice.toLocaleString('vi-VN')}₫
@@ -1486,9 +1629,15 @@ export default function CheckoutPage() {
                 {/* Price Breakdown */}
                 <div className="space-y-2.5 text-[13px]">
                   <div className="flex items-center justify-between text-[#6B5C5D]">
-                    <span>Giá thuê lễ phục (4 ngày):</span>
+                    <span>Giá thuê lễ phục ({rentalDays} ngày):</span>
                     <span className="font-bold text-[#2C2523]">{totalRentPrice.toLocaleString('vi-VN')}₫</span>
                   </div>
+                  {rentalDays > 4 && (
+                    <div className="flex items-center justify-between text-[11px] text-[#847374] pl-2 border-l-2 border-[#EEDECF]">
+                      <span>Bao gồm {rentalDays - 4} ngày gia hạn (+800k/ngày):</span>
+                      <span className="font-semibold text-[#733F49]">+{((rentalDays - 4) * 800000).toLocaleString('vi-VN')}₫</span>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-[#6B5C5D]">
                     <span>Dịch vụ giặt sấy tiệt trùng:</span>
                     <span className="font-bold text-[#2E7D32]">0₫ (Miễn Phí)</span>

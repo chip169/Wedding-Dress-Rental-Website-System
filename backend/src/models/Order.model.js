@@ -81,6 +81,11 @@ const orderSchema = new mongoose.Schema(
       required: [true, 'Ngày hẹn trả váy không được để trống'],
       index: true,
     },
+    rentalDays: {
+      type: Number,
+      default: 4,
+      min: 1,
+    },
     actualReturnDate: {
       type: Date,
       default: null,
