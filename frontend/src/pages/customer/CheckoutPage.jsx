@@ -813,11 +813,9 @@ export default function CheckoutPage() {
                       </div>
                       <div>
                         <h2 className="font-playfair text-[19px] sm:text-[21px] font-semibold text-[#2C2523] m-0">
-                          Thông Tin Cô Dâu & Người Đại Diện Thuê
+                          Thông Tin Người Đại Diện Thuê
                         </h2>
-                        <p className="text-[12px] text-[#847374] m-0 mt-0.5">
-                          Thông tin chính xác để ghi nhận vào Hợp đồng bảo hộ pháp lý
-                        </p>
+
                       </div>
                     </div>
 
@@ -1315,59 +1313,71 @@ export default function CheckoutPage() {
                     </div>
                   ) : (
                     <>
-                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-3">
-                        <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">CHIỀU CAO (CM)</label>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-3 items-stretch">
+                        <div className="bg-[#FCF9F6] p-3 rounded-2xl border border-[#EEDECF] flex flex-col justify-between">
+                          <label className="text-[10.5px] sm:text-[11px] font-bold uppercase tracking-wider text-[#6B464E] h-9 flex items-center justify-center text-center leading-tight mb-2">
+                            CHIỀU CAO (CM)
+                          </label>
                           <input
                             type="text"
                             value={measurements.height}
                             onChange={(e) => setMeasurements({ ...measurements, height: e.target.value })}
-                            className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                            className="w-full h-10 sm:h-11 bg-white border border-[#E2D2C2] rounded-xl px-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
                           />
                         </div>
-                        <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">CÂN NẶNG (KG)</label>
+                        <div className="bg-[#FCF9F6] p-3 rounded-2xl border border-[#EEDECF] flex flex-col justify-between">
+                          <label className="text-[10.5px] sm:text-[11px] font-bold uppercase tracking-wider text-[#6B464E] h-9 flex items-center justify-center text-center leading-tight mb-2">
+                            CÂN NẶNG (KG)
+                          </label>
                           <input
                             type="text"
                             value={measurements.weight}
                             onChange={(e) => setMeasurements({ ...measurements, weight: e.target.value })}
-                            className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                            className="w-full h-10 sm:h-11 bg-white border border-[#E2D2C2] rounded-xl px-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
                           />
                         </div>
-                        <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">VÒNG 1 (NGỰC)</label>
+                        <div className="bg-[#FCF9F6] p-3 rounded-2xl border border-[#EEDECF] flex flex-col justify-between">
+                          <label className="text-[10.5px] sm:text-[11px] font-bold uppercase tracking-wider text-[#6B464E] h-9 flex items-center justify-center text-center leading-tight mb-2">
+                            VÒNG 1 (NGỰC)
+                          </label>
                           <input
                             type="text"
                             value={measurements.bust}
                             onChange={(e) => setMeasurements({ ...measurements, bust: e.target.value })}
-                            className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                            className="w-full h-10 sm:h-11 bg-white border border-[#E2D2C2] rounded-xl px-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
                           />
                         </div>
-                        <div className="bg-[#FAF0EC] p-3 rounded-xl border border-[#F2D8D4]">
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#733F49] block mb-1.5">VÒNG 2 (EO * CHÍNH)</label>
+                        <div className="bg-[#FAF0EC] p-3 rounded-2xl border-2 border-[#F2D8D4] flex flex-col justify-between shadow-2xs">
+                          <label className="text-[10.5px] sm:text-[11px] font-bold uppercase tracking-wider text-[#733F49] h-9 flex items-center justify-center text-center leading-tight mb-2">
+                            VÒNG 2 (EO)
+                          </label>
                           <input
                             type="text"
                             value={measurements.waist}
                             onChange={(e) => setMeasurements({ ...measurements, waist: e.target.value })}
-                            className="w-full bg-white border-2 border-[#EAB8B8] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#733F49] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                            className="w-full h-10 sm:h-11 bg-white border-2 border-[#EAB8B8] rounded-xl px-2 font-jakarta font-extrabold text-[16px] text-[#733F49] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
                           />
                         </div>
-                        <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">VÒNG 3 (MÔNG)</label>
+                        <div className="bg-[#FCF9F6] p-3 rounded-2xl border border-[#EEDECF] flex flex-col justify-between">
+                          <label className="text-[10.5px] sm:text-[11px] font-bold uppercase tracking-wider text-[#6B464E] h-9 flex items-center justify-center text-center leading-tight mb-2">
+                            VÒNG 3 (MÔNG)
+                          </label>
                           <input
                             type="text"
                             value={measurements.hips}
                             onChange={(e) => setMeasurements({ ...measurements, hips: e.target.value })}
-                            className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                            className="w-full h-10 sm:h-11 bg-white border border-[#E2D2C2] rounded-xl px-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
                           />
                         </div>
-                        <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">CAO GIÀY CƯỚI</label>
+                        <div className="bg-[#FCF9F6] p-3 rounded-2xl border border-[#EEDECF] flex flex-col justify-between">
+                          <label className="text-[10.5px] sm:text-[11px] font-bold uppercase tracking-wider text-[#6B464E] h-9 flex items-center justify-center text-center leading-tight mb-2">
+                            CAO GIÀY (CM)
+                          </label>
                           <input
                             type="text"
                             value={measurements.heel}
                             onChange={(e) => setMeasurements({ ...measurements, heel: e.target.value })}
-                            className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                            className="w-full h-10 sm:h-11 bg-white border border-[#E2D2C2] rounded-xl px-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
                           />
                         </div>
                       </div>
