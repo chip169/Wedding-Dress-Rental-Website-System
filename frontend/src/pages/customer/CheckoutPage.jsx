@@ -346,6 +346,123 @@ export default function CheckoutPage() {
     window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
+  // Hàm xuất và tải file Word (.doc) hợp đồng thuê váy cưới chi tiết
+  const handleDownloadWordContract = () => {
+    const todayStr = new Date().toLocaleDateString('vi-VN');
+    const wordHtml = `
+      <html xmlns:o='urn:schemas-microsoft-com:office:office' xmlns:w='urn:schemas-microsoft-com:office:word' xmlns='http://www.w3.org/TR/REC-html40'>
+      <head>
+        <meta charset='utf-8'>
+        <title>Hop_Dong_Thue_Le_Phuc_Cuoi_UniBridal</title>
+        <style>
+          body { font-family: 'Times New Roman', serif; font-size: 13pt; line-height: 1.5; color: #111; margin: 40px; }
+          .center { text-align: center; }
+          .bold { font-weight: bold; }
+          .title { font-size: 17pt; font-weight: bold; color: #733F49; text-transform: uppercase; margin-top: 15px; margin-bottom: 5px; }
+          .table { width: 100%; border-collapse: collapse; margin-top: 15px; margin-bottom: 15px; }
+          .table td, .table th { border: 1px solid #999; padding: 7px 10px; font-size: 12pt; }
+          .table th { background-color: #f7ede8; color: #733F49; }
+          .clause-title { font-weight: bold; color: #733F49; margin-top: 14px; margin-bottom: 4px; }
+          .seal-box { border: 2px dashed #b80000; padding: 8px 12px; color: #b80000; font-weight: bold; display: inline-block; border-radius: 4px; }
+        </style>
+      </head>
+      <body>
+        <p class='center' style='font-size: 11pt; line-height: 1.3;'>
+          <strong>CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM</strong><br>
+          <em>Độc lập – Tự do – Hạnh phúc</em><br>
+          ---------------------------------------
+        </p>
+
+        <h2 class='center title'>HỢP ĐỒNG THUÊ LỄ PHỤC CƯỚI CAO CẤP</h2>
+        <p class='center' style='font-style: italic; font-size: 11pt; margin-top: 0;'>
+          Số: HĐ-UB-2026/8992 • Xác lập ngày: ${todayStr}
+        </p>
+
+        <p>Căn cứ Bộ luật Dân sự số 91/2015/QH13 và Luật Giao dịch điện tử số 20/2023/QH15 của Quốc hội Nước CHXHCN Việt Nam;</p>
+        <p>Hôm nay, ngày ${todayStr}, chúng tôi gồm các bên dưới đây thống nhất ký kết Hợp đồng thuê lễ phục:</p>
+
+        <table style='width: 100%; margin-top: 10px; margin-bottom: 15px;'>
+          <tr>
+            <td style='width: 50%; vertical-align: top; padding-right: 15px;'>
+              <strong>BÊN CHO THUÊ (BÊN A):</strong><br>
+              <strong>CÔNG TY TNHH UNIBRIDAL HAUTE COUTURE</strong><br>
+              Mã số thuế: 0316889988<br>
+              Địa chỉ: 88 Nam Kỳ Khởi Nghĩa, Phường Bến Nghé, Quận 1, TP. HCM<br>
+              Hotline: 1800 8998 • Email: contact@unibridal.vn<br>
+              Đại diện: <strong>Ông Kim Xuân Hiếu</strong><br>
+              Chức vụ: <strong>Tổng Giám Đốc</strong>
+            </td>
+            <td style='width: 50%; vertical-align: top; padding-left: 15px;'>
+              <strong>BÊN THUÊ LỄ PHỤC (BÊN B):</strong><br>
+              Họ và tên: <strong>${brideName}</strong><br>
+              Số CCCD/CMND: <strong>${cccd}</strong><br>
+              Số điện thoại: <strong>${phone}</strong><br>
+              Email: <strong>${email}</strong><br>
+              Địa chỉ: <strong>${address}</strong>
+            </td>
+          </tr>
+        </table>
+
+        <div class='clause-title'>ĐIỀU 1: ĐỐI TƯỢNG HỢP ĐỒNG & THỜI HẠN THUÊ</div>
+        <p>1.1. Bên A đồng ý cho Bên B thuê tác phẩm váy cưới thiết kế độc bản <strong>${activeDress?.name}</strong> (Mã tác phẩm: <strong>${activeDress?.code || 'UB-HC-2026'}</strong>), Kích cỡ: <strong>Size ${selectedSize}</strong>.</p>
+        <p>1.2. Thời gian thuê: <strong>${rentalDays} ngày</strong>. Ngày nhận váy: <strong>${rentalSchedule.startDate}</strong>; Ngày cưới chính thức: <strong>${rentalSchedule.weddingDate}</strong>; Ngày hoàn trả: trước 20:00 ngày <strong>${rentalSchedule.endDate}</strong>.</p>
+        <p>1.3. Tiêu chuẩn giao nhận: Lễ phục được giặt sấy tiệt trùng sinh học, ủi phẳng phiu và tinh chỉnh theo số đo cô dâu hoàn thiện trước giờ trao nhận 2 giờ trong Vali VIP Courier bảo quản chân không.</p>
+
+        <div class='clause-title'>ĐIỀU 2: GIÁ THUÊ & PHƯƠNG THỨC THANH TOÁN</div>
+        <p>2.1. Tổng chi phí thuê váy trọn gói (${rentalDays} ngày): <strong>${totalRentPrice.toLocaleString('vi-VN')} VNĐ</strong>.</p>
+        <p>2.2. Số tiền đặt cọc giữ lịch độc quyền: <strong>${amountToPayToday.toLocaleString('vi-VN')} VNĐ</strong> (thanh toán qua cổng chuyển khoản VietQR Techcombank).</p>
+        <p>2.3. Số tiền còn lại (nếu chọn cọc 50%) sẽ được thanh toán khi nhận bàn giao váy cưới.</p>
+
+        <div class='clause-title'>ĐIỀU 3: CỌC BẢO LÃNH HOÀN TRẢ & CAM KẾT HOÀN TIỀN 100%</div>
+        <p>3.1. Tiền cọc bảo lãnh hoàn trả trang phục: <strong>${depositCollateral.toLocaleString('vi-VN')} VNĐ</strong>.</p>
+        <p>3.2. Bên A cam kết hoàn trả 100% khoản cọc bảo lãnh tự động vào tài khoản ngân hàng của Bên B trong vòng 24 giờ sau khi tiếp nhận lại trang phục nguyên vẹn.</p>
+
+        <div class='clause-title'>ĐIỀU 4: BẢO HIỂM VẢI REN & QUY ĐỊNH BẢO QUẢN</div>
+        <p>4.1. Bên A tài trợ gói bảo hiểm làm sạch sinh học cao cấp: Miễn trừ trách nhiệm bồi thường đối với các vết bẩn bùn đất thông thường, vết rượu vang hay bụi sân khấu tiệc cưới.</p>
+        <p>4.2. Bên B cam kết không tự ý đem lễ phục tới tiệm giặt ủi thông thường hoặc can thiệp cắt xén form dáng nguyên bản.</p>
+
+        <div class='clause-title'>ĐIỀU 5: CHÍNH SÁCH ĐỔI NGÀY CƯỚI & DỜI LỊCH</div>
+        <p>5.1. Bên B được quyền thay đổi ngày thuê váy hoàn toàn miễn phí nếu thông báo cho Bên A trước tối thiểu 15 ngày so với ngày nhận dự kiến.</p>
+
+        <div class='clause-title'>ĐIỀU 6: HIỆU LỰC PHÁP LÝ CHỮ KÝ SỐ</div>
+        <p>6.1. Hợp đồng này được lập dưới dạng điện tử, có giá trị pháp lý đầy đủ và ràng buộc trách nhiệm song phương theo Luật Giao dịch điện tử số 20/2023/QH15.</p>
+
+        <table style='width: 100%; margin-top: 35px;'>
+          <tr>
+            <td style='width: 50%; text-align: center; vertical-align: top;'>
+              <strong>ĐẠI DIỆN BÊN CHO THUÊ (BÊN A)</strong><br>
+              <em>(Đã ký điện tử & đóng dấu mộc số)</em><br><br>
+              <div class='seal-box'>
+                ★ UNIBRIDAL HAUTE COUTURE ★<br>
+                ĐÃ XÁC THỰC KÝ SỐ HỢP LỆ<br>
+                Ngày: ${todayStr}
+              </div><br><br>
+              <strong>Ông Kim Xuân Hiếu</strong><br>
+              Tổng Giám Đốc UniBridal
+            </td>
+            <td style='width: 50%; text-align: center; vertical-align: top;'>
+              <strong>ĐẠI DIỆN BÊN THUÊ (BÊN B)</strong><br>
+              <em>(Ký tên và ghi rõ họ tên)</em><br><br><br><br>
+              <strong>${brideName}</strong>
+            </td>
+          </tr>
+        </table>
+      </body>
+      </html>
+    `;
+
+    const blob = new Blob(['\ufeff' + wordHtml], { type: 'application/msword;charset=utf-8' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `Hop_Dong_Thue_Vay_${activeDress?.name ? activeDress.name.replace(/\s+/g, '_') : 'UniBridal'}_HD-UB-2026.doc`;
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+    message.success('Đã tải xuống file Word (.doc) Hợp Đồng Thuê Váy Cưới!');
+  };
+
   // Confirm final booking & payment
   const handleConfirmFinalPayment = async (e) => {
     e?.preventDefault();
@@ -1268,50 +1385,92 @@ export default function CheckoutPage() {
                     </div>
                   </div>
 
-                  {/* Contract Clauses */}
-                  <div className="space-y-4 text-[12.5px] leading-relaxed text-[#4A3B3D]">
+                  {/* TÓM TẮT CÁC ĐIỀU KHOẢN CỐT LÕI (SÚC TÍCH) */}
+                  <div className="space-y-3 text-[12.5px] leading-relaxed text-[#4A3B3D]">
 
-                    <div className="p-3.5 rounded-xl bg-[#FAF4EE] border border-[#EEDECF]">
-                      <strong className="text-[#733F49] block mb-1">
-                        ĐIỀU 1: THÔNG TIN TRANG PHỤC & THỜI HẠN THUÊ
-                      </strong>
-                      <p className="m-0 text-[#6B5C5D]">
-                        1.1. Bên A đồng ý cho Bên B thuê tác phẩm váy cưới <strong>{activeDress?.name}</strong> (Mã: <strong>{activeDress?.code || 'UB-HC-2026'}</strong>), Size: <strong>{selectedSize}</strong>.<br />
-                        1.2. Thời gian thuê: <strong>{rentalDays} ngày</strong>, nhận váy từ ngày <strong>{rentalSchedule.startDate}</strong> và hoàn trả trước 20:00 ngày <strong>{rentalSchedule.endDate}</strong>.<br />
-                        1.3. Lễ phục được giặt sấy tiệt trùng sinh học, ủi phẳng phiu và tinh chỉnh số đo hoàn thiện trước giờ trao nhận 2 giờ.
-                      </p>
+                    {/* Điều 1 tóm tắt */}
+                    <div className="p-3.5 rounded-xl bg-[#FAF4EE] border border-[#EEDECF] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <strong className="text-[#733F49] block text-[13px] mb-0.5">
+                          1. THỜI GIAN NHẬN TRẢ & TÁC PHẨM VÁY CƯỚI
+                        </strong>
+                        <span className="text-[#6B5C5D] block">
+                          Thuê váy <strong>{activeDress?.name}</strong> (Size <strong>{selectedSize}</strong>) trọn gói <strong>{rentalDays} ngày</strong>. Nhận từ <strong>{rentalSchedule.startDate}</strong> ➔ Trả trước 20:00 ngày <strong>{rentalSchedule.endDate}</strong>.
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white border border-[#EEDECF] text-[#733F49] uppercase tracking-wider shrink-0 self-start sm:self-auto">
+                        GÓI {rentalDays} NGÀY
+                      </span>
                     </div>
 
-                    <div className="p-3.5 rounded-xl bg-[#FAF4EE] border border-[#EEDECF]">
-                      <strong className="text-[#733F49] block mb-1">
-                        ĐIỀU 2: GIÁ THUÊ, TIỀN CỌC GIỮ LỊCH & CỌC BẢO LÃNH HOÀN TRẢ
-                      </strong>
-                      <p className="m-0 text-[#6B5C5D]">
-                        2.1. Tổng chi phí thuê váy: <strong>{totalRentPrice.toLocaleString('vi-VN')}₫</strong>.<br />
-                        2.2. Tiền đặt cọc giữ lịch: <strong>{amountToPayToday.toLocaleString('vi-VN')}₫</strong> (thanh toán tại Bước 3).<br />
-                        2.3. Tiền cọc bảo lãnh hoàn trả: <strong>{depositCollateral.toLocaleString('vi-VN')}₫</strong>. Bên A cam kết <strong>hoàn trả 100%</strong> tự động qua tài khoản ngân hàng của Bên B trong vòng 24 giờ sau khi kiểm tra váy nguyên vẹn khi hoàn trả.
-                      </p>
+                    {/* Điều 2 tóm tắt */}
+                    <div className="p-3.5 rounded-xl bg-[#FAF4EE] border border-[#EEDECF] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <strong className="text-[#733F49] block text-[13px] mb-0.5">
+                          2. GIÁ THUÊ & CAM KẾT HOÀN TRẢ CỌC 100%
+                        </strong>
+                        <span className="text-[#6B5C5D] block">
+                          Giá thuê: <strong>{totalRentPrice.toLocaleString('vi-VN')}₫</strong> • Cọc giữ lịch hôm nay: <strong className="text-[#2E7D32]">{amountToPayToday.toLocaleString('vi-VN')}₫</strong>. Cọc bảo lãnh {depositCollateral.toLocaleString('vi-VN')}₫ cam kết <strong>hoàn tiền 100%</strong> trong vòng 24h sau khi nhận lại lễ phục.
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-[#E8F5E9] border border-[#C8E6C9] text-[#2E7D32] uppercase tracking-wider shrink-0 self-start sm:self-auto">
+                        HOÀN CỌC 100%
+                      </span>
                     </div>
 
-                    <div className="p-3.5 rounded-xl bg-[#FAF4EE] border border-[#EEDECF]">
-                      <strong className="text-[#733F49] block mb-1">
-                        ĐIỀU 3: QUY ĐỊNH BẢO QUẢN & BỒI THƯỜNG
-                      </strong>
-                      <p className="m-0 text-[#6B5C5D]">
-                        3.1. Bên B có trách nhiệm bảo quản lễ phục trong suốt thời gian tổ chức hôn lễ.<br />
-                        3.2. Tuyệt đối không tự ý cắt may, tẩy nhuộm hoặc đem váy tới tiệm giặt ủi thông thường.<br />
-                        3.3. Trường hợp làm bẩn bùn đất/rượu vang thông thường, UniBridal hỗ trợ xử lý sinh học miễn phí. Nếu phát sinh rách lớn hoặc hư hại hạt pha lê do bất cẩn, chi phí phục hồi sẽ được khấu trừ minh bạch theo phụ lục hợp đồng.
-                      </p>
+                    {/* Điều 3 tóm tắt */}
+                    <div className="p-3.5 rounded-xl bg-[#FAF4EE] border border-[#EEDECF] flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+                      <div>
+                        <strong className="text-[#733F49] block text-[13px] mb-0.5">
+                          3. BẢO HIỂM VẢI REN & QUYỀN ĐỔI NGÀY CƯỚI MIỄN PHÍ
+                        </strong>
+                        <span className="text-[#6B5C5D] block">
+                          Miễn phí xử lý các vết bẩn bùn đất/rượu vang thông thường. Cô dâu được <strong>đổi ngày thuê váy miễn phí</strong> khi thông báo trước 15 ngày.
+                        </span>
+                      </div>
+                      <span className="text-[10px] font-bold px-2 py-0.5 rounded-md bg-white border border-[#EEDECF] text-[#733F49] uppercase tracking-wider shrink-0 self-start sm:self-auto">
+                        ĐỔI LỊCH FREE
+                      </span>
                     </div>
 
-                    <div className="p-3.5 rounded-xl bg-[#FAF4EE] border border-[#EEDECF]">
-                      <strong className="text-[#733F49] block mb-1">
-                        ĐIỀU 4: CHÍNH SÁCH ĐỔI NGÀY CƯỚI & GIÁ TRỊ PHÁP LÝ CHỮ KÝ SỐ
-                      </strong>
-                      <p className="m-0 text-[#6B5C5D]">
-                        4.1. Bên B được quyền dời ngày thuê miễn phí nếu thông báo trước tối thiểu 15 ngày.<br />
-                        4.2. Hợp đồng này được xác lập dưới dạng điện tử, có giá trị pháp lý tương đương bản ký tay theo Luật Giao dịch điện tử số 20/2023/QH15.
-                      </p>
+                    {/* THẺ ĐÍNH KÈM VĂN BẢN WORD (.DOC) & NÚT XEM CHI TIẾT */}
+                    <div className="p-4 rounded-2xl bg-gradient-to-r from-[#FAF3F0] via-[#FCF9F6] to-[#FAF8F5] border border-[#F2D8D4] flex flex-col sm:flex-row items-center justify-between gap-3 text-[12.5px] shadow-2xs">
+                      <div className="flex items-center gap-3 w-full sm:w-auto">
+                        <div className="w-10 h-10 rounded-xl bg-[#E8F0FE] text-[#1A73E8] flex items-center justify-center shrink-0 shadow-2xs font-bold text-[14px]">
+                          W
+                        </div>
+                        <div>
+                          <div className="flex items-center gap-2">
+                            <strong className="text-[#2C2523] text-[13.5px]">Toàn văn Điều lệ Hợp đồng thuê đầy đủ (8 Điều)</strong>
+                            <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded bg-[#E8F0FE] text-[#1A73E8] uppercase tracking-wider">
+                              FILE WORD .DOC
+                            </span>
+                          </div>
+                          <p className="text-[#6B5C5D] text-[11.5px] m-0 mt-0.5">
+                            Bao gồm phụ lục bồi hoàn chi tiết, quy chuẩn bảo quản vali và chứng thư bảo lãnh.
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="flex items-center gap-2 w-full sm:w-auto shrink-0">
+                        <button
+                          type="button"
+                          onClick={() => setIsContractModalOpen(true)}
+                          className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-white border border-[#EEDECF] hover:bg-[#FAF0EC] text-[#733F49] text-[12px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-2xs"
+                        >
+                          <FileText className="w-4 h-4 text-[#733F49]" />
+                          <span>Xem Chi Tiết</span>
+                        </button>
+
+                        <button
+                          type="button"
+                          onClick={handleDownloadWordContract}
+                          className="flex-1 sm:flex-initial px-3.5 py-2 rounded-xl bg-[#1A73E8] hover:bg-[#1557B0] text-white text-[12px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 shadow-xs"
+                        >
+                          <Download className="w-4 h-4 text-white" />
+                          <span>Tải File Word (.doc)</span>
+                        </button>
+                      </div>
                     </div>
 
                   </div>
@@ -1793,6 +1952,133 @@ export default function CheckoutPage() {
         </div>
 
       </main>
+
+      {/* ================= CONTRACT FULL DETAILS MODAL (POPUP TOÀN VĂN HỢP ĐỒNG CHI TIẾT) ================= */}
+      {isContractModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in print:hidden">
+          <div className="relative w-full max-w-[760px] max-h-[85vh] bg-white rounded-3xl shadow-2xl border border-[#EEDECF] overflow-hidden flex flex-col">
+            
+            {/* Modal Header */}
+            <div className="px-6 py-4 bg-[#FAF4EE] border-b border-[#EEDECF] flex items-center justify-between">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-lg bg-[#E8F0FE] text-[#1A73E8] flex items-center justify-center font-bold text-[13px]">
+                  W
+                </div>
+                <div>
+                  <h3 className="font-playfair text-[17px] font-bold text-[#733F49] m-0">
+                    Toàn Văn Quy Chế & Điều Lệ Hợp Đồng Thuê
+                  </h3>
+                  <span className="text-[11px] text-[#847374] block">
+                    Văn bản pháp lý số #HĐ-UB-2026/8992 • Cấp ngày: {new Date().toLocaleDateString('vi-VN')}
+                  </span>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={handleDownloadWordContract}
+                  className="px-3 py-1.5 rounded-lg bg-[#1A73E8] hover:bg-[#1557B0] text-white text-[11.5px] font-bold border-0 cursor-pointer transition-all flex items-center gap-1 shadow-2xs"
+                >
+                  <Download className="w-3.5 h-3.5 text-white" />
+                  <span>Tải file Word (.doc)</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setIsContractModalOpen(false)}
+                  className="w-8 h-8 rounded-lg bg-white border border-[#EEDECF] text-[#847374] hover:text-[#2C2523] flex items-center justify-center cursor-pointer transition-colors"
+                >
+                  <X className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+
+            {/* Modal Body: Scrollable Contract Content */}
+            <div className="p-6 overflow-y-auto space-y-4 text-[12.5px] leading-relaxed text-[#4A3B3D] flex-1">
+              <div className="text-center pb-3 border-b border-[#F0E5DC]">
+                <div className="font-bold uppercase tracking-wider text-[#2C2523] text-[11.5px]">
+                  CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+                </div>
+                <div className="text-[11px] italic text-[#6B5C5D]">Độc lập — Tự do — Hạnh phúc</div>
+                <h4 className="font-playfair text-[18px] font-bold text-[#733F49] mt-2 mb-0.5 uppercase">
+                  HỢP ĐỒNG THUÊ LỄ PHỤC CƯỚI CAO CẤP
+                </h4>
+                <span className="text-[11px] text-[#847374]">Mã số: HĐ-UB-2026/8992</span>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-[#FCF9F6] border border-[#EEDECF] space-y-1 text-[12px]">
+                <div><strong>BÊN A (CHO THUÊ):</strong> CÔNG TY TNHH UNIBRIDAL HAUTE COUTURE • Đại diện: <strong>Ông Kim Xuân Hiếu (Tổng Giám Đốc)</strong></div>
+                <div><strong>BÊN B (THUÊ VÁY):</strong> {brideName} • Số CCCD: {cccd} • SĐT: {phone} • Địa chỉ: {address}</div>
+              </div>
+
+              <div className="space-y-3">
+                <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#EEDECF]">
+                  <strong className="text-[#733F49] block mb-1">ĐIỀU 1: ĐỐI TƯỢNG HỢP ĐỒNG & BÀN GIAO LỄ PHỤC</strong>
+                  <p className="m-0 text-[#6B5C5D]">
+                    1.1. Bên A bàn giao tác phẩm váy cưới thiết kế <strong>{activeDress?.name}</strong> (Mã: <strong>{activeDress?.code || 'UB-HC-2026'}</strong>), Size: <strong>{selectedSize}</strong> cho Bên B.<br />
+                    1.2. Thời gian thuê: <strong>{rentalDays} ngày</strong>. Nhận từ ngày <strong>{rentalSchedule.startDate}</strong> đến 20:00 ngày <strong>{rentalSchedule.endDate}</strong>.<br />
+                    1.3. Váy được tiệt trùng sinh học, ủi phẳng phiu và đặt trong Vali giữ nhiệt chuyên dụng.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#EEDECF]">
+                  <strong className="text-[#733F49] block mb-1">ĐIỀU 2: GIÁ THUÊ & PHƯƠNG THỨC THANH TOÁN</strong>
+                  <p className="m-0 text-[#6B5C5D]">
+                    2.1. Tổng giá trị gói thuê: <strong>{totalRentPrice.toLocaleString('vi-VN')}₫</strong>.<br />
+                    2.2. Khoản cọc đặt giữ lịch: <strong>{amountToPayToday.toLocaleString('vi-VN')}₫</strong> (thanh toán qua VietQR Techcombank).<br />
+                    2.3. Khoản còn lại thanh toán đủ khi nhận bàn giao lễ phục.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#EEDECF]">
+                  <strong className="text-[#733F49] block mb-1">ĐIỀU 3: TIỀN CỌC BẢO LÃNH & CAM KẾT HOÀN CỌC 100%</strong>
+                  <p className="m-0 text-[#6B5C5D]">
+                    3.1. Tiền cọc bảo lãnh: <strong>{depositCollateral.toLocaleString('vi-VN')}₫</strong>.<br />
+                    3.2. UniBridal cam kết hoàn trả 100% số tiền cọc bảo lãnh vào tài khoản ngân hàng của cô dâu trong vòng 24 giờ sau khi kiểm tra váy hoàn trả nguyên vẹn.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#EEDECF]">
+                  <strong className="text-[#733F49] block mb-1">ĐIỀU 4: BẢO HIỂM LÀM SẠCH & QUY ĐỊNH BẢO QUẢN</strong>
+                  <p className="m-0 text-[#6B5C5D]">
+                    4.1. Miễn phí xử lý vết bẩn sinh học: Bụi sân khấu, vết bùn đất, vết rượu vang thông thường đều được UniBridal hỗ trợ làm sạch công nghệ cao miễn phí.<br />
+                    4.2. Khách hàng không tự ý tẩy nhuộm hay mang váy tới tiệm giặt sấy bên ngoài.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#EEDECF]">
+                  <strong className="text-[#733F49] block mb-1">ĐIỀU 5: QUYỀN ĐỔI NGÀY CƯỚI & DỜI LỊCH THUÊ</strong>
+                  <p className="m-0 text-[#6B5C5D]">
+                    5.1. Cô dâu được chuyển đổi ngày thuê váy hoàn toàn miễn phí khi thông báo trước tối thiểu 15 ngày.
+                  </p>
+                </div>
+
+                <div className="p-3 rounded-xl bg-[#FAF8F5] border border-[#EEDECF]">
+                  <strong className="text-[#733F49] block mb-1">ĐIỀU 6: HIỆU LỰC CHỮ KÝ ĐIỆN TỬ</strong>
+                  <p className="m-0 text-[#6B5C5D]">
+                    6.1. Hợp đồng điện tử này có giá trị pháp lý đầy đủ theo Luật Giao dịch điện tử số 20/2023/QH15.
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            {/* Modal Footer */}
+            <div className="px-6 py-3.5 bg-[#FAF4EE] border-t border-[#EEDECF] flex items-center justify-between">
+              <span className="text-[11.5px] text-[#6B5C5D]">
+                ✦ Nàng có thể tải bản Word (.doc) về máy để chỉnh sửa hoặc in ấn lưu trữ.
+              </span>
+              <button
+                type="button"
+                onClick={() => setIsContractModalOpen(false)}
+                className="px-5 py-2 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white text-[12.5px] font-bold border-0 cursor-pointer transition-colors shadow-xs"
+              >
+                Tôi Đã Hiểu & Đóng
+              </button>
+            </div>
+
+          </div>
+        </div>
+      )}
 
       {/* ================= SUCCESS MODAL (HOÀN TẤT ĐẶT THUÊ & HỢP ĐỒNG ĐÃ KÝ) ================= */}
       {isSuccessModalOpen && (
