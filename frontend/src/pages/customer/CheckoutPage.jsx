@@ -31,6 +31,9 @@ import {
   AlertCircle,
   ArrowLeft,
   Copy,
+  Share2,
+  RefreshCw,
+  Info,
   Plus,
   Minus,
 } from 'lucide-react';
@@ -80,6 +83,70 @@ export default function CheckoutPage() {
   const endDateParam = searchParams.get('endDate');
   const daysParam = parseInt(searchParams.get('days'), 10);
   const [rentalDays, setRentalDays] = useState(!isNaN(daysParam) && daysParam >= 2 && daysParam <= 30 ? daysParam : 4);
+
+  // 1. Đếm ngược tạm giữ váy 15 phút (Hold Timer)
+  const [holdSeconds, setHoldSeconds] = useState(15 * 60);
+  React.useEffect(() => {
+    const timer = setInterval(() => {
+      setHoldSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
+
+  const formatHoldTimer = (seconds) => {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+    return `${String(m).padStart(2, '0')}:${String(s).padStart(2, '0')}`;
+  };
+
+  // 2. Chế độ cung cấp số đo: 'input' (tự điền) | 'showroom' (chuyên viên đo tại showroom / video call)
+  const [measurementMode, setMeasurementMode] = useState('input');
+
+  // 3. Danh mục phụ kiện & dịch vụ cưới cao cấp (Add-ons)
+  const AVAILABLE_ADDONS = [
+    {
+      id: 'veil',
+      name: 'Khăn Voan Hoàng Gia 3M Thêu Ren Thủ Công',
+      desc: 'Voan tơ tằm dài 3m đính ngọc trai & thêu tên CD-CR',
+      price: 500000,
+      icon: '🌸',
+      tag: 'Bán chạy nhất',
+    },
+    {
+      id: 'tiara',
+      name: 'Vương Miện Pha Lê Swarovski Pháp Cao Cấp',
+      desc: 'Mạ vàng trắng 18K lấp lánh sân khấu tiệc cưới',
+      price: 800000,
+      icon: '👑',
+      tag: 'Hoàng gia',
+    },
+    {
+      id: 'stylist',
+      name: 'Chuyên Viên Stylist Mặc Váy Tận Nơi Ngày Cưới',
+      desc: 'Hỗ trợ thắt corsetry & căn chỉnh tùng váy hoàn hảo tại tư gia',
+      price: 1200000,
+      icon: '💎',
+      tag: 'VIP Concierge',
+    },
+  ];
+
+  const [selectedAddons, setSelectedAddons] = useState(['veil']);
+
+  const toggleAddon = (addonId) => {
+    setSelectedAddons((prev) =>
+      prev.includes(addonId) ? prev.filter((id) => id !== addonId) : [...prev, addonId]
+    );
+  };
+
+  const addonTotal = useMemo(() => {
+    return selectedAddons.reduce((sum, id) => {
+      const found = AVAILABLE_ADDONS.find((a) => a.id === id);
+      return sum + (found ? found.price : 0);
+    }, 0);
+  }, [selectedAddons]);
+
+  // 4. Trạng thái kiểm tra thanh toán VietQR giả lập
+  const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
 
   // Dynamic Selected Dress
   const activeDress = useMemo(() => {
@@ -252,6 +319,17 @@ export default function CheckoutPage() {
     heel: '9',
   });
 
+  // Gợi ý Size thông minh theo Chiều cao & Cân nặng
+  const smartSuggestedSize = useMemo(() => {
+    const h = parseFloat(measurements.height);
+    const w = parseFloat(measurements.weight);
+    if (isNaN(h) || isNaN(w)) return null;
+    if (w < 46) return { size: 'XS', note: 'Vóc dáng thanh mảnh, phom chữ A hoặc tùng nhẹ rất tôn eo' };
+    if (w <= 53) return { size: 'S', note: 'Khung xương chuẩn, đan dây corsetry Pháp ôm khít vòng eo' };
+    if (w <= 61) return { size: 'M', note: 'Phom dáng đầy đặn quyến rũ, cúp ngực nâng đỡ êm ái' };
+    return { size: 'L', note: 'Atelier tinh chỉnh nới tùng váy theo phom người' };
+  }, [measurements.height, measurements.weight]);
+
   // Delivery method: 'direct' | 'delivery'
   const [deliveryMethod, setDeliveryMethod] = useState('direct');
 
@@ -276,7 +354,7 @@ export default function CheckoutPage() {
   const extraDayRate = 800000;
   const extraDaysCount = Math.max(0, rentalDays - 4);
   const extraDayFee = extraDaysCount * extraDayRate;
-  const totalRentPrice = baseRentPrice + extraDayFee;
+  const totalRentPrice = baseRentPrice + extraDayFee + addonTotal;
   const depositCollateral = activeDress?.depositAmount || 15000000;
 
   // Amount to pay today based on depositOption (30% or 100%)
@@ -336,6 +414,7 @@ export default function CheckoutPage() {
       rentalStartDate: rentalSchedule.startDate,
       rentalEndDate: rentalSchedule.endDate,
       rentalDays,
+      addons: selectedAddons,
       items: [
         {
           dressId: activeDress.id || activeDress._id,
@@ -402,6 +481,33 @@ export default function CheckoutPage() {
           <span>/</span>
           <span className="text-[#2C2523] font-medium">Đặt Thuê, Ký Hợp Đồng & Thanh Toán</span>
         </nav>
+
+        {/* 1. Thanh Tạm Giữ Độc Quyền Váy 15 Phút (Hold Timer Banner) */}
+        <div className="mb-6 bg-gradient-to-r from-[#FAF0EC] via-[#FFF9F6] to-[#FAF0EC] border border-[#F2D8D4] rounded-2xl p-4 sm:px-6 sm:py-3.5 flex flex-col sm:flex-row items-center justify-between gap-3 shadow-xs print:hidden animate-fade-in">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-full bg-[#733F49] text-white flex items-center justify-center shrink-0 shadow-xs ring-4 ring-[#FAF0EC]">
+              <Sparkles className="w-4 h-4 text-amber-200" />
+            </div>
+            <div>
+              <div className="flex items-center gap-2">
+                <span className="text-[12px] font-extrabold uppercase tracking-wider text-[#733F49]">
+                  LỄ PHỤC ĐANG ĐƯỢC TẠM GIỮ ĐỘC QUYỀN CHO NÀNG
+                </span>
+                <span className="hidden md:inline-block w-2 h-2 rounded-full bg-[#2E7D32] animate-ping" />
+              </div>
+              <p className="text-[12px] text-[#6B5C5D] m-0 mt-0.5">
+                UniBridal tạm khóa lịch tác phẩm <strong>{activeDress?.name}</strong> để bảo đảm nàng hoàn tất ký hợp đồng và cọc lịch.
+              </p>
+            </div>
+          </div>
+          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-[#F2D8D4] shrink-0 shadow-2xs">
+            <Clock className="w-4 h-4 text-[#733F49]" />
+            <span className="text-[11px] font-bold text-[#847374] uppercase tracking-wider">Thời gian giữ:</span>
+            <span className="font-jakarta font-extrabold text-[17px] text-[#733F49] tabular-nums tracking-wide">
+              {formatHoldTimer(holdSeconds)}
+            </span>
+          </div>
+        </div>
 
         {/* Stepper Bar (3 Clear Steps) */}
         <div className="w-full max-w-[820px] mx-auto mb-6 sm:mb-8 print:hidden">
@@ -503,7 +609,7 @@ export default function CheckoutPage() {
                             setBrideName(e.target.value);
                             setContractSignature(e.target.value);
                           }}
-                          className="w-full bg-white border border-[#E2D2C2] rounded-xl px-4 py-3 font-jakarta text-[15px] text-[#2C2523] font-semibold tabular-nums focus:outline-none focus:border-[#733F49] focus:ring-2 focus:ring-[#733F49]/15 shadow-2xs transition-all"
+                          className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
                           placeholder="Lê Nguyễn Thảo My"
                         />
                       </div>
@@ -517,7 +623,7 @@ export default function CheckoutPage() {
                           required
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
-                          className="w-full bg-white border border-[#E2D2C2] rounded-xl px-4 py-3 font-jakarta text-[15px] text-[#2C2523] font-semibold tabular-nums focus:outline-none focus:border-[#733F49] focus:ring-2 focus:ring-[#733F49]/15 shadow-2xs transition-all"
+                          className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
                           placeholder="09xx xxx xxx"
                         />
                       </div>
@@ -533,7 +639,7 @@ export default function CheckoutPage() {
                           required
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
-                          className="w-full bg-white border border-[#E2D2C2] rounded-xl px-4 py-3 font-jakarta text-[15px] text-[#2C2523] font-semibold tabular-nums focus:outline-none focus:border-[#733F49] focus:ring-2 focus:ring-[#733F49]/15 shadow-2xs transition-all"
+                          className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
                           placeholder="thaomy.bride@gmail.com"
                         />
                       </div>
@@ -547,7 +653,7 @@ export default function CheckoutPage() {
                           required
                           value={cccd}
                           onChange={(e) => setCccd(e.target.value)}
-                          className="w-full bg-white border border-[#E2D2C2] rounded-xl px-4 py-3 font-jakarta text-[15px] text-[#2C2523] font-semibold tabular-nums focus:outline-none focus:border-[#733F49] focus:ring-2 focus:ring-[#733F49]/15 shadow-2xs transition-all"
+                          className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
                           placeholder="079201019888"
                         />
                       </div>
@@ -562,7 +668,7 @@ export default function CheckoutPage() {
                         required
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
-                        className="w-full bg-white border border-[#E2D2C2] rounded-xl px-4 py-3 font-jakarta text-[15px] text-[#2C2523] font-semibold tabular-nums focus:outline-none focus:border-[#733F49] focus:ring-2 focus:ring-[#733F49]/15 shadow-2xs transition-all"
+                        className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
                         placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố"
                       />
                     </div>
@@ -599,7 +705,7 @@ export default function CheckoutPage() {
                         >
                           <Minus className="w-3.5 h-3.5" />
                         </button>
-                        <span className="font-jakarta font-extrabold text-[17px] text-[#733F49] min-w-[65px] text-center tabular-nums">
+                        <span className="font-playfair font-bold text-[15px] text-[#733F49] min-w-[55px] text-center">
                           {rentalDays} Ngày
                         </span>
                         <button
@@ -651,11 +757,10 @@ export default function CheckoutPage() {
                             key={pkg.days}
                             type="button"
                             onClick={() => handleRentalDaysChange(pkg.days)}
-                            className={`relative p-3 rounded-xl border text-left transition-all cursor-pointer ${
-                              isSelected
+                            className={`relative p-3 rounded-xl border text-left transition-all cursor-pointer ${isSelected
                                 ? 'border-[#733F49] bg-white ring-2 ring-[#733F49]/20 shadow-xs'
                                 : 'border-[#EEDECF] bg-[#FAF8F5] hover:bg-white hover:border-[#D5C2B5]'
-                            }`}
+                              }`}
                           >
                             {pkg.tag && (
                               <span className="absolute -top-2 right-2 text-[9px] font-bold px-1.5 py-0.5 rounded bg-[#733F49] text-white uppercase tracking-wider shadow-2xs">
@@ -664,9 +769,8 @@ export default function CheckoutPage() {
                             )}
                             <div className="flex items-center justify-between">
                               <span
-                                className={`font-jakarta font-extrabold text-[16px] tabular-nums ${
-                                  isSelected ? 'text-[#733F49]' : 'text-[#2C2523]'
-                                }`}
+                                className={`font-playfair font-bold text-[15px] ${isSelected ? 'text-[#733F49]' : 'text-[#2C2523]'
+                                  }`}
                               >
                                 {pkg.title}
                               </span>
@@ -684,10 +788,10 @@ export default function CheckoutPage() {
 
                   {/* 3 Thẻ Chọn Ngày Tương Tác Kèm DatePicker */}
                   <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-5">
-                    
+
                     {/* Thẻ 1: Ngày bắt đầu nhận váy */}
                     <div className="relative bg-[#FCF9F6] p-4 rounded-2xl border border-[#EEDECF] transition-all hover:shadow-xs focus-within:ring-2 focus-within:ring-[#733F49]/20">
-                      <label className="block text-[11.5px] font-bold text-[#6B464E] uppercase tracking-wider mb-1.5">
+                      <label className="block text-[10.5px] font-bold text-[#847374] uppercase tracking-wider mb-1">
                         NGÀY BẮT ĐẦU NHẬN VÁY
                       </label>
                       <div className="relative flex items-center">
@@ -703,7 +807,7 @@ export default function CheckoutPage() {
                               });
                             }
                           }}
-                          className="w-full bg-white border border-[#E2D2C2] rounded-xl px-3.5 py-2.5 font-jakarta font-bold text-[15.5px] text-[#2C2523] tabular-nums tracking-wide focus:outline-none focus:border-[#733F49] focus:ring-2 focus:ring-[#733F49]/15 cursor-pointer shadow-2xs"
+                          className="w-full bg-white border border-[#EEDECF] rounded-xl px-3 py-2 text-[14px] font-bold text-[#2C2523] focus:outline-none focus:border-[#733F49] cursor-pointer"
                         />
                       </div>
                       <span className="text-[10.5px] font-medium text-[#2E7D32] mt-1.5 flex items-center gap-1">
@@ -714,7 +818,7 @@ export default function CheckoutPage() {
                     {/* Thẻ 2: Ngày cưới chính thức (Tiêu điểm) */}
                     <div className="relative bg-[#FAF0EC] p-4 rounded-2xl border-2 border-[#F2D8D4] transition-all shadow-xs focus-within:ring-2 focus-within:ring-[#733F49]/30">
                       <div className="flex items-center justify-between mb-1">
-                        <label className="block text-[11.5px] font-bold text-[#733F49] uppercase tracking-wider">
+                        <label className="block text-[10.5px] font-bold text-[#733F49] uppercase tracking-wider">
                           NGÀY CƯỚI CHÍNH THỨC
                         </label>
                         <span className="text-[9.5px] font-bold px-1.5 py-0.5 rounded-md bg-[#733F49] text-white uppercase tracking-wider">
@@ -730,7 +834,7 @@ export default function CheckoutPage() {
                               handleSelectWeddingDate(e.target.value);
                             }
                           }}
-                          className="w-full bg-white border-2 border-[#EAB8B8] rounded-xl px-3.5 py-2.5 font-jakarta font-extrabold text-[16.5px] text-[#733F49] tabular-nums tracking-wide focus:outline-none focus:border-[#733F49] focus:ring-2 focus:ring-[#733F49]/20 cursor-pointer shadow-xs"
+                          className="w-full bg-white border border-[#F2D8D4] rounded-xl px-3 py-2 text-[14.5px] font-bold text-[#733F49] focus:outline-none focus:border-[#733F49] cursor-pointer shadow-2xs"
                         />
                       </div>
                       <span className="text-[10.5px] font-bold text-[#733F49] mt-1.5 flex items-center gap-1">
@@ -771,7 +875,7 @@ export default function CheckoutPage() {
                               });
                             }
                           }}
-                          className="w-full bg-white border border-[#E2D2C2] rounded-xl px-3.5 py-2.5 font-jakarta font-bold text-[15.5px] text-[#2C2523] tabular-nums tracking-wide focus:outline-none focus:border-[#733F49] focus:ring-2 focus:ring-[#733F49]/15 cursor-pointer shadow-2xs"
+                          className="w-full bg-white border border-[#EEDECF] rounded-xl px-3 py-2 text-[14px] font-bold text-[#2C2523] focus:outline-none focus:border-[#733F49] cursor-pointer"
                         />
                       </div>
                       <span className="text-[10.5px] font-medium text-[#6B5C5D] mt-1.5 flex items-center gap-1">
@@ -779,6 +883,21 @@ export default function CheckoutPage() {
                       </span>
                     </div>
 
+                  </div>
+
+                  {/* Live Dress Availability Badge */}
+                  <div className="mb-5 bg-[#E8F5E9]/70 border border-[#C8E6C9] rounded-2xl p-3.5 flex items-center justify-between gap-3 text-[12.5px] animate-fade-in">
+                    <div className="flex items-center gap-2.5">
+                      <div className="w-6 h-6 rounded-full bg-[#2E7D32] text-white flex items-center justify-center shrink-0">
+                        <Check className="w-3.5 h-3.5" />
+                      </div>
+                      <span className="text-[#2E7D32] font-semibold">
+                        Trạng thái lịch: Tác phẩm sẵn sàng trao nhận ngày <strong>{rentalSchedule.startDate}</strong> và khóa lịch độc quyền cho ngày trọng đại <strong>{rentalSchedule.weddingDate}</strong>.
+                      </span>
+                    </div>
+                    <span className="hidden sm:inline-block px-2.5 py-1 rounded-lg bg-white border border-[#C8E6C9] font-bold text-[#2E7D32] text-[11px] uppercase tracking-wider shadow-2xs">
+                      ✓ ĐÃ SẴN SÀNG
+                    </span>
                   </div>
 
                   {/* Bảng Lịch Trực Quan Tháng (Interactive Calendar Visual Picker) */}
@@ -870,17 +989,16 @@ export default function CheckoutPage() {
                             key={dateStr}
                             type="button"
                             onClick={() => handleSelectWeddingDate(dateStr)}
-                            className={`relative h-11 sm:h-13 rounded-xl flex flex-col items-center justify-center font-jakarta text-[14px] sm:text-[15px] font-bold tabular-nums transition-all border-0 cursor-pointer ${
-                              isWedding
+                            className={`relative h-10 sm:h-12 rounded-xl flex flex-col items-center justify-center text-[12px] sm:text-[13px] font-semibold transition-all border-0 cursor-pointer ${isWedding
                                 ? 'bg-[#733F49] text-white shadow-md ring-2 ring-[#D4AF37] z-10 scale-105'
                                 : isStart
-                                ? 'bg-[#2E7D32] text-white shadow-xs z-10'
-                                : isEnd
-                                ? 'bg-[#847374] text-white shadow-xs z-10'
-                                : isInRange
-                                ? 'bg-[#FAF0EC] text-[#733F49] font-bold border-y border-[#F2D8D4]'
-                                : 'bg-white text-[#2C2523] hover:bg-[#FAF0EC] hover:text-[#733F49]'
-                            }`}
+                                  ? 'bg-[#2E7D32] text-white shadow-xs z-10'
+                                  : isEnd
+                                    ? 'bg-[#847374] text-white shadow-xs z-10'
+                                    : isInRange
+                                      ? 'bg-[#FAF0EC] text-[#733F49] font-bold border-y border-[#F2D8D4]'
+                                      : 'bg-white text-[#2C2523] hover:bg-[#FAF0EC] hover:text-[#733F49]'
+                              }`}
                           >
                             <span>{d}</span>
                             {isWedding && (
@@ -941,8 +1059,8 @@ export default function CheckoutPage() {
                       <div
                         onClick={() => setDeliveryMethod('direct')}
                         className={`p-4 rounded-xl border cursor-pointer transition-all ${deliveryMethod === 'direct'
-                            ? 'border-[#733F49] bg-[#FAF3F0] ring-1 ring-[#733F49]'
-                            : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
+                          ? 'border-[#733F49] bg-[#FAF3F0] ring-1 ring-[#733F49]'
+                          : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
                           }`}
                       >
                         <div className="flex items-center justify-between mb-1">
@@ -961,8 +1079,8 @@ export default function CheckoutPage() {
                       <div
                         onClick={() => setDeliveryMethod('delivery')}
                         className={`p-4 rounded-xl border cursor-pointer transition-all ${deliveryMethod === 'delivery'
-                            ? 'border-[#733F49] bg-[#FAF3F0] ring-1 ring-[#733F49]'
-                            : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
+                          ? 'border-[#733F49] bg-[#FAF3F0] ring-1 ring-[#733F49]'
+                          : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
                           }`}
                       >
                         <div className="flex items-center justify-between mb-1">
@@ -981,9 +1099,9 @@ export default function CheckoutPage() {
                   </div>
                 </section>
 
-                {/* 3. SỐ ĐO CƠ THỂ MAY ĐO */}
+                {/* 3. SỐ ĐO CƠ THỂ MAY ĐO & TÙY CHỌN CONCIERGE */}
                 <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
-                  <div className="flex items-center justify-between pb-5 border-b border-[#F5EDE8] mb-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-5 border-b border-[#F5EDE8] mb-6 gap-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-[#FAF0EC] flex items-center justify-center text-[#B8737D]">
                         <Scissors className="w-5 h-5" />
@@ -997,67 +1115,255 @@ export default function CheckoutPage() {
                         </p>
                       </div>
                     </div>
+
+                    {/* Chuyển đổi chế độ điền số đo */}
+                    <div className="flex items-center bg-[#FAF0EC] p-1 rounded-xl border border-[#F2D8D4] self-start sm:self-auto text-[11.5px] font-bold">
+                      <button
+                        type="button"
+                        onClick={() => setMeasurementMode('input')}
+                        className={`px-3 py-1.5 rounded-lg border-0 cursor-pointer transition-all ${
+                          measurementMode === 'input'
+                            ? 'bg-white text-[#733F49] shadow-xs'
+                            : 'bg-transparent text-[#847374] hover:text-[#733F49]'
+                        }`}
+                      >
+                        Tự điền số đo
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setMeasurementMode('showroom')}
+                        className={`px-3 py-1.5 rounded-lg border-0 cursor-pointer transition-all flex items-center gap-1 ${
+                          measurementMode === 'showroom'
+                            ? 'bg-[#733F49] text-white shadow-xs'
+                            : 'bg-transparent text-[#847374] hover:text-[#733F49]'
+                        }`}
+                      >
+                        <span>✦ Hẹn đo tại Showroom</span>
+                      </button>
+                    </div>
                   </div>
+
+                  {measurementMode === 'showroom' ? (
+                    <div className="p-5 rounded-2xl bg-gradient-to-r from-[#FAF3F0] to-[#FAF8F5] border border-[#F2D8D4] text-[13px] text-[#6B5C5D] space-y-2 mb-4 animate-fade-in">
+                      <div className="flex items-center gap-2 font-bold text-[#733F49]">
+                        <Sparkles className="w-4 h-4" />
+                        <span>Dịch vụ May Đo VIP Concierge Miễn Phí Tại Showroom</span>
+                      </div>
+                      <p className="m-0 leading-relaxed">
+                        Nàng không cần tự đo tại nhà! Chuyên viên may đo cao cấp của UniBridal sẽ liên hệ đặt lịch đón tiếp nàng tại phòng thử VIP của Showroom (hoặc qua Video Call riêng tư) để lấy số đo chuẩn xác từng milimet và căn chỉnh phom váy trước ngày cưới.
+                      </p>
+                      <div className="pt-1 flex items-center gap-2 text-[11.5px] font-semibold text-[#2E7D32]">
+                        <Check className="w-3.5 h-3.5" />
+                        <span>Đã lưu yêu cầu đo trực tiếp vào hồ sơ đặt thuê của nàng.</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <>
+                      <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-3">
+                        <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">CHIỀU CAO (CM)</label>
+                          <input
+                            type="text"
+                            value={measurements.height}
+                            onChange={(e) => setMeasurements({ ...measurements, height: e.target.value })}
+                            className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                          />
+                        </div>
+                        <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">CÂN NẶNG (KG)</label>
+                          <input
+                            type="text"
+                            value={measurements.weight}
+                            onChange={(e) => setMeasurements({ ...measurements, weight: e.target.value })}
+                            className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                          />
+                        </div>
+                        <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">VÒNG 1 (NGỰC)</label>
+                          <input
+                            type="text"
+                            value={measurements.bust}
+                            onChange={(e) => setMeasurements({ ...measurements, bust: e.target.value })}
+                            className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                          />
+                        </div>
+                        <div className="bg-[#FAF0EC] p-3 rounded-xl border border-[#F2D8D4]">
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#733F49] block mb-1.5">VÒNG 2 (EO * CHÍNH)</label>
+                          <input
+                            type="text"
+                            value={measurements.waist}
+                            onChange={(e) => setMeasurements({ ...measurements, waist: e.target.value })}
+                            className="w-full bg-white border-2 border-[#EAB8B8] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#733F49] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                          />
+                        </div>
+                        <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">VÒNG 3 (MÔNG)</label>
+                          <input
+                            type="text"
+                            value={measurements.hips}
+                            onChange={(e) => setMeasurements({ ...measurements, hips: e.target.value })}
+                            className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                          />
+                        </div>
+                        <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
+                          <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">CAO GIÀY CƯỚI</label>
+                          <input
+                            type="text"
+                            value={measurements.heel}
+                            onChange={(e) => setMeasurements({ ...measurements, heel: e.target.value })}
+                            className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Gợi ý Size thông minh theo Chiều cao & Cân nặng */}
+                      {smartSuggestedSize && (
+                        <div className="mb-4 p-3 rounded-xl bg-[#FAF0EC] border border-[#F2D8D4] flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-[12px] animate-fade-in">
+                          <div className="flex items-center gap-2">
+                            <Sparkles className="w-4 h-4 text-[#733F49] shrink-0" />
+                            <span className="text-[#6B5C5D]">
+                              Gợi ý theo vóc dáng ({measurements.height}cm, {measurements.weight}kg):
+                            </span>
+                            <strong className="text-[#733F49] font-jakarta font-bold text-[13.5px]">
+                              Size {smartSuggestedSize.size}
+                            </strong>
+                            <span className="text-[#847374] hidden md:inline">• {smartSuggestedSize.note}</span>
+                          </div>
+                          <button
+                            type="button"
+                            onClick={() => {
+                              setSelectedSize(smartSuggestedSize.size);
+                              message.success(`Đã chọn Size ${smartSuggestedSize.size} theo gợi ý vóc dáng!`);
+                            }}
+                            className="px-3 py-1 text-[11px] font-bold text-[#733F49] bg-white rounded-lg border border-[#F2D8D4] hover:bg-[#733F49] hover:text-white transition-colors cursor-pointer self-start sm:self-auto shadow-2xs"
+                          >
+                            Áp dụng Size {smartSuggestedSize.size}
+                          </button>
+                        </div>
+                      )}
+                    </>
+                  )}
 
                   <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-6 gap-3 mb-4">
                     <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">CHIỀU CAO (CM)</label>
+                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">CHIỀU CAO (CM)</label>
                       <input
                         type="text"
                         value={measurements.height}
                         onChange={(e) => setMeasurements({ ...measurements, height: e.target.value })}
-                        className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
                       />
                     </div>
                     <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">CÂN NẶNG (KG)</label>
+                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">CÂN NẶNG (KG)</label>
                       <input
                         type="text"
                         value={measurements.weight}
                         onChange={(e) => setMeasurements({ ...measurements, weight: e.target.value })}
-                        className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
                       />
                     </div>
                     <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">VÒNG 1 (NGỰC)</label>
+                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">VÒNG 1 (NGỰC)</label>
                       <input
                         type="text"
                         value={measurements.bust}
                         onChange={(e) => setMeasurements({ ...measurements, bust: e.target.value })}
-                        className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
                       />
                     </div>
                     <div className="bg-[#FAF0EC] p-3 rounded-xl border border-[#F2D8D4]">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-[#733F49] block mb-1.5">VÒNG 2 (EO * QUAN TRỌNG)</label>
+                      <label className="text-[10px] font-bold uppercase text-[#733F49] block mb-1">VÒNG 2 (EO * QUAN TRỌNG)</label>
                       <input
                         type="text"
                         value={measurements.waist}
                         onChange={(e) => setMeasurements({ ...measurements, waist: e.target.value })}
-                        className="w-full bg-white border-2 border-[#EAB8B8] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#733F49] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                        className="w-full bg-white border border-[#F2D8D4] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#733F49] text-center"
                       />
                     </div>
                     <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">VÒNG 3 (MÔNG)</label>
+                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">VÒNG 3 (MÔNG)</label>
                       <input
                         type="text"
                         value={measurements.hips}
                         onChange={(e) => setMeasurements({ ...measurements, hips: e.target.value })}
-                        className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
                       />
                     </div>
                     <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF]">
-                      <label className="text-[11px] font-bold uppercase tracking-wider text-[#6B464E] block mb-1.5">CAO GIÀY CƯỚI</label>
+                      <label className="text-[10px] font-bold uppercase text-[#847374] block mb-1">CAO GIÀY CƯỚI</label>
                       <input
                         type="text"
                         value={measurements.heel}
                         onChange={(e) => setMeasurements({ ...measurements, heel: e.target.value })}
-                        className="w-full bg-white border border-[#E2D2C2] rounded-xl px-2 py-2 font-jakarta font-extrabold text-[16px] text-[#2C2523] text-center tabular-nums focus:outline-none focus:border-[#733F49] shadow-2xs"
+                        className="w-full bg-white border border-[#EEDECF] rounded-lg px-2.5 py-1.5 text-[13px] font-bold text-[#2C2523] text-center"
                       />
                     </div>
                   </div>
 
                   <div className="text-[11.5px] text-[#6B5C5D] italic">
                     ✦ Nếu nàng chưa đo chính xác, chuyên viên Atelier sẽ gọi video hướng dẫn hoặc đo trực tiếp tại buổi thử váy.
+                  </div>
+                </section>
+
+                {/* 4. PHỤ KIỆN CƯỚI & DỊCH VỤ ĐẶC QUYỀN (LUXURY ADD-ONS) */}
+                <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
+                  <div className="flex items-center justify-between pb-4 border-b border-[#F5EDE8] mb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#FAF0EC] flex items-center justify-center text-[#B8737D]">
+                        <Crown className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="font-playfair text-[19px] sm:text-[21px] font-semibold text-[#2C2523] m-0">
+                          Phụ Kiện Cưới & Dịch Vụ Đặc Quyền
+                        </h2>
+                        <p className="text-[12px] text-[#847374] m-0 mt-0.5">
+                          Tùy chọn phụ kiện đồng bộ với tác phẩm váy cưới để ngày trọng đại thêm lộng lẫy
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="grid grid-cols-1 md:grid-cols-3 gap-3.5">
+                    {AVAILABLE_ADDONS.map((addon) => {
+                      const isChecked = selectedAddons.includes(addon.id);
+                      return (
+                        <div
+                          key={addon.id}
+                          onClick={() => toggleAddon(addon.id)}
+                          className={`relative p-4 rounded-2xl border cursor-pointer transition-all flex flex-col justify-between ${
+                            isChecked
+                              ? 'border-[#733F49] bg-[#FAF3F0] ring-2 ring-[#733F49]/20 shadow-xs'
+                              : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
+                          }`}
+                        >
+                          <div>
+                            <div className="flex items-center justify-between mb-2">
+                              <span className="text-[20px]">{addon.icon}</span>
+                              <span className="text-[9.5px] font-bold px-2 py-0.5 rounded-full bg-white border border-[#EEDECF] text-[#733F49] uppercase tracking-wider">
+                                {addon.tag}
+                              </span>
+                            </div>
+                            <h4 className="font-playfair font-bold text-[14.5px] text-[#2C2523] m-0 mb-1 leading-snug">
+                              {addon.name}
+                            </h4>
+                            <p className="text-[11.5px] text-[#6B5C5D] m-0 leading-relaxed">
+                              {addon.desc}
+                            </p>
+                          </div>
+                          <div className="mt-4 pt-3 border-t border-[#F2D8D4] flex items-center justify-between">
+                            <span className="font-jakarta font-extrabold text-[14px] text-[#733F49] tabular-nums">
+                              +{addon.price.toLocaleString('vi-VN')}₫
+                            </span>
+                            <div className={`w-5 h-5 rounded-md flex items-center justify-center border ${
+                              isChecked ? 'bg-[#733F49] border-[#733F49] text-white' : 'border-[#D5C2B5] bg-white'
+                            }`}>
+                              {isChecked && <Check className="w-3.5 h-3.5" />}
+                            </div>
+                          </div>
+                        </div>
+                      );
+                    })}
                   </div>
                 </section>
 
@@ -1095,7 +1401,7 @@ export default function CheckoutPage() {
                     <h2 className="font-playfair text-[22px] sm:text-[26px] font-bold text-[#733F49] mt-3 mb-1">
                       HỢP ĐỒNG THUÊ LỄ PHỤC CƯỚI CAO CẤP
                     </h2>
-                    <span className="font-jakarta font-semibold text-[13px] text-[#6B5C5D] block tracking-wide tabular-nums">
+                    <span className="font-mono text-[12px] text-[#847374] block">
                       Số: HĐ-UB-2026/8992 • Cấp ngày: {new Date().toLocaleDateString('vi-VN')}
                     </span>
                   </div>
@@ -1200,28 +1506,26 @@ export default function CheckoutPage() {
                         <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#733F49] block">
                           ĐẠI DIỆN BÊN THUÊ (BÊN B - CÔ DÂU KÝ TAY)
                         </span>
-                        
+
                         {/* Chuyển chế độ Ký tay / Ký gõ tên */}
                         <div className="flex items-center bg-white/80 p-0.5 rounded-lg border border-[#F2D8D4] text-[10.5px] font-bold">
                           <button
                             type="button"
                             onClick={() => setSignatureMode('draw')}
-                            className={`px-2 py-0.5 rounded-md transition-colors border-0 cursor-pointer ${
-                              signatureMode === 'draw'
+                            className={`px-2 py-0.5 rounded-md transition-colors border-0 cursor-pointer ${signatureMode === 'draw'
                                 ? 'bg-[#733F49] text-white'
                                 : 'bg-transparent text-[#733F49] hover:bg-[#FAF0EC]'
-                            }`}
+                              }`}
                           >
                             ✍️ Ký tay
                           </button>
                           <button
                             type="button"
                             onClick={() => setSignatureMode('type')}
-                            className={`px-2 py-0.5 rounded-md transition-colors border-0 cursor-pointer ${
-                              signatureMode === 'type'
+                            className={`px-2 py-0.5 rounded-md transition-colors border-0 cursor-pointer ${signatureMode === 'type'
                                 ? 'bg-[#733F49] text-white'
                                 : 'bg-transparent text-[#733F49] hover:bg-[#FAF0EC]'
-                            }`}
+                              }`}
                           >
                             ⌨️ Gõ họ tên
                           </button>
@@ -1384,8 +1688,8 @@ export default function CheckoutPage() {
                     <div
                       onClick={() => setDepositOption('deposit30')}
                       className={`rounded-2xl p-5 border cursor-pointer transition-all relative ${depositOption === 'deposit30'
-                          ? 'border-[#733F49] bg-[#FAF3F0] ring-2 ring-[#733F49]/20 shadow-xs'
-                          : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
+                        ? 'border-[#733F49] bg-[#FAF3F0] ring-2 ring-[#733F49]/20 shadow-xs'
+                        : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
                         }`}
                     >
                       <div className="flex items-center justify-between mb-2">
@@ -1408,8 +1712,8 @@ export default function CheckoutPage() {
                     <div
                       onClick={() => setDepositOption('full100')}
                       className={`rounded-2xl p-5 border cursor-pointer transition-all relative ${depositOption === 'full100'
-                          ? 'border-[#733F49] bg-[#FAF3F0] ring-2 ring-[#733F49]/20 shadow-xs'
-                          : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
+                        ? 'border-[#733F49] bg-[#FAF3F0] ring-2 ring-[#733F49]/20 shadow-xs'
+                        : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
                         }`}
                     >
                       <div className="flex items-center justify-between mb-2">
@@ -1470,7 +1774,7 @@ export default function CheckoutPage() {
                       <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-[#EEDECF]">
                         <div>
                           <span className="text-[10px] text-[#847374] block uppercase font-bold">SỐ TÀI KHOẢN:</span>
-                          <strong className="font-jakarta font-extrabold text-[18px] text-[#733F49] tracking-wider tabular-nums">
+                          <strong className="font-mono text-[16px] text-[#733F49] tracking-wider">
                             1903 8899 2200 88
                           </strong>
                         </div>
@@ -1486,7 +1790,7 @@ export default function CheckoutPage() {
                       <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-[#EEDECF]">
                         <div>
                           <span className="text-[10px] text-[#847374] block uppercase font-bold">SỐ TIỀN CỌC HÔM NAY:</span>
-                          <strong className="font-jakarta font-extrabold text-[19px] text-[#2E7D32] tabular-nums tracking-tight">
+                          <strong className="font-mono text-[16px] text-[#2E7D32]">
                             {amountToPayToday.toLocaleString('vi-VN')}₫
                           </strong>
                         </div>
@@ -1502,7 +1806,7 @@ export default function CheckoutPage() {
                       <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-[#EEDECF]">
                         <div>
                           <span className="text-[10px] text-[#847374] block uppercase font-bold">NỘI DUNG CHUYỂN KHOẢN:</span>
-                          <strong className="font-jakarta font-bold text-[15px] text-[#733F49] tracking-wide">
+                          <strong className="font-mono text-[14px] text-[#733F49]">
                             UB COC 8992 {phone.replace(/\s/g, '')}
                           </strong>
                         </div>
@@ -1582,12 +1886,12 @@ export default function CheckoutPage() {
                       {activeDress?.name}
                     </div>
                     <div className="text-[12px] text-[#847374] mt-0.5">
-                      Mã: <span className="font-jakarta font-bold text-[#733F49] tracking-wide">{activeDress?.code || 'UB-HC-2026'}</span>
+                      Mã: <span className="font-mono text-[#733F49] font-bold">{activeDress?.code || 'UB-HC-2026'}</span>
                     </div>
                     <div className="text-[11.5px] text-[#6B5C5D] mt-1">
                       Size: <strong>{selectedSize}</strong> • Gói {rentalDays} ngày
                     </div>
-                    <div className="font-jakarta font-extrabold text-[19px] text-[#733F49] mt-1.5 tabular-nums tracking-tight">
+                    <div className="font-playfair font-bold text-[17px] text-[#733F49] mt-2">
                       {totalRentPrice.toLocaleString('vi-VN')}₫
                     </div>
                   </div>
@@ -1615,8 +1919,14 @@ export default function CheckoutPage() {
                 <div className="space-y-2.5 text-[13px]">
                   <div className="flex items-center justify-between text-[#6B5C5D]">
                     <span>Giá thuê lễ phục ({rentalDays} ngày):</span>
-                    <span className="font-bold text-[#2C2523]">{totalRentPrice.toLocaleString('vi-VN')}₫</span>
+                    <span className="font-bold text-[#2C2523]">{(baseRentPrice + extraDayFee).toLocaleString('vi-VN')}₫</span>
                   </div>
+                  {addonTotal > 0 && (
+                    <div className="flex items-center justify-between text-[11px] text-[#733F49] pl-2 border-l-2 border-[#B8737D]">
+                      <span>Phụ kiện & Dịch vụ đi kèm ({selectedAddons.length} món):</span>
+                      <span className="font-bold">+{addonTotal.toLocaleString('vi-VN')}₫</span>
+                    </div>
+                  )}
                   {rentalDays > 4 && (
                     <div className="flex items-center justify-between text-[11px] text-[#847374] pl-2 border-l-2 border-[#EEDECF]">
                       <span>Bao gồm {rentalDays - 4} ngày gia hạn (+800k/ngày):</span>
@@ -1639,7 +1949,7 @@ export default function CheckoutPage() {
                         {depositOption === 'deposit30' ? '(Tạm ứng cọc giữ lịch 50%)' : '(Thanh toán 100% trọn gói)'}
                       </span>
                     </div>
-                    <span className="font-jakarta font-extrabold text-[24px] sm:text-[26px] text-[#733F49] tabular-nums tracking-tight">
+                    <span className="font-playfair font-bold text-[22px] text-[#733F49]">
                       {amountToPayToday.toLocaleString('vi-VN')}₫
                     </span>
                   </div>
@@ -1690,7 +2000,7 @@ export default function CheckoutPage() {
             <div className="bg-[#FAF4EE] p-4.5 rounded-2xl border border-[#EEDECF] text-left text-[12.5px] space-y-2">
               <div className="flex items-center justify-between pb-2 border-b border-[#EEDECF]">
                 <span className="text-[#847374]">Mã Đơn / Hợp Đồng:</span>
-                <strong className="font-jakarta font-bold text-[#733F49] text-[15px] tabular-nums tracking-wide">{createdOrder?.contractCode || createdOrder?.orderCode || 'HĐ-UB-2026/8992'}</strong>
+                <strong className="font-mono text-[#733F49] text-[14px]">{createdOrder?.contractCode || createdOrder?.orderCode || 'HĐ-UB-2026/8992'}</strong>
               </div>
               <div className="flex items-center justify-between">
                 <span className="text-[#847374]">Trang phục:</span>
@@ -1717,8 +2027,57 @@ export default function CheckoutPage() {
               </div>
             </div>
 
+            {/* LỘ TRÌNH CHĂM SÓC LỄ PHỤC (POST-BOOKING JOURNEY TIMELINE) */}
+            <div className="bg-[#FCF9F6] p-4.5 rounded-2xl border border-[#EEDECF] text-left">
+              <span className="text-[11px] font-bold text-[#733F49] uppercase tracking-wider block mb-3">
+                ✦ LỘ TRÌNH CHĂM SÓC LỄ PHỤC CỦA NÀNG (4 GIAI ĐOẠN)
+              </span>
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-[11.5px]">
+                <div className="bg-white p-2.5 rounded-xl border border-[#E8F5E9] shadow-2xs">
+                  <span className="text-[10px] font-bold text-[#2E7D32] block mb-1">GIAI ĐOẠN 1: HÔM NAY</span>
+                  <strong className="text-[#2C2523] block mb-0.5">Khóa Lịch Độc Quyền</strong>
+                  <span className="text-[#847374] block leading-tight">Hợp đồng điện tử đã ký có hiệu lực pháp lý</span>
+                </div>
+                <div className="bg-white p-2.5 rounded-xl border border-[#F2D8D4] shadow-2xs">
+                  <span className="text-[10px] font-bold text-[#733F49] block mb-1">TRƯỚC CƯỚI 7 NGÀY</span>
+                  <strong className="text-[#2C2523] block mb-0.5">Thử Vừa Lần Cuối</strong>
+                  <span className="text-[#847374] block leading-tight">Chuyên viên ủi sấy sinh học & chỉnh eo</span>
+                </div>
+                <div className="bg-white p-2.5 rounded-xl border border-[#EEDECF] shadow-2xs">
+                  <span className="text-[10px] font-bold text-[#847374] block mb-1">{rentalSchedule.startDate}</span>
+                  <strong className="text-[#2C2523] block mb-0.5">Bàn Giao Vali VIP</strong>
+                  <span className="text-[#847374] block leading-tight">Nguyên seal chống ẩm & quà tặng găng tay</span>
+                </div>
+                <div className="bg-white p-2.5 rounded-xl border border-[#EEDECF] shadow-2xs">
+                  <span className="text-[10px] font-bold text-[#847374] block mb-1">{rentalSchedule.endDate}</span>
+                  <strong className="text-[#2C2523] block mb-0.5">Hoàn Trả & Giải Ngân</strong>
+                  <span className="text-[#847374] block leading-tight">Hoàn cọc 100% qua tài khoản trong 2h</span>
+                </div>
+              </div>
+            </div>
+
             {/* Modal Actions */}
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const shareText = `Anh yêu ơi, em đã đặt thuê thành công tác phẩm váy cưới ${activeDress?.name} tại UniBridal cho ngày cưới ${rentalSchedule.weddingDate}! Mã hợp đồng: ${createdOrder?.contractCode || 'HĐ-UB-2026/8992'}. Cùng xem với em nhé: ${window.location.href}`;
+                  if (navigator.share) {
+                    navigator.share({
+                      title: 'Hợp Đồng Thuê Váy Cưới UniBridal',
+                      text: shareText,
+                      url: window.location.href,
+                    }).catch(() => {});
+                  } else {
+                    navigator.clipboard.writeText(shareText);
+                    message.success('Đã sao chép tin nhắn gửi Chú Rể vào bộ nhớ tạm!');
+                  }
+                }}
+                className="w-full sm:w-auto px-4 py-3 rounded-xl bg-[#FAF0EC] border border-[#F2D8D4] hover:bg-[#F2DDD9] text-[#733F49] text-[13px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+              >
+                <Share2 className="w-4 h-4" />
+                <span>Gửi Chú Rể (Zalo/SMS)</span>
+              </button>
               <button
                 type="button"
                 onClick={() => window.print()}
