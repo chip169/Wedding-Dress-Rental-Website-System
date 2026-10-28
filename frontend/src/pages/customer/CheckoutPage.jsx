@@ -85,13 +85,32 @@ export default function CheckoutPage() {
   const daysParam = parseInt(searchParams.get('days'), 10);
   const [rentalDays, setRentalDays] = useState(!isNaN(daysParam) && daysParam >= 2 && daysParam <= 30 ? daysParam : 4);
 
-  // 1. Đếm ngược tạm giữ váy 15 phút (Hold Timer)
-  const [holdSeconds, setHoldSeconds] = useState(15 * 60);
+  // 1. Đếm ngược tạm giữ váy 5 phút (Hold Timer: 300s) - Tự động ngắt ngay khi thoát khỏi hệ thống
+  const [holdSeconds, setHoldSeconds] = useState(5 * 60);
   React.useEffect(() => {
     const timer = setInterval(() => {
-      setHoldSeconds((prev) => (prev > 0 ? prev - 1 : 0));
+      setHoldSeconds((prev) => {
+        if (prev <= 1) {
+          clearInterval(timer);
+          return 0;
+        }
+        return prev - 1;
+      });
     }, 1000);
-    return () => clearInterval(timer);
+
+    // Ngắt ngay lập tức khi người dùng thoát hoặc chuyển trang
+    const handleExit = () => {
+      clearInterval(timer);
+    };
+
+    window.addEventListener('beforeunload', handleExit);
+    window.addEventListener('pagehide', handleExit);
+
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener('beforeunload', handleExit);
+      window.removeEventListener('pagehide', handleExit);
+    };
   }, []);
 
   const formatHoldTimer = (seconds) => {
@@ -693,12 +712,30 @@ export default function CheckoutPage() {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2 bg-white px-4 py-2 rounded-xl border border-[#F2D8D4] shrink-0 shadow-2xs">
-            <Clock className="w-4 h-4 text-[#733F49]" />
+          <div className={`flex items-center gap-2 px-4 py-2 rounded-xl border shrink-0 shadow-2xs transition-all ${holdSeconds <= 60 && holdSeconds > 0
+            ? 'bg-[#FFF5F5] border-[#FEB2B2] animate-pulse'
+            : holdSeconds === 0
+              ? 'bg-[#FDF2F0] border-[#E57373]'
+              : 'bg-white border-[#F2D8D4]'
+            }`}>
+            <Clock className={`w-4 h-4 ${holdSeconds <= 60 ? 'text-[#DC2626]' : 'text-[#733F49]'}`} />
             <span className="text-[11px] font-bold text-[#847374] uppercase tracking-wider">Thời gian giữ:</span>
-            <span className="font-jakarta font-extrabold text-[17px] text-[#733F49] tabular-nums tracking-wide">
-              {formatHoldTimer(holdSeconds)}
+            <span className={`font-jakarta font-extrabold text-[17px] tabular-nums tracking-wide ${holdSeconds <= 60 ? 'text-[#DC2626]' : 'text-[#733F49]'
+              }`}>
+              {holdSeconds > 0 ? formatHoldTimer(holdSeconds) : '00:00'}
             </span>
+            {holdSeconds === 0 && (
+              <button
+                type="button"
+                onClick={() => {
+                  setHoldSeconds(5 * 60);
+                  message.info('Đã gia hạn thêm 5 phút tạm giữ váy cho nàng!');
+                }}
+                className="ml-1 px-2 py-0.5 text-[10px] font-bold text-[#733F49] bg-[#FAF0EC] hover:bg-[#F2D8D4] rounded-md border border-[#F2D8D4] cursor-pointer"
+              >
+                Gia hạn
+              </button>
+            )}
           </div>
         </div>
 
@@ -717,7 +754,7 @@ export default function CheckoutPage() {
                 }`}>
                 {currentStep > 1 ? '✓' : '1'}
               </span>
-              <span className={currentStep === 1 ? 'font-bold text-[#733F49]' : ''}>1. Thông tin & Số đo</span>
+              <span className={currentStep === 1 ? 'font-bold text-[#733F49]' : ''}>1. Thông tin khách hàng</span>
             </button>
 
             {/* Line 1 */}
@@ -783,7 +820,7 @@ export default function CheckoutPage() {
                         </p>
                       </div>
                     </div>
-                    
+
                   </div>
 
                   <div className="space-y-4">
@@ -894,7 +931,7 @@ export default function CheckoutPage() {
                         />
                       </div>
                       <span className="text-[10.5px] font-medium text-[#2E7D32] mt-1.5 flex items-center gap-1">
-                        <span>✦</span> Nhận váy và thử vừa vặn tại Showroom
+                        <span>✦</span> Ngày nhận váy
                       </span>
                     </div>
 
@@ -934,9 +971,7 @@ export default function CheckoutPage() {
                         <label className="block text-[10.5px] font-bold text-[#847374] uppercase tracking-wider">
                           NGÀY HOÀN TRẢ VÁY
                         </label>
-                        <span className="text-[9.5px] font-extrabold px-1.5 py-0.5 rounded-md bg-[#FAF0EC] text-[#733F49] border border-[#F2D8D4] uppercase tracking-wider">
-                          TỰ ĐỘNG TÍNH ({rentalDays} NGÀY)
-                        </span>
+
                       </div>
                       <div className="relative flex items-center">
                         <input
@@ -947,9 +982,7 @@ export default function CheckoutPage() {
                           className="w-full bg-[#EFECE8] border border-[#DDD4CC] rounded-xl px-3 py-2 text-[14px] font-bold text-[#6B5C5D] cursor-not-allowed select-none"
                         />
                       </div>
-                      <span className="text-[10.5px] font-medium text-[#733F49] mt-1.5 flex items-center gap-1">
-                        <span>✦</span> Tự động: Ngày nhận + {rentalDays} ngày thuê (không cần chọn)
-                      </span>
+
                     </div>
 
                   </div>
@@ -963,11 +996,9 @@ export default function CheckoutPage() {
                         </div>
                         <div>
                           <h4 className="font-playfair text-[15.5px] font-bold text-[#2C2523] m-0">
-                            Bảng Lịch Thuê & Ngày Hôn Lễ: Tháng {calendarViewDate.getMonth() + 1}/{calendarViewDate.getFullYear()}
+                            Bảng Lịch Thuê Váy:    Tháng {calendarViewDate.getMonth() + 1}/{calendarViewDate.getFullYear()}
                           </h4>
-                          <span className="text-[11.5px] text-[#847374]">
-                            Nhấp chọn ngày bắt đầu thuê, ngày trả sẽ tự động tính theo gói {rentalDays} ngày
-                          </span>
+
                         </div>
                       </div>
 
@@ -980,11 +1011,10 @@ export default function CheckoutPage() {
                               key={d}
                               type="button"
                               onClick={() => handleRentalDaysChange(d)}
-                              className={`px-2.5 py-1 rounded-lg border-0 cursor-pointer transition-all ${
-                                rentalDays === d
-                                  ? 'bg-[#733F49] text-white shadow-xs'
-                                  : 'bg-transparent text-[#6B5C5D] hover:text-[#733F49] hover:bg-[#FAF0EC]'
-                              }`}
+                              className={`px-2.5 py-1 rounded-lg border-0 cursor-pointer transition-all ${rentalDays === d
+                                ? 'bg-[#733F49] text-white shadow-xs'
+                                : 'bg-transparent text-[#6B5C5D] hover:text-[#733F49] hover:bg-[#FAF0EC]'
+                                }`}
                             >
                               {d} Ngày
                             </button>
@@ -1112,14 +1142,14 @@ export default function CheckoutPage() {
                             type="button"
                             onClick={() => handleCalendarCellClick(dateStr)}
                             className={`relative h-10 sm:h-12 rounded-xl flex flex-col items-center justify-center text-[12px] sm:text-[13px] font-semibold transition-all border-0 cursor-pointer ${isWedding
-                                ? 'bg-[#733F49] text-white shadow-md ring-2 ring-[#D4AF37] z-10 scale-105'
-                                : isStart
-                                  ? 'bg-[#2E7D32] text-white shadow-xs z-10'
-                                  : isEnd
-                                    ? 'bg-[#847374] text-white shadow-xs z-10'
-                                    : isInRange
-                                      ? 'bg-[#FAF0EC] text-[#733F49] font-bold border-y border-[#F2D8D4]'
-                                      : 'bg-white text-[#2C2523] hover:bg-[#FAF0EC] hover:text-[#733F49]'
+                              ? 'bg-[#733F49] text-white shadow-md ring-2 ring-[#D4AF37] z-10 scale-105'
+                              : isStart
+                                ? 'bg-[#2E7D32] text-white shadow-xs z-10'
+                                : isEnd
+                                  ? 'bg-[#847374] text-white shadow-xs z-10'
+                                  : isInRange
+                                    ? 'bg-[#FAF0EC] text-[#733F49] font-bold border-y border-[#F2D8D4]'
+                                    : 'bg-white text-[#2C2523] hover:bg-[#FAF0EC] hover:text-[#733F49]'
                               }`}
                           >
                             <span>{d}</span>
@@ -1247,22 +1277,20 @@ export default function CheckoutPage() {
                       <button
                         type="button"
                         onClick={() => setMeasurementMode('input')}
-                        className={`px-3 py-1.5 rounded-lg border-0 cursor-pointer transition-all ${
-                          measurementMode === 'input'
-                            ? 'bg-white text-[#733F49] shadow-xs'
-                            : 'bg-transparent text-[#847374] hover:text-[#733F49]'
-                        }`}
+                        className={`px-3 py-1.5 rounded-lg border-0 cursor-pointer transition-all ${measurementMode === 'input'
+                          ? 'bg-white text-[#733F49] shadow-xs'
+                          : 'bg-transparent text-[#847374] hover:text-[#733F49]'
+                          }`}
                       >
                         Tự điền số đo
                       </button>
                       <button
                         type="button"
                         onClick={() => setMeasurementMode('showroom')}
-                        className={`px-3 py-1.5 rounded-lg border-0 cursor-pointer transition-all flex items-center gap-1 ${
-                          measurementMode === 'showroom'
-                            ? 'bg-[#733F49] text-white shadow-xs'
-                            : 'bg-transparent text-[#847374] hover:text-[#733F49]'
-                        }`}
+                        className={`px-3 py-1.5 rounded-lg border-0 cursor-pointer transition-all flex items-center gap-1 ${measurementMode === 'showroom'
+                          ? 'bg-[#733F49] text-white shadow-xs'
+                          : 'bg-transparent text-[#847374] hover:text-[#733F49]'
+                          }`}
                       >
                         <span>✦ Hẹn đo tại Showroom</span>
                       </button>
@@ -1381,11 +1409,10 @@ export default function CheckoutPage() {
                     type="button"
                     onClick={handleProceedToContract}
                     disabled={Boolean(scheduleConflict)}
-                    className={`w-full py-4 rounded-xl font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-2 border-0 ${
-                      scheduleConflict
-                        ? 'bg-stone-300 text-stone-500 cursor-not-allowed shadow-none'
-                        : 'bg-[#733F49] hover:bg-[#5F323B] text-white shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer active:scale-[0.99]'
-                    }`}
+                    className={`w-full py-4 rounded-xl font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-2 border-0 ${scheduleConflict
+                      ? 'bg-stone-300 text-stone-500 cursor-not-allowed shadow-none'
+                      : 'bg-[#733F49] hover:bg-[#5F323B] text-white shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer active:scale-[0.99]'
+                      }`}
                   >
                     {scheduleConflict ? (
                       <>
@@ -1577,8 +1604,8 @@ export default function CheckoutPage() {
                             type="button"
                             onClick={() => setSignatureMode('draw')}
                             className={`px-2 py-0.5 rounded-md transition-colors border-0 cursor-pointer ${signatureMode === 'draw'
-                                ? 'bg-[#733F49] text-white'
-                                : 'bg-transparent text-[#733F49] hover:bg-[#FAF0EC]'
+                              ? 'bg-[#733F49] text-white'
+                              : 'bg-transparent text-[#733F49] hover:bg-[#FAF0EC]'
                               }`}
                           >
                             ✍️ Ký tay
@@ -1587,8 +1614,8 @@ export default function CheckoutPage() {
                             type="button"
                             onClick={() => setSignatureMode('type')}
                             className={`px-2 py-0.5 rounded-md transition-colors border-0 cursor-pointer ${signatureMode === 'type'
-                                ? 'bg-[#733F49] text-white'
-                                : 'bg-transparent text-[#733F49] hover:bg-[#FAF0EC]'
+                              ? 'bg-[#733F49] text-white'
+                              : 'bg-transparent text-[#733F49] hover:bg-[#FAF0EC]'
                               }`}
                           >
                             ⌨️ Gõ họ tên
@@ -2036,7 +2063,7 @@ export default function CheckoutPage() {
       {isContractModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in print:hidden">
           <div className="relative w-full max-w-[760px] max-h-[85vh] bg-white rounded-3xl shadow-2xl border border-[#EEDECF] overflow-hidden flex flex-col">
-            
+
             {/* Modal Header */}
             <div className="px-6 py-4 bg-[#FAF4EE] border-b border-[#EEDECF] flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -2251,7 +2278,7 @@ export default function CheckoutPage() {
                       title: 'Hợp Đồng Thuê Váy Cưới UniBridal',
                       text: shareText,
                       url: window.location.href,
-                    }).catch(() => {});
+                    }).catch(() => { });
                   } else {
                     navigator.clipboard.writeText(shareText);
                     message.success('Đã sao chép tin nhắn gửi Chú Rể vào bộ nhớ tạm!');
