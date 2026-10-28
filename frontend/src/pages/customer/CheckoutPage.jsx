@@ -75,6 +75,67 @@ function toDisplayDateString(val) {
 
 import { createOrder } from '../../services/orderService';
 
+// Chữ ký nghệ thuật & Dấu mộc đỏ đại diện Bên A (Ông Kim Xuân Hiếu - Tổng Giám Đốc)
+function DirectorSignatureAndStamp({ className = "h-32", isSmall = false }) {
+  return (
+    <div className={`relative w-full ${className} bg-[#FFFDFB] rounded-xl border border-[#EEDECF] overflow-hidden flex items-center justify-center shadow-inner p-2 select-none`}>
+      {/* Dấu mộc tròn đỏ công ty (đóng giáp lai chữ ký) */}
+      <div className={`absolute ${isSmall ? 'right-2 w-16 h-16' : 'right-4 sm:right-8 w-24 h-24'} top-1/2 -translate-y-1/2 rounded-full border-2 border-[#D32F2F]/80 flex flex-col items-center justify-center text-[#D32F2F] text-[8px] font-bold text-center p-0.5 rotate-[-12deg] pointer-events-none opacity-85 shadow-xs select-none`}>
+        <div className={`w-full h-full rounded-full border border-dashed border-[#D32F2F]/70 flex flex-col items-center justify-center p-0.5`}>
+          <span className={`${isSmall ? 'text-[5px]' : 'text-[6.5px]'} tracking-tight leading-none uppercase font-extrabold text-[#C62828]`}>
+            CÔNG TY TNHH UNIBRIDAL
+          </span>
+          <span className={`${isSmall ? 'text-[7px] my-0' : 'text-[10px] my-0.5'} text-[#C62828]`}>★</span>
+          <span className={`${isSmall ? 'text-[6px]' : 'text-[8px]'} font-black tracking-wider text-[#B71C1C] uppercase`}>
+            ĐÃ KÝ SỐ
+          </span>
+          <span className={`${isSmall ? 'text-[5px]' : 'text-[6.5px]'} tracking-tight leading-none text-[#C62828] uppercase`}>
+            HAUTE COUTURE
+          </span>
+        </div>
+      </div>
+
+      {/* Chữ ký nghệ thuật calligraphy Kim Xuân Hiếu (Vector SVG) */}
+      <svg
+        viewBox="0 0 320 110"
+        className={`w-full h-full ${isSmall ? 'max-h-16' : 'max-h-28'} relative z-10 filter drop-shadow-xs`}
+        fill="none"
+        xmlns="http://www.w3.org/2000/svg"
+      >
+        {/* Chữ K nét bút thanh đậm nghệ thuật */}
+        <path d="M 32 24 C 26 44 22 74 30 90 C 33 94 36 92 38 86 C 42 72 48 44 52 26 C 53 22 49 20 45 24" stroke="#1E3A8A" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M 68 30 C 58 48 45 62 36 67 C 48 67 62 76 75 92" stroke="#1E3A8A" strokeWidth="2.8" strokeLinecap="round" strokeLinejoin="round"/>
+        
+        {/* Chữ im */}
+        <path d="M 78 72 C 82 66 86 68 88 74 C 91 66 95 68 98 73 C 101 66 106 67 109 72" stroke="#1E3A8A" strokeWidth="2.2" strokeLinecap="round"/>
+        <circle cx="83" cy="58" r="1.5" fill="#1E3A8A"/>
+
+        {/* Chữ X nghệ thuật bay bổng */}
+        <path d="M 120 48 C 132 58 142 74 152 88" stroke="#1E3A8A" strokeWidth="2.6" strokeLinecap="round"/>
+        <path d="M 148 50 C 138 62 126 76 118 86" stroke="#1E3A8A" strokeWidth="2.6" strokeLinecap="round"/>
+        
+        {/* Chữ uân */}
+        <path d="M 155 74 C 160 67 165 72 168 76 C 172 68 178 72 182 76 C 186 68 192 72 196 76" stroke="#1E3A8A" strokeWidth="2.2" strokeLinecap="round"/>
+        <path d="M 174 62 L 178 59 L 182 62" stroke="#1E3A8A" strokeWidth="1.8" strokeLinecap="round"/>
+
+        {/* Chữ H lớn phong cách tổng giám đốc */}
+        <path d="M 210 20 C 204 42 200 70 205 90 C 206 94 210 93 212 88 C 215 78 220 50 223 24" stroke="#1E3A8A" strokeWidth="3" strokeLinecap="round" strokeLinejoin="round"/>
+        <path d="M 206 54 C 218 50 230 48 242 52" stroke="#1E3A8A" strokeWidth="2.4" strokeLinecap="round"/>
+        <path d="M 238 34 C 235 52 232 72 236 88" stroke="#1E3A8A" strokeWidth="2.8" strokeLinecap="round"/>
+
+        {/* Chữ iếu & dấu thanh */}
+        <path d="M 242 74 C 248 68 253 72 256 76 C 260 68 266 71 270 75 C 273 68 278 71 282 75" stroke="#1E3A8A" strokeWidth="2.2" strokeLinecap="round"/>
+        <circle cx="249" cy="62" r="1.5" fill="#1E3A8A"/>
+        <path d="M 264 58 L 268 55 L 272 58" stroke="#1E3A8A" strokeWidth="1.8" strokeLinecap="round"/>
+        <path d="M 271 52 L 277 47" stroke="#1E3A8A" strokeWidth="2.2" strokeLinecap="round"/>
+
+        {/* Nét gạch đuôi chữ ký hoa mỹ kéo dài (flourish underline) */}
+        <path d="M 28 95 C 75 92 145 90 225 87 C 265 85 292 82 298 76 C 304 70 295 90 250 99 C 190 108 115 106 45 101" stroke="#1E3A8A" strokeWidth="2.4" strokeLinecap="round" strokeLinejoin="round" fill="#1E3A8A" fillOpacity="0.12"/>
+      </svg>
+    </div>
+  );
+}
+
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
@@ -522,18 +583,8 @@ export default function CheckoutPage() {
           .signatures-table { width: 100%; border-collapse: collapse; margin-top: 25px; page-break-inside: avoid; }
           .signatures-table td { width: 50%; text-align: center; vertical-align: top; padding: 10px; border: none; }
           .sig-title { font-weight: bold; font-size: 12pt; text-transform: uppercase; margin-bottom: 3px; }
-          .sig-sub { font-style: italic; font-size: 10.5pt; color: #555; margin-bottom: 45px; }
-          .seal-stamp {
-            display: inline-block;
-            border: 2px dashed #b80000;
-            color: #b80000;
-            font-weight: bold;
-            padding: 6px 14px;
-            border-radius: 6px;
-            font-size: 11pt;
-            transform: rotate(-2deg);
-          }
-          .sign-name { font-weight: bold; font-size: 12.5pt; margin-top: 10px; }
+          .sig-sub { font-style: italic; font-size: 10.5pt; color: #555; margin-bottom: 12px; }
+          .sign-name { font-weight: bold; font-size: 12.5pt; margin-top: 6px; }
           @media print {
             body { padding: 0; }
           }
@@ -627,10 +678,32 @@ export default function CheckoutPage() {
             <td>
               <div class="sig-title">ĐẠI DIỆN BÊN CHO THUÊ (BÊN A)</div>
               <div class="sig-sub">CÔNG TY TNHH UNIBRIDAL HAUTE COUTURE</div>
-              <div class="seal-stamp">
-                ✓ CHỨNG THƯ ĐIỆN TỬ ĐÃ KÝ SỐ<br />
-                UNIBRIDAL ATELIER VIETNAM<br />
-                MÃ XÁC THỰC: E-SIGN-UB-2026
+              <div style="position: relative; height: 65px; width: 220px; margin: 4px auto; display: flex; align-items: center; justify-content: center;">
+                <div style="position: absolute; right: 10px; top: 50%; transform: translateY(-50%) rotate(-12deg); width: 62px; height: 62px; border-radius: 50%; border: 2px solid #C62828; display: flex; flex-direction: column; align-items: center; justify-content: center; font-size: 5pt; font-weight: bold; color: #C62828; opacity: 0.85;">
+                  <div style="width: 54px; height: 54px; border-radius: 50%; border: 1px dashed #C62828; display: flex; flex-direction: column; align-items: center; justify-content: center;">
+                    <span style="font-size: 4.5pt; letter-spacing: -0.5px;">UNIBRIDAL</span>
+                    <span style="font-size: 6pt; color: #C62828; margin: 1px 0;">★</span>
+                    <span style="font-size: 5.5pt; font-weight: 900; color: #B71C1C;">ĐÃ KÝ SỐ</span>
+                  </div>
+                </div>
+                <svg viewBox="0 0 320 110" style="width: 100%; height: 100%; max-height: 55px; position: relative; z-index: 2;" fill="none" xmlns="http://www.w3.org/2000/svg">
+                  <path d="M 32 24 C 26 44 22 74 30 90 C 33 94 36 92 38 86 C 42 72 48 44 52 26 C 53 22 49 20 45 24" stroke="#1E3A8A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M 68 30 C 58 48 45 62 36 67 C 48 67 62 76 75 92" stroke="#1E3A8A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M 78 72 C 82 66 86 68 88 74 C 91 66 95 68 98 73 C 101 66 106 67 109 72" stroke="#1E3A8A" stroke-width="2.4" stroke-linecap="round"/>
+                  <circle cx="83" cy="58" r="1.5" fill="#1E3A8A"/>
+                  <path d="M 120 48 C 132 58 142 74 152 88" stroke="#1E3A8A" stroke-width="2.8" stroke-linecap="round"/>
+                  <path d="M 148 50 C 138 62 126 76 118 86" stroke="#1E3A8A" stroke-width="2.8" stroke-linecap="round"/>
+                  <path d="M 155 74 C 160 67 165 72 168 76 C 172 68 178 72 182 76 C 186 68 192 72 196 76" stroke="#1E3A8A" stroke-width="2.4" stroke-linecap="round"/>
+                  <path d="M 174 62 L 178 59 L 182 62" stroke="#1E3A8A" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M 210 20 C 204 42 200 70 205 90 C 206 94 210 93 212 88 C 215 78 220 50 223 24" stroke="#1E3A8A" stroke-width="3.2" stroke-linecap="round" stroke-linejoin="round"/>
+                  <path d="M 206 54 C 218 50 230 48 242 52" stroke="#1E3A8A" stroke-width="2.6" stroke-linecap="round"/>
+                  <path d="M 238 34 C 235 52 232 72 236 88" stroke="#1E3A8A" stroke-width="3" stroke-linecap="round"/>
+                  <path d="M 242 74 C 248 68 253 72 256 76 C 260 68 266 71 270 75 C 273 68 278 71 282 75" stroke="#1E3A8A" stroke-width="2.4" stroke-linecap="round"/>
+                  <circle cx="249" cy="62" r="1.5" fill="#1E3A8A"/>
+                  <path d="M 264 58 L 268 55 L 272 58" stroke="#1E3A8A" stroke-width="2" stroke-linecap="round"/>
+                  <path d="M 271 52 L 277 47" stroke="#1E3A8A" stroke-width="2.4" stroke-linecap="round"/>
+                  <path d="M 28 95 C 75 92 145 90 225 87 C 265 85 292 82 298 76 C 304 70 295 90 250 99 C 190 108 115 106 45 101" stroke="#1E3A8A" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" fill="#1E3A8A" fill-opacity="0.12"/>
+                </svg>
               </div>
               <div class="sign-name">Ông Kim Xuân Hiếu</div>
               <div style="font-size: 10.5pt; color: #555;">Tổng Giám Đốc</div>
@@ -1723,23 +1796,28 @@ export default function CheckoutPage() {
                   <div className="pt-4 border-t border-[#F0E5DC] grid grid-cols-1 sm:grid-cols-2 gap-6">
 
                     {/* Bên A Signature */}
-                    <div className="p-4 rounded-2xl bg-[#FCF9F6] border border-[#EEDECF] text-center space-y-2">
-                      <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#847374] block">
-                        ĐẠI DIỆN BÊN CHO THUÊ (BÊN A)
-                      </span>
-                      <div className="h-16 flex items-center justify-center">
-                        <div className="border-2 border-[#D4AF37] px-4 py-1.5 rounded-xl bg-[#FFFDF9] text-[#733F49] shadow-xs">
-                          <div className="font-playfair font-bold text-[13px] tracking-wide text-[#733F49]">
-                            UNIBRIDAL ATELIER
-                          </div>
-                          <span className="text-[9px] uppercase tracking-wider text-[#2E7D32] font-mono block">
-                            ✓ E-SIGNED & TIMESTAMPED
-                          </span>
-                        </div>
+                    <div className="p-4 rounded-2xl bg-[#FCF9F6] border border-[#EEDECF] space-y-3">
+                      <div className="flex items-center justify-between pb-2 border-b border-[#EEDECF]">
+                        <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#847374] block">
+                          ĐẠI DIỆN BÊN CHO THUÊ (BÊN A)
+                        </span>
+                        <span className="px-2 py-0.5 rounded-md bg-[#2E7D32]/10 text-[#2E7D32] text-[10px] font-semibold flex items-center gap-1">
+                          <CheckCircle2 className="w-3 h-3 text-[#2E7D32]" />
+                          Chứng thư CA hợp lệ
+                        </span>
                       </div>
-                      <span className="font-bold text-[12.5px] text-[#2C2523] block">
-                        Ông Kim Xuân Hiếu (Tổng Giám Đốc)
-                      </span>
+
+                      {/* Khung hiển thị chữ ký nghệ thuật và dấu mộc đỏ */}
+                      <DirectorSignatureAndStamp className="h-32" />
+
+                      <div className="flex items-center justify-between text-[11px] pt-1">
+                        <span className="font-bold text-[#2C2523] flex items-center gap-1">
+                          Ông Kim Xuân Hiếu (Tổng Giám Đốc)
+                        </span>
+                        <span className="text-[#847374] text-[10px] font-mono">
+                          UB-SIGN-2026-X9
+                        </span>
+                      </div>
                     </div>
 
                     {/* Bên B Signature Pad (Ký Điện Tử Tự Tay) */}
@@ -2398,9 +2476,7 @@ export default function CheckoutPage() {
                     ĐẠI DIỆN BÊN CHO THUÊ (BÊN A)
                   </div>
                   <div className="text-[10px] text-[#6B5C5D] italic">CÔNG TY TNHH UNIBRIDAL HAUTE COUTURE</div>
-                  <div className="my-2 border-2 border-dashed border-[#b80000] p-2 rounded-xl text-[#b80000] font-bold text-[11px] inline-block bg-[#FFF8F8]">
-                    ✓ ĐÃ KÝ SỐ VÀ ĐÓNG DẤU MỘC ĐIỆN TỬ
-                  </div>
+                  <DirectorSignatureAndStamp className="h-24 my-2" isSmall={true} />
                   <div className="font-bold text-[#2C2523] text-[13px]">Ông Kim Xuân Hiếu</div>
                   <div className="text-[11px] text-[#847374]">Tổng Giám Đốc UniBridal</div>
                 </div>
