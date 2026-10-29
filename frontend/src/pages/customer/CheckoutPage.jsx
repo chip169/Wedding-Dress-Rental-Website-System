@@ -239,38 +239,104 @@ export default function CheckoutPage() {
   const [cccd, setCccd] = useState('079201019888');
   const [address, setAddress] = useState('120/4 Lê Lai, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh');
 
+  // Helper: Cộng/trừ số ngày vào ngày cho trước (dùng local Date tránh lệch timezone)
+  const addDaysToDate = (displayOrIso, days) => {
+    const iso = toIsoDateString(displayOrIso);
+    if (!iso) return '';
+    const parts = iso.split('-').map(Number);
+    if (parts.length !== 3) return '';
+    const d = new Date(parts[0], parts[1] - 1, parts[2] + days);
+    const pad = (n) => String(n).padStart(2, '0');
+    return `${pad(d.getDate())}/${pad(d.getMonth() + 1)}/${d.getFullYear()}`;
+  };
+
   // Helper tính ngày kết thúc thuê dựa vào ngày bắt đầu và số ngày bằng local date
   const computeEndDate = (startDisplayOrIso, days) => {
-    const iso = toIsoDateString(startDisplayOrIso);
-    if (!iso) return '21/11/2026';
-    const parts = iso.split('-').map(Number);
-    if (parts.length !== 3) return '21/11/2026';
-    const endD = new Date(parts[0], parts[1] - 1, parts[2] + (days - 1));
-    const pad = (n) => String(n).padStart(2, '0');
-    return `${pad(endD.getDate())}/${pad(endD.getMonth() + 1)}/${endD.getFullYear()}`;
+    return addDaysToDate(startDisplayOrIso, days - 1);
+  };
+
+  // Helper tính lịch cân đối chuẩn theo Ngày cưới (weddingDate) và số ngày thuê (days):
+  // QUY TẮC BẤT DI BẤT DỊCH:
+  // 1. Ngày trả (endDate) LUÔN LUÔN >= Ngày cưới (weddingDate) (sau hoặc cùng ngày cưới)
+  // 2. Ngày nhận (startDate) LUÔN LUÔN <= Ngày cưới (weddingDate) (trước hoặc cùng ngày cưới)
+  // 3. Tổng thời gian thuê chính xác = days
+  const computeScheduleFromWedding = (weddingDisplayOrIso, days) => {
+    const wedIso = toIsoDateString(weddingDisplayOrIso);
+    if (!wedIso) return { startDate: '18/11/2026', weddingDate: '20/11/2026', endDate: '21/11/2026' };
+
+    let beforeDays = 1;
+    let afterDays = 1;
+
+    if (days === 2) {
+      // Gói 2 ngày: Nhận trước 1 ngày để ủi phom thử vừa, cưới và hoàn trả vào tối ngày cưới (cùng ngày cưới)
+      beforeDays = 1;
+      afterDays = 0;
+    } else if (days === 3) {
+      // Gói 3 ngày: Nhận trước 1 ngày, cưới, trả sau ngày cưới 1 ngày
+      beforeDays = 1;
+      afterDays = 1;
+    } else if (days === 4) {
+      // Gói 4 ngày chuẩn: Nhận trước 2 ngày, cưới, trả sau ngày cưới 1 ngày
+      beforeDays = 2;
+      afterDays = 1;
+    } else {
+      // Gói >= 5 ngày: Phân bổ hợp lý, ưu tiên ngày trả sau ngày cưới
+      beforeDays = Math.floor((days - 1) / 2);
+      afterDays = (days - 1) - beforeDays;
+    }
+
+    const startDisplay = addDaysToDate(wedIso, -beforeDays);
+    const weddingDisplay = toDisplayDateString(wedIso);
+    const endDisplay = addDaysToDate(wedIso, afterDays);
+
+    return {
+      startDate: startDisplay,
+      weddingDate: weddingDisplay,
+      endDate: endDisplay,
+    };
   };
 
   // Schedule state (Định dạng hiển thị DD/MM/YYYY)
   const [rentalSchedule, setRentalSchedule] = useState(() => {
-    const start = startDateParam ? toDisplayDateString(startDateParam) : '18/11/2026';
+    const initialWedding = '20/11/2026';
     const initialDays = !isNaN(daysParam) && daysParam >= 2 && daysParam <= 30 ? daysParam : 4;
-    const end = endDateParam ? toDisplayDateString(endDateParam) : computeEndDate(start, initialDays);
-    return {
-      startDate: start,
-      weddingDate: '20/11/2026',
-      endDate: end,
-    };
+    
+    if (startDateParam && endDateParam) {
+      return {
+        startDate: toDisplayDateString(startDateParam),
+        weddingDate: initialWedding,
+        endDate: toDisplayDateString(endDateParam),
+      };
+    }
+    return computeScheduleFromWedding(initialWedding, initialDays);
   });
 
-  // Cập nhật số ngày thuê và tự động dời ngày hoàn trả trên cả bảng lịch và form
+  // Cập nhật số ngày thuê và tự động điều chỉnh lịch:
+  // Đảm bảo: Ngày trả LUÔN LUÔN sau hoặc cùng ngày cưới (endDate >= weddingDate)
   const handleRentalDaysChange = (newDays) => {
     const clamped = Math.max(2, Math.min(30, newDays));
     setRentalDays(clamped);
-    const newEnd = computeEndDate(rentalSchedule.startDate, clamped);
-    setRentalSchedule((prev) => ({
-      ...prev,
-      endDate: newEnd,
-    }));
+
+    setRentalSchedule((prev) => {
+      const wedIso = toIsoDateString(prev.weddingDate);
+      const startIso = toIsoDateString(prev.startDate);
+      const testEndDisplay = computeEndDate(prev.startDate, clamped);
+      const testEndIso = toIsoDateString(testEndDisplay);
+
+      // Nếu ngày trả mới >= ngày cưới và ngày nhận <= ngày cưới:
+      // Giữ nguyên ngày nhận, chỉ cập nhật ngày trả
+      if (wedIso && startIso && testEndIso >= wedIso && startIso <= wedIso) {
+        return {
+          ...prev,
+          endDate: testEndDisplay,
+        };
+      }
+
+      // NẾU GIẢM NGÀY THUÊ DẪN ĐẾN NGÀY TRẢ RƠI VÀO TRƯỚC NGÀY CƯỚI (testEndIso < wedIso):
+      // Tự động phân bổ lại ngày nhận và ngày trả xoay quanh ngày cưới
+      // để ngày trả LUÔN SAU HOẶC CÙNG NGÀY CƯỚI!
+      return computeScheduleFromWedding(prev.weddingDate, clamped);
+    });
   };
 
   // State cho tháng đang xem trên lịch tương tác
@@ -374,7 +440,6 @@ export default function CheckoutPage() {
   };
 
   // Xử lý khi chọn ngày bắt đầu thuê (Ngày nhận váy)
-  // Ngày hoàn trả (endDate) TỰ ĐỘNG TÍNH TOÁN theo số ngày thuê (rentalDays), KHÔNG cho chọn ngày trả
   const handleSelectStartDate = (selectedIsoOrDisplay) => {
     const iso = toIsoDateString(selectedIsoOrDisplay);
     if (!iso) return;
@@ -383,11 +448,22 @@ export default function CheckoutPage() {
 
     const startDisplay = toDisplayDateString(iso);
     const endDisplay = computeEndDate(iso, rentalDays);
-    const weddingDisplay = computeWeddingDate(iso, rentalDays);
+    const endIso = toIsoDateString(endDisplay);
+    const currentWedIso = toIsoDateString(rentalSchedule.weddingDate);
+
+    let newWeddingDisplay = rentalSchedule.weddingDate;
+
+    // Nếu ngày nhận mới làm ngày cưới nằm ngoài khoảng thuê [startDate, endDate]:
+    // (ví dụ: ngày trả < ngày cưới, hoặc ngày nhận > ngày cưới)
+    if (!currentWedIso || currentWedIso < iso || currentWedIso > endIso) {
+      // Đặt ngày cưới nằm trong khoảng thuê sao cho ngày trả >= ngày cưới
+      const offset = rentalDays === 2 ? 1 : Math.min(2, Math.floor(rentalDays / 2));
+      newWeddingDisplay = addDaysToDate(iso, offset);
+    }
 
     setRentalSchedule({
       startDate: startDisplay,
-      weddingDate: weddingDisplay,
+      weddingDate: newWeddingDisplay,
       endDate: endDisplay,
     });
     setCalendarViewDate(new Date(parts[0], parts[1] - 1, 1));
@@ -1298,10 +1374,11 @@ export default function CheckoutPage() {
                           value={toIsoDateString(rentalSchedule.weddingDate)}
                           onChange={(e) => {
                             if (e.target.value) {
-                              setRentalSchedule((prev) => ({
-                                ...prev,
-                                weddingDate: toDisplayDateString(e.target.value),
-                              }));
+                              const newWedIso = e.target.value;
+                              const newSchedule = computeScheduleFromWedding(newWedIso, rentalDays);
+                              setRentalSchedule(newSchedule);
+                              const parts = newWedIso.split('-').map(Number);
+                              setCalendarViewDate(new Date(parts[0], parts[1] - 1, 1));
                             }
                           }}
                           className="w-full bg-white border border-[#F2D8D4] rounded-xl px-3 py-2 text-[14.5px] font-bold text-[#733F49] focus:outline-none focus:border-[#733F49] cursor-pointer shadow-2xs"
@@ -1318,7 +1395,15 @@ export default function CheckoutPage() {
                         <label className="block text-[10.5px] font-bold text-[#847374] uppercase tracking-wider">
                           NGÀY HOÀN TRẢ VÁY
                         </label>
-
+                        <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
+                          toIsoDateString(rentalSchedule.endDate) === toIsoDateString(rentalSchedule.weddingDate)
+                            ? 'bg-[#FFF3E0] text-[#E65100]'
+                            : 'bg-[#E8F5E9] text-[#2E7D32]'
+                        }`}>
+                          {toIsoDateString(rentalSchedule.endDate) === toIsoDateString(rentalSchedule.weddingDate)
+                            ? 'CÙNG NGÀY CƯỚI'
+                            : 'SAU NGÀY CƯỚI'}
+                        </span>
                       </div>
                       <div className="relative flex items-center">
                         <input
@@ -1329,7 +1414,9 @@ export default function CheckoutPage() {
                           className="w-full bg-[#EFECE8] border border-[#DDD4CC] rounded-xl px-3 py-2 text-[14px] font-bold text-[#6B5C5D] cursor-not-allowed select-none"
                         />
                       </div>
-
+                      <span className="text-[10.5px] font-medium text-[#847374] mt-1.5 flex items-center gap-1">
+                        <span>✓</span> Trả trước 20:00 (Gói {rentalDays} ngày)
+                      </span>
                     </div>
 
                   </div>
@@ -1485,14 +1572,20 @@ export default function CheckoutPage() {
                               }`}
                           >
                             <span>{d}</span>
-                            {isWedding && (
-                              <span className="text-[9px] font-bold leading-none text-amber-200">★ CƯỚI</span>
-                            )}
-                            {isStart && (
-                              <span className="text-[8.5px] font-bold leading-none text-emerald-100">NHẬN</span>
-                            )}
-                            {isEnd && (
-                              <span className="text-[8.5px] font-bold leading-none text-stone-200">TRẢ</span>
+                            {isWedding && isEnd ? (
+                              <span className="text-[7.5px] font-bold leading-none text-amber-200">★ CƯỚI/TRẢ</span>
+                            ) : (
+                              <>
+                                {isWedding && (
+                                  <span className="text-[9px] font-bold leading-none text-amber-200">★ CƯỚI</span>
+                                )}
+                                {isStart && (
+                                  <span className="text-[8.5px] font-bold leading-none text-emerald-100">NHẬN</span>
+                                )}
+                                {isEnd && (
+                                  <span className="text-[8.5px] font-bold leading-none text-stone-200">TRẢ</span>
+                                )}
+                              </>
                             )}
                           </button>
                         );
