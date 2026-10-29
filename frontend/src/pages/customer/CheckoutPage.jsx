@@ -225,7 +225,8 @@ export default function CheckoutPage() {
       ctx.clearRect(0, 0, canvas.width, canvas.height);
       setHasDrawnSignature(false);
       setDrawnSignatureData('');
-      setContractSignature(brideName);
+      setContractSignature('');
+      setIsContractSigned(false);
     }
   };
 
@@ -516,7 +517,7 @@ export default function CheckoutPage() {
   const [deliveryMethod, setDeliveryMethod] = useState('direct');
 
   // Step 2: Contract signing state
-  const [contractSignature, setContractSignature] = useState('Lê Nguyễn Thảo My');
+  const [contractSignature, setContractSignature] = useState('');
   const [hasAgreedContractTerms, setHasAgreedContractTerms] = useState(true);
   const [isContractSigned, setIsContractSigned] = useState(false);
 
@@ -564,9 +565,16 @@ export default function CheckoutPage() {
       message.warning('Nàng vui lòng tích chọn đồng ý với các điều khoản của Hợp đồng thuê.');
       return;
     }
-    if (!contractSignature.trim()) {
-      message.warning('Vui lòng nhập họ tên xác nhận chữ ký điện tử.');
-      return;
+    if (signatureMode === 'draw') {
+      if (!hasDrawnSignature || !drawnSignatureData) {
+        message.warning('Nàng vui lòng vẽ chữ ký vào ô ký tên điện tử trước khi chuyển sang thanh toán.');
+        return;
+      }
+    } else {
+      if (!contractSignature || !contractSignature.trim()) {
+        message.warning('Vui lòng nhập họ tên xác nhận chữ ký điện tử.');
+        return;
+      }
     }
     setIsContractSigned(true);
     message.success('Ký hợp đồng thuê điện tử thành công!');
@@ -988,6 +996,18 @@ export default function CheckoutPage() {
   const handleConfirmFinalPayment = async (e) => {
     e?.preventDefault();
     if (isSubmitting || isVerifyingPayment) return;
+
+    // VALIDATION BẮT BUỘC: Chưa ký hợp đồng điện tử thì KHÔNG ĐƯỢC thanh toán cọc
+    if (!isContractSigned) {
+      message.error({
+        content: 'Nàng chưa ký hợp đồng thuê điện tử! Vui lòng hoàn tất chữ ký ở Bước 2 trước khi thanh toán cọc.',
+        duration: 3.5,
+      });
+      setCurrentStep(2);
+      window.scrollTo({ top: 0, behavior: 'smooth' });
+      return;
+    }
+
     setIsVerifyingPayment(true);
 
     message.loading({
@@ -1183,14 +1203,23 @@ export default function CheckoutPage() {
               }`} />
 
             {/* Step 3 */}
-            <div className={`flex items-center gap-2 font-medium ${currentStep === 3 ? 'text-[#733F49] font-bold' : 'text-[#847374]'
-              }`}>
-              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${currentStep === 3 ? 'bg-[#733F49] text-white shadow-xs' : 'bg-[#EAE0D5] text-[#847374]'
-                }`}>
+            <button
+              type="button"
+              onClick={() => {
+                if (!isContractSigned) {
+                  message.warning('Nàng chưa ký hợp đồng điện tử! Vui lòng hoàn tất chữ ký ở Bước 2 trước khi chuyển sang thanh toán.');
+                  setCurrentStep(2);
+                  return;
+                }
+                setCurrentStep(3);
+              }}
+              className={`flex items-center gap-2 border-0 bg-transparent cursor-pointer font-medium transition-colors ${currentStep === 3 ? 'text-[#733F49] font-bold' : 'text-[#847374]'}`}
+            >
+              <span className={`w-6 h-6 rounded-full flex items-center justify-center text-[11px] font-bold ${currentStep === 3 ? 'bg-[#733F49] text-white shadow-xs' : 'bg-[#EAE0D5] text-[#847374]'}`}>
                 3
               </span>
               <span>3. Đặt cọc & Thanh toán</span>
-            </div>
+            </button>
 
           </div>
         </div>
@@ -2129,29 +2158,58 @@ export default function CheckoutPage() {
             {currentStep === 3 && (
               <div className="space-y-8 animate-fade-in">
 
-                {/* Contract Signed Success Banner */}
-                <div className="bg-[#E8F5E9] border border-[#C8E6C9] p-4.5 rounded-2xl flex items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-8 h-8 rounded-full bg-[#2E7D32] text-white flex items-center justify-center shrink-0">
-                      <Check className="w-5 h-5 stroke-[2.5]" />
-                    </div>
-                    <div>
-                      <div className="font-bold text-[13.5px] text-[#2E7D32]">
-                        Hợp Đồng Thuê #HĐ-UB-2026/8992 Đã Ký Điện Tử Thành Công!
+                {/* Contract Signed Status Banner */}
+                {!isContractSigned ? (
+                  <div className="bg-[#FFF8E7] border-2 border-[#E0A96D] p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-fade-in">
+                    <div className="flex items-center gap-3.5">
+                      <div className="w-10 h-10 rounded-full bg-[#E65100] text-white flex items-center justify-center shrink-0 shadow-xs">
+                        <AlertCircle className="w-6 h-6" />
                       </div>
-                      <div className="text-[11.5px] text-[#6B5C5D]">
-                        Bản hợp đồng pháp lý đã gắn mã số bảo mật và sẵn sàng tải về sau khi cọc giữ lịch.
+                      <div>
+                        <div className="font-bold text-[14px] text-[#E65100]">
+                          CHƯA KÝ HỢP ĐỒNG ĐIỆN TỬ — CHƯA THỂ THANH TOÁN CỌC!
+                        </div>
+                        <div className="text-[12px] text-[#5D4037] mt-0.5">
+                          Theo quy định pháp lý, nàng bắt buộc phải ký hợp đồng điện tử ở Bước 2 trước khi tiến hành chuyển khoản đặt cọc.
+                        </div>
                       </div>
                     </div>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setCurrentStep(2);
+                        window.scrollTo({ top: 0, behavior: 'smooth' });
+                      }}
+                      className="shrink-0 px-5 py-2.5 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white font-bold text-[12.5px] cursor-pointer border-0 shadow-sm flex items-center gap-1.5 transition-all"
+                    >
+                      <PenTool className="w-3.5 h-3.5" />
+                      <span>Quay lại Bước 2 để ký ngay</span>
+                    </button>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setCurrentStep(2)}
-                    className="text-[12px] font-bold text-[#733F49] hover:underline bg-transparent border-0 cursor-pointer shrink-0"
-                  >
-                    Xem lại hợp đồng
-                  </button>
-                </div>
+                ) : (
+                  <div className="bg-[#E8F5E9] border border-[#C8E6C9] p-4.5 rounded-2xl flex items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-8 h-8 rounded-full bg-[#2E7D32] text-white flex items-center justify-center shrink-0">
+                        <Check className="w-5 h-5 stroke-[2.5]" />
+                      </div>
+                      <div>
+                        <div className="font-bold text-[13.5px] text-[#2E7D32]">
+                          Hợp Đồng Thuê #HĐ-UB-2026/8992 Đã Ký Điện Tử Thành Công!
+                        </div>
+                        <div className="text-[11.5px] text-[#6B5C5D]">
+                          Bản hợp đồng pháp lý đã gắn mã số bảo mật và sẵn sàng tải về sau khi cọc giữ lịch.
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCurrentStep(2)}
+                      className="text-[12px] font-bold text-[#733F49] hover:underline bg-transparent border-0 cursor-pointer shrink-0"
+                    >
+                      Xem lại hợp đồng
+                    </button>
+                  </div>
+                )}
 
                 {/* 1. CHỌN HÌNH THỨC ĐẶT CỌC */}
                 <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
@@ -2366,12 +2424,21 @@ export default function CheckoutPage() {
                     type="button"
                     disabled={isSubmitting || isVerifyingPayment}
                     onClick={handleConfirmFinalPayment}
-                    className="w-full sm:w-auto px-8 py-4 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer border-0 flex items-center justify-center gap-2"
+                    className={`w-full sm:w-auto px-8 py-4 rounded-xl text-white font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer border-0 flex items-center justify-center gap-2 ${
+                      !isContractSigned
+                        ? 'bg-[#B08968] hover:bg-[#8D6E63] ring-2 ring-amber-400'
+                        : 'bg-[#733F49] hover:bg-[#5F323B]'
+                    }`}
                   >
                     {isVerifyingPayment ? (
                       <>
                         <RefreshCw className="w-4 h-4 animate-spin" />
                         <span>Đang kiểm tra giao dịch Techcombank...</span>
+                      </>
+                    ) : !isContractSigned ? (
+                      <>
+                        <AlertCircle className="w-4 h-4 text-amber-200" />
+                        <span>CHƯA KÝ HỢP ĐỒNG (BẤM ĐỂ QUAY LẠI BƯỚC 2 KÝ)</span>
                       </>
                     ) : (
                       <>
