@@ -138,8 +138,10 @@ export default function CheckoutPage() {
 
 
 
-  // 4. Trạng thái kiểm tra thanh toán VietQR giả lập
+  // 4. Trạng thái kiểm tra thanh toán VietQR giả lập & Phương thức thanh toán
+  const [paymentMethod, setPaymentMethod] = useState('vietqr_test'); // 'vietqr_test' (Thử nghiệm Sandbox) | 'vietqr' (Quét mã thật)
   const [isVerifyingPayment, setIsVerifyingPayment] = useState(false);
+  const [qrImgError, setQrImgError] = useState(false);
 
   // Dynamic Selected Dress
   const activeDress = useMemo(() => {
@@ -906,12 +908,35 @@ export default function CheckoutPage() {
     message.success('Đã tải xuống file Word (.doc) Hợp Đồng Thuê Váy Cưới!');
   };
 
+  // Mô phỏng thanh toán thử bằng VietQR (Sandbox Demo)
+  const handleSimulateVietQrPayment = async () => {
+    if (isVerifyingPayment || isSubmitting) return;
+    setIsVerifyingPayment(true);
+
+    message.loading({
+      content: 'Đang kết nối cổng VietQR Sandbox Napas 247 & kiểm tra biến động số dư...',
+      key: 'vqr_test',
+      duration: 1.5,
+    });
+
+    setTimeout(async () => {
+      message.success({
+        content: `✓ Techcombank: Nhận thành công ${amountToPayToday.toLocaleString('vi-VN')}₫ cọc từ VietQR Sandbox!`,
+        key: 'vqr_test',
+        duration: 3,
+      });
+      setIsVerifyingPayment(false);
+      await handleConfirmFinalPayment(null, 'vietqr_test');
+    }, 1500);
+  };
+
   // Confirm final booking & payment
-  const handleConfirmFinalPayment = async (e) => {
+  const handleConfirmFinalPayment = async (e, customPaymentMethod = null) => {
     e?.preventDefault();
-    if (isSubmitting) return;
+    if (isSubmitting || isVerifyingPayment) return;
     setIsSubmitting(true);
 
+    const chosenPaymentMethod = customPaymentMethod || paymentMethod || 'vietqr';
     const generatedOrderCode = `UB-2026-${Math.floor(100 + Math.random() * 900)}`;
     const generatedContractCode = `HĐ-${generatedOrderCode}`;
 
@@ -930,6 +955,8 @@ export default function CheckoutPage() {
       contractSignature: contractSignature || brideName,
       measurements,
       depositOption,
+      paymentMethod: chosenPaymentMethod,
+      paymentStatus: 'deposit_paid',
       rentalStartDate: rentalSchedule.startDate,
       rentalEndDate: rentalSchedule.endDate,
       rentalDays,
@@ -948,7 +975,7 @@ export default function CheckoutPage() {
       depositPaidAmount: amountToPayToday,
       totalPayment: totalRentPrice + depositCollateral,
       deliveryMethod: 'showroom',
-      notes: `Hôn lễ ngày ${rentalSchedule.weddingDate}. Đặt cọc ${depositOption === 'deposit30' ? '50%' : '100%'}.`,
+      notes: `Hôn lễ ngày ${rentalSchedule.weddingDate}. Đặt cọc ${depositOption === 'deposit30' ? '50%' : '100%'}. Phương thức: ${chosenPaymentMethod === 'vietqr_test' ? 'VietQR Sandbox (Thử nghiệm)' : 'VietQR Chuyển khoản Techcombank'}.`,
     };
 
     try {
@@ -2108,7 +2135,7 @@ export default function CheckoutPage() {
                   </div>
                 </section>
 
-                {/* 2. THANH TOÁN BẰNG QUÉT MÃ VIETQR */}
+                {/* 2. PHƯƠNG THỨC THANH TOÁN VIETQR */}
                 <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
                   <div className="flex items-center gap-3 pb-4 border-b border-[#F5EDE8] mb-6">
                     <div className="w-10 h-10 rounded-xl bg-[#FAF0EC] flex items-center justify-center text-[#B8737D]">
@@ -2116,33 +2143,117 @@ export default function CheckoutPage() {
                     </div>
                     <div>
                       <h2 className="font-playfair text-[19px] sm:text-[21px] font-semibold text-[#2C2523] m-0">
-                        Thanh Toán Đặt Cọc Bằng Quét Mã VietQR
+                        Phương Thức Thanh Toán VietQR
                       </h2>
                       <p className="text-[12px] text-[#847374] m-0 mt-0.5">
-                        Chuyển khoản 24/7 tức thì qua mã VietQR liên ngân hàng, tự động xác nhận đơn cọc
+                        Hỗ trợ thanh toán thử nghiệm tức thì (Sandbox) hoặc chuyển khoản qua mã VietQR Napas 24/7
                       </p>
                     </div>
                   </div>
 
+                  {/* Payment Method Selector Tabs */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 mb-6">
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('vietqr_test')}
+                      className={`p-4 rounded-xl border text-left cursor-pointer transition-all flex items-start gap-3 ${
+                        paymentMethod === 'vietqr_test'
+                          ? 'border-[#733F49] bg-[#FAF3F0] ring-2 ring-[#733F49]/20 shadow-xs'
+                          : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                        paymentMethod === 'vietqr_test' ? 'bg-[#733F49] text-white' : 'bg-[#EEDECF] text-[#6B5C5D]'
+                      }`}>
+                        <Sparkles className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <strong className="text-[13.5px] text-[#2C2523]">Thanh Toán Thử Nghiệm (Sandbox)</strong>
+                          <span className="text-[9.5px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[#E65100]/10 text-[#E65100]">
+                            Khuyên Dùng Demo
+                          </span>
+                        </div>
+                        <p className="text-[11.5px] text-[#6B5C5D] m-0 leading-relaxed">
+                          Mô phỏng quét mã VietQR & đối soát tự động thành công ngay không cần chuyển tiền thật.
+                        </p>
+                      </div>
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={() => setPaymentMethod('vietqr')}
+                      className={`p-4 rounded-xl border text-left cursor-pointer transition-all flex items-start gap-3 ${
+                        paymentMethod === 'vietqr'
+                          ? 'border-[#733F49] bg-[#FAF3F0] ring-2 ring-[#733F49]/20 shadow-xs'
+                          : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white'
+                      }`}
+                    >
+                      <div className={`w-8 h-8 rounded-lg flex items-center justify-center shrink-0 ${
+                        paymentMethod === 'vietqr' ? 'bg-[#733F49] text-white' : 'bg-[#EEDECF] text-[#6B5C5D]'
+                      }`}>
+                        <QrCode className="w-4 h-4" />
+                      </div>
+                      <div className="flex-1">
+                        <div className="flex items-center justify-between mb-0.5">
+                          <strong className="text-[13.5px] text-[#2C2523]">Quét Mã VietQR Ngân Hàng</strong>
+                          <span className="text-[9.5px] font-extrabold uppercase px-2 py-0.5 rounded-full bg-[#E8F5E9] text-[#2E7D32]">
+                            Napas 24/7
+                          </span>
+                        </div>
+                        <p className="text-[11.5px] text-[#6B5C5D] m-0 leading-relaxed">
+                          Sử dụng App Ngân hàng (Techcombank, VCB, MB...) quét mã QR động chuyển khoản trực tiếp.
+                        </p>
+                      </div>
+                    </button>
+                  </div>
+
                   {/* VietQR Payment Details Box */}
                   <div className="p-5 sm:p-6 rounded-2xl bg-[#FCF9F6] border border-[#EEDECF] flex flex-col md:flex-row items-center gap-6">
-                    {/* QR Box */}
-                    <div className="w-48 h-52 bg-white p-3 rounded-2xl border border-[#EEDECF] shadow-sm flex flex-col items-center justify-center shrink-0">
-                      <QrCode className="w-36 h-36 text-[#2C2523]" />
-                      <span className="text-[10.5px] font-mono text-[#733F49] font-bold mt-1.5 tracking-wider">
-                        VIETQR 24/7 PRO
-                      </span>
+                    {/* QR Code Dynamic Display */}
+                    <div className="w-52 bg-white p-3.5 rounded-2xl border border-[#EEDECF] shadow-sm flex flex-col items-center justify-center shrink-0 text-center">
+                      {!qrImgError ? (
+                        <div className="relative group">
+                          <img
+                            src={`https://img.vietqr.io/image/TCB-19038899220088-compact2.png?amount=${amountToPayToday}&addInfo=${encodeURIComponent('UB COC 8992 ' + (phone.replace(/\s/g, '') || '0938128899'))}&accountName=CONG%20TY%20TNHH%20UNIBRIDAL`}
+                            alt="VietQR Techcombank UniBridal"
+                            className="w-44 h-auto max-h-56 object-contain rounded-lg"
+                            onError={() => setQrImgError(true)}
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-44 h-44 flex flex-col items-center justify-center">
+                          <QrCode className="w-32 h-32 text-[#2C2523]" />
+                          <span className="text-[10px] font-mono text-[#733F49] font-bold mt-1">
+                            VIETQR 24/7 PRO
+                          </span>
+                        </div>
+                      )}
+                      <div className="mt-2.5">
+                        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[10px] font-bold bg-[#E8F5E9] text-[#2E7D32]">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#2E7D32] animate-pulse"></span>
+                          MÃ VIETQR ĐỘNG CHÍNH XÁC
+                        </span>
+                      </div>
                     </div>
 
                     {/* Bank Transfer Details */}
                     <div className="space-y-3 text-[13px] flex-1 w-full">
                       <div>
                         <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#847374] block mb-0.5">
-                          NGÂN HÀNG THỤ HƯỞNG
+                          NGÂN HÀNG THỤ HƯỞNG & CHỦ TÀI KHOẢN
                         </span>
-                        <strong className="text-[#2C2523] text-[15px]">
-                          Techcombank — Chi nhánh TP. Hồ Chí Minh
-                        </strong>
+                        <div className="flex items-center gap-2">
+                          <strong className="text-[#2C2523] text-[15px]">
+                            Techcombank — Chi nhánh TP. Hồ Chí Minh
+                          </strong>
+                          <span className="text-[10px] px-2 py-0.5 rounded bg-[#FAF0EC] text-[#733F49] font-bold">
+                            Napas 247
+                          </span>
+                        </div>
+                        <span className="text-[12px] text-[#6B5C5D] block">
+                          Chủ TK: <strong>CÔNG TY TNHH UNIBRIDAL HAUTE COUTURE</strong>
+                        </span>
                       </div>
 
                       <div className="flex items-center justify-between bg-white p-2.5 rounded-xl border border-[#EEDECF]">
@@ -2181,17 +2292,59 @@ export default function CheckoutPage() {
                         <div>
                           <span className="text-[10px] text-[#847374] block uppercase font-bold">NỘI DUNG CHUYỂN KHOẢN:</span>
                           <strong className="font-mono text-[14px] text-[#733F49]">
-                            UB COC 8992 {phone.replace(/\s/g, '')}
+                            UB COC 8992 {phone.replace(/\s/g, '') || '0938128899'}
                           </strong>
                         </div>
                         <button
                           type="button"
-                          onClick={() => copyToClipboard(`UB COC 8992 ${phone.replace(/\s/g, '')}`)}
+                          onClick={() => copyToClipboard(`UB COC 8992 ${phone.replace(/\s/g, '') || '0938128899'}`)}
                           className="px-3 py-1.5 text-[11.5px] font-bold text-[#733F49] bg-[#FAF0EC] rounded-lg border border-[#F2D8D4] hover:bg-[#F2DDD9] cursor-pointer transition-colors"
                         >
                           Sao chép
                         </button>
                       </div>
+                    </div>
+                  </div>
+
+                  {/* Nút hành động Thanh toán thử nghiệm VietQR Sandbox */}
+                  <div className="mt-5 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#FFF9E6] via-[#FFF3E0] to-[#FAF0EC] border-2 border-dashed border-[#E0A96D] shadow-xs">
+                    <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4">
+                      <div className="space-y-1">
+                        <div className="flex items-center gap-2">
+                          <span className="px-2.5 py-0.5 rounded-full bg-[#E65100] text-white text-[10px] font-extrabold uppercase tracking-wider">
+                            Chế độ Thử Nghiệm Sandbox
+                          </span>
+                          <span className="text-[12px] font-bold text-[#B45309] flex items-center gap-1">
+                            <Sparkles className="w-3.5 h-3.5 text-[#D97706]" /> Mô phỏng thanh toán VietQR tức thì
+                          </span>
+                        </div>
+                        <p className="text-[12px] text-[#6B5C5D] m-0 leading-relaxed">
+                          Dành cho người kiểm thử & cô dâu muốn trải nghiệm quy trình. Bấm nút để hệ thống tự động ghi nhận chuyển cọc <strong>{amountToPayToday.toLocaleString('vi-VN')}₫</strong> và kích hoạt hợp đồng ngay lập tức!
+                        </p>
+                      </div>
+
+                      <button
+                        type="button"
+                        disabled={isVerifyingPayment || isSubmitting}
+                        onClick={handleSimulateVietQrPayment}
+                        className={`shrink-0 w-full sm:w-auto px-6 py-3.5 rounded-xl font-jakarta text-[13px] font-extrabold uppercase tracking-wide text-white shadow-md transition-all flex items-center justify-center gap-2 border-0 cursor-pointer ${
+                          isVerifyingPayment || isSubmitting
+                            ? 'bg-[#B08968] cursor-not-allowed opacity-80'
+                            : 'bg-gradient-to-r from-[#D97706] to-[#B45309] hover:from-[#B45309] hover:to-[#92400E] hover:shadow-lg active:scale-[0.98]'
+                        }`}
+                      >
+                        {isVerifyingPayment ? (
+                          <>
+                            <RefreshCw className="w-4 h-4 animate-spin" />
+                            <span>Đang kiểm tra biến động số dư...</span>
+                          </>
+                        ) : (
+                          <>
+                            <Sparkles className="w-4 h-4 text-amber-200" />
+                            <span>Bấm Để Thanh Toán Thử Bằng VietQR</span>
+                          </>
+                        )}
+                      </button>
                     </div>
                   </div>
                 </section>
@@ -2209,11 +2362,35 @@ export default function CheckoutPage() {
 
                   <button
                     type="button"
-                    onClick={handleConfirmFinalPayment}
-                    className="w-full sm:w-auto px-8 py-4 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer border-0 flex items-center justify-center gap-2"
+                    disabled={isSubmitting || isVerifyingPayment}
+                    onClick={(e) => {
+                      if (paymentMethod === 'vietqr_test') {
+                        handleSimulateVietQrPayment();
+                      } else {
+                        handleConfirmFinalPayment(e, 'vietqr');
+                      }
+                    }}
+                    className={`w-full sm:w-auto px-8 py-4 rounded-xl text-white font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer border-0 flex items-center justify-center gap-2 ${
+                      paymentMethod === 'vietqr_test'
+                        ? 'bg-gradient-to-r from-[#B45309] to-[#733F49] hover:from-[#92400E] hover:to-[#5F323B]'
+                        : 'bg-[#733F49] hover:bg-[#5F323B]'
+                    }`}
                   >
-                    <Lock className="w-4 h-4" />
-                    <span>XÁC NHẬN THANH TOÁN & KHÓA LỊCH ĐẶT THUÊ</span>
+                    {isVerifyingPayment ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Đang xác thực VietQR...</span>
+                      </>
+                    ) : (
+                      <>
+                        <Lock className="w-4 h-4" />
+                        <span>
+                          {paymentMethod === 'vietqr_test'
+                            ? '⚡ THANH TOÁN THỬ BẰNG VIETQR & KHÓA LỊCH'
+                            : 'XÁC NHẬN ĐÃ CHUYỂN KHOẢN & KHÓA LỊCH'}
+                        </span>
+                      </>
+                    )}
                   </button>
                 </div>
 
@@ -2393,6 +2570,15 @@ export default function CheckoutPage() {
               <div className="flex items-center justify-between">
                 <span className="text-[#847374]">Đại diện Bên A:</span>
                 <strong className="text-[#2C2523]">Ông Kim Xuân Hiếu (Tổng Giám Đốc)</strong>
+              </div>
+              <div className="flex items-center justify-between pt-1 border-t border-[#EEDECF]/60">
+                <span className="text-[#847374]">Thanh toán:</span>
+                <span className="inline-flex items-center gap-1 font-bold text-[#733F49] text-[11.5px] bg-white px-2 py-0.5 rounded-md border border-[#EEDECF]">
+                  <Sparkles className="w-3.5 h-3.5 text-[#D97706]" />
+                  {createdOrder?.paymentMethod === 'vietqr_test' || paymentMethod === 'vietqr_test'
+                    ? 'VietQR Sandbox (Thanh toán thử nghiệm thành công)'
+                    : 'VietQR Chuyển khoản Napas 24/7 (Techcombank)'}
+                </span>
               </div>
             </div>
 

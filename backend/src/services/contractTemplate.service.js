@@ -74,3 +74,4 @@ export const updateTemplate = async (id, updateData) => {
   }
   return updated;
 };
+

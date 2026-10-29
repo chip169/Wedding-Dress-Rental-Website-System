@@ -122,3 +122,4 @@ export const seedContractTemplates = async () => {
 };
 
 export default seedContractTemplates;
+
