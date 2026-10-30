@@ -117,8 +117,7 @@ export default function NotFoundPage({ type: propType }) {
           <p className="text-[14px] sm:text-[15px] text-[#6B5C5D] max-w-lg mx-auto leading-relaxed mb-8">
             {is401 && (
               <>
-                Trang này chứa dữ liệu đặt lịch hoặc bảo mật cá nhân của nàng.
-                Vui lòng đăng nhập vào tài khoản <strong className="text-[#733F49]">UniBridal</strong> để tiếp tục trải nghiệm dịch vụ cưới cao cấp.
+                Nếu muốn theo dõi được đơn hàng, vui lòng đăng nhập vào tài khoản <strong className="text-[#733F49]">UniBridal</strong> để tiếp tục quản lý hợp đồng và tiến độ chuẩn bị lễ phục cưới của nàng.
               </>
             )}
             {is403 && (

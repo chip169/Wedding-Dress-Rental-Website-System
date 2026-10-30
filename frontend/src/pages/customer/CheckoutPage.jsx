@@ -1292,7 +1292,7 @@ export default function CheckoutPage() {
 
                 {/* 1. THÔNG TIN NGƯỜI THUÊ */}
                 <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
-                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#F5EDE8] mb-6 gap-3">
+                  <div className="flex items-center justify-between pb-5 border-b border-[#F5EDE8] mb-6">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-[#FAF0EC] flex items-center justify-center text-[#B8737D]">
                         <FileText className="w-5 h-5" />
@@ -1301,29 +1301,14 @@ export default function CheckoutPage() {
                         <h2 className="font-playfair text-[19px] sm:text-[21px] font-semibold text-[#2C2523] m-0">
                           Thông Tin Người Đại Diện Thuê
                         </h2>
-                        <p className="text-[12px] text-[#847374] m-0 mt-0.5">
-                          {isLoggedIn ? (
-                            <span className="text-[#2E7D32] font-semibold flex items-center gap-1">
-                              <CheckCircle2 className="w-3.5 h-3.5 text-[#2E7D32]" />
-                              Tự động lấy thông tin từ tài khoản đã đăng ký ({user?.fullName || user?.name || user?.email})
-                            </span>
-                          ) : (
-                            <span>Đơn thuê khách vãng lai (Chưa đăng nhập) — Vui lòng điền thông tin để lập hợp đồng</span>
-                          )}
-                        </p>
+                        {isLoggedIn && (
+                          <p className="text-[12px] text-[#2E7D32] font-semibold m-0 mt-0.5 flex items-center gap-1">
+                            <CheckCircle2 className="w-3.5 h-3.5 text-[#2E7D32]" />
+                            Tự động lấy thông tin từ tài khoản đã đăng ký ({user?.fullName || user?.name || user?.email})
+                          </p>
+                        )}
                       </div>
                     </div>
-
-                    {!isLoggedIn && (
-                      <Link
-                        to="/login"
-                        state={{ from: location }}
-                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF4EE] hover:bg-[#FAF0EC] border border-[#EEDECF] text-[#733F49] text-[12px] font-bold transition-all shadow-2xs self-start sm:self-auto cursor-pointer"
-                      >
-                        <LogIn className="w-3.5 h-3.5" />
-                        <span>Đăng nhập để tự động điền</span>
-                      </Link>
-                    )}
                   </div>
 
                   <div className="space-y-4">
@@ -2814,6 +2799,15 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 onClick={() => {
+                  if (!isLoggedIn) {
+                    message.warning({
+                      content: 'Nếu muốn theo dõi được đơn hàng, vui lòng đăng nhập vào tài khoản của bạn.',
+                      duration: 4,
+                    });
+                    setIsSuccessModalOpen(false);
+                    navigate('/login', { state: { from: '/profile/orders' } });
+                    return;
+                  }
                   setIsSuccessModalOpen(false);
                   navigate('/profile/orders');
                 }}
@@ -2832,6 +2826,12 @@ export default function CheckoutPage() {
                 Về Trang Chủ
               </button>
             </div>
+
+            {!isLoggedIn && (
+              <p className="text-[12px] text-[#847374] mt-2 mb-0 text-center">
+                ✦ Lưu ý: Nếu muốn theo dõi được đơn hàng và tiến độ chuẩn bị lễ phục, nàng vui lòng đăng nhập tài khoản.
+              </p>
+            )}
 
           </div>
         </div>
