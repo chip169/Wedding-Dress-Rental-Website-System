@@ -2497,34 +2497,49 @@ export default function CheckoutPage() {
 
           </div>
 
-          {/* ================= RIGHT COLUMN: STICKY SUMMARY CARD ================= */}
+          {/* ================= RIGHT COLUMN: STICKY LUXURY BRIDAL TICKET ================= */}
           <div className="lg:col-span-5 xl:col-span-4 sticky top-24 space-y-4 print:hidden">
 
-            <div className="bg-white rounded-3xl border border-[#F0E5DC] shadow-[0_8px_32px_rgba(44,37,35,0.06)] overflow-hidden">
+            {/* Ticket Outer Wrapper */}
+            <div className="relative bg-[#FFFEFC] rounded-3xl border border-[#E8DFD8] shadow-[0_16px_45px_rgba(115,63,73,0.08)] overflow-hidden transition-all">
 
+              {/* 1. Ticket Top Stub Header (Cuống vé hoàng gia) */}
+              <div className="bg-gradient-to-r from-[#733F49] via-[#854F55] to-[#733F49] text-white px-5 py-3.5 flex items-center justify-between text-[11px] font-bold tracking-wider uppercase border-b border-[#D4AF37]/30">
+                <div className="flex items-center gap-2">
+                  <Crown className="w-4 h-4 text-[#E6C687]" />
+                  <span className="tracking-[1.5px] font-playfair text-[11.5px]">UNIBRIDAL COUTURE PASS</span>
+                </div>
+                <div className="font-mono text-[10.5px] bg-black/25 px-2 py-0.5 rounded text-[#F5EDE8] tracking-widest border border-white/10">
+                  #{activeDress?.code || 'UB-2026'}
+                </div>
+              </div>
 
-
-              {/* Card Body */}
-              <div className="p-5 sm:p-6 space-y-5">
+              {/* 2. Ticket Main Body (Thân vé) */}
+              <div className="p-5 sm:p-6 space-y-4">
 
                 {/* Product Info Row */}
-                <div className="flex gap-4 pb-5 border-b border-[#F5EDE8]">
-                  <div className="relative w-20 h-26 rounded-xl overflow-hidden shrink-0 border border-[#EEDECF]">
+                <div className="flex gap-4 pb-4 border-b border-[#F5EDE8]">
+                  <div className="relative w-20 h-26 rounded-xl overflow-hidden shrink-0 border border-[#EEDECF] shadow-2xs">
                     <img
                       src={activeDress?.images?.[0] || activeDress?.image}
                       alt={activeDress?.name}
                       className="w-full h-full object-cover"
                     />
+                    <div className="absolute top-1 left-1 bg-[#733F49]/80 backdrop-blur-2xs text-white text-[9px] font-bold px-1.5 py-0.5 rounded">
+                      VIP
+                    </div>
                   </div>
                   <div className="flex-1 min-w-0">
-                    <div className="font-playfair font-bold text-[16px] text-[#2C2523] leading-snug truncate">
+                    <div className="font-playfair font-bold text-[16.5px] text-[#2C2523] leading-snug truncate">
                       {activeDress?.name}
                     </div>
                     <div className="text-[12px] text-[#847374] mt-0.5">
                       Mã: <span className="font-mono text-[#733F49] font-bold">{activeDress?.code || 'UB-HC-2026'}</span>
                     </div>
-                    <div className="text-[11.5px] text-[#6B5C5D] mt-1">
-                      Size: <strong>{selectedSize}</strong> • Gói {rentalDays} ngày
+                    <div className="inline-flex items-center gap-1.5 mt-1 px-2 py-0.5 rounded-md bg-[#FAF4EE] border border-[#F0E5DC] text-[11px] text-[#6B5C5D]">
+                      <span>Size: <strong>{selectedSize}</strong></span>
+                      <span>•</span>
+                      <span>Gói <strong>{rentalDays} ngày</strong></span>
                     </div>
                     <div className="font-jakarta font-extrabold text-[19px] text-[#733F49] mt-1.5 tabular-nums tracking-tight">
                       {totalRentPrice.toLocaleString('vi-VN')}₫
@@ -2532,68 +2547,106 @@ export default function CheckoutPage() {
                   </div>
                 </div>
 
-                {/* Live Availability Status in Summary Card */}
+                {/* Live Availability / Rental Schedule Badge */}
                 {scheduleConflict ? (
                   <div className="bg-[#FFF5F5] border border-[#FEB2B2] p-2.5 rounded-xl text-[#B91C1C] text-[11.5px] flex items-center gap-2 font-bold">
                     <AlertCircle className="w-4 h-4 shrink-0 text-[#DC2626]" />
                     <span>Trùng lịch đã đặt ({scheduleConflict.formattedRange})</span>
                   </div>
                 ) : (
-                  <div className="bg-[#F0FDF4] border border-[#BBF7D0] p-2.5 rounded-xl text-[#15803D] text-[11.5px] flex items-center gap-2 font-bold">
-                    <CheckCircle2 className="w-4 h-4 shrink-0 text-[#16A34A]" />
-                    <span>Lịch đã đăng ký: {rentalSchedule.startDate} – {rentalSchedule.endDate}</span>
+                  <div className="bg-[#F0FDF4] border border-[#BBF7D0] p-2.5 rounded-xl text-[#15803D] text-[11.5px] flex items-center justify-between font-bold">
+                    <div className="flex items-center gap-2">
+                      <CheckCircle2 className="w-4 h-4 shrink-0 text-[#16A34A]" />
+                      <span>Lịch đã đăng ký:</span>
+                    </div>
+                    <span className="font-mono text-[12px] text-[#15803D] bg-white/80 px-2 py-0.5 rounded-md border border-[#BBF7D0]">
+                      {rentalSchedule.startDate} – {rentalSchedule.endDate}
+                    </span>
                   </div>
                 )}
 
-                {/* Progress / Step Overview Badge */}
-                <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF] space-y-1 text-[12px]">
+                {/* Contract Status Stamp */}
+                <div className="bg-[#FCF9F6] p-3 rounded-xl border border-[#EEDECF] space-y-1.5 text-[12px]">
                   <div className="flex items-center justify-between text-[#847374]">
                     <span>Tiến độ hợp đồng:</span>
-                    <strong className="text-[#733F49]">
-                      {currentStep === 1 && 'Bước 1: Điền thông tin'}
-                      {currentStep === 2 && 'Bước 2: Ký hợp đồng điện tử'}
-                      {currentStep === 3 && 'Bước 3: Đặt cọc giữ lịch'}
+                    <strong className="text-[#733F49] font-semibold">
+                      {currentStep === 1 && '1. Điền thông tin'}
+                      {currentStep === 2 && '2. Ký hợp đồng điện tử'}
+                      {currentStep === 3 && '3. Đặt cọc giữ lịch'}
                     </strong>
                   </div>
                   <div className="flex items-center justify-between text-[#847374]">
                     <span>Trạng thái chữ ký:</span>
-                    <strong className={isContractSigned ? 'text-[#2E7D32]' : 'text-[#D4AF37]'}>
+                    <strong className={isContractSigned ? 'text-[#2E7D32] flex items-center gap-1 font-bold' : 'text-[#D4AF37] font-semibold'}>
                       {isContractSigned ? '✓ Đã ký hợp đồng' : 'Chưa ký'}
                     </strong>
                   </div>
                 </div>
 
+              </div>
+
+              {/* 3. Ticket Perforated Tear-off Line with Notches (Vết cắt xé vé & Rãnh răng cưa) */}
+              <div className="relative my-1">
+                {/* Vết khuyết bán nguyệt bên trái */}
+                <div className="absolute -left-3.5 -top-3 w-7 h-7 rounded-full bg-[#FDFBF7] border border-[#E8DFD8] shadow-inner z-10" />
+                {/* Vết khuyết bán nguyệt bên phải */}
+                <div className="absolute -right-3.5 -top-3 w-7 h-7 rounded-full bg-[#FDFBF7] border border-[#E8DFD8] shadow-inner z-10" />
+                {/* Đường chỉ may xé vé đứt đoạn */}
+                <div className="border-b-2 border-dashed border-[#E5D7CD] w-full px-5" />
+              </div>
+
+              {/* 4. Ticket Lower Section: Breakdown & Amount To Pay (Phần cuống thanh toán) */}
+              <div className="p-5 sm:p-6 space-y-3.5">
+
                 {/* Price Breakdown */}
-                <div className="space-y-2.5 text-[13px]">
+                <div className="space-y-2 text-[12.5px]">
                   <div className="flex items-center justify-between text-[#6B5C5D]">
-                    <span>Giá thuê lễ phục ({rentalDays} ngày):</span>
+                    <span>Giá thuê ({rentalDays} ngày):</span>
                     <span className="font-bold text-[#2C2523]">{totalRentPrice.toLocaleString('vi-VN')}₫</span>
                   </div>
                   {rentalDays > 4 && (
                     <div className="flex items-center justify-between text-[11px] text-[#847374] pl-2 border-l-2 border-[#EEDECF]">
-                      <span>Bao gồm {rentalDays - 4} ngày gia hạn (+800k/ngày):</span>
+                      <span>Gia hạn {rentalDays - 4} ngày (+800k/ngày):</span>
                       <span className="font-semibold text-[#733F49]">+{((rentalDays - 4) * 800000).toLocaleString('vi-VN')}₫</span>
                     </div>
                   )}
                   <div className="flex items-center justify-between text-[#6B5C5D]">
                     <span>Dịch vụ giặt sấy tiệt trùng:</span>
-                    <span className="font-bold text-[#2E7D32]">0₫ (Miễn Phí)</span>
+                    <span className="font-bold text-[#2E7D32]">0₫ (Đặc quyền VIP)</span>
                   </div>
                   <div className="flex items-center justify-between text-[#6B5C5D]">
                     <span>May đo & chỉnh phom theo số đo:</span>
-                    <span className="font-bold text-[#2E7D32]">0₫ (Miễn Phí)</span>
+                    <span className="font-bold text-[#2E7D32]">0₫ (Đặc quyền VIP)</span>
                   </div>
+                </div>
 
-                  <div className="pt-3 border-t border-[#F5EDE8] flex items-center justify-between">
-                    <div>
-                      <span className="text-[13.5px] font-bold text-[#2C2523] block">Số tiền cọc hôm nay:</span>
-                      <span className="text-[11px] text-[#847374]">
-                        {depositOption === 'deposit30' ? '(Tạm ứng cọc giữ lịch 50%)' : '(Thanh toán 100% trọn gói)'}
-                      </span>
-                    </div>
-                    <span className="font-jakarta font-extrabold text-[24px] sm:text-[26px] text-[#733F49] tabular-nums tracking-tight">
-                      {amountToPayToday.toLocaleString('vi-VN')}₫
+                {/* Amount to Pay Today */}
+                <div className="pt-3 border-t border-[#F5EDE8] flex items-center justify-between">
+                  <div>
+                    <span className="text-[13px] font-bold text-[#2C2523] block">Số tiền cọc hôm nay:</span>
+                    <span className="text-[11px] text-[#847374]">
+                      {depositOption === 'deposit30' ? '(Tạm ứng cọc giữ lịch 50%)' : '(Thanh toán 100% trọn gói)'}
                     </span>
+                  </div>
+                  <span className="font-jakarta font-extrabold text-[23px] sm:text-[25px] text-[#733F49] tabular-nums tracking-tight">
+                    {amountToPayToday.toLocaleString('vi-VN')}₫
+                  </span>
+                </div>
+
+                {/* Decorative Barcode & Authentication Footer (Đáy vé mã vạch sang trọng) */}
+                <div className="pt-3 border-t border-[#F5EDE8] flex flex-col items-center justify-center text-center space-y-1.5 select-none">
+                  <div className="flex items-center gap-[2px] h-6 opacity-65">
+                    {/* Barcode Lines */}
+                    {[2, 1, 3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 1, 2, 3, 1, 4, 1, 2, 3, 1, 2].map((w, i) => (
+                      <span
+                        key={i}
+                        className="bg-[#2C2523] h-full rounded-[0.5px]"
+                        style={{ width: `${w * 1.5}px` }}
+                      />
+                    ))}
+                  </div>
+                  <div className="text-[9.5px] font-mono tracking-[2px] text-[#847374] uppercase">
+                    ★ UNIBRIDAL OFFICIAL BRIDAL PASS • {activeDress?.code || 'UB-2026'} ★
                   </div>
                 </div>
 
