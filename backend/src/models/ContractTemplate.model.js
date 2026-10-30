@@ -81,6 +81,16 @@ const contractTemplateSchema = new mongoose.Schema(
       size: { type: String, default: '' },
       uploadedAt: { type: Date, default: null },
     },
+    // Đường dẫn mở trực tiếp bản PDF hợp đồng chuẩn A4 trực tuyến
+    pdfUrl: {
+      type: String,
+      default: '',
+    },
+    // Đường dẫn xem trước trực tuyến (Web preview)
+    contractUrl: {
+      type: String,
+      default: '',
+    },
     clauses: {
       type: [clauseSchema],
       default: [],

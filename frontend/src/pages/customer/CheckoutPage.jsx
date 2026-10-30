@@ -301,7 +301,7 @@ export default function CheckoutPage() {
   const [rentalSchedule, setRentalSchedule] = useState(() => {
     const initialWedding = '20/11/2026';
     const initialDays = !isNaN(daysParam) && daysParam >= 2 && daysParam <= 30 ? daysParam : 4;
-    
+
     if (startDateParam && endDateParam) {
       return {
         startDate: toDisplayDateString(startDateParam),
@@ -850,9 +850,9 @@ export default function CheckoutPage() {
                   <div class="sig-title">BÊN THUÊ LỄ PHỤC (BÊN B)</div>
                   <div class="sig-sub">KÝ TÊN VÀ XÁC NHẬN BẰNG CHỮ KÝ ĐIỆN TỬ</div>
                   ${drawnSignatureData
-                    ? '<img src="' + drawnSignatureData + '" style="max-height: 55px; margin: 10px auto;" /><br />'
-                    : '<div style="font-family: serif; font-size: 18pt; font-style: italic; color: #1D2A44; margin: 15px 0;">' + (contractSignature || brideName) + '</div>'
-                  }
+        ? '<img src="' + drawnSignatureData + '" style="max-height: 55px; margin: 10px auto;" /><br />'
+        : '<div style="font-family: serif; font-size: 18pt; font-style: italic; color: #1D2A44; margin: 15px 0;">' + (contractSignature || brideName) + '</div>'
+      }
                   <div class="sign-name">${brideName}</div>
                   <div style="font-size: 10.5pt; color: #555;">Số CCCD: ${cccd}</div>
                 </td>
@@ -1400,11 +1400,10 @@ export default function CheckoutPage() {
                         <label className="block text-[10.5px] font-bold text-[#847374] uppercase tracking-wider">
                           NGÀY HOÀN TRẢ VÁY
                         </label>
-                        <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${
-                          toIsoDateString(rentalSchedule.endDate) === toIsoDateString(rentalSchedule.weddingDate)
-                            ? 'bg-[#FFF3E0] text-[#E65100]'
-                            : 'bg-[#E8F5E9] text-[#2E7D32]'
-                        }`}>
+                        <span className={`text-[9.5px] font-bold px-1.5 py-0.5 rounded-md uppercase tracking-wider ${toIsoDateString(rentalSchedule.endDate) === toIsoDateString(rentalSchedule.weddingDate)
+                          ? 'bg-[#FFF3E0] text-[#E65100]'
+                          : 'bg-[#E8F5E9] text-[#2E7D32]'
+                          }`}>
                           {toIsoDateString(rentalSchedule.endDate) === toIsoDateString(rentalSchedule.weddingDate)
                             ? 'CÙNG NGÀY CƯỚI'
                             : 'SAU NGÀY CƯỚI'}
@@ -2424,11 +2423,10 @@ export default function CheckoutPage() {
                     type="button"
                     disabled={isSubmitting || isVerifyingPayment}
                     onClick={handleConfirmFinalPayment}
-                    className={`w-full sm:w-auto px-8 py-4 rounded-xl text-white font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer border-0 flex items-center justify-center gap-2 ${
-                      !isContractSigned
-                        ? 'bg-[#B08968] hover:bg-[#8D6E63] ring-2 ring-amber-400'
-                        : 'bg-[#733F49] hover:bg-[#5F323B]'
-                    }`}
+                    className={`w-full sm:w-auto px-8 py-4 rounded-xl text-white font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer border-0 flex items-center justify-center gap-2 ${!isContractSigned
+                      ? 'bg-[#B08968] hover:bg-[#8D6E63] ring-2 ring-amber-400'
+                      : 'bg-[#733F49] hover:bg-[#5F323B]'
+                      }`}
                   >
                     {isVerifyingPayment ? (
                       <>
