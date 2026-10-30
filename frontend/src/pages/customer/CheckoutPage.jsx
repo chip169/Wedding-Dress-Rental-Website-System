@@ -807,7 +807,7 @@ export default function CheckoutPage() {
             <p>2.3. Ngày tổ chức hôn lễ chính thức: <strong>${rentalSchedule.weddingDate}</strong>.</p>
             <p>2.4. Phương thức hoàn trả & thu hồi: ${
               deliveryMethod === 'delivery'
-                ? 'Bên A thực hiện giao váy tận nơi bằng Vali VIP Courier theo địa chỉ đã đăng ký. Đến thời hạn hoàn trả (trước 20:00 ngày <strong>' + rentalSchedule.endDate + '</strong>), <strong>chuyên viên của Bên A sẽ chủ động liên hệ hẹn giờ và trực tiếp đến tận địa chỉ của Bên B để thu hồi lễ phục trong vali bảo quản niêm phong</strong>, thực hiện kiểm định sơ bộ hiện trạng sản phẩm trước khi hoàn trả 100% tiền cọc bảo lãnh.'
+                ? 'Bên A thực hiện giao váy tận nơi bằng Vali VIP Courier theo địa chỉ đã đăng ký. Đến thời hạn hoàn trả (trước 20:00 ngày <strong>' + rentalSchedule.endDate + '</strong>), <strong>chuyên viên của Bên A sẽ chủ động liên hệ hẹn giờ và trực tiếp đến tận địa chỉ của Bên B để thu hồi lễ phục trong vali bảo quản niêm phong</strong>, thực hiện kiểm định sơ bộ hiện trạng sản phẩm trước khi hoàn tất hợp đồng.'
                 : 'Bên B thực hiện hoàn trả lễ phục trước 20:00 ngày <strong>' + rentalSchedule.endDate + '</strong> trực tiếp tại Showroom UniBridal để chuyên viên Bên A kiểm định hiện trạng và hoàn trả 100% tiền cọc tại quầy.'
             }</p>
             <p>2.5. Hai bên thực hiện ký Biên bản kiểm định bàn giao và thu hồi để ghi nhận hiện trạng đính kết ren, hạt cườm và kết cấu váy tại thời điểm giao và nhận lại.</p>
@@ -817,9 +817,9 @@ export default function CheckoutPage() {
             <p>3.2. Tiền đặt cọc giữ lịch độc quyền (50% giá trị hợp đồng): <strong>${amountToPayToday.toLocaleString('vi-VN')} VNĐ</strong>, Bên B thanh toán ngay khi ký hợp đồng thông qua cổng chuyển khoản VietQR Techcombank.</p>
             <p>3.3. Số tiền thuê còn lại (${(totalRentPrice - amountToPayToday).toLocaleString('vi-VN')} VNĐ) sẽ được Bên B thanh toán dứt điểm tại thời điểm nhận bàn giao lễ phục.</p>
 
-            <div class="clause-heading">ĐIỀU 4: TIỀN ĐẶT CỌC BẢO LÃNH HOÀN TRẢ & CAM KẾT HOÀN TIỀN 100%</div>
-            <p>4.1. Tiền cọc bảo lãnh trách nhiệm bảo quản: <strong>${depositCollateral.toLocaleString('vi-VN')} VNĐ</strong> (Hình thức: Tiền mặt, chuyển khoản hoặc ủy quyền khóa hạn mức thẻ tín dụng).</p>
-            <p>4.2. Cam kết hoàn cọc 100%: Bên A cam kết hoàn trả đầy đủ 100% số tiền cọc bảo lãnh vào số tài khoản ngân hàng của Bên B trong vòng tối đa <strong>24 giờ làm việc</strong> sau khi hai bên nghiệm thu lễ phục hoàn trả nguyên vẹn.</p>
+            <div class="clause-heading">ĐIỀU 4: CAM KẾT DỊCH VỤ & BẢO HIỂM LỄ PHỤC</div>
+            <p>4.1. Cam kết chất lượng: Bên A cam kết bàn giao đúng tác phẩm thiết kế đã chọn, đúng số đo may đo đã ghi nhận và đầy đủ bộ phụ kiện cao cấp đi kèm.</p>
+            <p>4.2. Cam kết hoàn cọc: Trường hợp phát sinh thay đổi hoặc hủy hợp đồng theo các điều khoản bất khả kháng quy định tại Điều 7, Bên A cam kết bảo lưu hoặc hoàn trả 100% tiền cọc giữ lịch trong vòng 24 giờ làm việc.</p>
 
             <div class="clause-heading">ĐIỀU 5: QUY CHUẨN BẢO QUẢN & CHÍNH SÁCH BẢO HIỂM VẢI REN</div>
             <p>5.1. Bảo hiểm vết bẩn sự kiện cưới: Bên A áp dụng chính sách bảo hiểm miễn phí xử lý đối với các vết bẩn thông thường như bụi sân khấu, vết bùn đất gấu váy hoặc vết rượu vang rơi vãi nhẹ. Bên A chịu 100% chi phí xử lý bằng dung môi sinh học chuyên dụng.</p>
@@ -1958,7 +1958,7 @@ export default function CheckoutPage() {
                           </p>
                           <p className="m-0">
                             1.3. Phương thức bàn giao & thu hồi: {deliveryMethod === 'delivery' ? (
-                              <span>Bên A thực hiện giao váy tận nơi bằng Vali VIP Courier theo địa chỉ đã đăng ký. Đến thời điểm hoàn trả (trước 20:00 ngày <strong>{rentalSchedule.endDate}</strong>), <strong>chuyên viên của Bên A sẽ chủ động liên hệ hẹn giờ và trực tiếp đến tận địa chỉ Bên B để thu hồi váy trong vali bảo quản niêm phong</strong>, thực hiện kiểm định sơ bộ hiện trạng sản phẩm trước khi hoàn trả 100% tiền cọc bảo lãnh.</span>
+                              <span>Bên A thực hiện giao váy tận nơi bằng Vali VIP Courier theo địa chỉ đã đăng ký. Đến thời điểm hoàn trả (trước 20:00 ngày <strong>{rentalSchedule.endDate}</strong>), <strong>chuyên viên của Bên A sẽ chủ động liên hệ hẹn giờ và trực tiếp đến tận địa chỉ Bên B để thu hồi váy trong vali bảo quản niêm phong</strong>, thực hiện kiểm định sơ bộ hiện trạng sản phẩm và hoàn tất nghiệm thu thanh lý hợp đồng.</span>
                             ) : (
                               <span>Bên B nhận váy trực tiếp tại Showroom Atelier (được hỗ trợ fitting và căn chỉnh nẹp eo); đến ngày hoàn trả (trước 20:00 ngày <strong>{rentalSchedule.endDate}</strong>), Bên B mang hoàn trả tại Showroom để chuyên viên Bên A kiểm định hiện trạng và hoàn trả 100% tiền cọc tại quầy.</span>
                             )}
@@ -1973,7 +1973,7 @@ export default function CheckoutPage() {
                       <div className="space-y-1.5">
                         <h4 className="font-playfair text-[13.5px] font-bold text-[#733F49] uppercase tracking-wide m-0 flex items-center gap-2">
                           <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]" />
-                          ĐIỀU 2: GIÁ TRỊ HỢP ĐỒNG, TIỀN CỌC GIỮ LỊCH & BẢO LÃNH HOÀN TRẢ
+                          ĐIỀU 2: GIÁ TRỊ HỢP ĐỒNG, TIỀN CỌC GIỮ LỊCH & THANH TOÁN
                         </h4>
                         <div className="pl-3.5 space-y-1 text-[#554749]">
                           <p className="m-0">
@@ -1983,7 +1983,7 @@ export default function CheckoutPage() {
                             2.2. Tiền đặt cọc giữ lịch độc quyền (50%): <strong className="text-[#733F49]">{amountToPayToday.toLocaleString('vi-VN')}₫</strong> (Bên B hoàn tất thanh toán chuyển khoản tại Bước 3).
                           </p>
                           <p className="m-0">
-                            2.3. Tiền cọc bảo lãnh hoàn trả trách nhiệm: <strong>{depositCollateral.toLocaleString('vi-VN')}₫</strong>. Bên A cam kết <strong>hoàn trả 100%</strong> trong vòng 24 giờ làm việc vào tài khoản Bên B sau khi nhận lại lễ phục nguyên vẹn.
+                            2.3. Số tiền còn lại: <strong>{(totalRentPrice - amountToPayToday).toLocaleString('vi-VN')}₫</strong> sẽ được Bên B thanh toán khi nhận bàn giao lễ phục.
                           </p>
                         </div>
                       </div>
@@ -2594,16 +2594,6 @@ export default function CheckoutPage() {
                     <span className="font-jakarta font-extrabold text-[24px] sm:text-[26px] text-[#733F49] tabular-nums tracking-tight">
                       {amountToPayToday.toLocaleString('vi-VN')}₫
                     </span>
-                  </div>
-
-                  <div className="p-3 rounded-xl bg-[#E8F5E9]/50 border border-[#C8E6C9] text-[11px] text-[#2E7D32] space-y-1">
-                    <div className="font-bold flex items-center gap-1">
-                      <Check className="w-3.5 h-3.5" />
-                      <span>CAM KẾT HOÀN CỌC 100%:</span>
-                    </div>
-                    <p className="m-0 text-[#6B5C5D]">
-                      Khoản tiền cọc bảo lãnh {depositCollateral.toLocaleString('vi-VN')}₫ sẽ được hoàn trả tự động vào tài khoản nàng trong vòng 24h sau khi nhận lại lễ phục nguyên vẹn.
-                    </p>
                   </div>
                 </div>
 
