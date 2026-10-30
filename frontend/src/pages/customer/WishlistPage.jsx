@@ -207,7 +207,7 @@ export default function WishlistPage() {
         </section>
 
         {/* CONTAINER CHÍNH */}
-        <div className="max-w-[1280px] mx-auto px-6 sm:px-8 mt-8">
+        <div className="max-w-[1360px] mx-auto px-4 sm:px-6 lg:px-8 mt-8">
           {/* TRƯỜNG HỢP: DANH SÁCH RỖNG */}
           {wishlistItems.length === 0 ? (
             <div className="bg-white rounded-[24px] border border-[#EEDECF] p-12 sm:p-16 text-center my-8 shadow-xs">
@@ -229,42 +229,42 @@ export default function WishlistPage() {
               </Link>
             </div>
           ) : (
-            /* LƯỚI 3 CỘT: CÁC MẪU VÁY ĐÃ LƯU TRONG WISHLIST (Chuẩn 100% Screenshot) */
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
+            /* LƯỚI 4 CỘT: CÁC MẪU VÁY ĐÃ LƯU TRONG WISHLIST */
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
               {wishlistItems.map((dress) => (
                 <div
                   key={dress.id}
                   onClick={() => navigate(`/dresses/${dress.id}`)}
-                  className="bg-white border border-[#EEDECF] rounded-[24px] overflow-hidden shadow-[0px_4px_20px_rgba(201,138,144,0.06)] hover:shadow-[0px_12px_32px_rgba(184,115,125,0.14)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer"
+                  className="bg-white border border-[#EEDECF] rounded-[18px] overflow-hidden shadow-[0px_4px_18px_rgba(201,138,144,0.06)] hover:shadow-[0px_10px_26px_rgba(184,115,125,0.13)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer"
                 >
                   {/* Ảnh Váy Cưới & Nút Trái Tim Xóa Yêu Thích */}
-                  <div className="relative w-full h-[390px] bg-[#FCEEE9] overflow-hidden rounded-t-[23px]">
+                  <div className="relative w-full h-[280px] sm:h-[300px] bg-[#FCEEE9] overflow-hidden rounded-t-[17px]">
                     <img
                       src={dress.image}
                       alt={dress.name}
                       className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
                     />
 
-                    {/* Nút Trái Tim Bo Góc 10px (Squircle) - Filled Đỏ/Burgundy */}
+                    {/* Nút Trái Tim Bo Góc 8px (Squircle) - Filled Đỏ/Burgundy */}
                     <button
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
                         handleRemoveItem(dress.id, dress.name);
                       }}
-                      className="absolute top-3.5 right-3.5 w-[36px] h-[36px] rounded-[10px] bg-white flex items-center justify-center border border-[#EEDECF] shadow-[0px_2px_8px_rgba(0,0,0,0.08)] cursor-pointer z-10 transition-transform active:scale-90 p-0"
+                      className="absolute top-2.5 right-2.5 w-[32px] h-[32px] rounded-[8px] bg-white flex items-center justify-center border border-[#EEDECF] shadow-[0px_2px_8px_rgba(0,0,0,0.08)] cursor-pointer z-10 transition-transform active:scale-90 p-0"
                       title="Bỏ yêu thích"
                     >
-                      <Heart className="w-4 h-4 fill-[#804E55] text-[#804E55]" />
+                      <Heart className="w-3.5 h-3.5 fill-[#804E55] text-[#804E55]" />
                     </button>
                   </div>
 
                   {/* Thông Tin Chi Tiết Thẻ */}
-                  <div className="p-5 flex flex-col flex-1 justify-between">
+                  <div className="p-3.5 sm:p-4 flex flex-col flex-1 justify-between">
                     <div>
                       {/* Dòng Category & Size */}
-                      <div className="text-[10.5px] font-jakarta font-semibold tracking-wider text-[#8A7978] uppercase mb-1.5 flex items-center justify-between">
-                        <span className="truncate max-w-[200px]">
+                      <div className="text-[10px] font-jakarta font-semibold tracking-wider text-[#8A7978] uppercase mb-1 flex items-center justify-between">
+                        <span className="truncate max-w-[140px]">
                           {dress.categoryBadge || dress.categoryName || 'VÁY CƯỚI CAO CẤP'}
                         </span>
                         <span>•</span>
@@ -272,33 +272,33 @@ export default function WishlistPage() {
                       </div>
 
                       {/* Tên Thiết Kế */}
-                      <h3 className="font-playfair text-[21px] sm:text-[22px] font-semibold text-[#2C2523] group-hover:text-[#BA7A83] transition-colors leading-[1.25] tracking-tight mb-2 min-h-[54px] flex items-center">
+                      <h3 className="font-playfair text-[17px] sm:text-[18px] font-semibold text-[#2C2523] group-hover:text-[#BA7A83] transition-colors leading-[1.25] tracking-tight mb-1.5 min-h-[44px] flex items-center">
                         {dress.name}
                       </h3>
 
                       {/* Giá Thuê */}
-                      <div className="flex items-baseline gap-1.5 mb-4">
-                        <span className="font-playfair font-bold text-[24px] sm:text-[26px] leading-tight text-[#804E55] tracking-tight">
+                      <div className="flex items-baseline gap-1 mb-3">
+                        <span className="font-playfair font-bold text-[20px] sm:text-[22px] leading-tight text-[#804E55] tracking-tight">
                           {dress.priceFormatted || dress.price}
                         </span>
-                        <span className="font-jakarta text-[12px] font-medium text-[#8A7978]">
+                        <span className="font-jakarta text-[11px] font-medium text-[#8A7978]">
                           / ngày
                         </span>
                       </div>
                     </div>
 
                     {/* 2 Nút Bấm: Thêm Vào Giỏ & Thuê Ngay */}
-                    <div className="grid grid-cols-2 gap-2.5 pt-1">
+                    <div className="grid grid-cols-2 gap-2 pt-1">
                       <button
                         type="button"
                         onClick={(e) => {
                           e.stopPropagation();
                           handleAddToCart(dress);
                         }}
-                        className="w-full py-2.5 rounded-[10px] bg-white border border-[#804E55]/60 text-[#804E55] font-jakarta text-[12px] font-semibold tracking-wide hover:bg-[#FFF9F6] transition-all cursor-pointer shadow-xs active:scale-[0.98] flex items-center justify-center gap-1.5"
+                        className="w-full py-2 rounded-[8px] bg-white border border-[#804E55]/60 text-[#804E55] font-jakarta text-[11px] font-semibold tracking-wide hover:bg-[#FFF9F6] transition-all cursor-pointer shadow-xs active:scale-[0.98] flex items-center justify-center gap-1"
                       >
-                        <ShoppingBag className="w-3.5 h-3.5" />
-                        <span>Thêm Vào Giỏ</span>
+                        <ShoppingBag className="w-3 h-3" />
+                        <span className="truncate">Thêm Giỏ</span>
                       </button>
 
                       <button
@@ -307,7 +307,7 @@ export default function WishlistPage() {
                           e.stopPropagation();
                           handleRentNow(dress);
                         }}
-                        className="w-full py-2.5 rounded-[10px] bg-[#804E55] hover:bg-[#6D3940] text-white font-jakarta text-[12px] font-semibold tracking-wide transition-all cursor-pointer border-0 shadow-xs active:scale-[0.98]"
+                        className="w-full py-2 rounded-[8px] bg-[#804E55] hover:bg-[#6D3940] text-white font-jakarta text-[11px] font-semibold tracking-wide transition-all cursor-pointer border-0 shadow-xs active:scale-[0.98] text-center"
                       >
                         Thuê Ngay
                       </button>
@@ -335,7 +335,7 @@ export default function WishlistPage() {
               </div>
 
               <Link
-                to="/bo-suu-tap"
+                to="/collection"
                 className="font-jakarta text-[11.5px] font-bold tracking-[1.5px] uppercase text-[#804E55] hover:text-[#B8737D] no-underline inline-flex items-center gap-1 self-start sm:self-auto transition-colors"
               >
                 <span>KHÁM PHÁ THÊM</span>
@@ -343,8 +343,8 @@ export default function WishlistPage() {
               </Link>
             </div>
 
-            {/* Lưới 3 cột gợi ý */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 sm:gap-7">
+            {/* Lưới 4 cột gợi ý */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
               {RECOMMENDED_DRESSES.map((recDress) => {
                 const isSaved = wishlistIds.some(
                   (id) => Number(id) === recDress.id || String(id) === String(recDress.id)
@@ -354,10 +354,10 @@ export default function WishlistPage() {
                   <div
                     key={recDress.id}
                     onClick={() => navigate(`/dresses/${recDress.id}`)}
-                    className="bg-white border border-[#EEDECF] rounded-[24px] overflow-hidden shadow-[0px_4px_20px_rgba(201,138,144,0.06)] hover:shadow-[0px_12px_32px_rgba(184,115,125,0.14)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer"
+                    className="bg-white border border-[#EEDECF] rounded-[18px] overflow-hidden shadow-[0px_4px_18px_rgba(201,138,144,0.06)] hover:shadow-[0px_10px_26px_rgba(184,115,125,0.13)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between group cursor-pointer"
                   >
                     {/* Hình ảnh & Nút Trái Tim */}
-                    <div className="relative w-full h-[390px] bg-[#FCEEE9] overflow-hidden rounded-t-[23px]">
+                    <div className="relative w-full h-[280px] sm:h-[300px] bg-[#FCEEE9] overflow-hidden rounded-t-[17px]">
                       <img
                         src={recDress.image}
                         alt={recDress.name}
@@ -371,11 +371,11 @@ export default function WishlistPage() {
                           e.stopPropagation();
                           handleToggleRecommended(recDress);
                         }}
-                        className="absolute top-3.5 right-3.5 w-[36px] h-[36px] rounded-[10px] bg-white flex items-center justify-center border border-[#EEDECF] shadow-[0px_2px_8px_rgba(0,0,0,0.08)] cursor-pointer z-10 transition-transform active:scale-90 p-0"
+                        className="absolute top-2.5 right-2.5 w-[32px] h-[32px] rounded-[8px] bg-white flex items-center justify-center border border-[#EEDECF] shadow-[0px_2px_8px_rgba(0,0,0,0.08)] cursor-pointer z-10 transition-transform active:scale-90 p-0"
                         title={isSaved ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
                       >
                         <Heart
-                          className={`w-4 h-4 transition-colors ${
+                          className={`w-3.5 h-3.5 transition-colors ${
                             isSaved
                               ? 'fill-[#804E55] text-[#804E55]'
                               : 'text-[#4A3E3F] hover:text-[#804E55]'
@@ -385,48 +385,43 @@ export default function WishlistPage() {
                     </div>
 
                     {/* Chi Tiết */}
-                    <div className="p-5 flex flex-col flex-1 justify-between">
+                    <div className="p-3.5 sm:p-4 flex flex-col flex-1 justify-between">
                       <div>
                         {/* Dòng Category & Size */}
-                        <div className="text-[10.5px] font-jakarta font-semibold tracking-wider text-[#8A7978] uppercase mb-1.5 flex items-center justify-between">
-                          <span>{recDress.categoryBadge}</span>
+                        <div className="text-[10px] font-jakarta font-semibold tracking-wider text-[#8A7978] uppercase mb-1 flex items-center justify-between">
+                          <span className="truncate max-w-[140px]">{recDress.categoryBadge}</span>
                           <span>•</span>
-                          <span>{recDress.size}</span>
+                          <span className="shrink-0">{recDress.size}</span>
                         </div>
 
                         {/* Tên Váy */}
-                        <h3 className="font-playfair text-[21px] sm:text-[22px] font-semibold text-[#2C2523] group-hover:text-[#BA7A83] transition-colors leading-[1.25] tracking-tight mb-2 min-h-[54px] flex items-center">
+                        <h3 className="font-playfair text-[17px] sm:text-[18px] font-semibold text-[#2C2523] group-hover:text-[#BA7A83] transition-colors leading-[1.25] tracking-tight mb-1.5 min-h-[44px] flex items-center">
                           {recDress.name}
                         </h3>
 
-                        {/* Mô tả ngắn */}
-                        <p className="font-jakarta text-[12px] leading-[18px] text-[#695C4E] mb-3 line-clamp-2">
-                          {recDress.description}
-                        </p>
-
                         {/* Giá Thuê */}
-                        <div className="flex items-baseline gap-1.5 mb-4">
-                          <span className="font-playfair font-bold text-[24px] sm:text-[26px] leading-tight text-[#804E55] tracking-tight">
+                        <div className="flex items-baseline gap-1 mb-3">
+                          <span className="font-playfair font-bold text-[20px] sm:text-[22px] leading-tight text-[#804E55] tracking-tight">
                             {recDress.priceFormatted}
                           </span>
-                          <span className="font-jakarta text-[12px] font-medium text-[#8A7978]">
+                          <span className="font-jakarta text-[11px] font-medium text-[#8A7978]">
                             / ngày
                           </span>
                         </div>
                       </div>
 
                       {/* 2 Nút Bấm */}
-                      <div className="grid grid-cols-2 gap-2.5 pt-1">
+                      <div className="grid grid-cols-2 gap-2 pt-1">
                         <button
                           type="button"
                           onClick={(e) => {
                             e.stopPropagation();
                             handleAddToCart(recDress);
                           }}
-                          className="w-full py-2.5 rounded-[10px] bg-white border border-[#804E55]/60 text-[#804E55] font-jakarta text-[12px] font-semibold tracking-wide hover:bg-[#FFF9F6] transition-all cursor-pointer shadow-xs active:scale-[0.98] flex items-center justify-center gap-1.5"
+                          className="w-full py-2 rounded-[8px] bg-white border border-[#804E55]/60 text-[#804E55] font-jakarta text-[11px] font-semibold tracking-wide hover:bg-[#FFF9F6] transition-all cursor-pointer shadow-xs active:scale-[0.98] flex items-center justify-center gap-1"
                         >
-                          <ShoppingBag className="w-3.5 h-3.5" />
-                          <span>Thêm Vào Giỏ</span>
+                          <ShoppingBag className="w-3 h-3" />
+                          <span className="truncate">Thêm Giỏ</span>
                         </button>
 
                         <button
@@ -435,7 +430,7 @@ export default function WishlistPage() {
                             e.stopPropagation();
                             handleRentNow(recDress);
                           }}
-                          className="w-full py-2.5 rounded-[10px] bg-[#804E55] hover:bg-[#6D3940] text-white font-jakarta text-[12px] font-semibold tracking-wide transition-all cursor-pointer border-0 shadow-xs active:scale-[0.98]"
+                          className="w-full py-2 rounded-[8px] bg-[#804E55] hover:bg-[#6D3940] text-white font-jakarta text-[11px] font-semibold tracking-wide transition-all cursor-pointer border-0 shadow-xs active:scale-[0.98] text-center"
                         >
                           Thuê Ngay
                         </button>

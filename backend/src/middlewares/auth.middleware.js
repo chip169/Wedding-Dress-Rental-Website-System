@@ -73,7 +73,7 @@ export const optionalAuthenticate = async (req, res, next) => {
     }
     if (token) {
       const decoded = jwt.verify(token, process.env.JWT_SECRET || 'unibridal_jwt_secret_key_2026_wdp301');
-      const user = await User.findById(decoded.id);
+      const user = await User.findById(decoded.id).populate('roleId');
       if (user && user.isActive) {
         req.user = user;
       }

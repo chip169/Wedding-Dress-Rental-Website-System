@@ -103,3 +103,56 @@
 .animate-marquee:hover {
   animation-play-state: paused;
 }
+
+/* 3D Chibi Floating & Attention Animations */
+@keyframes chibiFloat {
+  0%, 100% {
+    transform: translateY(0px) rotate(0deg);
+  }
+  50% {
+    transform: translateY(-8px) rotate(1.2deg);
+  }
+}
+
+@keyframes chibiGlowPulse {
+  0%, 100% {
+    transform: scale(0.92);
+    opacity: 0.35;
+  }
+  50% {
+    transform: scale(1.18);
+    opacity: 0.7;
+  }
+}
+
+@keyframes sparkleTwinkle {
+  0%, 100% {
+    opacity: 0;
+    transform: scale(0.3) rotate(0deg);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15) rotate(180deg);
+  }
+}
+
+.animate-chibi-float {
+  animation: chibiFloat 3.6s ease-in-out infinite;
+}
+
+.animate-chibi-glow {
+  animation: chibiGlowPulse 2.8s ease-in-out infinite;
+}
+
+.animate-sparkle-1 {
+  animation: sparkleTwinkle 2.4s ease-in-out infinite;
+}
+
+.animate-sparkle-2 {
+  animation: sparkleTwinkle 2.9s ease-in-out 0.8s infinite;
+}
+
+.animate-sparkle-3 {
+  animation: sparkleTwinkle 3.2s ease-in-out 1.5s infinite;
+}
+

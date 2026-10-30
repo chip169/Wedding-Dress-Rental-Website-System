@@ -914,7 +914,7 @@ export default function DressDetailPage() {
                 <div
                   key={item.id}
                   onClick={() => navigate(`/dresses/${item.id}`)}
-                  className="bg-white border border-[#EAE0DC] rounded-[22px] overflow-hidden shadow-xs hover:shadow-xl transition-all duration-300 flex flex-col group cursor-pointer"
+                  className="bg-white border border-[#EAE0DC] hover:border-[#D498A0] rounded-[22px] overflow-hidden shadow-xs hover:shadow-[0_16px_36px_rgba(218,142,150,0.32)] hover:-translate-y-1 transition-all duration-300 flex flex-col group cursor-pointer"
                 >
                   <div className="relative aspect-[3/4] bg-[#FCEEE9] overflow-hidden">
                     <img

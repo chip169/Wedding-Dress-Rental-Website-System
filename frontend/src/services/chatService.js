@@ -1,17 +1,28 @@
 import axiosClient from '../api/axiosClient';
 
 /**
- * Lấy danh sách các cuộc trò chuyện (Staff/Admin xem danh sách khách, Customer xem cuộc trò chuyện của mình)
- * @param {Object} params - { status, page, limit }
+ * Lấy hoặc khởi tạo cuộc hội thoại của chính khách hàng hiện tại
+ */
+export async function getMyConversation() {
+  try {
+    return await axiosClient.get('/conversations/my');
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+}
+
+/**
+ * Lấy danh sách các cuộc trò chuyện (Staff/Admin xem danh sách khách)
+ * @param {Object} params - { status, search }
  */
 export async function getConversations(params = {}) {
   try {
     return await axiosClient.get('/conversations', { params });
   } catch (error) {
-    const cached = localStorage.getItem('unibridal-conversations');
     return {
-      success: true,
-      data: cached ? JSON.parse(cached) : [],
+      success: false,
+      message: error.message || 'Lỗi tải danh sách hội thoại',
+      data: [],
     };
   }
 }
@@ -77,6 +88,18 @@ export async function markAsRead(conversationId) {
     return await axiosClient.patch(`/conversations/${conversationId}/read`);
   } catch (error) {
     return { success: true };
+  }
+}
+
+/**
+ * Ghim / Bỏ ghim hội thoại
+ * @param {string} conversationId
+ */
+export async function togglePin(conversationId) {
+  try {
+    return await axiosClient.patch(`/conversations/${conversationId}/pin`);
+  } catch (error) {
+    return { success: false, message: error.message };
   }
 }
 

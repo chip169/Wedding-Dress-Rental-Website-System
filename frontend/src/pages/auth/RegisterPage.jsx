@@ -495,14 +495,6 @@ export default function RegisterPage() {
             0 6px 16px rgba(0, 0, 0, 0.05);
         }
 
-        .ub-reg-card .ub-emblem-inner-glow {
-          position: absolute;
-          inset: 2px;
-          border-radius: 20px;
-          border: 1px solid rgba(133, 79, 85, 0.06);
-          pointer-events: none;
-        }
-
         .ub-reg-card .ub-emblem-img {
           max-width: 100%;
           max-height: 100%;
@@ -1044,8 +1036,7 @@ export default function RegisterPage() {
           <div className="ub-brand-center">
             {/* White Monogram Emblem Card */}
             <div className="ub-emblem-card">
-              <div className="ub-emblem-inner-glow" />
-              <Logo variant="emblem" className="ub-emblem-img" alt="UniBridal Emblem" />
+              <Logo variant="emblem-transparent" className="ub-emblem-img" alt="UniBridal Emblem" />
             </div>
 
             {/* Haute Couture Typography */}

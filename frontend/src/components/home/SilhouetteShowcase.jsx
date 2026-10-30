@@ -51,7 +51,7 @@ const SilhouetteShowcase = ({ onSelectSilhouette }) => {
             <div
               key={item.id}
               onClick={() => onSelectSilhouette && onSelectSilhouette(item)}
-              className="group relative h-[420px] rounded-2xl overflow-hidden bg-[#FCEEE9] shadow-sm hover:shadow-xl transition-all duration-300 cursor-pointer"
+              className="group relative h-[420px] rounded-2xl overflow-hidden bg-[#FCEEE9] shadow-[0_4px_16px_rgba(218,142,150,0.08)] hover:shadow-[0_16px_36px_rgba(218,142,150,0.32)] hover:-translate-y-1 transition-all duration-300 cursor-pointer"
             >
               {/* Background Photo */}
               <img

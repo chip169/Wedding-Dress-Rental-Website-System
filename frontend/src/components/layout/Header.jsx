@@ -45,6 +45,7 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
   const cartCount = propCartCount !== undefined ? propCartCount : internalCartCount;
   const wishlistCount = propWishlistCount !== undefined ? propWishlistCount : internalWishlistCount;
   const isWishlistPage = location.pathname === '/wishlist' || location.pathname === '/yeu-thich';
+  const isCartPage = location.pathname === '/cart' || location.pathname === '/gio-hang';
   const isMessagesPage = location.pathname === '/tin-nhan' || location.pathname === '/messages' || location.pathname === '/chat';
   const isAboutPage = location.pathname === '/about' || location.pathname === '/ve-chung-toi';
   const isCollectionPage = location.pathname === '/collection' || location.pathname === '/bo-suu-tap';
@@ -244,13 +245,26 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
           {/* Shopping Bag with badge */}
           <Link
             to="/cart"
-            className="relative p-1.5 flex items-center justify-center text-[#2C2523] hover:text-[#B8737D] transition-colors border-0 bg-transparent cursor-pointer no-underline"
+            className={`relative w-[36px] h-[36px] sm:w-[38px] sm:h-[38px] flex items-center justify-center rounded-[12px] transition-all duration-300 cursor-pointer no-underline active:scale-95 ${
+              isCartPage
+                ? 'bg-[#FFF2F0] border border-[#D498A0] text-[#2C2523] shadow-[0_0_14px_rgba(218,142,150,0.55)]'
+                : 'text-[#2C2523] hover:text-[#B8737D] hover:bg-[#FFF5F3] hover:border hover:border-[#D498A0]/50 hover:shadow-[0_0_10px_rgba(218,142,150,0.35)] border border-transparent'
+            }`}
+            style={
+              isCartPage
+                ? {
+                    boxShadow: '0 0 14px rgba(218, 142, 150, 0.55), 0 1px 6px rgba(186, 122, 131, 0.25)',
+                  }
+                : undefined
+            }
             title="Giỏ thuê váy"
           >
-            <ShoppingBag className="w-[19px] h-[19px] stroke-[1.8]" />
-            <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-0.5 rounded-full bg-[#B8737D] text-white font-jakarta text-[9.5px] font-bold flex items-center justify-center leading-none">
-              {cartCount}
-            </span>
+            <ShoppingBag className="w-[18px] h-[18px] stroke-[1.8] text-[#2C2523]" />
+            {cartCount > 0 && (
+              <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-[#B8737D] text-white font-jakarta text-[9.5px] font-bold flex items-center justify-center leading-none shadow-xs">
+                {cartCount}
+              </span>
+            )}
           </Link>
 
           {/* Wishlist Heart */}
@@ -276,7 +290,7 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
           {/* User Profile / Auth Actions */}
           {isLoggedIn ? (
             <div
-              className="relative group py-4"
+              className="relative group py-4 flex items-center justify-center"
               onMouseEnter={handleUserMouseEnter}
               onMouseLeave={handleUserMouseLeave}
             >
@@ -284,20 +298,33 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
                 id="user-profile-button"
                 type="button"
                 onClick={() => setIsUserMenuOpen((prev) => !prev)}
-                className={`p-1.5 flex items-center justify-center transition-colors border-0 bg-transparent cursor-pointer ${
-                  isUserMenuOpen ? 'text-[#B8737D]' : 'text-[#2C2523] group-hover:text-[#B8737D]'
+                className={`relative w-[36px] h-[36px] sm:w-[38px] sm:h-[38px] flex items-center justify-center rounded-[12px] transition-all duration-300 cursor-pointer active:scale-95 ${
+                  isUserMenuOpen
+                    ? 'bg-[#FFF2F0] border border-[#D498A0] text-[#2C2523] shadow-[0_0_14px_rgba(218,142,150,0.55)]'
+                    : 'bg-[#FAF5F6] border border-[#D498A0]/60 text-[#804E55] hover:text-[#B8737D] hover:bg-[#FFF5F3] hover:border-[#D498A0] hover:shadow-[0_0_10px_rgba(218,142,150,0.35)]'
                 }`}
+                style={
+                  isUserMenuOpen
+                    ? {
+                        boxShadow: '0 0 14px rgba(218, 142, 150, 0.55), 0 1px 6px rgba(186, 122, 131, 0.25)',
+                      }
+                    : undefined
+                }
                 title="Tài khoản cá nhân"
               >
-                <div className="w-[30px] h-[30px] rounded-full bg-[#FAF5F6] border border-[#D498A0]/60 flex items-center justify-center text-[#804E55] font-jakarta font-bold text-[13px] uppercase shadow-sm">
-                  {user?.fullName ? user.fullName.trim().charAt(0) : <User className="w-[17px] h-[17px] stroke-[1.8]" />}
-                </div>
+                {user?.fullName ? (
+                  <span className="font-jakarta font-bold text-[13.5px] uppercase leading-none text-[#804E55]">
+                    {user.fullName.trim().charAt(0)}
+                  </span>
+                ) : (
+                  <User className="w-[18px] h-[18px] stroke-[1.8] text-[#804E55]" />
+                )}
               </button>
 
               {/* Dropdown Menu Box */}
               <div
                 id="user-dropdown-menu"
-                className={`absolute top-full right-0 pt-1 z-50 transition-all duration-150 ${
+                className={`absolute top-full left-1/2 -translate-x-1/2 pt-1 z-50 transition-all duration-150 ${
                   isUserMenuOpen
                     ? 'block opacity-100 pointer-events-auto'
                     : 'hidden group-hover:block group-hover:opacity-100 group-hover:pointer-events-auto'

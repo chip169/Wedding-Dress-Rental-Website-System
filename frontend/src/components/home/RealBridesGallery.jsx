@@ -118,7 +118,7 @@ const RealBridesGallery = () => {
           {allReviews.map((item, index) => (
             <div
               key={`${item.id}-${index}`}
-              className="w-[310px] sm:w-[350px] md:w-[370px] shrink-0 bg-white border border-[#E6DAC8] rounded-2xl p-6 shadow-sm hover:shadow-xl transition-all duration-300 flex flex-col justify-between select-none"
+              className="w-[310px] sm:w-[350px] md:w-[370px] shrink-0 bg-white border border-[#E6DAC8] hover:border-[#D498A0] rounded-2xl p-6 shadow-[0_4px_16px_rgba(218,142,150,0.08)] hover:shadow-[0_16px_36px_rgba(218,142,150,0.32)] hover:-translate-y-1 transition-all duration-300 flex flex-col justify-between select-none cursor-pointer"
             >
               <div>
                 {/* Photo */}

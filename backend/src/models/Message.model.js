@@ -11,7 +11,8 @@ const messageSchema = new mongoose.Schema(
     senderId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false,
+      default: null,
       index: true,
     },
     senderRole: {
@@ -23,6 +24,10 @@ const messageSchema = new mongoose.Schema(
       type: String,
       default: '',
       trim: true,
+    },
+    image: {
+      type: String,
+      default: '',
     },
     attachments: [
       {

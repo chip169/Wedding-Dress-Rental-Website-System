@@ -1,4 +1,4 @@
-import React, { useState, useRef, useEffect } from 'react';
+import React, { useState, useRef, useEffect, useCallback } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import {
   Search,
@@ -10,6 +10,13 @@ import {
   Sparkles,
   X
 } from 'lucide-react';
+import {
+  getConversations,
+  getMessages,
+  sendMessage,
+  markAsRead,
+  togglePin,
+} from '../../services/chatService';
 
 import card1Elysian from '../../assets/card1_elysian.jpg';
 import card2Celeste from '../../assets/card2_celeste.jpg';
@@ -25,7 +32,7 @@ const WEDDING_EMOJIS = [
 
 const INITIAL_CONVERSATIONS = [
   {
-    id: 1,
+    id: 'init_1',
     name: 'Nguyễn Thảo Linh',
     avatar: card1Elysian,
     online: true,
@@ -50,7 +57,7 @@ const INITIAL_CONVERSATIONS = [
     ],
   },
   {
-    id: 2,
+    id: 'init_2',
     name: 'Lê Hoàng Yến',
     avatar: card2Celeste,
     online: false,
@@ -68,7 +75,7 @@ const INITIAL_CONVERSATIONS = [
     ],
   },
   {
-    id: 3,
+    id: 'init_3',
     name: 'Trần Mai Phương',
     avatar: card3Lumiere,
     online: false,
@@ -86,7 +93,7 @@ const INITIAL_CONVERSATIONS = [
     ],
   },
   {
-    id: 4,
+    id: 'init_4',
     name: 'Đặng Ngọc Hà',
     avatar: card4Monet,
     online: false,
@@ -104,7 +111,7 @@ const INITIAL_CONVERSATIONS = [
     ],
   },
   {
-    id: 5,
+    id: 'init_5',
     name: 'Bùi Phương Anh',
     avatar: heroBride,
     online: false,
@@ -125,19 +132,112 @@ const INITIAL_CONVERSATIONS = [
 
 export default function CustomerCareManagement() {
   const [conversations, setConversations] = useState(INITIAL_CONVERSATIONS);
-  const [selectedId, setSelectedId] = useState(1);
+  const [selectedId, setSelectedId] = useState(null);
+  const [activeMessages, setActiveMessages] = useState([]);
   const [filterTab, setFilterTab] = useState('all'); // all | unread
   const [searchTerm, setSearchTerm] = useState('');
   const [inputText, setInputText] = useState('');
   const [selectedImage, setSelectedImage] = useState(null);
   const [showEmojiPicker, setShowEmojiPicker] = useState(false);
-  const [isPinned, setIsPinned] = useState(true);
+  const [isPinned, setIsPinned] = useState(false);
   const [pinnedMessage, setPinnedMessage] = useState(
     'Chốt lưu số đo chỉnh hạ eo thêm 1.5cm cho mẫu Elysian Rose vào hợp đồng. (Hôm 15/11 em đến thử trực tiếp nha)'
   );
 
   const fileInputRef = useRef(null);
   const emojiPickerRef = useRef(null);
+
+  // Avatar presets cho các hội thoại
+  const AVATAR_LIST = [card1Elysian, card2Celeste, card3Lumiere, card4Monet, heroBride];
+
+  // Hàm tải danh sách hội thoại từ máy chủ
+  const fetchConversationsList = useCallback(async () => {
+    try {
+      const res = await getConversations({
+        status: filterTab,
+        search: searchTerm.trim() || undefined,
+      });
+
+      if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
+        const mapped = res.data.map((c, index) => ({
+          id: c._id,
+          name: c.customerId?.fullName || c.customerName || 'Khách hàng',
+          phone: c.customerId?.phone || c.customerPhone || '',
+          avatar: c.customerAvatar || c.customerId?.avatar || AVATAR_LIST[index % AVATAR_LIST.length],
+          online: true,
+          time: new Date(c.lastMessage?.createdAt || c.updatedAt).toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          lastMessage: c.lastMessage?.text || 'Bắt đầu cuộc trò chuyện',
+          unread: (c.unreadStaffCount || 0) > 0,
+          unreadCount: c.unreadStaffCount || 0,
+          isPinned: c.isPinned || false,
+          messages: [],
+        }));
+
+        setConversations(mapped);
+        setSelectedId((current) => current || mapped[0].id);
+      }
+    } catch (err) {
+      console.warn('Lỗi tải danh sách hội thoại:', err);
+    }
+  }, [filterTab, searchTerm]);
+
+  // Hàm tải danh sách tin nhắn của hội thoại đang chọn
+  const fetchActiveMessages = useCallback(async (convId) => {
+    if (!convId || convId.startsWith?.('init_')) return;
+
+    try {
+      const res = await getMessages(convId);
+      if (res?.data && Array.isArray(res.data)) {
+        const mapped = res.data.map((m) => ({
+          id: m._id,
+          sender: m.senderRole === 'customer' ? 'customer' : 'staff',
+          text: m.text,
+          image: m.image,
+          time: new Date(m.createdAt).toLocaleTimeString('vi-VN', {
+            hour: '2-digit',
+            minute: '2-digit',
+          }),
+          status: m.status === 'read' ? 'Đã xem' : 'Đã gửi',
+        }));
+        setActiveMessages(mapped);
+      }
+      // Đánh dấu đã đọc
+      markAsRead(convId).catch(() => {});
+    } catch (err) {
+      console.warn('Lỗi tải tin nhắn:', err);
+    }
+  }, []);
+
+  // Lần đầu mount và khi search/filter thay đổi
+  useEffect(() => {
+    fetchConversationsList();
+  }, [fetchConversationsList]);
+
+  // Khi selectedId thay đổi
+  useEffect(() => {
+    if (selectedId) {
+      fetchActiveMessages(selectedId);
+      const conv = conversations.find((c) => c.id === selectedId);
+      if (conv) {
+        setIsPinned(conv.isPinned);
+      }
+    }
+  }, [selectedId, fetchActiveMessages]);
+
+  // Polling chu kỳ 3.5s để cập nhật tin nhắn mới từ khách hàng
+  useEffect(() => {
+    const interval = setInterval(() => {
+      fetchConversationsList();
+      if (selectedId) {
+        fetchActiveMessages(selectedId);
+      }
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [fetchConversationsList, fetchActiveMessages, selectedId]);
 
   // Close emoji picker when clicking outside
   useEffect(() => {
@@ -176,7 +276,6 @@ export default function CustomerCareManagement() {
       setSelectedImage(reader.result);
     };
     reader.readAsDataURL(file);
-    // Reset file input value so re-selecting same file triggers onChange
     e.target.value = '';
   };
 
@@ -185,35 +284,53 @@ export default function CustomerCareManagement() {
     setShowEmojiPicker(false);
   };
 
-  const handleSendMessage = (e) => {
+  const handleSendMessage = async (e) => {
     if (e) e.preventDefault();
     if (!inputText.trim() && !selectedImage) return;
+
+    const textToSend = inputText.trim();
+    const imageToSend = selectedImage;
 
     const newMsg = {
       id: Date.now(),
       sender: 'staff',
-      text: inputText.trim(),
-      image: selectedImage,
+      text: textToSend,
+      image: imageToSend,
       time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       status: 'Đã gửi',
     };
 
-    setConversations((prev) =>
-      prev.map((c) => {
-        if (c.id === selectedId) {
-          return {
-            ...c,
-            lastMessage: newMsg.text || 'Đã gửi một hình ảnh',
-            time: newMsg.time,
-            messages: [...c.messages, newMsg],
-          };
-        }
-        return c;
-      })
-    );
-
+    setActiveMessages((prev) => [...prev, newMsg]);
     setInputText('');
     setSelectedImage(null);
+
+    // Gửi tin nhắn lên server
+    if (selectedId && !selectedId.startsWith?.('init_')) {
+      try {
+        await sendMessage({
+          conversationId: selectedId,
+          text: textToSend,
+          image: imageToSend,
+          senderRole: 'staff',
+        });
+        fetchConversationsList();
+      } catch (err) {
+        console.error('Lỗi gửi tin nhắn từ Admin:', err);
+      }
+    }
+  };
+
+  const handleTogglePinConversation = async () => {
+    const nextState = !isPinned;
+    setIsPinned(nextState);
+    if (selectedId && !selectedId.startsWith?.('init_')) {
+      try {
+        await togglePin(selectedId);
+        fetchConversationsList();
+      } catch (err) {
+        console.warn('Lỗi ghim:', err);
+      }
+    }
   };
 
   const handleQuickReply = (text) => {
@@ -259,7 +376,7 @@ export default function CustomerCareManagement() {
                     : 'bg-[#FAF2EE] text-[#7A6B6C] hover:bg-[#F2E5E0]'
                 }`}
               >
-                Tất cả (18)
+                Tất cả ({conversations.length})
               </button>
               <button
                 type="button"
@@ -270,7 +387,7 @@ export default function CustomerCareManagement() {
                     : 'bg-[#FAF2EE] text-[#7A6B6C] hover:bg-[#F2E5E0]'
                 }`}
               >
-                Chưa đọc (4)
+                Chưa đọc ({conversations.filter((c) => c.unread).length})
               </button>
             </div>
           </div>
@@ -307,14 +424,22 @@ export default function CustomerCareManagement() {
                   </div>
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center justify-between mb-0.5">
-                      <span className="text-[13px] font-bold text-[#2C2523] truncate">
-                        {c.name}
-                      </span>
+                      <div className="flex items-center gap-1.5 truncate">
+                        <span className={`text-[13px] truncate ${c.unread ? 'font-bold text-[#733F49]' : 'font-bold text-[#2C2523]'}`}>
+                          {c.name}
+                        </span>
+                        {c.unread && (
+                          <span className="w-2 h-2 rounded-full bg-rose-500 shrink-0 animate-pulse" />
+                        )}
+                        {c.isPinned && (
+                          <Pin size={11} className="text-[#B8737D] fill-[#B8737D] -rotate-45 shrink-0" />
+                        )}
+                      </div>
                       <span className="text-[11px] text-[#9A8B8C] shrink-0 ml-1">
                         {c.time}
                       </span>
                     </div>
-                    <p className="text-xs text-[#6A5B5D] truncate leading-snug">
+                    <p className={`text-xs truncate leading-snug ${c.unread ? 'font-semibold text-[#2C2523]' : 'text-[#6A5B5D]'}`}>
                       {c.lastMessage}
                     </p>
                   </div>
@@ -347,15 +472,7 @@ export default function CustomerCareManagement() {
             <div className="flex items-center gap-2">
               <button
                 type="button"
-                onClick={() => {
-                  const nextState = !isPinned;
-                  setIsPinned(nextState);
-                  if (nextState && !pinnedMessage) {
-                    setPinnedMessage(
-                      activeConv.messages[activeConv.messages.length - 1]?.text || 'Đã ghim hội thoại'
-                    );
-                  }
-                }}
+                onClick={handleTogglePinConversation}
                 className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors border-0 cursor-pointer ${
                   isPinned
                     ? 'bg-[#F2E2DC] text-[#733F49] shadow-2xs'
@@ -388,7 +505,7 @@ export default function CustomerCareManagement() {
               </div>
               <button
                 type="button"
-                onClick={() => setIsPinned(false)}
+                onClick={handleTogglePinConversation}
                 className="bg-transparent border-0 text-[#9A8B8C] hover:text-[#733F49] cursor-pointer p-0.5 text-xs font-semibold shrink-0 ml-2"
                 title="Bỏ ghim"
               >
@@ -399,7 +516,7 @@ export default function CustomerCareManagement() {
 
           {/* Messages Stream */}
           <div className="flex-1 overflow-y-auto p-5 space-y-4 bg-white">
-            {activeConv.messages.map((msg) => {
+            {((activeMessages.length > 0 ? activeMessages : activeConv.messages) || []).map((msg) => {
               const isStaff = msg.sender === 'staff';
               if (isStaff) {
                 return (

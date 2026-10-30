@@ -15,7 +15,6 @@ function CartItem({ item, onUpdate, onRemove, onWishlist, isWishlisted }) {
   const ProductImage = item.detailHref === null ? 'div' : Link;
   return (
     <article className="cart-product">
-      {item.location && <span className="cart-product-ribbon">✥ {item.location}</span>}
       <ProductImage className="cart-product-image" {...(item.detailHref === null ? {} : { to: item.detailHref || `/dresses/${item.id}`, 'aria-label': `Xem ${item.name}` })}>
         <img src={item.image} alt={item.name} />
         {item.code && <span>{item.code}</span>}

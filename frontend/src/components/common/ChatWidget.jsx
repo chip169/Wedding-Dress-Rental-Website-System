@@ -10,6 +10,11 @@ import {
   CheckCheck,
 } from 'lucide-react';
 import aboutFounderImg from '../../assets/about_founder_portrait.jpg';
+import chibiBrideImg from '../../assets/chibi_bride_chat.jpg';
+import chibiBride3DImg from '../../assets/chibi_bride_3d.png';
+import chibiBride3DWinkImg from '../../assets/chibi_bride_3d_wink.png';
+import { useAuth } from '../../contexts/AuthContext';
+import { getMyConversation, sendMessage, getMessages } from '../../services/chatService';
 
 const STORAGE_KEY = 'unibridal_quick_chat_history';
 
@@ -47,12 +52,26 @@ const QUICK_SUGGESTIONS = [
   },
 ];
 
+// Biểu tượng ngôi sao 4 cánh (FourPointStar) chuẩn theo hình ảnh người dùng
+function FourPointStar({ className = '' }) {
+  return (
+    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
+      <path d="M12 0C12 7 17 12 24 12C17 12 12 17 12 24C12 17 7 12 0 12C7 12 12 7 12 0Z" />
+    </svg>
+  );
+}
+
 export default function ChatWidget() {
   const navigate = useNavigate();
+  const { user } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
+  const [showGreetingBubble, setShowGreetingBubble] = useState(true);
+  const [autoShowBubble, setAutoShowBubble] = useState(true);
+  const [isWinking, setIsWinking] = useState(false);
   const [inputText, setInputText] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
+  const [conversationId, setConversationId] = useState(null);
   const [messages, setMessages] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -66,14 +85,113 @@ export default function ChatWidget() {
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
 
-  // Lưu lịch sử tin nhắn vào localStorage
+  // Tự động hiện lời chào 6 giây đầu khi người dùng vào trang để gây chú ý tự nhiên
   useEffect(() => {
-    try {
-      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
-    } catch {
-      // ignore
-    }
-  }, [messages]);
+    const timer = setTimeout(() => {
+      setAutoShowBubble(false);
+    }, 6000);
+    return () => clearTimeout(timer);
+  }, []);
+
+  // Preload cả 2 ảnh nhân vật để nháy mắt lập tức, không bị giật hay chớp sáng
+  useEffect(() => {
+    const img1 = new Image();
+    img1.src = chibiBride3DImg;
+    const img2 = new Image();
+    img2.src = chibiBride3DWinkImg;
+  }, []);
+
+  // Hiệu ứng thỉnh thoảng nháy 1 mắt tinh nghịch (mỗi 3.8s - 5.5s nháy mắt trong 320ms)
+  useEffect(() => {
+    let timeoutId;
+    let isMounted = true;
+
+    const scheduleWink = () => {
+      const delay = Math.random() * 1800 + 3800;
+      timeoutId = setTimeout(() => {
+        if (!isMounted) return;
+        setIsWinking(true);
+        setTimeout(() => {
+          if (!isMounted) return;
+          setIsWinking(false);
+          scheduleWink();
+        }, 320);
+      }, delay);
+    };
+
+    scheduleWink();
+
+    return () => {
+      isMounted = false;
+      clearTimeout(timeoutId);
+    };
+  }, []);
+
+  // Đồng bộ cuộc hội thoại từ server khi component mount hoặc khi user thay đổi
+  useEffect(() => {
+    setConversationId(null);
+    const fetchConversation = async () => {
+      try {
+        const res = await getMyConversation();
+        if (res?.data?.conversation) {
+          setConversationId(res.data.conversation._id);
+          if (Array.isArray(res.data.messages) && res.data.messages.length > 0) {
+            const mapped = res.data.messages.map((m) => ({
+              id: m._id || m.id,
+              sender: m.senderRole === 'customer' ? 'user' : 'staff',
+              senderRole: m.senderRole,
+              name: m.senderRole === 'customer' ? (user?.fullName || 'Bạn') : 'Mai Anh • Senior Stylist',
+              time: new Date(m.createdAt || Date.now()).toLocaleTimeString('vi-VN', {
+                hour: '2-digit',
+                minute: '2-digit',
+              }),
+              text: m.text,
+            }));
+            setMessages(mapped);
+          }
+        }
+      } catch (err) {
+        console.warn('Lỗi lấy hội thoại từ server:', err);
+      }
+    };
+
+    fetchConversation();
+  }, [user]);
+
+  // Polling lấy tin nhắn mới mỗi 3.5 giây để đồng bộ real-time với phản hồi từ Admin/Staff
+  useEffect(() => {
+    if (!conversationId) return;
+
+    const interval = setInterval(async () => {
+      try {
+        const res = await getMessages(conversationId);
+        if (res?.data && Array.isArray(res.data)) {
+          const mapped = res.data.map((m) => ({
+            id: m._id || m.id,
+            sender: m.senderRole === 'customer' ? 'user' : 'staff',
+            senderRole: m.senderRole,
+            name: m.senderRole === 'customer' ? (user?.fullName || 'Bạn') : 'Mai Anh • Senior Stylist',
+            time: new Date(m.createdAt || Date.now()).toLocaleTimeString('vi-VN', {
+              hour: '2-digit',
+              minute: '2-digit',
+            }),
+            text: m.text,
+          }));
+
+          setMessages((prev) => {
+            if (mapped.length > prev.length && !isOpen) {
+              setUnreadCount((c) => c + (mapped.length - prev.length));
+            }
+            return mapped;
+          });
+        }
+      } catch {
+        // bỏ qua lỗi polling
+      }
+    }, 3500);
+
+    return () => clearInterval(interval);
+  }, [conversationId, isOpen, user]);
 
   // Tự động cuộn xuống tin nhắn mới nhất
   const scrollToBottom = (behavior = 'smooth') => {
@@ -94,61 +212,78 @@ export default function ChatWidget() {
     }
   }, [messages, isTyping]);
 
-  const handleSendMessage = (textToSend) => {
+  const handleSendMessage = async (textToSend, isQuickSuggestion = false) => {
     const content = (textToSend || inputText).trim();
     if (!content) return;
 
     const userMsg = {
-      id: Date.now(),
+      id: 'local_' + Date.now(),
       sender: 'user',
+      senderRole: 'customer',
+      name: user?.fullName || 'Bạn',
       time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
       text: content,
     };
 
+    // Tin nhắn của người dùng lập tức hiển thị bên phải (sender: 'user')
     setMessages((prev) => [...prev, userMsg]);
     setInputText('');
 
-    // Kiểm tra câu trả lời khớp hoặc mô phỏng phản hồi từ Stylist
-    setIsTyping(true);
-    setTimeout(() => {
-      let replyText = '';
-      const lower = content.toLowerCase();
+    let currentConvId = conversationId;
 
+    // Gửi tin nhắn lên Backend MongoDB với vai trò 'customer'
+    try {
+      const res = await sendMessage({
+        conversationId: currentConvId,
+        text: content,
+        senderRole: 'customer',
+        guestName: user?.fullName || 'Khách hàng',
+        guestPhone: user?.phone || '',
+      });
+
+      if (res?.data) {
+        if (!currentConvId && res.data.conversationId) {
+          currentConvId = res.data.conversationId;
+          setConversationId(currentConvId);
+        }
+      }
+    } catch (error) {
+      console.warn('Lỗi gửi tin nhắn lên server:', error);
+    }
+
+    // Chỉ tự động trả lời nếu người dùng bấm vào các nút Gợi ý Nhanh (FAQ)
+    if (isQuickSuggestion) {
       const matchedSuggestion = QUICK_SUGGESTIONS.find(
-        (q) => lower.includes(q.label.toLowerCase()) || lower === q.text.toLowerCase()
+        (q) => q.text.toLowerCase() === content.toLowerCase() || content.toLowerCase().includes(q.label.toLowerCase())
       );
 
       if (matchedSuggestion) {
-        replyText = matchedSuggestion.reply;
-      } else if (lower.includes('giá') || lower.includes('thuê') || lower.includes('nhiêu')) {
-        replyText =
-          'Giá thuê váy cưới tại UniBridal dao động từ 3.500.000₫ đến 18.000.000₫ tuỳ bộ sưu tập. Tất cả đều bao gồm phụ kiện, lúp voan Pháp và chỉnh sửa chuẩn ni đo của nàng.';
-      } else if (lower.includes('lịch') || lower.includes('thử') || lower.includes('hẹn')) {
-        replyText =
-          'UniBridal rất sẵn lòng đón tiếp nàng! Nàng muốn thử váy vào ngày giờ nào hay ghé showroom để được fitting suite 1-1 ạ?';
-      } else if (lower.includes('địa chỉ') || lower.includes('ở đâu') || lower.includes('showroom')) {
-        replyText =
-          'Showroom UniBridal tọa lạc tại số 72 Tràng Tiền, Quận Hoàn Kiếm, Hà Nội. Mở cửa từ 9:00 - 21:00 hàng ngày nàng nhé!';
-      } else {
-        replyText =
-          'Cảm ơn nàng đã gửi lời nhắn! Chuyên viên tư vấn Mai Anh đã nhận được thông tin và sẽ phản hồi chi tiết cho nàng ngay ít phút nữa nhé. 💕';
+        setIsTyping(true);
+        setTimeout(async () => {
+          const staffMsg = {
+            id: 'bot_' + Date.now(),
+            sender: 'staff',
+            senderRole: 'staff',
+            name: 'Mai Anh • Senior Stylist',
+            time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+            text: matchedSuggestion.reply,
+          };
+
+          setMessages((prev) => [...prev, staffMsg]);
+          setIsTyping(false);
+
+          try {
+            await sendMessage({
+              conversationId: currentConvId,
+              text: matchedSuggestion.reply,
+              senderRole: 'staff',
+            });
+          } catch {
+            // ignore
+          }
+        }, 800);
       }
-
-      const staffMsg = {
-        id: Date.now() + 1,
-        sender: 'staff',
-        name: 'Mai Anh • Senior Stylist',
-        time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
-        text: replyText,
-      };
-
-      setMessages((prev) => [...prev, staffMsg]);
-      setIsTyping(false);
-
-      if (!isOpen) {
-        setUnreadCount((prev) => prev + 1);
-      }
-    }, 900);
+    }
   };
 
   const handleKeyDown = (e) => {
@@ -165,16 +300,16 @@ export default function ChatWidget() {
         <aside
           aria-label="Cửa sổ tư vấn trực tuyến"
           className="fixed z-50 w-[350px] sm:w-[380px] h-[500px] max-h-[calc(100vh-100px)] bg-white rounded-2xl shadow-[0_12px_45px_rgba(0,0,0,0.25)] border border-[#EADBDE] flex flex-col overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
-          style={{ bottom: '88px', right: '24px' }}
+          style={{ bottom: '100px', right: '24px' }}
         >
           {/* Header */}
           <div className="bg-gradient-to-r from-[#9B5C66] via-[#B8737D] to-[#A35D67] text-white p-3.5 px-4 flex items-center justify-between shrink-0 shadow-sm">
             <div className="flex items-center gap-3">
               <div className="relative">
                 <img
-                  src={aboutFounderImg}
+                  src={chibiBrideImg}
                   alt="Stylist Mai Anh"
-                  className="w-10 h-10 rounded-full object-cover border-2 border-white/70 shadow-sm"
+                  className="w-10 h-10 rounded-full object-cover border-2 border-white/70 shadow-sm bg-[#FFF2F0]"
                 />
                 <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-400 border-2 border-white ring-1 ring-emerald-300 animate-pulse" />
               </div>
@@ -231,7 +366,7 @@ export default function ChatWidget() {
           {/* Messages Body */}
           <div className="flex-1 p-3.5 space-y-3 overflow-y-auto bg-gradient-to-b from-[#FAF8F7] to-white text-[13px] font-jakarta">
             {messages.map((msg) => {
-              const isUser = msg.sender === 'user';
+              const isUser = msg.sender === 'user' || msg.senderRole === 'customer';
               return (
                 <div
                   key={msg.id}
@@ -280,7 +415,7 @@ export default function ChatWidget() {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => handleSendMessage(item.text)}
+                onClick={() => handleSendMessage(item.text, true)}
                 className="text-[11px] font-medium text-[#7D535B] bg-white hover:bg-[#FFF2F0] hover:border-[#D498A0] border border-[#EADBDE] rounded-full px-2.5 py-1 whitespace-nowrap transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
               >
                 {item.label}
@@ -318,50 +453,95 @@ export default function ChatWidget() {
         </aside>
       )}
 
-      {/* 2. Nút Chat Nổi Tròn Góc Phải (Floating Launcher Button) */}
-      <aside aria-label="Tư vấn trực tuyến" className="fixed bottom-6 right-6 z-50">
-        <button
-          type="button"
-          id="floating-chat-toggle"
-          onClick={() => setIsOpen((prev) => !prev)}
-          className={`group relative flex items-center justify-center w-14 h-14 sm:w-[58px] sm:h-[58px] rounded-full text-white shadow-[0_8px_25px_rgba(184,115,125,0.45)] hover:shadow-[0_12px_35px_rgba(184,115,125,0.7)] hover:scale-108 active:scale-95 transition-all duration-300 border-2 border-white/70 backdrop-blur-sm cursor-pointer ${
-            isOpen
-              ? 'bg-[#2C2523] hover:bg-stone-800'
-              : 'bg-gradient-to-tr from-[#9B5C66] via-[#B8737D] to-[#D498A0]'
-          }`}
-          title={isOpen ? 'Đóng hộp chat' : 'Trò chuyện trực tuyến cùng chuyên viên'}
-        >
-          {/* Ping animation effect khi đóng */}
-          {!isOpen && (
-            <span className="absolute inset-0 rounded-full bg-[#B8737D] opacity-35 animate-ping group-hover:opacity-10 pointer-events-none" />
-          )}
+      {/* 2. Nút Chat Nổi 3D Chibi Bride Không Viền Tròn (Floating 3D Cutout Figure) */}
+      <aside aria-label="Tư vấn trực tuyến" className="fixed bottom-3 right-3 sm:bottom-4 sm:right-5 z-50 flex items-end group/chibi">
+        {/* Lời chào Speech Bubble (Hiện tự động 6s đầu hoặc khi trỏ chuột vào Hover) */}
+        {!isOpen && (
+          <div
+            onClick={() => setIsOpen(true)}
+            className={`relative -mr-2 sm:-mr-2.5 mb-10 sm:mb-12 cursor-pointer select-none transition-all duration-300 z-10 ${
+              autoShowBubble
+                ? 'opacity-100 translate-x-0 pointer-events-auto'
+                : 'opacity-0 translate-x-2 pointer-events-none group-hover/chibi:opacity-100 group-hover/chibi:translate-x-0 group-hover/chibi:pointer-events-auto'
+            }`}
+          >
+            <div className="relative bg-white/95 backdrop-blur-md border border-[#D498A0] rounded-[14px] rounded-br-[3px] px-2.5 py-1.5 shadow-[0_4px_18px_rgba(218,142,150,0.32)] text-center hover:scale-105 transition-transform duration-300">
+              {/* Mũi nhọn speech bubble trỏ sang nhân vật */}
+              <div className="absolute -right-1.5 top-1/2 -translate-y-1/2 w-3 h-3 bg-white border-t border-r border-[#D498A0] transform rotate-45" />
 
-          {/* Icon Chuyển Đổi: Chat hoặc Đóng */}
-          {isOpen ? (
-            <X className="w-6 h-6 stroke-[2.2] text-white transition-transform duration-300 rotate-0 group-hover:rotate-90 relative z-10" />
-          ) : (
-            <MessageSquare className="w-6 h-6 stroke-[2] text-white transition-transform duration-300 group-hover:rotate-6 relative z-10" />
-          )}
-
-          {/* Online Status Dot hoặc Unread Badge */}
-          {!isOpen && unreadCount > 0 ? (
-            <span className="absolute -top-1 -right-1 min-w-[20px] h-[20px] px-1 rounded-full bg-rose-600 text-white font-bold text-[10px] flex items-center justify-center border-2 border-white shadow-sm z-20">
-              {unreadCount}
-            </span>
-          ) : (
-            !isOpen && (
-              <span className="absolute top-0.5 right-0.5 w-3.5 h-3.5 rounded-full bg-emerald-500 border-2 border-white shadow-sm ring-2 ring-emerald-400/30 animate-pulse z-20" />
-            )
-          )}
-
-          {/* Tooltip Capsule khi Hover (chỉ khi đóng) */}
-          {!isOpen && (
-            <div className="absolute right-full mr-3.5 top-1/2 -translate-y-1/2 hidden sm:flex items-center gap-2 px-3.5 py-1.5 bg-[#2C2523]/95 text-white text-[12px] font-medium tracking-wide rounded-full shadow-lg pointer-events-none opacity-0 group-hover:opacity-100 transition-all duration-300 translate-x-2 group-hover:translate-x-0 whitespace-nowrap backdrop-blur-md border border-white/10">
-              <span className="w-2 h-2 rounded-full bg-emerald-400 animate-pulse" />
-              <span>Tư vấn trực tuyến</span>
+              <p className="font-jakarta text-[11.5px] font-medium text-[#4A3E3F] leading-[15.5px] m-0">
+                Bạn cần tư vấn<br />về váy cưới nào ạ?
+              </p>
             </div>
-          )}
-        </button>
+          </div>
+        )}
+
+        {/* 3D Character Figure (Không viền tròn, bồng bềnh 3D, ngôi sao 4 cánh, không chớp sáng) */}
+        <div className="relative select-none animate-chibi-float">
+          {/* Chỉ hiển thị ngôi sao 4 cánh theo đúng mẫu */}
+          <span className="absolute -top-1 left-2 w-4 h-4 text-amber-200 drop-shadow-[0_0_8px_rgba(251,191,36,0.9)] pointer-events-none animate-sparkle-1 select-none">
+            <FourPointStar className="w-full h-full" />
+          </span>
+          <span className="absolute top-2 right-2 w-4 h-4 text-amber-200 drop-shadow-[0_0_8px_rgba(251,191,36,0.9)] pointer-events-none animate-sparkle-2 select-none">
+            <FourPointStar className="w-full h-full" />
+          </span>
+
+          <button
+            type="button"
+            id="floating-chat-toggle"
+            onClick={() => setIsOpen((prev) => !prev)}
+            onMouseDown={(e) => e.preventDefault()}
+            className="relative p-0 border-0 bg-transparent cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95 group/btn outline-none focus:outline-none focus-visible:outline-none active:outline-none ring-0 focus:ring-0 focus-visible:ring-0 select-none"
+            style={{
+              outline: 'none',
+              boxShadow: 'none',
+              WebkitTapHighlightColor: 'transparent',
+              WebkitTouchCallout: 'none',
+              userSelect: 'none',
+            }}
+            title={isOpen ? 'Đóng hộp chat' : 'Trò chuyện cùng chuyên viên tư vấn UniBridal'}
+          >
+            {/* Ảnh nhân vật 3D (Đổi ảnh trực tiếp 1 thẻ img, hoàn toàn không bị chớp sáng) */}
+            <img
+              src={isWinking ? chibiBride3DWinkImg : chibiBride3DImg}
+              alt="UniBridal 3D Chibi Bride"
+              draggable={false}
+              className="w-[90px] h-auto sm:w-[106px] object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.14)] select-none pointer-events-none"
+              style={{
+                outline: 'none',
+                userSelect: 'none',
+                WebkitUserDrag: 'none',
+              }}
+            />
+
+            {/* Badge nút tròn góc dưới (X khi mở, icon Chat khi đóng) */}
+            <span
+              className={`absolute bottom-0 right-1 w-6 h-6 sm:w-7 sm:h-7 rounded-full flex items-center justify-center border-2 border-white shadow-md transition-all duration-300 z-20 ${
+                isOpen
+                  ? 'bg-[#804E55] text-white hover:bg-[#6D3940]'
+                  : 'bg-[#B8737D] text-white group-hover/btn:bg-[#a35d67]'
+              }`}
+            >
+              {isOpen ? (
+                <X className="w-3.5 h-3.5 stroke-[2.5]" />
+              ) : (
+                <MessageSquare className="w-3 h-3 stroke-[2.2]" />
+              )}
+            </span>
+
+            {/* Online status green dot */}
+            {!isOpen && (
+              <span className="absolute bottom-4 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border border-white shadow-xs animate-pulse z-20" />
+            )}
+
+            {/* Unread badge nếu có tin nhắn mới */}
+            {!isOpen && unreadCount > 0 && (
+              <span className="absolute top-2 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white font-bold text-[10px] flex items-center justify-center border-2 border-white shadow-sm z-30 animate-bounce">
+                {unreadCount}
+              </span>
+            )}
+          </button>
+        </div>
       </aside>
     </>
   );

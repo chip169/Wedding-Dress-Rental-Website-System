@@ -5,8 +5,28 @@ const conversationSchema = new mongoose.Schema(
     customerId: {
       type: mongoose.Schema.Types.ObjectId,
       ref: 'User',
-      required: true,
+      required: false,
+      default: null,
       index: true,
+    },
+    guestSessionId: {
+      type: String,
+      default: null,
+      index: true,
+    },
+    customerName: {
+      type: String,
+      default: 'Khách hàng',
+      trim: true,
+    },
+    customerPhone: {
+      type: String,
+      default: '',
+      trim: true,
+    },
+    customerAvatar: {
+      type: String,
+      default: '',
     },
     staffId: {
       type: mongoose.Schema.Types.ObjectId,

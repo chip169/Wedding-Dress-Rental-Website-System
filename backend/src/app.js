@@ -3,6 +3,9 @@ import cors from 'cors';
 import authRoutes from './routes/auth.routes.js';
 import appointmentRoutes from './routes/appointment.routes.js';
 import orderRoutes from './routes/order.routes.js';
+import contractTemplateRoutes from './routes/contractTemplate.routes.js';
+import chatRoutes from './routes/chat.routes.js';
+import messageRoutes from './routes/message.routes.js';
 import { errorHandler } from './middlewares/errorHandler.js';
 
 const app = express();
@@ -39,6 +42,9 @@ app.get('/health', (req, res) => {
 app.use('/api/auth', authRoutes);
 app.use('/api/appointments', appointmentRoutes);
 app.use('/api/orders', orderRoutes);
+app.use('/api/contract-templates', contractTemplateRoutes);
+app.use('/api/conversations', chatRoutes);
+app.use('/api/messages', messageRoutes);
 
 // Bắt lỗi tập trung
 app.use(errorHandler);

@@ -1,4 +1,5 @@
 import React from 'react';
+import { Link } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
 import heroBrideImg from '../../assets/hero_bride.jpg';
 import laceDetailImg from '../../assets/lace_detail.jpg';
@@ -39,12 +40,12 @@ const HeroSection = () => {
 
             {/* CTA Button: KHÁM PHÁ BỘ SƯU TẬP */}
             <div className="mb-12">
-              <a
-                href="#collection"
-                className="inline-flex items-center justify-center px-8 py-3.5 rounded-xl bg-[#B8737D] text-white font-jakarta text-[13px] font-semibold tracking-wider uppercase shadow-[0px_4px_16px_rgba(184,115,125,0.35)] hover:bg-[#a6626c] transition-all cursor-pointer no-underline"
+              <Link
+                to="/collection"
+                className="inline-flex items-center justify-center px-8 py-3.5 rounded-xl bg-[#B8737D] text-white font-jakarta text-[13px] font-semibold tracking-wider uppercase shadow-[0px_4px_16px_rgba(184,115,125,0.35)] hover:bg-[#a6626c] transition-all cursor-pointer no-underline active:scale-95"
               >
                 KHÁM PHÁ BỘ SƯU TẬP
-              </a>
+              </Link>
             </div>
 
             {/* Separator Line */}

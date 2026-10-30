@@ -25,6 +25,7 @@ import InventoryManagement from './pages/admin/InventoryManagement';
 import CustomerCareManagement from './pages/admin/CustomerCareManagement';
 import ContractManagement from './pages/admin/ContractManagement';
 import ContractTemplateManagement from './pages/admin/ContractTemplateManagement';
+import NotFoundPage from './pages/common/NotFoundPage';
 import ProtectedRoute from './components/common/ProtectedRoute';
 import ScrollToTop from './components/common/ScrollToTop';
 import { AuthProvider } from './contexts/AuthContext';
@@ -114,7 +115,11 @@ export default function App() {
               <Route path="/quan-ly-mau-hop-dong" element={<ProtectedRoute allowedRoles={['admin']}><ContractTemplateManagement /></ProtectedRoute>} />
               <Route path="/mau-hop-dong" element={<ProtectedRoute allowedRoles={['admin']}><ContractTemplateManagement /></ProtectedRoute>} />
 
-              <Route path="*" element={<Navigate to="/" replace />} />
+              {/* Error & Access Control Routes */}
+              <Route path="/404" element={<NotFoundPage type="404" />} />
+              <Route path="/403" element={<NotFoundPage type="forbidden" />} />
+              <Route path="/401" element={<NotFoundPage type="unauthenticated" />} />
+              <Route path="*" element={<NotFoundPage type="404" />} />
             </Routes>
           </Router>
         </WishlistProvider>
