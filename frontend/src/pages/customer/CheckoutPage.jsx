@@ -2202,8 +2202,8 @@ export default function CheckoutPage() {
             {currentStep === 3 && (
               <div className="space-y-8 animate-fade-in">
 
-                {/* Contract Signed Status Banner */}
-                {!isContractSigned ? (
+                {/* Contract Signed Status Banner (Chỉ hiện cảnh báo nếu chưa ký hợp đồng) */}
+                {!isContractSigned && (
                   <div className="bg-[#FFF8E7] border-2 border-[#E0A96D] p-5 rounded-2xl flex flex-col sm:flex-row items-center justify-between gap-4 shadow-sm animate-fade-in">
                     <div className="flex items-center gap-3.5">
                       <div className="w-10 h-10 rounded-full bg-[#E65100] text-white flex items-center justify-center shrink-0 shadow-xs">
@@ -2228,29 +2228,6 @@ export default function CheckoutPage() {
                     >
                       <PenTool className="w-3.5 h-3.5" />
                       <span>Quay lại Bước 2 để ký ngay</span>
-                    </button>
-                  </div>
-                ) : (
-                  <div className="bg-[#E8F5E9] border border-[#C8E6C9] p-4.5 rounded-2xl flex items-center justify-between gap-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-8 h-8 rounded-full bg-[#2E7D32] text-white flex items-center justify-center shrink-0">
-                        <Check className="w-5 h-5 stroke-[2.5]" />
-                      </div>
-                      <div>
-                        <div className="font-bold text-[13.5px] text-[#2E7D32]">
-                          Hợp Đồng Thuê #HĐ-UB-2026/8992 Đã Ký Điện Tử Thành Công!
-                        </div>
-                        <div className="text-[11.5px] text-[#6B5C5D]">
-                          Bản hợp đồng pháp lý đã gắn mã số bảo mật và sẵn sàng tải về sau khi cọc giữ lịch.
-                        </div>
-                      </div>
-                    </div>
-                    <button
-                      type="button"
-                      onClick={() => setCurrentStep(2)}
-                      className="text-[12px] font-bold text-[#733F49] hover:underline bg-transparent border-0 cursor-pointer shrink-0"
-                    >
-                      Xem lại hợp đồng
                     </button>
                   </div>
                 )}
