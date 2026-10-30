@@ -44,6 +44,7 @@ import { MOCK_DRESSES } from '../../services/dressService';
 import { getCart } from '../../services/cartService';
 import { getDressBookedDates } from '../../services/orderService';
 import { HIEU_SIGNATURE_BASE64 } from '../../assets/images/signatureHieuBase64';
+import unibridalEmblem from '../../assets/logo_emblem.png';
 
 // Helper: Chuyển đổi định dạng ngày DD/MM/YYYY sang YYYY-MM-DD và ngược lại
 function toIsoDateString(val) {
@@ -77,9 +78,9 @@ function toDisplayDateString(val) {
 import { createOrder } from '../../services/orderService';
 
 // Chữ ký nghệ thuật đại diện Bên A (Ông Kim Xuân Hiếu - Tổng Giám Đốc)
-function DirectorSignatureAndStamp({ className = "h-32", isSmall = false }) {
+function DirectorSignatureAndStamp({ className = "h-28", isSmall = false }) {
   return (
-    <div className={`relative w-full ${className} bg-[#FFFDFB] rounded-xl border border-[#EEDECF] overflow-hidden flex items-center justify-center shadow-inner p-3 select-none`}>
+    <div className={`relative w-full ${className} bg-transparent overflow-hidden flex items-center justify-center select-none`}>
       <img
         src={HIEU_SIGNATURE_BASE64}
         alt="Chữ ký Hiếu"
@@ -1849,281 +1850,339 @@ export default function CheckoutPage() {
 
             {/* ================= STEP 2: XEM & KÝ HỢP ĐỒNG ĐIỆN TỬ ================= */}
             {currentStep === 2 && (
-              <div className="space-y-8 animate-fade-in">
+              <div className="space-y-6 animate-fade-in">
 
-                {/* Contract Paper Box */}
-                <section className="bg-white rounded-3xl border-2 border-[#D4AF37]/40 shadow-[0_12px_45px_rgba(115,63,73,0.08)] p-6 sm:p-10 space-y-6">
+                {/* TỜ GIẤY HỢP ĐỒNG THƯỢNG LƯU CÓ WATERMARK CHÌM SANG TRỌNG */}
+                <div className="relative bg-[#FFFEFC] rounded-2xl sm:rounded-3xl shadow-[0_20px_60px_rgba(44,37,35,0.08)] border border-[#EBE1D8] p-4 sm:p-8 md:p-12 overflow-hidden">
 
-                  {/* National Emblem & Title */}
-                  <div className="text-center pb-6 border-b border-[#F0E5DC] space-y-1.5">
-                    <div className="font-playfair text-[12.5px] font-bold uppercase tracking-wider text-[#2C2523]">
-                      CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
-                    </div>
-                    <div className="text-[12px] italic text-[#6B5C5D]">
-                      Độc lập — Tự do — Hạnh phúc
-                    </div>
-                    <div className="w-16 h-[1.5px] bg-[#D4AF37] mx-auto my-2" />
-                    <h2 className="font-playfair text-[22px] sm:text-[26px] font-bold text-[#733F49] mt-3 mb-1">
-                      HỢP ĐỒNG THUÊ LỄ PHỤC CƯỚI CAO CẤP
-                    </h2>
-                    <span className="font-mono text-[12px] text-[#847374] block">
-                      Số: HĐ-UB-2026/8992 • Cấp ngày: {new Date().toLocaleDateString('vi-VN')}
-                    </span>
-                  </div>
-
-                  {/* Parties Info */}
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 text-[12.5px] bg-[#FCF9F6] p-4.5 rounded-2xl border border-[#EEDECF]">
-                    <div>
-                      <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#847374] block mb-1">
-                        BÊN CHO THUÊ (BÊN A):
-                      </span>
-                      <strong className="text-[#2C2523] block text-[13.5px]">CÔNG TY TNHH UNIBRIDAL HAUTE COUTURE</strong>
-                      <span className="text-[#6B5C5D] block mt-0.5">Mã số thuế: 0316889988</span>
-                      <span className="text-[#6B5C5D] block">Showroom : 88 Nam Kỳ Khởi Nghĩa, Q.1, TP. HCM</span>
-                      <span className="text-[#6B5C5D] block">Đại diện: <strong>Ông Kim Xuân Hiếu</strong> (Tổng Giám Đốc UniBridal)</span>
-                    </div>
-
-                    <div>
-                      <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#733F49] block mb-1">
-                        BÊN THUÊ LỄ PHỤC (BÊN B):
-                      </span>
-                      <strong className="text-[#733F49] block text-[13.5px]">{brideName}</strong>
-                      <span className="text-[#6B5C5D] block mt-0.5">Số CCCD: <strong>{cccd}</strong></span>
-                      <span className="text-[#6B5C5D] block">Số điện thoại: {phone}</span>
-                      <span className="text-[#6B5C5D] block">Email: {email}</span>
-                      <span className="text-[#6B5C5D] block">Địa chỉ: {address}</span>
+                  {/* Watermark ẩn chìm phía sau nền giấy */}
+                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none select-none z-0 overflow-hidden">
+                    <div className="relative flex flex-col items-center justify-center opacity-[0.038] transform -rotate-12 scale-110 sm:scale-125">
+                      <img
+                        src={unibridalEmblem}
+                        alt="UniBridal Watermark"
+                        className="w-72 h-72 sm:w-96 sm:h-96 object-contain"
+                      />
+                      <div className="text-center font-playfair font-extrabold text-[28px] sm:text-[34px] tracking-[6px] text-[#733F49] uppercase mt-2">
+                        UNIBRIDAL HAUTE COUTURE
+                      </div>
+                      <div className="text-[14px] font-mono tracking-[4px] text-[#2C2523] uppercase">
+                        OFFICIAL DIGITAL CONTRACT • BẢO MẬT PHÁP LÝ
+                      </div>
                     </div>
                   </div>
 
-                  {/* CÁC ĐIỀU KHOẢN HỢP ĐỒNG CHUẨN MỰC */}
-                  <div className="space-y-3.5 text-[12.5px] leading-relaxed text-[#4A3B3D]">
+                  {/* Khung viền chỉ đôi thanh lịch kiểu chứng thư Haute Couture */}
+                  <div className="relative z-10 border border-[#E8DFD8]/80 p-5 sm:p-8 md:p-10 rounded-xl space-y-7">
 
-                    {/* Điều 1 */}
-                    <div className="p-4 rounded-2xl bg-[#FCF9F6] border border-[#EEDECF] space-y-1.5">
-                      <strong className="text-[#733F49] block text-[13px]">
-                        ĐIỀU 1: THÔNG TIN TRANG PHỤC & THỜI HẠN THUÊ
-                      </strong>
-                      <p className="text-[#6B5C5D] m-0 space-y-1">
-                        <span className="block">1.1. Bên A đồng ý cho Bên B thuê tác phẩm váy cưới <strong>{activeDress?.name}</strong> (Mã: <strong>{activeDress?.code || 'UB-HC-2026'}</strong>), Kích cỡ: <strong>Size {selectedSize}</strong>.</span>
-                        <span className="block">1.2. Thời gian thuê: <strong>{rentalDays} ngày</strong>, nhận váy từ ngày <strong>{rentalSchedule.startDate}</strong> và hoàn trả trước 20:00 ngày <strong>{rentalSchedule.endDate}</strong>.</span>
-                        <span className="block">1.3. Lễ phục được giặt sấy tiệt trùng sinh học, ủi phẳng phiu và tinh chỉnh số đo hoàn thiện trước giờ trao nhận 2 giờ.</span>
-                      </p>
+                    {/* Top Header: Quốc hiệu & Tiêu đề văn bản */}
+                    <div className="text-center pb-6 border-b border-[#EFE7E0] space-y-2">
+                      <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-[#FAF5F0] border border-[#EEDECF] text-[#847374] text-[11px] font-semibold tracking-wider uppercase mb-1">
+                        <ShieldCheck className="w-3.5 h-3.5 text-[#2E7D32]" />
+                        <span>Xác thực pháp lý theo Luật Giao dịch điện tử số 20/2023/QH15</span>
+                      </div>
+                      <div className="font-playfair text-[13px] sm:text-[14px] font-bold uppercase tracking-[1.5px] text-[#2C2523]">
+                        CỘNG HÒA XÃ HỘI CHỦ NGHĨA VIỆT NAM
+                      </div>
+                      <div className="text-[12.5px] italic text-[#6B5C5D] font-serif">
+                        Độc lập — Tự do — Hạnh phúc
+                      </div>
+                      <div className="w-24 h-[1.5px] bg-[#D4AF37] mx-auto my-2" />
+                      
+                      <h2 className="font-playfair text-[23px] sm:text-[27px] font-bold text-[#733F49] tracking-wide mt-3 mb-1 uppercase">
+                        HỢP ĐỒNG THUÊ LỄ PHỤC CƯỚI CAO CẤP
+                      </h2>
+                      <div className="text-[12px] text-[#847374] font-mono">
+                        Mã văn bản điện tử: <strong className="text-[#733F49]">#HĐ-UB-2026/8992</strong> • Xác lập ngày: {new Date().toLocaleDateString('vi-VN')}
+                      </div>
                     </div>
 
-                    {/* Điều 2 */}
-                    <div className="p-4 rounded-2xl bg-[#FCF9F6] border border-[#EEDECF] space-y-1.5">
-                      <strong className="text-[#733F49] block text-[13px]">
-                        ĐIỀU 2: GIÁ THUÊ, TIỀN CỌC GIỮ LỊCH & CỌC BẢO LÃNH HOÀN TRẢ
-                      </strong>
-                      <p className="text-[#6B5C5D] m-0 space-y-1">
-                        <span className="block">2.1. Tổng chi phí thuê váy: <strong>{totalRentPrice.toLocaleString('vi-VN')}₫</strong>.</span>
-                        <span className="block">2.2. Tiền đặt cọc giữ lịch: <strong>{amountToPayToday.toLocaleString('vi-VN')}₫</strong> (thanh toán tại Bước 3).</span>
-                        <span className="block">2.3. Tiền cọc bảo lãnh hoàn trả: <strong>{depositCollateral.toLocaleString('vi-VN')}₫</strong>. Bên A cam kết <strong>hoàn trả 100%</strong> tự động qua tài khoản ngân hàng của Bên B trong vòng 24 giờ sau khi kiểm tra váy nguyên vẹn khi hoàn trả.</span>
-                      </p>
-                    </div>
-
-                    {/* Điều 3 */}
-                    <div className="p-4 rounded-2xl bg-[#FCF9F6] border border-[#EEDECF] space-y-1.5">
-                      <strong className="text-[#733F49] block text-[13px]">
-                        ĐIỀU 3: QUY ĐỊNH BẢO QUẢN & BỒI THƯỜNG
-                      </strong>
-                      <p className="text-[#6B5C5D] m-0 space-y-1">
-                        <span className="block">3.1. Bên B có trách nhiệm bảo quản lễ phục trong suốt thời gian tổ chức hôn lễ.</span>
-                        <span className="block">3.2. Tuyệt đối không tự ý cắt may, tẩy nhuộm hoặc đem váy tới tiệm giặt ủi thông thường.</span>
-                        <span className="block">3.3. Miễn phí xử lý các vết bẩn thông thường. Cho phép đổi ngày thuê miễn phí khi báo trước tối thiểu 15 ngày.</span>
-                      </p>
-                    </div>
-
-                    {/* THẺ XEM TOÀN VĂN HỢP ĐỒNG PHÁP LÝ (CHỈ CÓ NÚT XEM CHI TIẾT) */}
-                    <div className="p-4 rounded-2xl bg-[#FAF4EE] border border-[#EEDECF] flex flex-col sm:flex-row items-center justify-between gap-3 text-[12.5px] shadow-2xs">
-                      <div className="flex items-center gap-3 w-full sm:w-auto">
-                        <div className="w-10 h-10 rounded-xl bg-[#FAF0EC] text-[#733F49] border border-[#F2D8D4] flex items-center justify-center shrink-0 font-bold text-[13px] shadow-2xs">
-                          <FileText className="w-5 h-5 text-[#733F49]" />
+                    {/* Parties Info: Trình bày dạng 2 cột văn bản đối ứng không dùng khối hộp xám */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6 sm:gap-10 pb-6 border-b border-[#EFE7E0] text-[13px] leading-relaxed">
+                      {/* Bên A */}
+                      <div className="space-y-1.5 pr-0 md:pr-6 md:border-r border-[#EFE7E0]">
+                        <div className="font-playfair font-bold text-[13px] uppercase tracking-wider text-[#733F49] pb-1 border-b border-[#F2E8E2] flex items-center justify-between">
+                          <span>BÊN CHO THUÊ (BÊN A)</span>
+                          <span className="text-[10.5px] font-mono text-[#2E7D32] bg-[#E8F5E9] px-2 py-0.5 rounded-full font-semibold">
+                            Đã Ký Số
+                          </span>
                         </div>
-                        <div>
-                          <strong className="text-[#2C2523] text-[13.5px] block font-playfair font-bold">
-                            Toàn văn Điều lệ Hợp đồng thuê đầy đủ (8 Điều khoản pháp lý)
-                          </strong>
-                          <p className="text-[#847374] text-[11.5px] m-0 mt-0.5">
-                            Quy định chi tiết về quyền đổi lịch, chính sách bảo hiểm làm sạch và cam kết hoàn cọc 100%.
+                        <div className="font-bold text-[#2C2523] text-[14px] pt-1">
+                          CÔNG TY TNHH UNIBRIDAL HAUTE COUTURE
+                        </div>
+                        <div className="text-[#6B5C5D]">Mã số thuế: <strong className="text-[#2C2523]">0316889988</strong></div>
+                        <div className="text-[#6B5C5D]">Showroom: 88 Nam Kỳ Khởi Nghĩa, P. Bến Nghé, Q.1, TP. HCM</div>
+                        <div className="text-[#6B5C5D]">Hotline: 1800 8998 • Email: contact@unibridal.vn</div>
+                        <div className="text-[#6B5C5D] pt-0.5">
+                          Đại diện: <strong className="text-[#2C2523]">Ông Kim Xuân Hiếu</strong> — Tổng Giám Đốc
+                        </div>
+                      </div>
+
+                      {/* Bên B */}
+                      <div className="space-y-1.5">
+                        <div className="font-playfair font-bold text-[13px] uppercase tracking-wider text-[#733F49] pb-1 border-b border-[#F2E8E2] flex items-center justify-between">
+                          <span>BÊN THUÊ LỄ PHỤC (BÊN B)</span>
+                          <span className="text-[10.5px] font-mono text-[#C5A880] bg-[#FAF4EE] px-2 py-0.5 rounded-full font-semibold">
+                            Khách Hàng Ký
+                          </span>
+                        </div>
+                        <div className="font-bold text-[#733F49] text-[14px] pt-1">
+                          {brideName}
+                        </div>
+                        <div className="text-[#6B5C5D]">Số CCCD/CMND: <strong className="text-[#2C2523]">{cccd}</strong></div>
+                        <div className="text-[#6B5C5D]">Số điện thoại: <strong className="text-[#2C2523]">{phone}</strong></div>
+                        <div className="text-[#6B5C5D]">Email nhận hợp đồng: {email}</div>
+                        <div className="text-[#6B5C5D]">Địa chỉ nhận váy: {address}</div>
+                      </div>
+                    </div>
+
+                    {/* Các Điều Khoản Hợp Đồng: Trình bày liền mạch thanh nhã như văn bản thật */}
+                    <div className="space-y-6 text-[13px] leading-relaxed text-[#3C3133]">
+                      
+                      {/* Điều 1 */}
+                      <div className="space-y-1.5">
+                        <h4 className="font-playfair text-[13.5px] font-bold text-[#733F49] uppercase tracking-wide m-0 flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]" />
+                          ĐIỀU 1: ĐỐI TƯỢNG HỢP ĐỒNG & THỜI HẠN THUÊ LỄ PHỤC
+                        </h4>
+                        <div className="pl-3.5 space-y-1 text-[#554749]">
+                          <p className="m-0">
+                            1.1. Bên A đồng ý cho Bên B thuê tác phẩm váy cưới thiết kế <strong>{activeDress?.name}</strong> (Mã tác phẩm: <strong className="font-mono text-[#733F49]">{activeDress?.code || 'UB-HC-2026'}</strong>), Kích cỡ may đo: <strong>Size {selectedSize}</strong>.
+                          </p>
+                          <p className="m-0">
+                            1.2. Thời gian thuê trọn gói: <strong>{rentalDays} ngày</strong>. Thời điểm nhận váy: từ 09:00 ngày <strong>{rentalSchedule.startDate}</strong>; Thời điểm hoàn trả: trước 20:00 ngày <strong>{rentalSchedule.endDate}</strong>.
+                          </p>
+                          <p className="m-0">
+                            1.3. Tiêu chuẩn bàn giao: Tác phẩm được giặt sấy tiệt trùng sinh học ozone, ủi phẳng nếp và tinh chỉnh phom dáng theo số đo riêng của Bên B trước giờ giao nhận 2 giờ.
                           </p>
                         </div>
                       </div>
 
-                      <div className="w-full sm:w-auto shrink-0">
+                      {/* Điều 2 */}
+                      <div className="space-y-1.5">
+                        <h4 className="font-playfair text-[13.5px] font-bold text-[#733F49] uppercase tracking-wide m-0 flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]" />
+                          ĐIỀU 2: GIÁ TRỊ HỢP ĐỒNG, TIỀN CỌC GIỮ LỊCH & BẢO LÃNH HOÀN TRẢ
+                        </h4>
+                        <div className="pl-3.5 space-y-1 text-[#554749]">
+                          <p className="m-0">
+                            2.1. Tổng chi phí thuê váy cưới trọn gói: <strong className="text-[#2C2523]">{totalRentPrice.toLocaleString('vi-VN')}₫</strong>.
+                          </p>
+                          <p className="m-0">
+                            2.2. Tiền đặt cọc giữ lịch độc quyền (50%): <strong className="text-[#733F49]">{amountToPayToday.toLocaleString('vi-VN')}₫</strong> (Bên B hoàn tất thanh toán chuyển khoản tại Bước 3).
+                          </p>
+                          <p className="m-0">
+                            2.3. Tiền cọc bảo lãnh hoàn trả trách nhiệm: <strong>{depositCollateral.toLocaleString('vi-VN')}₫</strong>. Bên A cam kết <strong>hoàn trả 100%</strong> trong vòng 24 giờ làm việc vào tài khoản Bên B sau khi nhận lại lễ phục nguyên vẹn.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Điều 3 */}
+                      <div className="space-y-1.5">
+                        <h4 className="font-playfair text-[13.5px] font-bold text-[#733F49] uppercase tracking-wide m-0 flex items-center gap-2">
+                          <span className="w-1.5 h-1.5 rounded-full bg-[#D4AF37]" />
+                          ĐIỀU 3: CHÍNH SÁCH BẢO HIỂM VẢI REN & QUYỀN ĐỔI NGÀY CƯỚI
+                        </h4>
+                        <div className="pl-3.5 space-y-1 text-[#554749]">
+                          <p className="m-0">
+                            3.1. Bảo hiểm vết bẩn miễn phí: Bên A chịu 100% chi phí xử lý chuyên sâu đối với các vết bẩn sự kiện cưới thông thường (bụi sân khấu, rượu vang nhẹ).
+                          </p>
+                          <p className="m-0">
+                            3.2. Quyền đổi ngày cưới linh hoạt: Bên B được quyền chuyển đổi ngày thuê sang bất kỳ ngày nào còn trống trong vòng 12 tháng hoàn toàn miễn phí khi thông báo trước tối thiểu 15 ngày.
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Action Row: Nút mở xem toàn văn PDF A4 */}
+                      <div className="pt-2 flex flex-col sm:flex-row items-center justify-between gap-3 p-3.5 rounded-xl bg-[#FAF6F2] border border-[#EEDECF]">
+                        <div className="flex items-center gap-2.5 text-[12px] text-[#6B5C5D]">
+                          <FileText className="w-4 h-4 text-[#733F49]" />
+                          <span>Hợp đồng điện tử tiêu chuẩn đầy đủ 8 Điều khoản pháp lý Việt Nam</span>
+                        </div>
                         <button
                           type="button"
                           onClick={handleOpenPdfContract}
-                          className="w-full sm:w-auto px-5 py-2.5 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white text-[12.5px] font-bold transition-all cursor-pointer flex items-center justify-center gap-2 shadow-xs"
+                          className="w-full sm:w-auto px-4 py-2 rounded-lg bg-[#733F49] hover:bg-[#5F323B] text-white text-[12px] font-bold transition-all cursor-pointer flex items-center justify-center gap-1.5 border-0 shadow-2xs"
                         >
-                          <FileText className="w-4 h-4 text-white" />
-                          <span>Xem Chi Tiết Bản PDF</span>
+                          <ExternalLink className="w-3.5 h-3.5 text-white" />
+                          <span>Xem Toàn Văn Bản PDF (A4)</span>
                         </button>
                       </div>
+
                     </div>
 
-                  </div>
-
-                  {/* Digital Signature Box */}
-                  <div className="pt-4 border-t border-[#F0E5DC] grid grid-cols-1 sm:grid-cols-2 gap-6">
-
-                    {/* Bên A Signature */}
-                    <div className="p-4 rounded-2xl bg-[#FCF9F6] border border-[#EEDECF] space-y-3">
-                      <div className="flex items-center justify-between pb-2 border-b border-[#EEDECF]">
-                        <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#847374] block">
+                    {/* Khung Chữ Ký 2 Bên: Trình bày như cuối trang hợp đồng giấy thật */}
+                    <div className="pt-6 border-t border-[#EFE7E0] grid grid-cols-1 md:grid-cols-2 gap-8 items-start">
+                      
+                      {/* Bên A Signature */}
+                      <div className="text-center space-y-2 pr-0 md:pr-6 md:border-r border-[#EFE7E0]">
+                        <div className="font-playfair text-[12.5px] font-bold uppercase tracking-wider text-[#2C2523]">
                           ĐẠI DIỆN BÊN CHO THUÊ (BÊN A)
-                        </span>
-                        <span className="px-2 py-0.5 rounded-md bg-[#2E7D32]/10 text-[#2E7D32] text-[10px] font-semibold flex items-center gap-1">
-                          <CheckCircle2 className="w-3 h-3 text-[#2E7D32]" />
-                          Chứng thư CA hợp lệ
-                        </span>
-                      </div>
+                        </div>
+                        <div className="text-[11px] italic text-[#6B5C5D]">
+                          CÔNG TY TNHH UNIBRIDAL HAUTE COUTURE
+                        </div>
 
-                      {/* Khung hiển thị chữ ký nghệ thuật và dấu mộc đỏ */}
-                      <DirectorSignatureAndStamp className="h-32" />
+                        {/* Chữ ký Hiếu tự nhiên trên mặt giấy */}
+                        <div className="h-28 flex items-center justify-center py-1">
+                          <DirectorSignatureAndStamp className="h-28" />
+                        </div>
 
-                      <div className="flex items-center justify-between text-[11px] pt-1">
-                        <span className="font-bold text-[#2C2523] flex items-center gap-1">
-                          Ông Kim Xuân Hiếu (Tổng Giám Đốc)
-                        </span>
-                        <span className="text-[#847374] text-[10px] font-mono">
-                          UB-SIGN-2026-X9
-                        </span>
-                      </div>
-                    </div>
-
-                    {/* Bên B Signature Pad (Ký Điện Tử Tự Tay) */}
-                    <div className="p-4 rounded-2xl bg-[#FAF0EC] border-2 border-[#F2D8D4] space-y-3">
-                      <div className="flex items-center justify-between pb-2 border-b border-[#F2D8D4]">
-                        <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#733F49] block">
-                          ĐẠI DIỆN BÊN THUÊ (BÊN B - CÔ DÂU KÝ TAY)
-                        </span>
-
-                        {/* Chuyển chế độ Ký tay / Ký gõ tên */}
-                        <div className="flex items-center bg-white/80 p-0.5 rounded-lg border border-[#F2D8D4] text-[10.5px] font-bold">
-                          <button
-                            type="button"
-                            onClick={() => setSignatureMode('draw')}
-                            className={`px-2 py-0.5 rounded-md transition-colors border-0 cursor-pointer ${signatureMode === 'draw'
-                              ? 'bg-[#733F49] text-white'
-                              : 'bg-transparent text-[#733F49] hover:bg-[#FAF0EC]'
-                              }`}
-                          >
-                            ✍️ Ký tay
-                          </button>
-                          <button
-                            type="button"
-                            onClick={() => setSignatureMode('type')}
-                            className={`px-2 py-0.5 rounded-md transition-colors border-0 cursor-pointer ${signatureMode === 'type'
-                              ? 'bg-[#733F49] text-white'
-                              : 'bg-transparent text-[#733F49] hover:bg-[#FAF0EC]'
-                              }`}
-                          >
-                            ⌨️ Gõ họ tên
-                          </button>
+                        <div className="font-playfair font-bold text-[14px] text-[#2C2523]">
+                          Ông Kim Xuân Hiếu
+                        </div>
+                        <div className="text-[11px] text-[#847374]">
+                          Tổng Giám Đốc • Chứng thư số hợp lệ
                         </div>
                       </div>
 
-                      {signatureMode === 'draw' ? (
-                        /* BẢNG KÝ TAY CANVAS ĐIỆN TỬ */
-                        <div className="space-y-2">
-                          <div className="relative w-full h-32 bg-[#FFFDFB] rounded-xl border-2 border-dashed border-[#EEDECF] overflow-hidden flex items-center justify-center shadow-inner">
-                            {!hasDrawnSignature && (
-                              <div className="absolute inset-0 flex flex-col items-center justify-center pointer-events-none text-[#A39284] select-none text-[11.5px] px-4 text-center">
-                                <span className="font-playfair italic text-[14px] sm:text-[15px] text-[#C5A880] text-center w-full block">
-                                  ✍️ Dùng chuột, ngón tay hoặc bút cảm ứng để vẽ chữ ký của nàng tại đây
-                                </span>
-                              </div>
-                            )}
-                            <canvas
-                              ref={signatureCanvasRef}
-                              width={480}
-                              height={130}
-                              onMouseDown={handleStartDraw}
-                              onMouseMove={handleMoveDraw}
-                              onMouseUp={handleEndDraw}
-                              onMouseLeave={handleEndDraw}
-                              onTouchStart={handleStartDraw}
-                              onTouchMove={handleMoveDraw}
-                              onTouchEnd={handleEndDraw}
-                              className="w-full h-full cursor-crosshair touch-none"
-                            />
-                          </div>
-
-                          <div className="flex items-center justify-between text-[11px] pt-1">
-                            <span className="font-semibold text-[#2E7D32] flex items-center gap-1">
-                              {hasDrawnSignature ? '✓ Chữ ký điện tử đã được ghi nhận' : 'Vui lòng ký vào ô phía trên'}
-                            </span>
-                            <button
-                              type="button"
-                              onClick={handleClearSignature}
-                              className="text-[#733F49] font-bold hover:underline bg-transparent border-0 cursor-pointer flex items-center gap-1"
-                            >
-                              <span>↺</span> Xóa ký lại
-                            </button>
-                          </div>
+                      {/* Bên B Signature */}
+                      <div className="text-center space-y-2">
+                        <div className="font-playfair text-[12.5px] font-bold uppercase tracking-wider text-[#733F49]">
+                          BÊN THUÊ LỄ PHỤC (BÊN B)
                         </div>
-                      ) : (
-                        /* CHẾ ĐỘ GÕ HỌ TÊN */
-                        <div className="space-y-2 py-1">
-                          <div className="h-20 flex flex-col items-center justify-center bg-[#FFFDFB] rounded-xl border border-[#F2D8D4] p-2">
-                            <div className="font-playfair italic font-bold text-[24px] text-[#733F49] tracking-wider select-none">
-                              {contractSignature && !contractSignature.startsWith('data:image') ? contractSignature : brideName}
+                        <div className="text-[11px] italic text-[#6B5C5D]">
+                          XÁC NHẬN BẰNG CHỮ KÝ ĐIỆN TỬ
+                        </div>
+
+                        {/* Vùng Ký Tay hoặc Gõ Tên của Khách */}
+                        <div className="relative">
+                          {/* Nút chuyển chế độ Ký tay / Gõ tên */}
+                          <div className="flex justify-center mb-1.5">
+                            <div className="inline-flex items-center bg-[#FAF0EC] p-0.5 rounded-lg border border-[#F2D8D4] text-[10.5px] font-bold">
+                              <button
+                                type="button"
+                                onClick={() => setSignatureMode('draw')}
+                                className={`px-2.5 py-1 rounded-md transition-colors border-0 cursor-pointer ${
+                                  signatureMode === 'draw'
+                                    ? 'bg-[#733F49] text-white shadow-2xs'
+                                    : 'bg-transparent text-[#733F49] hover:bg-white/60'
+                                }`}
+                              >
+                                ✍️ Vẽ chữ ký
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setSignatureMode('type')}
+                                className={`px-2.5 py-1 rounded-md transition-colors border-0 cursor-pointer ${
+                                  signatureMode === 'type'
+                                    ? 'bg-[#733F49] text-white shadow-2xs'
+                                    : 'bg-transparent text-[#733F49] hover:bg-white/60'
+                                }`}
+                              >
+                                ⌨️ Gõ họ tên
+                              </button>
                             </div>
-                            <span className="text-[9.5px] font-mono text-[#2E7D32] font-semibold mt-1">
-                              ✓ XÁC THỰC CHỮ KÝ ĐIỆN TỬ THEO TÊN CÔ DÂU
-                            </span>
                           </div>
-                          <input
-                            type="text"
-                            value={contractSignature && !contractSignature.startsWith('data:image') ? contractSignature : ''}
-                            onChange={(e) => setContractSignature(e.target.value)}
-                            placeholder="Nhập họ tên cô dâu để xác thực chữ ký"
-                            className="w-full text-center bg-white border border-[#F2D8D4] rounded-lg px-2.5 py-1.5 text-[12.5px] font-semibold text-[#733F49] focus:outline-none focus:border-[#733F49]"
-                          />
+
+                          {signatureMode === 'draw' ? (
+                            <div className="space-y-1">
+                              <div className="relative w-full h-28 bg-white/70 rounded-xl border border-[#D4AF37]/40 shadow-inner overflow-hidden flex items-center justify-center">
+                                {!hasDrawnSignature && (
+                                  <div className="absolute inset-0 flex items-center justify-center pointer-events-none text-[#C5A880] select-none text-[12px] font-playfair italic px-4 text-center">
+                                    ✍️ Nàng ký tay vào đây bằng chuột hoặc cảm ứng
+                                  </div>
+                                )}
+                                <canvas
+                                  ref={signatureCanvasRef}
+                                  width={480}
+                                  height={112}
+                                  onMouseDown={handleStartDraw}
+                                  onMouseMove={handleMoveDraw}
+                                  onMouseUp={handleEndDraw}
+                                  onMouseLeave={handleEndDraw}
+                                  onTouchStart={handleStartDraw}
+                                  onTouchMove={handleMoveDraw}
+                                  onTouchEnd={handleEndDraw}
+                                  className="w-full h-full cursor-crosshair touch-none"
+                                />
+                              </div>
+                              <div className="flex items-center justify-between text-[11px] px-1">
+                                <span className="font-semibold text-[#2E7D32]">
+                                  {hasDrawnSignature ? '✓ Chữ ký đã ghi nhận' : 'Chưa ký'}
+                                </span>
+                                <button
+                                  type="button"
+                                  onClick={handleClearSignature}
+                                  className="text-[#733F49] font-bold hover:underline bg-transparent border-0 cursor-pointer"
+                                >
+                                  ↺ Xóa ký lại
+                                </button>
+                              </div>
+                            </div>
+                          ) : (
+                            <div className="space-y-1.5">
+                              <div className="h-24 flex flex-col items-center justify-center bg-white/70 rounded-xl border border-[#D4AF37]/40 p-2">
+                                <div className="font-playfair italic font-bold text-[22px] text-[#733F49]">
+                                  {contractSignature && !contractSignature.startsWith('data:image') ? contractSignature : brideName}
+                                </div>
+                              </div>
+                              <input
+                                type="text"
+                                value={contractSignature && !contractSignature.startsWith('data:image') ? contractSignature : ''}
+                                onChange={(e) => setContractSignature(e.target.value)}
+                                placeholder="Nhập họ tên cô dâu xác thực chữ ký"
+                                className="w-full text-center bg-white border border-[#D4AF37]/40 rounded-lg px-2.5 py-1 text-[12px] font-semibold text-[#733F49] focus:outline-none focus:border-[#733F49]"
+                              />
+                            </div>
+                          )}
                         </div>
-                      )}
+
+                        <div className="font-playfair font-bold text-[14px] text-[#733F49] pt-0.5">
+                          {brideName}
+                        </div>
+                        <div className="text-[11px] text-[#847374]">
+                          CCCD: {cccd}
+                        </div>
+                      </div>
+
+                    </div>
+
+                    {/* Paper Footer */}
+                    <div className="pt-4 border-t border-[#EFE7E0] flex flex-col sm:flex-row items-center justify-between gap-2 text-[11px] text-[#9E8B89] italic">
+                      <span>* Hợp đồng điện tử được lưu trữ an toàn & mã hóa theo tiêu chuẩn UniBridal Secure Cloud</span>
+                      <span>Trang 1 / 1 • Số: HĐ-UB-2026/8992</span>
                     </div>
 
                   </div>
 
-                  {/* Terms Checkbox */}
-                  <div className="pt-2">
-                    <label className="flex items-start gap-3 cursor-pointer select-none">
-                      <input
-                        type="checkbox"
-                        checked={hasAgreedContractTerms}
-                        onChange={(e) => setHasAgreedContractTerms(e.target.checked)}
-                        className="mt-1 accent-[#733F49] w-4 h-4 rounded shrink-0"
-                      />
-                      <span className="text-[12.5px] text-[#4A3E3D] leading-relaxed">
-                        Tôi là <strong>{brideName}</strong>, xác nhận đã đọc kỹ, thấu hiểu toàn bộ điều khoản Hợp đồng cho thuê lễ phục cao cấp và cam kết chữ ký điện tử này có đầy đủ giá trị pháp lý song phương.
-                      </span>
-                    </label>
-                  </div>
+                </div>
 
-                  {/* Actions for Step 2 */}
-                  <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-4 border-t border-[#F0E5DC]">
-                    <button
-                      type="button"
-                      onClick={() => setCurrentStep(1)}
-                      className="w-full sm:w-auto px-5 py-3 rounded-xl bg-white border border-[#EEDECF] text-[#2C2523] text-[13px] font-bold hover:bg-[#FAF0EC] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
-                    >
-                      <ArrowLeft className="w-4 h-4" />
-                      <span>Quay lại Bước 1: Sửa thông tin</span>
-                    </button>
+                {/* Terms Agreement Checkbox */}
+                <div className="p-4 rounded-xl bg-white border border-[#EEDECF] shadow-2xs">
+                  <label className="flex items-start gap-3 cursor-pointer select-none">
+                    <input
+                      type="checkbox"
+                      checked={hasAgreedContractTerms}
+                      onChange={(e) => setHasAgreedContractTerms(e.target.checked)}
+                      className="mt-1 accent-[#733F49] w-4 h-4 rounded shrink-0 cursor-pointer"
+                    />
+                    <span className="text-[12.5px] text-[#4A3E3D] leading-relaxed">
+                      Tôi là <strong>{brideName}</strong>, xác nhận đã đọc kỹ, thấu hiểu toàn bộ điều khoản Hợp đồng cho thuê lễ phục cưới cao cấp trên và cam kết chữ ký điện tử này có đầy đủ giá trị pháp lý song phương.
+                    </span>
+                  </label>
+                </div>
 
-                    <button
-                      type="button"
-                      onClick={handleSignAndProceedToPayment}
-                      className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white font-jakarta text-[13.5px] font-bold tracking-wider uppercase transition-all shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer border-0 flex items-center justify-center gap-2"
-                    >
-                      <span>KÝ HỢP ĐỒNG & CHUYỂN SANG THANH TOÁN (BƯỚC 3)</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
-                  </div>
+                {/* Navigation Actions for Step 2 */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setCurrentStep(1)}
+                    className="w-full sm:w-auto px-5 py-3 rounded-xl bg-white border border-[#EEDECF] text-[#2C2523] text-[13px] font-bold hover:bg-[#FAF0EC] transition-colors cursor-pointer flex items-center justify-center gap-1.5"
+                  >
+                    <ArrowLeft className="w-4 h-4" />
+                    <span>Quay lại Bước 1: Sửa thông tin</span>
+                  </button>
 
-                </section>
+                  <button
+                    type="button"
+                    onClick={handleSignAndProceedToPayment}
+                    className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white font-jakarta text-[13.5px] font-bold tracking-wider uppercase transition-all shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer border-0 flex items-center justify-center gap-2"
+                  >
+                    <span>KÝ HỢP ĐỒNG & CHUYỂN SANG THANH TOÁN (BƯỚC 3)</span>
+                    <ArrowRight className="w-4 h-4" />
+                  </button>
+                </div>
 
               </div>
             )}
