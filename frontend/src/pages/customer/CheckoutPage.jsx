@@ -856,11 +856,11 @@ export default function CheckoutPage() {
             <p>2.1. Tổng thời gian thuê: <strong>${rentalDays} ngày</strong> liên tục.</p>
             <p>2.2. Thời điểm nhận váy: Từ 09:00 ngày <strong>${rentalSchedule.startDate}</strong>.</p>
             <p>2.3. Ngày tổ chức hôn lễ chính thức: <strong>${rentalSchedule.weddingDate}</strong>.</p>
-            <p>2.4. Phương thức hoàn trả & thu hồi: ${
+            <p>2.4. Phương thức nhận váy & thu hồi: ${
               deliveryMethod === 'delivery'
-                ? 'Bên A thực hiện giao váy tận nơi bằng Vali VIP Courier theo địa chỉ đã đăng ký. Đến thời hạn hoàn trả (trước 20:00 ngày <strong>' + rentalSchedule.endDate + '</strong>), <strong>chuyên viên của Bên A sẽ chủ động liên hệ hẹn giờ và trực tiếp đến tận địa chỉ của Bên B để thu hồi lễ phục trong vali bảo quản niêm phong</strong>, thực hiện kiểm định sơ bộ hiện trạng sản phẩm trước khi hoàn tất hợp đồng.'
-                : 'Bên B thực hiện hoàn trả lễ phục trước 20:00 ngày <strong>' + rentalSchedule.endDate + '</strong> trực tiếp tại Showroom UniBridal để chuyên viên Bên A kiểm định hiện trạng và hoàn trả 100% tiền cọc tại quầy.'
-            }</p>
+                ? 'Bên A thực hiện giao váy tận nơi bằng Vali VIP Courier theo địa chỉ Bên B đã đăng ký. '
+                : 'Bên B nhận váy trực tiếp tại Showroom Atelier của Bên A (được hỗ trợ chuyên viên fitting và ủi sấy hoàn thiện trước giờ trao nhận). '
+            }Đến thời hạn hoàn trả (trước 20:00 ngày <strong>' + rentalSchedule.endDate + '</strong>), <strong>chuyên viên của Bên A sẽ chủ động liên hệ hẹn giờ và trực tiếp đến tận nơi thu hồi lễ phục trong vali bảo quản niêm phong & kiểm định hiện trạng</strong>, Bên B không cần phải tự mang trả.</p>
             <p>2.5. Hai bên thực hiện ký Biên bản kiểm định bàn giao và thu hồi để ghi nhận hiện trạng đính kết ren, hạt cườm và kết cấu váy tại thời điểm giao và nhận lại.</p>
 
             <div class="clause-heading">ĐIỀU 3: GIÁ THUÊ & PHƯƠNG THỨC THANH TOÁN</div>
@@ -1685,14 +1685,14 @@ export default function CheckoutPage() {
                       >
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-bold text-[13.5px] text-[#2C2523]">
-                            Nhận & Trả tại Showroom Atelier (Khuyên dùng)
+                            Nhận trực tiếp tại Showroom Atelier (Khuyên dùng)
                           </span>
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#E8F5E9] text-[#2E7D32]">
                             MIỄN PHÍ
                           </span>
                         </div>
                         <p className="text-[11.5px] text-[#6B5C5D] m-0 leading-relaxed">
-                          <strong>Chiều nhận:</strong> Thử và căn chỉnh phom dáng tại phòng VIP. <strong>Chiều trả:</strong> Khách mang trả tại Showroom trước 20:00, chuyên viên kiểm định và hoàn cọc trực tiếp tại quầy.
+                          Thử và căn chỉnh phom dáng chuẩn xác tại phòng VIP Showroom trước giờ trao nhận.
                         </p>
                       </div>
 
@@ -1705,16 +1705,23 @@ export default function CheckoutPage() {
                       >
                         <div className="flex items-center justify-between mb-1">
                           <span className="font-bold text-[13.5px] text-[#2C2523]">
-                            Giao & Tự Đến Thu Hồi Tận Nơi (VIP Courier)
+                            Giao váy tận nơi (VIP Courier)
                           </span>
                           <span className="text-[10px] font-bold px-2 py-0.5 rounded-full bg-[#FAF0EC] text-[#B8737D]">
                             VIP COURIER
                           </span>
                         </div>
                         <p className="text-[11.5px] text-[#6B5C5D] m-0 leading-relaxed">
-                          <strong>Chiều nhận:</strong> Giao vali giữ nhiệt, móc gỗ tận nhà. <strong>Chiều trả:</strong> Chuyên viên UniBridal sẽ <strong>tự đến tận nơi thu hồi váy và kiểm định</strong>, không cần khách phải mang đi.
+                          Giao vali VIP Courier nguyên seal chống ẩm và móc gỗ bảo quản tận nhà cô dâu.
                         </p>
                       </div>
+                    </div>
+
+                    <div className="mt-3 p-3 rounded-xl bg-[#FAF4EE] border border-[#EEDECF] flex items-center gap-2 text-[12px] text-[#733F49]">
+                      <CheckCircle2 className="w-4 h-4 text-[#2E7D32] shrink-0" />
+                      <span>
+                        <strong>Mặc định dịch vụ:</strong> Sau ngày cưới, chuyên viên UniBridal sẽ <strong>chủ động đến tận nơi thu hồi váy và kiểm định</strong>, nàng không cần phải mang trả.
+                      </span>
                     </div>
                   </div>
                 </section>
@@ -2013,10 +2020,11 @@ export default function CheckoutPage() {
                           </p>
                           <p className="m-0">
                             1.3. Phương thức bàn giao & thu hồi: {deliveryMethod === 'delivery' ? (
-                              <span>Bên A thực hiện giao váy tận nơi bằng Vali VIP Courier theo địa chỉ đã đăng ký. Đến thời điểm hoàn trả (trước 20:00 ngày <strong>{rentalSchedule.endDate}</strong>), <strong>chuyên viên của Bên A sẽ chủ động liên hệ hẹn giờ và trực tiếp đến tận địa chỉ Bên B để thu hồi váy trong vali bảo quản niêm phong</strong>, thực hiện kiểm định sơ bộ hiện trạng sản phẩm và hoàn tất nghiệm thu thanh lý hợp đồng.</span>
+                              <span>Bên A thực hiện giao váy tận nơi bằng Vali VIP Courier theo địa chỉ đã đăng ký. </span>
                             ) : (
-                              <span>Bên B nhận váy trực tiếp tại Showroom Atelier (được hỗ trợ fitting và căn chỉnh nẹp eo); đến ngày hoàn trả (trước 20:00 ngày <strong>{rentalSchedule.endDate}</strong>), Bên B mang hoàn trả tại Showroom để chuyên viên Bên A kiểm định hiện trạng và hoàn trả 100% tiền cọc tại quầy.</span>
+                              <span>Bên B nhận váy trực tiếp tại Showroom Atelier của Bên A (được chuyên viên hỗ trợ fitting và căn chỉnh nẹp eo trước giờ nhận). </span>
                             )}
+                            <span>Đến thời hạn hoàn trả (trước 20:00 ngày <strong>{rentalSchedule.endDate}</strong>), <strong>chuyên viên của Bên A sẽ chủ động liên hệ hẹn giờ và trực tiếp đến tận nơi thu hồi váy trong vali bảo quản niêm phong & kiểm định hiện trạng</strong>, Bên B không cần phải tự mang trả.</span>
                           </p>
                           <p className="m-0">
                             1.4. Tiêu chuẩn bàn giao: Tác phẩm được giặt sấy tiệt trùng sinh học ozone, ủi phẳng nếp và tinh chỉnh phom dáng theo số đo riêng của Bên B trước giờ giao nhận 2 giờ.
