@@ -1,5 +1,5 @@
-import React, { useState, useMemo } from 'react';
-import { Link, useNavigate, useSearchParams } from 'react-router-dom';
+import React, { useState, useMemo, useEffect } from 'react';
+import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
 import {
   ShieldCheck,
   Calendar,
@@ -7,6 +7,8 @@ import {
   Check,
   CheckCircle2,
   Lock,
+  LogIn,
+  UserCheck,
   Phone,
   QrCode,
   CreditCard,
@@ -38,6 +40,7 @@ import {
   Minus,
 } from 'lucide-react';
 import { message } from 'antd';
+import { useAuth } from '../../contexts/AuthContext';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { MOCK_DRESSES } from '../../services/dressService';
@@ -92,7 +95,9 @@ function DirectorSignatureAndStamp({ className = "h-28", isSmall = false }) {
 
 export default function CheckoutPage() {
   const navigate = useNavigate();
+  const location = useLocation();
   const [searchParams] = useSearchParams();
+  const { user, isLoggedIn } = useAuth();
   const dressIdParam = searchParams.get('dressId');
   const sizeParam = searchParams.get('size');
   const startDateParam = searchParams.get('startDate');
@@ -234,12 +239,58 @@ export default function CheckoutPage() {
   const [createdOrder, setCreatedOrder] = useState(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Helper: Trích xuất thông tin người dùng đã đăng ký
+  const extractUserFields = (u) => {
+    if (!u) return { name: '', phone: '', email: '', cccd: '', address: '' };
+    const name = u.fullName || u.name || '';
+    const phone = u.phone || '';
+    const email = u.email || '';
+    const cccd = u.idCard || u.cccd || '';
+    let address = '';
+    if (typeof u.address === 'string') {
+      address = u.address;
+    } else if (u.address && typeof u.address === 'object') {
+      address = [u.address.street, u.address.ward, u.address.district, u.address.city].filter(Boolean).join(', ');
+    }
+    return { name, phone, email, cccd, address };
+  };
+
   // Step 1: Form state
-  const [brideName, setBrideName] = useState('Lê Nguyễn Thảo My');
-  const [phone, setPhone] = useState('0938 128 899');
-  const [email, setEmail] = useState('thaomy.bride@gmail.com');
-  const [cccd, setCccd] = useState('079201019888');
-  const [address, setAddress] = useState('120/4 Lê Lai, Phường Bến Thành, Quận 1, TP. Hồ Chí Minh');
+  // QUY TẮC:
+  // - Khách chưa đăng ký / chưa đăng nhập: BẮT BUỘC để trống toàn bộ ('')
+  // - Người dùng đăng nhập bình thường: Tự động trích xuất thông tin hồ sơ đã đăng ký
+  const initialUserData = useMemo(() => {
+    return isLoggedIn && user ? extractUserFields(user) : { name: '', phone: '', email: '', cccd: '', address: '' };
+  }, [isLoggedIn, user]);
+
+  const [brideName, setBrideName] = useState(initialUserData.name);
+  const [phone, setPhone] = useState(initialUserData.phone);
+  const [email, setEmail] = useState(initialUserData.email);
+  const [cccd, setCccd] = useState(initialUserData.cccd);
+  const [address, setAddress] = useState(initialUserData.address);
+
+  // Đồng bộ khi user đăng nhập hoặc khi dữ liệu profile tải xong
+  useEffect(() => {
+    if (isLoggedIn && user) {
+      const uData = extractUserFields(user);
+      setBrideName((prev) => (prev ? prev : uData.name));
+      setPhone((prev) => (prev ? prev : uData.phone));
+      setEmail((prev) => (prev ? prev : uData.email));
+      setCccd((prev) => (prev ? prev : uData.cccd));
+      setAddress((prev) => (prev ? prev : uData.address));
+
+      if (user.measurements) {
+        setMeasurements((prev) => ({
+          ...prev,
+          height: user.measurements.height ? String(user.measurements.height) : prev.height,
+          weight: user.measurements.weight ? String(user.measurements.weight) : prev.weight,
+          bust: user.measurements.bust ? String(user.measurements.bust) : prev.bust,
+          waist: user.measurements.waist ? String(user.measurements.waist) : prev.waist,
+          hips: user.measurements.hips ? String(user.measurements.hips) : prev.hips,
+        }));
+      }
+    }
+  }, [isLoggedIn, user]);
 
   // Helper: Cộng/trừ số ngày vào ngày cho trước (dùng local Date tránh lệch timezone)
   const addDaysToDate = (displayOrIso, days) => {
@@ -1241,7 +1292,7 @@ export default function CheckoutPage() {
 
                 {/* 1. THÔNG TIN NGƯỜI THUÊ */}
                 <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
-                  <div className="flex items-center justify-between pb-5 border-b border-[#F5EDE8] mb-6">
+                  <div className="flex flex-col sm:flex-row sm:items-center justify-between pb-4 border-b border-[#F5EDE8] mb-6 gap-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 rounded-xl bg-[#FAF0EC] flex items-center justify-center text-[#B8737D]">
                         <FileText className="w-5 h-5" />
@@ -1250,10 +1301,29 @@ export default function CheckoutPage() {
                         <h2 className="font-playfair text-[19px] sm:text-[21px] font-semibold text-[#2C2523] m-0">
                           Thông Tin Người Đại Diện Thuê
                         </h2>
-
+                        <p className="text-[12px] text-[#847374] m-0 mt-0.5">
+                          {isLoggedIn ? (
+                            <span className="text-[#2E7D32] font-semibold flex items-center gap-1">
+                              <CheckCircle2 className="w-3.5 h-3.5 text-[#2E7D32]" />
+                              Tự động lấy thông tin từ tài khoản đã đăng ký ({user?.fullName || user?.name || user?.email})
+                            </span>
+                          ) : (
+                            <span>Đơn thuê khách vãng lai (Chưa đăng nhập) — Vui lòng điền thông tin để lập hợp đồng</span>
+                          )}
+                        </p>
                       </div>
                     </div>
 
+                    {!isLoggedIn && (
+                      <Link
+                        to="/login"
+                        state={{ from: location }}
+                        className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-[#FAF4EE] hover:bg-[#FAF0EC] border border-[#EEDECF] text-[#733F49] text-[12px] font-bold transition-all shadow-2xs self-start sm:self-auto cursor-pointer"
+                      >
+                        <LogIn className="w-3.5 h-3.5" />
+                        <span>Đăng nhập để tự động điền</span>
+                      </Link>
+                    )}
                   </div>
 
                   <div className="space-y-4">
@@ -1271,7 +1341,7 @@ export default function CheckoutPage() {
                             setContractSignature(e.target.value);
                           }}
                           className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
-                          placeholder="Lê Nguyễn Thảo My"
+                          placeholder="Nhập họ và tên cô dâu (Ví dụ: Lê Nguyễn Thảo My)"
                         />
                       </div>
 
@@ -1301,7 +1371,7 @@ export default function CheckoutPage() {
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
-                          placeholder="thaomy.bride@gmail.com"
+                          placeholder="nangdau@gmail.com"
                         />
                       </div>
 
@@ -1315,7 +1385,7 @@ export default function CheckoutPage() {
                           value={cccd}
                           onChange={(e) => setCccd(e.target.value)}
                           className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
-                          placeholder="079201019888"
+                          placeholder="Nhập 12 số CCCD (Ví dụ: 079201019888)"
                         />
                       </div>
                     </div>
