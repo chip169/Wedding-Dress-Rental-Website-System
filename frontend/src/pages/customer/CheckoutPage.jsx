@@ -2541,7 +2541,7 @@ export default function CheckoutPage() {
                 ) : (
                   <div className="bg-[#F0FDF4] border border-[#BBF7D0] p-2.5 rounded-xl text-[#15803D] text-[11.5px] flex items-center gap-2 font-bold">
                     <CheckCircle2 className="w-4 h-4 shrink-0 text-[#16A34A]" />
-                    <span>Lịch còn trống: {rentalSchedule.startDate} – {rentalSchedule.endDate}</span>
+                    <span>Lịch đã đăng ký: {rentalSchedule.startDate} – {rentalSchedule.endDate}</span>
                   </div>
                 )}
 
