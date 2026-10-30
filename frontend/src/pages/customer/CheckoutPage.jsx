@@ -1608,31 +1608,6 @@ export default function CheckoutPage() {
                         </div>
                       );
                     })()}
-
-                    {/* Timeline Legend Footer */}
-                    <div className="mt-3.5 pt-3 border-t border-[#EEDECF] flex flex-wrap items-center justify-between gap-2.5 text-[11.5px]">
-                      <div className="flex flex-wrap items-center gap-3">
-                        <span className="inline-flex items-center gap-1.5 text-[#2E7D32] font-semibold">
-                          <span className="w-2.5 h-2.5 rounded-full bg-[#2E7D32]" />
-                          Ngày nhận váy ({rentalSchedule.startDate})
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 text-[#733F49] font-bold">
-                          <span className="w-2.5 h-2.5 rounded-full bg-[#733F49] ring-2 ring-[#D4AF37]" />
-                          Ngày cưới chính thức ({rentalSchedule.weddingDate})
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 text-[#847374] font-semibold">
-                          <span className="w-2.5 h-2.5 rounded-full bg-[#847374]" />
-                          Ngày hoàn trả ({rentalSchedule.endDate})
-                        </span>
-                        <span className="inline-flex items-center gap-1.5 text-[#B91C1C] font-semibold">
-                          <span className="w-2.5 h-2.5 rounded-full bg-[#B91C1C]" />
-                          Đã có người đặt (Kín lịch)
-                        </span>
-                      </div>
-                      <div className="font-bold text-[#733F49] bg-[#FAF0EC] px-2.5 py-1 rounded-lg border border-[#F2D8D4]">
-                        ✓ Trọn gói thuê {rentalDays} ngày cao cấp
-                      </div>
-                    </div>
                   </div>
 
                   {/* Delivery Mode */}
