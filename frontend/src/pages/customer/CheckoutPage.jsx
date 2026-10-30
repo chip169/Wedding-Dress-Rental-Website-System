@@ -2610,23 +2610,6 @@ export default function CheckoutPage() {
                   </span>
                 </div>
 
-                {/* Decorative Barcode & Authentication Footer (Đáy vé mã vạch sang trọng) */}
-                <div className="pt-3 border-t border-[#F5EDE8] flex flex-col items-center justify-center text-center space-y-1.5 select-none">
-                  <div className="flex items-center gap-[2px] h-6 opacity-65">
-                    {/* Barcode Lines */}
-                    {[2, 1, 3, 1, 2, 4, 1, 3, 2, 1, 4, 2, 1, 3, 1, 2, 3, 1, 4, 1, 2, 3, 1, 2].map((w, i) => (
-                      <span
-                        key={i}
-                        className="bg-[#2C2523] h-full rounded-[0.5px]"
-                        style={{ width: `${w * 1.5}px` }}
-                      />
-                    ))}
-                  </div>
-                  <div className="text-[9.5px] font-mono tracking-[2px] text-[#847374] uppercase">
-                    ★ UNIBRIDAL OFFICIAL BRIDAL PASS • {activeDress?.code || 'UB-2026'} ★
-                  </div>
-                </div>
-
               </div>
 
             </div>
