@@ -12,13 +12,13 @@ const HAUTE_COUTURE_CLAUSES = [
   },
   {
     id: 2,
-    title: 'ĐIỀU 2: THỜI HẠN THUÊ & PHƯƠNG THỨC GIAO NHẬN',
+    title: 'ĐIỀU 2: THỜI HẠN THUÊ, PHƯƠNG THỨC GIAO NHẬN & QUY TRÌNH THU HỒI, KIỂM ĐỊNH',
     content:
       '2.1. Tổng thời gian thuê: Được xác định theo gói ngày Bên B lựa chọn (từ 2 đến 30 ngày liên tục).\n' +
-      '2.2. Thời điểm nhận váy: Từ 09:00 ngày bắt đầu thuê ghi nhận trên phiếu đặt tại Showroom UniBridal hoặc bàn giao tận nơi.\n' +
+      '2.2. Thời điểm nhận váy: Từ 09:00 ngày bắt đầu thuê ghi nhận trên phiếu đặt tại Showroom UniBridal hoặc bàn giao tận nơi bằng Vali VIP Courier.\n' +
       '2.3. Ngày tổ chức hôn lễ chính thức: Được ghi rõ để Atelier hoàn tất ủi sấy và kiểm định phụ kiện trước hôn lễ 24 giờ.\n' +
-      '2.4. Thời điểm hoàn trả váy: Trước 20:00 ngày kết thúc thuê tại Showroom hoặc bàn giao cho chuyên viên thu hồi tận nơi.\n' +
-      '2.5. Hai bên thực hiện ký Biên bản kiểm định bàn giao để ghi nhận hiện trạng đính kết ren, hạt cườm và kết cấu váy tại thời điểm giao và nhận lại.',
+      '2.4. Phương thức hoàn trả & thu hồi: Trước 20:00 ngày kết thúc thời hạn thuê. Đối với hình thức giao tận nơi, chuyên viên của Bên A sẽ chủ động liên hệ hẹn giờ và trực tiếp đến tận địa chỉ của Bên B để thu hồi lễ phục trong vali bảo quản niêm phong, thực hiện kiểm định sơ bộ hiện trạng sản phẩm trước khi hoàn trả 100% tiền cọc; đối với hình thức nhận tại showroom, Bên B mang hoàn trả tại Showroom để chuyên viên Bên A kiểm định và hoàn cọc trực tiếp tại quầy.\n' +
+      '2.5. Hai bên thực hiện ký Biên bản kiểm định bàn giao và thu hồi để ghi nhận hiện trạng đính kết ren, hạt cườm và kết cấu váy tại thời điểm giao và nhận lại.',
   },
   {
     id: 3,
