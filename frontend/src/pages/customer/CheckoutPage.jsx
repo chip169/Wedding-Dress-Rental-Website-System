@@ -1341,7 +1341,7 @@ export default function CheckoutPage() {
                             setContractSignature(e.target.value);
                           }}
                           className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
-                          placeholder="Nhập họ và tên cô dâu (Ví dụ: Lê Nguyễn Thảo My)"
+                          placeholder="Nhập họ và tên cô dâu"
                         />
                       </div>
 
@@ -1355,7 +1355,7 @@ export default function CheckoutPage() {
                           value={phone}
                           onChange={(e) => setPhone(e.target.value)}
                           className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
-                          placeholder="09xx xxx xxx"
+                          placeholder="Nhập số điện thoại liên hệ"
                         />
                       </div>
                     </div>
@@ -1371,7 +1371,7 @@ export default function CheckoutPage() {
                           value={email}
                           onChange={(e) => setEmail(e.target.value)}
                           className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
-                          placeholder="nangdau@gmail.com"
+                          placeholder="Nhập địa chỉ email nhận hợp đồng"
                         />
                       </div>
 
@@ -1385,7 +1385,7 @@ export default function CheckoutPage() {
                           value={cccd}
                           onChange={(e) => setCccd(e.target.value)}
                           className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
-                          placeholder="Nhập 12 số CCCD (Ví dụ: 079201019888)"
+                          placeholder="Nhập số CCCD / CMND"
                         />
                       </div>
                     </div>
@@ -1400,7 +1400,7 @@ export default function CheckoutPage() {
                         value={address}
                         onChange={(e) => setAddress(e.target.value)}
                         className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
-                        placeholder="Số nhà, tên đường, phường/xã, quận/huyện, tỉnh/thành phố"
+                        placeholder="Nhập địa chỉ thường trú hoặc nhận lễ phục"
                       />
                     </div>
                   </div>

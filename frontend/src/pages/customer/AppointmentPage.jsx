@@ -1073,7 +1073,7 @@ export default function AppointmentPage() {
                         rows={3}
                         value={notes}
                         onChange={(e) => setNotes(e.target.value)}
-                        placeholder="Ví dụ: Đám cưới tổ chức ngoài biển, nàng muốn thử váy đuôi cá nhẹ nhàng dễ di chuyển..."
+                        placeholder="Nhập yêu cầu đặc biệt hoặc phong cách váy cưới nàng mong muốn trải nghiệm..."
                         className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 text-[13.5px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white resize-none"
                       />
                     </div>

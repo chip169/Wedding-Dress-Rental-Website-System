@@ -283,7 +283,7 @@ export default function CollectionPage() {
                 type="text"
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                placeholder="Tìm kiếm theo tên thiết kế, phom dáng, chất liệu (ví dụ: Elysian, Ballgown, Ren 3D)..."
+                placeholder="Tìm kiếm theo tên thiết kế, phom dáng, chất liệu..."
                 className="flex-1 bg-transparent border-0 outline-none font-jakarta text-[13.5px] sm:text-[14px] text-[#2C2523] placeholder:text-[#847374]/70 py-1"
               />
 
