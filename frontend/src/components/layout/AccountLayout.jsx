@@ -4,7 +4,7 @@ import { ClipboardPenLine, History, LogOut, ReceiptText } from 'lucide-react';
 import Header from './Header';
 import Footer from './Footer';
 import BookingModal from '../common/BookingModal';
-import { clearProfile } from '../../services/profileService';
+import { useAuth } from '../../contexts/AuthContext';
 
 const accountLayoutStyles = `
 :where(.profile-page) :is(h1, h2, h3, h4, p) { margin: 0; }
@@ -81,8 +81,9 @@ export function AccountSidebar({ onLogout }) {
 
 export default function AccountLayout({ children, breadcrumb = [], notice, onLogout, hideSidebar = false }) {
   const navigate = useNavigate();
+  const { logout: logoutAccount } = useAuth();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
-  const logout = onLogout || (() => { clearProfile(); navigate('/login'); });
+  const logout = onLogout || (() => { logoutAccount(); navigate('/login'); });
 
   return (
     <div className="profile-page min-h-screen font-jakarta text-[#302725]">

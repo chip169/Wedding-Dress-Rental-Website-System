@@ -28,6 +28,7 @@ import ContractTemplateManagement from './pages/admin/ContractTemplateManagement
 import { AuthProvider } from './contexts/AuthContext';
 import { CartProvider } from './contexts/CartContext';
 import { WishlistProvider } from './contexts/WishlistContext';
+import ProtectedPage from './components/common/ProtectedPage';
 
 export default function App() {
   return (
@@ -61,17 +62,17 @@ export default function App() {
               <Route path="/messages" element={<MessagesPage />} />
               <Route path="/chat" element={<MessagesPage />} />
               <Route path="/staff" element={<Navigate to="/staff/dashboard" replace />} />
-              <Route path="/staff/dashboard" element={<StaffDashboardPage />} />
+              <Route path="/staff/dashboard" element={<ProtectedPage roles={['staff', 'admin']}><StaffDashboardPage /></ProtectedPage>} />
               <Route path="/admin" element={<Navigate to="/admin/dashboard" replace />} />
-              <Route path="/admin/dashboard" element={<AdminDashboardPage />} />
-              <Route path="/admin/reports/revenue" element={<RevenueReportPage />} />
+              <Route path="/admin/dashboard" element={<ProtectedPage roles={['admin']}><AdminDashboardPage /></ProtectedPage>} />
+              <Route path="/admin/reports/revenue" element={<ProtectedPage roles={['admin']}><RevenueReportPage /></ProtectedPage>} />
               <Route path="/admin/revenue" element={<Navigate to="/admin/reports/revenue" replace />} />
               <Route path="/dresses/:id" element={<DressDetailPage />} />
               <Route path="/dress/:id" element={<DressDetailPage />} />
-              <Route path="/profile" element={<ProfilePage />} />
-              <Route path="/profile/orders" element={<OrderHistoryPage />} />
-              <Route path="/profile/orders/:orderId" element={<OrderDetailPage />} />
-              <Route path="/profile/password" element={<ChangePasswordPage />} />
+              <Route path="/profile" element={<ProtectedPage><ProfilePage /></ProtectedPage>} />
+              <Route path="/profile/orders" element={<ProtectedPage><OrderHistoryPage /></ProtectedPage>} />
+              <Route path="/profile/orders/:orderId" element={<ProtectedPage><OrderDetailPage /></ProtectedPage>} />
+              <Route path="/profile/password" element={<ProtectedPage><ChangePasswordPage /></ProtectedPage>} />
               <Route path="/login" element={<LoginPage />} />
               <Route path="/register" element={<RegisterPage />} />
               <Route path="/forgot-password" element={<ForgotPasswordPage />} />

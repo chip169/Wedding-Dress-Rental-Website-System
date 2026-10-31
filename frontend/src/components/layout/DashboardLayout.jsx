@@ -6,6 +6,7 @@ import {
   UsersRound, X,
 } from 'lucide-react';
 import './Dashboard.css';
+import { useAuth } from '../../contexts/AuthContext';
 
 const COMMON_ITEMS = [
   { label: 'Quản Lý Sản Phẩm', Icon: Scissors },
@@ -17,6 +18,7 @@ const COMMON_ITEMS = [
 ];
 
 function Sidebar({ role, close, closeButtonRef, activeNav }) {
+  const { logout } = useAuth();
   const isAdmin = role === 'admin';
   const items = [
     { label: 'Tổng Quan', Icon: LayoutDashboard, path: isAdmin ? '/admin/dashboard' : '/staff/dashboard' },
@@ -48,13 +50,14 @@ function Sidebar({ role, close, closeButtonRef, activeNav }) {
       </nav>
       <div className="ub-dashboard-sidebar-bottom mt-auto">
         <Link to="/" onClick={close}><House size={17} strokeWidth={1.8} /> VỀ TRANG CHỦ</Link>
-        <button type="button" onClick={() => { close(); navigate('/login'); }}><LogOut size={17} strokeWidth={1.8} /> VỀ TRANG ĐĂNG NHẬP</button>
+        <button type="button" onClick={() => { close(); logout(); navigate('/login'); }}><LogOut size={17} strokeWidth={1.8} /> ĐĂNG XUẤT</button>
       </div>
     </aside>
   );
 }
 
 export default function DashboardLayout({ role, children, controls, title = 'Tổng Quan', subtitle = 'Tổng quan các số liệu', activeNav = 'Tổng Quan' }) {
+  const { user } = useAuth();
   const [menuOpen, setMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(() => window.matchMedia('(max-width: 850px)').matches);
   const menuButtonRef = useRef(null);
@@ -97,9 +100,9 @@ export default function DashboardLayout({ role, children, controls, title = 'T�
         <header className="ub-dashboard-topbar flex h-[82px] items-center justify-between border-b border-[#f3e8e3] bg-[#fff8f6] px-[42px] max-[850px]:px-6 max-[650px]:h-[65px] max-[650px]:px-[17px]">
           <button ref={menuButtonRef} type="button" className="ub-dashboard-menu-toggle" onClick={() => setMenuOpen(true)} aria-controls="ub-dashboard-drawer" aria-label="Mở menu quản trị" aria-expanded={menuOpen}><Menu size={22} /></button>
           <Sparkles className="ub-dashboard-sparkle" size={16} strokeWidth={1.8} aria-hidden="true" />
-          <div className="ub-dashboard-user" aria-label="Tài khoản minh họa">
-            <div className="ub-dashboard-user-text"><strong>Trần Bích Ngọc</strong><span>{role === 'admin' ? 'ADMIN MODE · MẪU' : 'STAFF MODE · MẪU'}</span></div>
-            <div className="ub-dashboard-avatar" aria-hidden="true">BN<i /></div>
+          <div className="ub-dashboard-user" aria-label="Tài khoản đang đăng nhập">
+            <div className="ub-dashboard-user-text"><strong>{user?.name || 'Tài khoản'}</strong><span>{role === 'admin' ? 'ADMIN MODE' : 'STAFF MODE'}</span></div>
+            <div className="ub-dashboard-avatar" aria-hidden="true">{user?.avatar ? <img src={user.avatar} alt="" className="h-full w-full rounded-full object-cover" /> : (user?.name || 'UB').split(' ').slice(-2).map((part) => part[0]).join('').toUpperCase()}<i /></div>
           </div>
         </header>
         <main className="ub-dashboard-content mx-auto max-w-[1460px] px-10 pb-16 pt-[25px] max-[1120px]:px-[25px] max-[650px]:px-[17px] max-[650px]:pb-10 max-[650px]:pt-[22px]">
@@ -107,7 +110,7 @@ export default function DashboardLayout({ role, children, controls, title = 'T�
             <div><h1>{title}</h1><p>{subtitle}</p></div>
             {controls}
           </div>
-          <p className="ub-dashboard-demo-label"><Gem size={13} aria-hidden="true" /> Dữ liệu minh họa</p>
+          <p className="ub-dashboard-demo-label"><Gem size={13} aria-hidden="true" /> Dữ liệu từ hệ thống</p>
           {children}
         </main>
       </div>

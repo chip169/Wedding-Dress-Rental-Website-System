@@ -1,31 +1,18 @@
-const PROFILE_KEY = 'unibridal.demoProfile.v1';
+import axiosClient from '../api/axiosClient';
 
-export const DEFAULT_PROFILE = {
-  name: 'Nguyễn Mai Phương',
-  phone: '0908 123 888',
-  email: 'mai.phuong@unibridal.com',
-  gender: 'female',
-  birthday: '1998-08-15',
-  avatar: '',
+const extrasKey = (id) => `unibridal.profile.extras.${id}`;
+function localExtras(id) {
+  try { return JSON.parse(localStorage.getItem(extrasKey(id)) || '{}'); } catch { return {}; }
+}
+
+export const getProfile = async () => {
+  const profile = (await axiosClient.get('/profile')).data;
+  return { ...profile, gender: 'unspecified', birthday: '', ...localExtras(profile.id) };
 };
-
-// Local preview only. Replace this adapter with the profile API when available.
-export function loadProfile() {
-  try {
-    const stored = JSON.parse(localStorage.getItem(PROFILE_KEY) || 'null');
-    if (!stored) return { profile: { ...DEFAULT_PROFILE } };
-    const profile = Object.fromEntries(Object.entries(DEFAULT_PROFILE).map(([key, value]) => [key, typeof stored[key] === 'string' ? stored[key] : value]));
-    if (!/^data:image\/(png|jpeg);base64,/.test(profile.avatar)) profile.avatar = '';
-    return { profile };
-  } catch {
-    return { profile: { ...DEFAULT_PROFILE }, error: 'Không thể đọc dữ liệu đã lưu trên trình duyệt. Đang hiển thị hồ sơ mẫu.' };
-  }
-}
-
-export function saveProfile(profile) {
-  localStorage.setItem(PROFILE_KEY, JSON.stringify(profile));
-}
-
-export function clearProfile() {
-  localStorage.removeItem(PROFILE_KEY);
-}
+export const saveProfile = async (profile) => {
+  const updated = (await axiosClient.put('/profile', { name: profile.name, email: profile.email, phone: profile.phone, avatar: profile.avatar })).data;
+  const extras = { gender: profile.gender || 'unspecified', birthday: profile.birthday || '' };
+  localStorage.setItem(extrasKey(updated.id), JSON.stringify(extras));
+  return { ...updated, ...extras };
+};
+export const changePassword = async (payload) => (await axiosClient.patch('/profile/password', payload)).data;

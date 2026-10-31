@@ -4,7 +4,8 @@ import { Alert, ConfigProvider, Form, Input, Select } from 'antd';
 import { BadgeCheck, Camera, Check, IdCard, Upload } from 'lucide-react';
 import AccountLayout from '../../components/layout/AccountLayout';
 import emblemImg from '../../assets/images/unibridal-emblem-transparent.png';
-import { clearProfile, loadProfile, saveProfile } from '../../services/profileService';
+import { getProfile, saveProfile } from '../../services/profileService';
+import { useAuth } from '../../contexts/AuthContext';
 
 const profileStyles = `
 :where(.profile-page) :is(h1, h2, h3, h4, p) { margin: 0; }
@@ -37,16 +38,25 @@ const profileStyles = `
 `;
 
 export default function ProfilePage() {
-  const [initial] = useState(loadProfile);
-  const [saved, setSaved] = useState(initial.profile);
-  const [avatar, setAvatar] = useState(initial.profile.avatar);
-  const [notice, setNotice] = useState(initial.error ? { type: 'warning', text: initial.error } : null);
+  const { user, logout: logoutAccount, updateUser } = useAuth();
+  const emptyProfile = { name: '', phone: '', email: '', gender: 'unspecified', birthday: '', avatar: '' };
+  const [saved, setSaved] = useState(user || emptyProfile);
+  const [avatar, setAvatar] = useState(user?.avatar || '');
+  const [notice, setNotice] = useState(null);
   const [avatarError, setAvatarError] = useState('');
   const [readingAvatar, setReadingAvatar] = useState(false);
   const [form] = Form.useForm();
   const uploadRef = useRef(null);
   const readerRef = useRef(null);
   const navigate = useNavigate();
+  useEffect(() => {
+    let active = true;
+    getProfile().then((profile) => {
+      if (!active) return;
+      setSaved(profile); setAvatar(profile.avatar); form.setFieldsValue(profile); updateUser(profile);
+    }).catch((error) => { if (active) setNotice({ type: 'error', text: error.message || 'Không tải được hồ sơ.' }); });
+    return () => { active = false; };
+  }, [form]);
   useEffect(() => () => { readerRef.current?.abort(); readerRef.current = null; }, []);
   const today = new Date();
   const maxBirthday = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, '0')}-${String(today.getDate()).padStart(2, '0')}`;
@@ -62,15 +72,14 @@ export default function ProfilePage() {
     setNotice({ type: 'info', text: 'Đã khôi phục thông tin được lưu gần nhất.' });
   };
 
-  const submit = (values) => {
-    const profile = { ...values, name: values.name.trim(), email: values.email.trim(), phone: values.phone.trim(), avatar };
+  const submit = async (values) => {
+    const profile = { ...saved, ...values, name: values.name.trim(), email: values.email.trim(), phone: values.phone.trim(), avatar };
     try {
-      saveProfile(profile);
-      setSaved(profile);
-      form.setFieldsValue(profile);
-      setNotice({ type: 'success', text: 'Đã lưu thay đổi trên trình duyệt này. Hồ sơ chưa được đồng bộ với máy chủ.' });
-    } catch {
-      setNotice({ type: 'error', text: 'Không thể lưu trên trình duyệt. Bộ nhớ có thể đã đầy hoặc bị chặn. Hãy thử ảnh nhỏ hơn; các thay đổi vẫn còn trong biểu mẫu.' });
+      const updated = await saveProfile(profile);
+      setSaved(updated); updateUser(updated); form.setFieldsValue(updated);
+      setNotice({ type: 'success', text: 'Đã cập nhật hồ sơ.' });
+    } catch (error) {
+      setNotice({ type: 'error', text: error.message || 'Không thể cập nhật hồ sơ.' });
     }
   };
 
@@ -99,8 +108,7 @@ export default function ProfilePage() {
   };
 
   const logout = () => {
-    try { clearProfile(); navigate('/login'); }
-    catch { setNotice({ type: 'error', text: 'Không thể xóa hồ sơ mẫu trên trình duyệt. Vui lòng kiểm tra quyền lưu trữ và thử lại.' }); }
+    logoutAccount(); navigate('/login');
   };
 
   return <ConfigProvider theme={{ token: { colorPrimary: '#874e57', colorText: '#302725', colorBorder: '#eadbd8', borderRadius: 2, controlHeight: 44, fontFamily: "'Plus Jakarta Sans', sans-serif", fontSize: 14 }, components: { Input: { activeShadow: '0 0 0 2px #b8737d20' }, Select: { selectorBg: '#fff8f6' } } }}>
@@ -119,7 +127,7 @@ export default function ProfilePage() {
                   <span className="absolute -bottom-0.5 right-0 flex h-5 w-5 items-center justify-center rounded-full border-2 border-white bg-[#874e57] text-white"><Camera size={11} /></span>
                 </div>
                 <div className="min-w-0">
-                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><h2 className="break-words text-lg font-semibold">{saved.name}</h2><span className="rounded-sm bg-[#ffe2bd] px-2 py-1 text-[10px] font-semibold">VIP TIER 2</span></div>
+                  <div className="flex flex-wrap items-center gap-x-2 gap-y-1"><h2 className="break-words text-lg font-semibold">{saved.name || 'Tài khoản của bạn'}</h2></div>
                   <p className="mb-2 mt-1 text-xs text-[#6c5b57]">Định dạng hỗ trợ: JPG, PNG tối đa 5MB</p>
                   <button type="button" onClick={() => uploadRef.current?.click()} disabled={readingAvatar} className="flex items-center gap-1.5 border border-[#eadbd8] bg-white px-3 py-1.5 text-[11px] text-[#874e57] hover:bg-[#f9ebe8] disabled:opacity-60"><Upload size={13} />{readingAvatar ? 'ĐANG ĐỌC ẢNH…' : 'ĐỔI ẢNH ĐẠI DIỆN'}</button>
                   <input ref={uploadRef} type="file" accept="image/jpeg,image/png" aria-label="Chọn ảnh đại diện" className="hidden" onChange={uploadAvatar} />
@@ -133,10 +141,10 @@ export default function ProfilePage() {
                   <Form.Item name="phone" label="SỐ ĐIỆN THOẠI" rules={[{ required: true, message: 'Vui lòng nhập số điện thoại.' }, { validator: (_, value) => !value || /^(0\d{9}|\+84\d{9})$/.test(value.replace(/[\s.-]/g, '')) ? Promise.resolve() : Promise.reject(new Error('Nhập số điện thoại Việt Nam hợp lệ.')) }]}><Input type="tel" autoComplete="tel" /></Form.Item>
                   <Form.Item name="email" label="ĐỊA CHỈ EMAIL" rules={[{ required: true, message: 'Vui lòng nhập email.' }, { type: 'email', message: 'Địa chỉ email chưa hợp lệ.' }]}><Input autoComplete="email" type="email" /></Form.Item>
                   <Form.Item name="gender" label="GIỚI TÍNH" rules={[{ required: true, message: 'Vui lòng chọn giới tính.' }]}><Select options={[{ value: 'female', label: 'Nữ' }, { value: 'male', label: 'Nam' }, { value: 'other', label: 'Khác' }, { value: 'unspecified', label: 'Không muốn chia sẻ' }]} /></Form.Item>
-                  <Form.Item name="birthday" label="NGÀY SINH" className="sm:col-span-2" rules={[{ required: true, message: 'Vui lòng nhập ngày sinh.' }, { validator: (_, value) => !value || (value >= '1900-01-01' && value <= maxBirthday) ? Promise.resolve() : Promise.reject(new Error('Ngày sinh phải từ năm 1900 đến hôm nay.')) }]}><Input type="date" min="1900-01-01" max={maxBirthday} autoComplete="bday" /></Form.Item>
+                  <Form.Item name="birthday" label="NGÀY SINH" className="sm:col-span-2" rules={[{ validator: (_, value) => !value || (value >= '1900-01-01' && value <= maxBirthday) ? Promise.resolve() : Promise.reject(new Error('Ngày sinh phải từ năm 1900 đến hôm nay.')) }]}><Input type="date" min="1900-01-01" max={maxBirthday} autoComplete="bday" /></Form.Item>
                 </div>
                 <div className="mt-3 flex flex-col gap-4 border-t border-[#f0e9e6] pt-4 xl:flex-row xl:items-center xl:justify-between">
-                  <p className="flex items-center gap-2 text-xs text-[#6c5b57]"><BadgeCheck size={18} className="shrink-0 text-[#b8737d]" />Thông tin chỉ được lưu trên trình duyệt này.</p>
+                  <p className="flex items-center gap-2 text-xs text-[#6c5b57]"><BadgeCheck size={18} className="shrink-0 text-[#b8737d]" />Thông tin liên hệ và ảnh được đồng bộ; giới tính và ngày sinh lưu trên thiết bị này.</p>
                   <div className="flex gap-2"><button type="button" onClick={cancel} className="profile-cancel min-w-[126px] flex-1 border border-[#eadbd8] bg-white px-4 py-2.5 text-[13px] tracking-wider hover:bg-[#fff8f6]">HỦY BỎ</button><button type="submit" disabled={readingAvatar} className="flex flex-1 items-center justify-center gap-2 whitespace-nowrap rounded-sm bg-[#874e57] px-6 py-2.5 text-[13px] tracking-wider text-white hover:bg-[#703d45] disabled:opacity-50"><Check size={16} />LƯU THAY ĐỔI</button></div>
                 </div>
               </Form>

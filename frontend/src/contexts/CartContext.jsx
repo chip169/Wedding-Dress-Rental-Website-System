@@ -19,9 +19,9 @@ export function CartProvider({ children }) {
   }, []);
 
   const addToCart = (product) => {
-    const updated = addServiceCart(product);
-    setCart(updated);
-    return updated;
+    const added = addServiceCart(product);
+    setCart(getCart());
+    return added;
   };
 
   const removeFromCart = (id) => {

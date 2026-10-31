@@ -23,7 +23,7 @@ export const authenticate = async (req, res, next) => {
     }
 
     // Giải mã token
-    const decoded = jwt.verify(token, process.env.JWT_SECRET || 'unibridal_jwt_secret_key_2026_wdp301');
+    const decoded = jwt.verify(token, process.env.JWT_SECRET);
 
     // Tìm kiếm user và nạp thông tin Role kèm danh sách Permissions
     const user = await User.findById(decoded.id)
@@ -57,7 +57,6 @@ export const authenticate = async (req, res, next) => {
     return res.status(401).json({
       success: false,
       message: 'Token không hợp lệ hoặc đã hết hạn.',
-      error: error.message,
     });
   }
 };

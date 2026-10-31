@@ -3,6 +3,7 @@ import monetImage from '../assets/card8_lace_dream.jpg';
 import seraphinaImage from '../assets/card6_tiered_princess.jpg';
 import genevieveImage from '../assets/hero_bride.jpg';
 import julietteImage from '../assets/card4_monet.jpg';
+import { dressImage } from './dressApiService';
 
 const CART_KEY = 'unibridal-rental-cart';
 const WISHLIST_KEY = 'unibridal-wishlist';
@@ -22,8 +23,6 @@ const LEGACY_PREVIEW_IDS = {
   '8:Juliette Floral A-Line': 'preview-juliette-floral',
 };
 
-const STARTER_CART = [{ id: '1', days: 1 }, { id: '4', days: 1 }];
-
 function storage() {
   try { return window.localStorage; } catch { return null; }
 }
@@ -42,13 +41,10 @@ function migratePreviewIds(items, store, key) {
 
 export function getCart() {
   const store = storage();
-  if (!store) return STARTER_CART;
+  if (!store) return [];
   try {
     const raw = store.getItem(CART_KEY);
-    if (raw === null) {
-      store.setItem(CART_KEY, JSON.stringify(STARTER_CART));
-      return STARTER_CART;
-    }
+    if (raw === null || raw === '[{"id":"1","days":1},{"id":"4","days":1}]') return [];
     const parsed = JSON.parse(raw);
     return Array.isArray(parsed) ? migratePreviewIds(parsed, store, CART_KEY) : [];
   } catch { return []; }
@@ -58,6 +54,16 @@ function saveCart(items) {
   storage()?.setItem(CART_KEY, JSON.stringify(items));
   window.dispatchEvent(new Event(CART_EVENT));
   return items;
+}
+
+export function refreshCartWithDresses(dresses) {
+  const byCode = new Map(dresses.map((dress) => [dress.code, dress]));
+  const byName = new Map(dresses.map((dress) => [dress.name, dress]));
+  return saveCart(getCart().map((item) => {
+    const existing = CART_CATALOG[item.id];
+    const dress = byCode.get(item.code) || byName.get(item.name || existing?.name);
+    return dress ? { ...item, code: dress.code, name: dress.name, image: dress.image, price: dress.rentPrice, deposit: dress.depositAmount, status: dress.status, unavailable: dress.status === 'retired' } : { ...item, unavailable: true };
+  }));
 }
 
 function parseMoney(value) {
@@ -75,7 +81,8 @@ export function addToCart(dress) {
     name: dress.name,
     price: parseMoney(dress.priceNumber ?? dress.rentPrice ?? dress.price),
     deposit: parseMoney(dress.depositAmount ?? dress.deposit),
-    image: dress.image ?? dress.images?.[0],
+    image: dressImage(dress),
+    code: dress.code,
     size: dress.size ?? dress.sizes?.[0]?.label ?? 'Theo tư vấn',
     collection: dress.collectionTag ?? dress.collection ?? 'HAUTE COUTURE',
     detailHref: Object.hasOwn(dress, 'detailHref') ? dress.detailHref : `/dresses/${id}`,
@@ -97,7 +104,9 @@ export function clearCart() {
 }
 
 export function resolveCartItem(item) {
-  return { ...CART_CATALOG[item.id], ...item };
+  const resolved = { ...CART_CATALOG[item.id], ...item };
+  const catalogId = /^WDR-(\d{3})$/.exec(resolved.code || '')?.[1];
+  return { ...resolved, image: dressImage(resolved), detailHref: catalogId ? `/dresses/${Number(catalogId)}` : resolved.detailHref };
 }
 
 export function getWishlist() {

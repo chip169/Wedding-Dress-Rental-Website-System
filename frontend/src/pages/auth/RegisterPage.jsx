@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Sparkles, Lock, Mail, Phone, Eye, EyeOff, ArrowLeft } from 'lucide-react';
 import Logo from '../../components/common/Logo';
+import { useAuth } from '../../contexts/AuthContext';
+import { registerAccount } from '../../services/authService';
 
 // Icons using lucide-react
 const SparkleIcon = () => <Sparkles size={12} fill="currentColor" stroke="none" />;
@@ -15,6 +17,9 @@ const ArrowBackIcon = () => <ArrowLeft size={14} strokeWidth={2} />;
 
 export default function RegisterPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
   // Form states
   const [fullName, setFullName] = useState('');
@@ -43,7 +48,7 @@ export default function RegisterPage() {
 
   const strength = getPasswordStrength(password);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
     if (password !== confirmPassword) {
       alert('Mật khẩu xác nhận không khớp. Vui lòng kiểm tra lại!');
@@ -53,7 +58,13 @@ export default function RegisterPage() {
       alert('Vui lòng đồng ý với Điều khoản dịch vụ và Chính sách bảo mật.');
       return;
     }
-    console.log('Register submitted:', { fullName, phone, email, password });
+    setError(''); setSubmitting(true);
+    try {
+      const result = await registerAccount({ name: fullName, phone, email, password });
+      login(result.user, result.token);
+      navigate('/profile');
+    } catch (requestError) { setError(requestError.message || 'Không thể đăng ký.'); }
+    finally { setSubmitting(false); }
   };
 
   return (
@@ -864,6 +875,7 @@ export default function RegisterPage() {
 
             {/* Registration Form */}
             <form className="ub-form" onSubmit={handleSubmit} id="register-form">
+              {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
 
               {/* Row 1: Full Name & Phone Number */}
               <div className="ub-form-row">
@@ -1021,7 +1033,7 @@ export default function RegisterPage() {
               </div>
 
               {/* Submit Button */}
-              <button type="submit" className="ub-submit-btn" id="register-submit-btn">
+              <button type="submit" disabled={submitting} className="ub-submit-btn" id="register-submit-btn">
                 <span className="ub-submit-btn__text">TẠO TÀI KHOẢN THÀNH VIÊN</span>
                 <span className="ub-submit-btn__arrow">→</span>
               </button>

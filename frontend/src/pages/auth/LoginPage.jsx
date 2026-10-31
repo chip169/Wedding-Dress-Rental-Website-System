@@ -2,6 +2,8 @@ import { useState } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
 import { Mail, Lock, Eye, EyeOff, ArrowLeft, Sparkles, Gem } from 'lucide-react';
 import Logo from '../../components/common/Logo';
+import { useAuth } from '../../contexts/AuthContext';
+import { loginAccount } from '../../services/authService';
 
 const SparkleIcon = () => <Sparkles size={12} fill="currentColor" stroke="none" />;
 const DiamondIcon = () => <Gem size={18} strokeWidth={1.8} color="#854F55" />;
@@ -15,14 +17,25 @@ const ArrowBackIcon = () => <ArrowLeft size={14} strokeWidth={2} />;
 
 export default function LoginPage() {
   const navigate = useNavigate();
+  const { login } = useAuth();
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [rememberMe, setRememberMe] = useState(true);
+  const [error, setError] = useState('');
+  const [submitting, setSubmitting] = useState(false);
 
-  const handleSubmit = (e) => {
+  const handleSubmit = async (e) => {
     e.preventDefault();
-    console.log('Login submitted:', { email, password, rememberMe });
+    setError('');
+    setSubmitting(true);
+    try {
+      const result = await loginAccount(email, password);
+      login(result.user, result.token, rememberMe);
+      navigate(result.user.role === 'admin' ? '/admin/dashboard' : result.user.role === 'staff' ? '/staff/dashboard' : '/profile');
+    } catch (requestError) {
+      setError(requestError.message || 'Không thể đăng nhập. Vui lòng thử lại.');
+    } finally { setSubmitting(false); }
   };
 
   return (
@@ -897,7 +910,8 @@ export default function LoginPage() {
               </div>
 
               {/* Submit Button */}
-              <button type="submit" className="ub-submit-btn" id="login-submit-btn">
+              {error && <p role="alert" className="text-sm text-red-700">{error}</p>}
+              <button type="submit" disabled={submitting} className="ub-submit-btn" id="login-submit-btn">
                 <span className="ub-submit-btn__text">ĐĂNG NHẬP TÀI KHOẢN</span>
                 <span className="ub-submit-btn__arrow">→</span>
               </button>

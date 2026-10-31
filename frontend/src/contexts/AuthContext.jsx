@@ -1,41 +1,66 @@
-import React, { createContext, useContext, useState, useEffect } from 'react';
-import { loadProfile, saveProfile, clearProfile } from '../services/profileService';
+import React, { createContext, useContext, useEffect, useState } from 'react';
+import { getProfile } from '../services/profileService';
 
-const AuthContext = createContext();
+const AuthContext = createContext(null);
+const AUTH_USER_KEY = 'unibridal.authUser';
 
 export function AuthProvider({ children }) {
-  const [user, setUser] = useState(() => loadProfile()?.profile);
-  const [token, setToken] = useState(() => localStorage.getItem('token') || localStorage.getItem('accessToken') || null);
-
-  const login = (userData, authToken = 'mock_jwt_token_unibridal_2026') => {
-    localStorage.setItem('token', authToken);
-    saveProfile(userData);
-    setUser(userData);
-    setToken(authToken);
-  };
+  const [token, setToken] = useState(() => localStorage.getItem('token') || sessionStorage.getItem('token'));
+  const [user, setUser] = useState(() => {
+    try { return JSON.parse(localStorage.getItem(AUTH_USER_KEY) || sessionStorage.getItem(AUTH_USER_KEY) || 'null'); } catch { return null; }
+  });
+  const [loading, setLoading] = useState(!!token);
 
   const logout = () => {
     localStorage.removeItem('token');
     localStorage.removeItem('accessToken');
-    clearProfile();
-    setUser(null);
+    localStorage.removeItem(AUTH_USER_KEY);
+    sessionStorage.removeItem('token');
+    sessionStorage.removeItem(AUTH_USER_KEY);
     setToken(null);
+    setUser(null);
+    setLoading(false);
   };
 
-  const isLoggedIn = !!token;
-  const role = user?.role || (token ? 'admin' : 'guest');
+  useEffect(() => {
+    if (!token) { setLoading(false); return; }
+    let active = true;
+    getProfile().then((profile) => {
+      if (!active) return;
+      setUser(profile);
+      (localStorage.getItem('token') ? localStorage : sessionStorage).setItem(AUTH_USER_KEY, JSON.stringify(profile));
+    }).catch((error) => {
+      if (active && error?.status === 401) logout();
+    }).finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [token]);
 
-  return (
-    <AuthContext.Provider value={{ user, token, isLoggedIn, role, login, logout }}>
-      {children}
-    </AuthContext.Provider>
-  );
+  const login = (userData, authToken, remember = true) => {
+    if (!authToken || !userData) throw new Error('Thiếu dữ liệu đăng nhập.');
+    localStorage.removeItem('token'); localStorage.removeItem(AUTH_USER_KEY);
+    sessionStorage.removeItem('token'); sessionStorage.removeItem(AUTH_USER_KEY);
+    const store = remember ? localStorage : sessionStorage;
+    store.setItem('token', authToken);
+    store.setItem(AUTH_USER_KEY, JSON.stringify(userData));
+    setToken(authToken);
+    setUser(userData);
+  };
+
+  const updateUser = (profile) => {
+    (localStorage.getItem('token') ? localStorage : sessionStorage).setItem(AUTH_USER_KEY, JSON.stringify(profile));
+    setUser(profile);
+  };
+
+  const updateToken = (nextToken) => {
+    (localStorage.getItem('token') ? localStorage : sessionStorage).setItem('token', nextToken);
+    setToken(nextToken);
+  };
+
+  return <AuthContext.Provider value={{ user, token, loading, isLoggedIn: !!token && !!user, role: user?.role || 'guest', login, logout, updateUser, updateToken }}>{children}</AuthContext.Provider>;
 }
 
 export function useAuth() {
   const context = useContext(AuthContext);
-  if (!context) {
-    throw new Error('useAuth must be used within an AuthProvider');
-  }
+  if (!context) throw new Error('useAuth must be used within an AuthProvider');
   return context;
 }

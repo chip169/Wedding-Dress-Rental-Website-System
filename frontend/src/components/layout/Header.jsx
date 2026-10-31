@@ -2,12 +2,13 @@ import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { ShoppingBag, Heart, User, Calendar, ChevronDown, Menu, X, LogOut, Bell, MessageSquare } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
-import { clearProfile } from '../../services/profileService';
+import { useAuth } from '../../contexts/AuthContext';
 import { CART_EVENT, getCart } from '../../services/cartService';
 import { getWishlistIds, WISHLIST_EVENT } from '../../services/wishlistService';
 
 const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCount: propWishlistCount }) => {
   const navigate = useNavigate();
+  const { logout: logoutAccount, isLoggedIn, role } = useAuth();
   const location = useLocation();
 
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
@@ -75,27 +76,25 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
     },
   ];
 
-  const userAccountItems = [
+  const accountLinks = [
     {
       title: 'Trang cá nhân',
       subtitle: 'Quản lý thông tin & hồ sơ',
       href: '/profile',
     },
-    {
+    ...(role === 'customer' ? [{
       title: 'Lịch sử đơn hàng',
       subtitle: 'Tiến độ thuê & thử váy cưới',
       href: '/profile/orders',
-    },
-    {
-      title: 'Quản lý đơn thuê (Staff)',
-      subtitle: 'Bàn giao, kiểm định & định danh số đo',
-      href: '/admin/don-thue',
-    },
+    }] : []),
+    ...(['staff', 'admin'].includes(role) ? [{ title: 'Bảng điều khiển', subtitle: 'Tổng quan hoạt động', href: role === 'admin' ? '/admin/dashboard' : '/staff/dashboard' }] : []),
     {
       title: 'Đổi mật khẩu',
       subtitle: 'Bảo mật tài khoản',
       href: '/profile/password',
     },
+  ];
+  const guestLinks = [
     {
       title: 'Đăng nhập',
       subtitle: 'Đăng nhập tài khoản thành viên',
@@ -106,12 +105,12 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
       subtitle: 'Tạo tài khoản UniBridal mới',
       href: '/register',
     },
-    {
+  ];
+  const userAccountItems = isLoggedIn ? [...accountLinks, {
       title: 'Đăng xuất',
       subtitle: 'Thoát phiên đăng nhập hiện tại',
       isLogout: true,
-    },
-  ];
+    }] : guestLinks;
 
   // Điều hướng thông minh: Nếu đang ở trang chủ thì cuộn mượt mà; nếu đang ở trang khác thì chuyển về trang chủ + hash
   const handleNavClick = (hash = '') => {
@@ -146,7 +145,7 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
       onLogout();
       return;
     }
-    clearProfile();
+    logoutAccount();
     navigate('/login');
   };
 
