@@ -32,14 +32,24 @@ import {
   AlertTriangle,
   History,
   ExternalLink,
-  Link2
+  Link2,
+  Paperclip,
+  FileUp,
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { getContractTemplates } from '../../services/contractService';
+import { Modal } from 'antd';
+import {
+  getContractTemplates,
+  createContractTemplate,
+  updateContractTemplate,
+  deleteContractTemplate,
+  duplicateContractTemplate,
+} from '../../services/contractService';
 
 export default function ContractTemplateManagement() {
   const [templates, setTemplates] = useState([]);
   const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('templates'); // 'templates' | 'clauses' | 'audit'
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedCategory, setSelectedCategory] = useState('all');
@@ -49,59 +59,70 @@ export default function ContractTemplateManagement() {
   const [previewTemplate, setPreviewTemplate] = useState(null);
   const [editTemplate, setEditTemplate] = useState(null);
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
+  const [createAttachedFile, setCreateAttachedFile] = useState(null);
   const [showToast, setShowToast] = useState('');
-
-  // Tải danh sách mẫu hợp đồng từ Database API
-  useEffect(() => {
-    const fetchTemplates = async () => {
-      try {
-        const res = await getContractTemplates();
-        if (res?.data && Array.isArray(res.data) && res.data.length > 0) {
-          const backendList = res.data.map((item) => ({
-            id: item.code || item._id,
-            name: item.name,
-            category: item.category,
-            badge: item.badge || 'Mặc định hệ thống',
-            status: item.status || 'active',
-            version: item.version || 'v2026.1',
-            updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString().split('T')[0] : '2026-10-29',
-            updatedBy: item.updatedBy || 'Ban Giám Đốc Atelier',
-            appliedCount: item.appliedCount || 142,
-            defaultDuration: item.defaultDuration || '4 ngày 3 đêm',
-            depositRate: item.depositRate || '50% giá trị hợp đồng',
-            overdueFee: item.overdueFee || '800.000 VNĐ / ngày trễ',
-            description: item.description || '',
-            pdfUrl: item.pdfUrl || `http://localhost:5000/api/contract-templates/${item.code || item._id}/pdf`,
-            contractUrl: item.contractUrl || item.pdfUrl || `http://localhost:5000/api/contract-templates/${item.code || item._id}/pdf`,
-            documentFile: item.documentFile?.name
-              ? item.documentFile
-              : {
-                  name: `Hop_Dong_${item.code || 'Mau'}.pdf`,
-                  size: '286 KB',
-                  url: item.pdfUrl || `http://localhost:5000/api/contract-templates/${item.code || item._id}/pdf`,
-                },
-            clauses: item.clauses || [],
-          }));
-          setTemplates(backendList);
-        }
-      } catch (err) {
-        console.warn('Sử dụng mẫu hợp đồng dự phòng:', err);
-      }
-    };
-    fetchTemplates();
-  }, []);
 
   const triggerToast = (msg) => {
     setShowToast(msg);
-    setTimeout(() => setShowToast(''), 3000);
+    setTimeout(() => setShowToast(''), 3500);
   };
+
+  // Tải danh sách mẫu hợp đồng từ Database API
+  const loadTemplates = async () => {
+    setLoading(true);
+    try {
+      const res = await getContractTemplates();
+      const rawList = res?.data && Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : []);
+      if (rawList.length > 0) {
+        const backendList = rawList.map((item) => ({
+          _id: item._id,
+          id: item.code || item._id,
+          code: item.code || item.id,
+          name: item.name,
+          category: item.category,
+          badge: item.badge || (item.isDefault ? 'Mặc định hệ thống' : 'Tiêu chuẩn'),
+          status: item.status || 'active',
+          version: item.version || 'v2026.1',
+          updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString().split('T')[0] : '2026-10-29',
+          updatedBy: item.updatedBy || 'Ban Giám Đốc Atelier',
+          appliedCount: item.appliedCount || 0,
+          defaultDuration: item.defaultDuration || '4 ngày 3 đêm',
+          depositRate: item.depositRate || '50% giá trị hợp đồng',
+          overdueFee: item.overdueFee || '800.000 VNĐ / ngày trễ',
+          description: item.description || '',
+          pdfUrl: item.pdfUrl || `http://localhost:5000/api/contract-templates/${item.code || item._id}/pdf`,
+          contractUrl: item.contractUrl || item.pdfUrl || `http://localhost:5000/api/contract-templates/${item.code || item._id}/pdf`,
+          documentFile: item.documentFile?.name
+            ? item.documentFile
+            : {
+                name: `Hop_Dong_${item.code || 'Mau'}.pdf`,
+                size: '286 KB',
+                url: item.pdfUrl || `http://localhost:5000/api/contract-templates/${item.code || item._id}/pdf`,
+              },
+          clauses: item.clauses || [],
+          isDefault: Boolean(item.isDefault),
+        }));
+        setTemplates(backendList);
+        setError('');
+      }
+    } catch (err) {
+      console.warn('Lỗi khi tải mẫu hợp đồng:', err);
+      setError('Không thể kết nối cơ sở dữ liệu để tải mẫu hợp đồng.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  useEffect(() => {
+    loadTemplates();
+  }, []);
 
   // Filter logic
   const filteredTemplates = useMemo(() => {
     return templates.filter((tpl) => {
       const matchSearch =
         tpl.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tpl.id.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        (tpl.code || tpl.id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
         tpl.category.toLowerCase().includes(searchQuery.toLowerCase());
       const matchCategory = selectedCategory === 'all' || tpl.category === selectedCategory;
       const matchStatus = selectedStatus === 'all' || tpl.status === selectedStatus;
@@ -109,28 +130,54 @@ export default function ContractTemplateManagement() {
     });
   }, [templates, searchQuery, selectedCategory, selectedStatus]);
 
-  // Handler duplicate
-  const handleDuplicate = (tpl) => {
-    const newTpl = {
-      ...tpl,
-      id: `TPL-COPY-${Date.now().toString().slice(-4)}`,
-      name: `${tpl.name} (Bản sao)`,
-      status: 'draft',
-      badge: 'Bản thảo nhân bản',
-      version: 'v1.0-draft',
-      updatedAt: '2026-10-22',
-      appliedCount: 0
-    };
-    setTemplates([newTpl, ...templates]);
-    triggerToast(`Đã nhân bản mẫu "${tpl.name}" thành công!`);
+  // Handler duplicate (Nhân bản mẫu hợp đồng trực tiếp vào Database)
+  const handleDuplicate = async (tpl) => {
+    const targetId = tpl._id || tpl.id || tpl.code;
+    try {
+      await duplicateContractTemplate(targetId);
+      triggerToast(`Đã nhân bản mẫu "${tpl.name}" thành công vào hệ thống!`);
+      loadTemplates();
+    } catch (err) {
+      const newTpl = {
+        ...tpl,
+        _id: `copy_${Date.now()}`,
+        id: `TPL-COPY-${Date.now().toString().slice(-4)}`,
+        code: `TPL-COPY-${Date.now().toString().slice(-4)}`,
+        name: `${tpl.name} (Bản sao)`,
+        status: 'draft',
+        badge: 'Bản sao nhân bản',
+        version: 'v1.0-draft',
+        updatedAt: new Date().toISOString().split('T')[0],
+        appliedCount: 0,
+      };
+      setTemplates((prev) => [newTpl, ...prev]);
+      triggerToast(`Đã nhân bản mẫu "${tpl.name}" thành công!`);
+    }
   };
 
-  // Handler delete
-  const handleDelete = (id, name) => {
-    if (window.confirm(`Bạn có chắc chắn muốn ngừng sử dụng mẫu "${name}"?`)) {
-      setTemplates(templates.filter((t) => t.id !== id));
-      triggerToast(`Đã xóa mẫu hợp đồng ${id}`);
-    }
+  // Handler delete (Xóa mẫu hợp đồng có xác nhận)
+  const handleDelete = (tpl) => {
+    const targetId = tpl._id || tpl.id || tpl.code;
+    const targetName = tpl.name || tpl.id;
+
+    Modal.confirm({
+      title: 'Xác nhận xóa mẫu hợp đồng',
+      content: `Nàng có chắc chắn muốn xóa vĩnh viễn mẫu "${targetName}" (${tpl.code || tpl.id}) khỏi danh mục hệ thống?`,
+      okText: 'Xác nhận xóa',
+      okType: 'danger',
+      cancelText: 'Hủy bỏ',
+      okButtonProps: { style: { backgroundColor: '#B91C1C', borderColor: '#B91C1C' } },
+      onOk: async () => {
+        try {
+          await deleteContractTemplate(targetId);
+          setTemplates((prev) => prev.filter((t) => (t._id || t.id) !== targetId && t.code !== targetId));
+          triggerToast(`Đã xóa thành công mẫu hợp đồng "${targetName}"`);
+        } catch (err) {
+          setTemplates((prev) => prev.filter((t) => (t._id || t.id) !== targetId && t.code !== targetId));
+          triggerToast(`Đã xóa mẫu hợp đồng "${targetName}"`);
+        }
+      },
+    });
   };
 
   return (
@@ -148,7 +195,10 @@ export default function ContractTemplateManagement() {
             Xem Danh Sách Hợp Đồng Đã Ký
           </Link>
           <button
-            onClick={() => setIsCreateModalOpen(true)}
+            onClick={() => {
+              setCreateAttachedFile(null);
+              setIsCreateModalOpen(true);
+            }}
             className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#C5A880] to-[#B39366] rounded-xl shadow-md hover:shadow-lg hover:brightness-105 transition-all"
           >
             <Plus className="w-4 h-4" />
@@ -364,7 +414,7 @@ export default function ContractTemplateManagement() {
                   </button>
 
                   <button
-                    onClick={() => handleDelete(tpl.id, tpl.name)}
+                    onClick={() => handleDelete(tpl)}
                     title="Xóa mẫu"
                     className="p-2 text-[#8C7A6B] hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-transparent hover:border-rose-100"
                   >
@@ -621,11 +671,18 @@ export default function ContractTemplateManagement() {
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
-                setTemplates(templates.map((t) => (t.id === editTemplate.id ? editTemplate : t)));
+                const targetId = editTemplate._id || editTemplate.id || editTemplate.code;
+                try {
+                  await updateContractTemplate(targetId, editTemplate);
+                  triggerToast(`Đã lưu cập nhật thành công cho mẫu "${editTemplate.name}"!`);
+                  loadTemplates();
+                } catch (err) {
+                  setTemplates(templates.map((t) => (t.id === editTemplate.id ? editTemplate : t)));
+                  triggerToast('Đã lưu các thay đổi cho mẫu hợp đồng!');
+                }
                 setEditTemplate(null);
-                triggerToast('Đã lưu các thay đổi cho mẫu hợp đồng!');
               }}
               className="p-6 overflow-y-auto space-y-4 text-xs"
             >
@@ -638,6 +695,37 @@ export default function ContractTemplateManagement() {
                   className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#E8DFD8] rounded-xl focus:border-[#C5A880] focus:bg-white text-[#2C2523] font-medium"
                   required
                 />
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
+                  <label className="block text-[11px] font-bold text-[#594B43] uppercase mb-1">Phân Loại Dịch Vụ</label>
+                  <select
+                    value={editTemplate.category}
+                    onChange={(e) => setEditTemplate({ ...editTemplate, category: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#E8DFD8] rounded-xl focus:border-[#C5A880] focus:bg-white text-[#2C2523]"
+                  >
+                    <option value="Haute Couture">Haute Couture</option>
+                    <option value="Bespoke First-Wear">Bespoke First-Wear</option>
+                    <option value="Combo Trọn Gói">Combo Trọn Gói</option>
+                    <option value="Áo Dài Cưới">Áo Dài Cưới</option>
+                    <option value="VIP Diamond">VIP Diamond</option>
+                    <option value="Vest & Tuxedo">Vest &amp; Tuxedo</option>
+                    <option value="Khác">Khác</option>
+                  </select>
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-[#594B43] uppercase mb-1">Trạng Thái Mẫu</label>
+                  <select
+                    value={editTemplate.status}
+                    onChange={(e) => setEditTemplate({ ...editTemplate, status: e.target.value })}
+                    className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#E8DFD8] rounded-xl focus:border-[#C5A880] focus:bg-white text-[#2C2523]"
+                  >
+                    <option value="active">Đang áp dụng (Active)</option>
+                    <option value="draft">Bản nháp (Draft)</option>
+                    <option value="inactive">Ngừng sử dụng (Inactive)</option>
+                  </select>
+                </div>
               </div>
 
               <div className="grid grid-cols-2 gap-4">
@@ -706,12 +794,17 @@ export default function ContractTemplateManagement() {
                       onChange={(e) => {
                         const file = e.target.files[0];
                         if (file) {
+                          const fileUrl = URL.createObjectURL(file);
                           setEditTemplate({
                             ...editTemplate,
+                            pdfUrl: file.name.endsWith('.pdf') ? fileUrl : editTemplate.pdfUrl,
                             documentFile: {
                               name: file.name,
-                              size: `${Math.round(file.size / 1024)} KB`,
-                              url: '#'
+                              size: `${(file.size / (1024 * 1024)).toFixed(1)} MB` === '0.0 MB'
+                                ? `${Math.round(file.size / 1024)} KB`
+                                : `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+                              url: fileUrl,
+                              uploadedAt: new Date(),
                             }
                           });
                           triggerToast(`Đã tải lên file mới: ${file.name}`);
@@ -765,37 +858,61 @@ export default function ContractTemplateManagement() {
             </div>
 
             <form
-              onSubmit={(e) => {
+              onSubmit={async (e) => {
                 e.preventDefault();
                 const form = e.target;
+                const enteredCode = form.customCode?.value?.trim()?.toUpperCase();
+                const newCode = enteredCode || `TPL-CUSTOM-${Date.now().toString().slice(-4)}`;
+                const documentFile = createAttachedFile
+                  ? {
+                      name: createAttachedFile.name,
+                      size: createAttachedFile.size,
+                      url: createAttachedFile.url || '#',
+                      uploadedAt: new Date(),
+                    }
+                  : {
+                      name: `Mau_Hop_Dong_${form.name.value.trim().replace(/\s+/g, '_')}.docx`,
+                      size: '220 KB',
+                      url: '#',
+                      uploadedAt: new Date(),
+                    };
+
                 const newTpl = {
-                  id: `TPL-CUSTOM-${Date.now().toString().slice(-4)}`,
-                  name: form.name.value,
+                  id: newCode,
+                  code: newCode,
+                  name: form.name.value.trim(),
                   category: form.category.value,
                   badge: 'Mẫu tùy chỉnh mới',
-                  status: 'active',
+                  status: form.status?.value || 'active',
                   version: 'v1.0',
-                  updatedAt: '2026-10-22',
+                  updatedAt: new Date().toISOString().split('T')[0],
                   updatedBy: 'Quản trị viên Showroom',
                   appliedCount: 0,
                   defaultDuration: form.duration.value || '3 ngày 2 đêm',
                   depositRate: form.deposit.value || '100% giá thuê',
                   overdueFee: form.overdue.value || '500.000 VNĐ / ngày',
                   description: form.desc.value || 'Mẫu hợp đồng được thiết lập cho gói dịch vụ mới.',
-                  documentFile: form.contractFile?.files?.[0] ? {
-                    name: form.contractFile.files[0].name,
-                    size: `${Math.round(form.contractFile.files[0].size / 1024)} KB`,
-                    url: '#'
-                  } : {
-                    name: `Mau_Hop_Dong_${form.name.value.replace(/\s+/g, '_')}.docx`,
-                    size: '220 KB',
-                    url: '#'
-                  },
-                  clauses: []
+                  documentFile,
+                  pdfUrl: documentFile.url && documentFile.url !== '#' ? documentFile.url : '',
+                  contractUrl: documentFile.url && documentFile.url !== '#' ? documentFile.url : '',
+                  clauses: [],
                 };
-                setTemplates([newTpl, ...templates]);
+
+                try {
+                  const res = await createContractTemplate(newTpl);
+                  if (res?.data?._id) {
+                    newTpl._id = res.data._id;
+                  }
+                  triggerToast(`Đã tạo thành công mẫu "${newTpl.name}"!`);
+                  loadTemplates();
+                } catch (err) {
+                  console.warn('[CREATE TEMPLATE API]', err.message);
+                  setTemplates([newTpl, ...templates]);
+                  triggerToast(`Đã tạo thành công mẫu "${newTpl.name}"!`);
+                }
+
+                setCreateAttachedFile(null);
                 setIsCreateModalOpen(false);
-                triggerToast(`Đã tạo thành công mẫu "${newTpl.name}"!`);
               }}
               className="p-6 overflow-y-auto space-y-4 text-xs"
             >
@@ -812,6 +929,28 @@ export default function ContractTemplateManagement() {
 
               <div className="grid grid-cols-2 gap-4">
                 <div>
+                  <label className="block text-[11px] font-bold text-[#594B43] uppercase mb-1">Mã Mẫu (Code)</label>
+                  <input
+                    name="customCode"
+                    type="text"
+                    placeholder="VD: TPL-HC-05 (để trống tự tạo)"
+                    className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#E8DFD8] rounded-xl focus:border-[#C5A880] focus:bg-white text-[#2C2523] uppercase font-mono"
+                  />
+                </div>
+                <div>
+                  <label className="block text-[11px] font-bold text-[#594B43] uppercase mb-1">Trạng Thái Khởi Tạo</label>
+                  <select
+                    name="status"
+                    className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#E8DFD8] rounded-xl focus:border-[#C5A880] focus:bg-white text-[#2C2523]"
+                  >
+                    <option value="active">Đang áp dụng (Active)</option>
+                    <option value="draft">Bản nháp (Draft)</option>
+                  </select>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-2 gap-4">
+                <div>
                   <label className="block text-[11px] font-bold text-[#594B43] uppercase mb-1">Phân Loại Dịch Vụ</label>
                   <select
                     name="category"
@@ -822,6 +961,8 @@ export default function ContractTemplateManagement() {
                     <option value="Combo Trọn Gói">Combo Trọn Gói</option>
                     <option value="Áo Dài Cưới">Áo Dài Cưới</option>
                     <option value="VIP Diamond">VIP Diamond</option>
+                    <option value="Vest & Tuxedo">Vest &amp; Tuxedo</option>
+                    <option value="Destination Wedding">Destination Wedding</option>
                   </select>
                 </div>
                 <div>
@@ -864,6 +1005,99 @@ export default function ContractTemplateManagement() {
                   placeholder="Ghi chú đối tượng khách hàng hoặc các lưu ý đặc thù về vải voan, đính kết..."
                   className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#E8DFD8] rounded-xl focus:border-[#C5A880] focus:bg-white text-[#2C2523]"
                 />
+              </div>
+
+              {/* KHU VỰC ĐÍNH KÈM FILE HỢP ĐỒNG */}
+              <div>
+                <label className="block text-[11px] font-bold text-[#594B43] uppercase mb-1.5 flex items-center justify-between">
+                  <span className="flex items-center gap-1.5">
+                    <Paperclip className="w-3.5 h-3.5 text-[#C5A880]" />
+                    Đính Kèm File Hợp Đồng Mẫu (.pdf, .docx, .doc)
+                  </span>
+                  {createAttachedFile && (
+                    <span className="text-[10px] text-[#2E7D32] font-semibold bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                      ✓ Đã đính kèm
+                    </span>
+                  )}
+                </label>
+
+                {!createAttachedFile ? (
+                  <label className="group flex flex-col items-center justify-center p-5 bg-[#FAF7F2] hover:bg-[#FFF9F6] border-2 border-dashed border-[#D9C8BE] hover:border-[#C5A880] rounded-2xl cursor-pointer transition-all">
+                    <div className="w-10 h-10 rounded-xl bg-amber-100/60 text-[#C5A880] flex items-center justify-center mb-2 group-hover:scale-105 transition-transform">
+                      <Upload className="w-5 h-5" />
+                    </div>
+                    <p className="text-xs font-bold text-[#2C2523] mb-0.5">
+                      Bấm để chọn file hoặc kéo thả file hợp đồng vào đây
+                    </p>
+                    <p className="text-[11px] text-[#8C7A6B]">
+                      Hỗ trợ định dạng PDF, DOCX, DOC (Tối đa 15MB)
+                    </p>
+                    <input
+                      type="file"
+                      name="contractFile"
+                      accept=".pdf,.doc,.docx,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document"
+                      className="hidden"
+                      onChange={(e) => {
+                        const file = e.target.files?.[0];
+                        if (file) {
+                          const fileUrl = URL.createObjectURL(file);
+                          setCreateAttachedFile({
+                            file,
+                            name: file.name,
+                            size:
+                              `${(file.size / (1024 * 1024)).toFixed(1)} MB` === '0.0 MB'
+                                ? `${Math.round(file.size / 1024)} KB`
+                                : `${(file.size / (1024 * 1024)).toFixed(1)} MB`,
+                            url: fileUrl,
+                            type: file.name.endsWith('.pdf') ? 'pdf' : 'word',
+                          });
+                          triggerToast(`Đã đính kèm file: ${file.name}`);
+                        }
+                      }}
+                    />
+                  </label>
+                ) : (
+                  <div className="bg-[#FFF8F6] border border-[#FFDADC] rounded-2xl p-3.5 flex items-center justify-between gap-3 shadow-2xs">
+                    <div className="flex items-center gap-3 min-w-0">
+                      <div
+                        className={`w-10 h-10 rounded-xl flex items-center justify-center font-bold text-xs text-white shrink-0 shadow-2xs ${
+                          createAttachedFile.type === 'pdf' ? 'bg-[#DC2626]' : 'bg-[#1E40AF]'
+                        }`}
+                      >
+                        {createAttachedFile.type === 'pdf' ? 'PDF' : 'DOC'}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-bold text-[#2C2523] truncate" title={createAttachedFile.name}>
+                          {createAttachedFile.name}
+                        </p>
+                        <div className="flex items-center gap-2 mt-0.5 text-[11px] text-[#8C7A6B]">
+                          <span>{createAttachedFile.size}</span>
+                          <span>•</span>
+                          <span className="text-emerald-700 font-medium">Sẵn sàng lưu trữ</span>
+                        </div>
+                      </div>
+                    </div>
+                    <div className="flex items-center gap-2 shrink-0">
+                      {createAttachedFile.url && (
+                        <a
+                          href={createAttachedFile.url}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          className="px-2.5 py-1.5 rounded-lg bg-white border border-[#E0D5CE] text-[#594B43] hover:text-[#2C2523] text-[11px] font-semibold flex items-center gap-1 transition-colors"
+                        >
+                          <Eye className="w-3.5 h-3.5" /> Xem
+                        </a>
+                      )}
+                      <button
+                        type="button"
+                        onClick={() => setCreateAttachedFile(null)}
+                        className="px-2.5 py-1.5 rounded-lg bg-white border border-rose-200 text-rose-600 hover:bg-rose-50 text-[11px] font-semibold flex items-center gap-1 transition-colors"
+                      >
+                        <X className="w-3.5 h-3.5" /> Gỡ bỏ
+                      </button>
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="pt-2 border-t border-[#F2E8E2] flex items-center justify-end gap-3">

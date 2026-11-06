@@ -4,6 +4,7 @@ import Dress from '../models/Dress.model.js';
 import User from '../models/User.model.js';
 import Role from '../models/Role.model.js';
 import Appointment from '../models/Appointment.model.js';
+import { reportBounds, reportBuckets } from '../utils/adminReportMetrics.js';
 
 const REVENUE_TYPES = ['rental_payment', 'damage_compensation'];
 const ACTIVE_ORDER_STATUSES = ['deposit_paid', 'preparing', 'delivered', 'renting', 'returned', 'completed'];
@@ -110,17 +111,17 @@ function buckets(period, start, end) {
   return entries;
 }
 
-export async function dashboard(role, period = 'month') {
+export async function dashboard(role, period = 'month', now = new Date()) {
   if (!['week', 'month', 'quarter', 'year'].includes(period)) period = 'month';
-  const { start, end } = periodBounds(period);
+  const { start, end } = reportBounds(period, now);
   const [orders, payments, maintenanceOrdersDressIds, roleCustomer, appointments] = await Promise.all([
-    Order.find({ createdAt: { $gte: start, $lte: end } }).select('status createdAt rentalStartDate rentalEndDate totalRentPrice totalDeposit items customerName orderCode').lean(),
-    Payment.find({ status: 'success', paidAt: { $gte: start, $lte: end } }).select('transactionType amount paidAt').lean(),
+    Order.find({ createdAt: { $gte: start, $lt: end } }).select('status createdAt rentalStartDate rentalEndDate totalRentPrice totalDeposit items customerName orderCode').lean(),
+    Payment.find({ status: 'success', paidAt: { $gte: start, $lt: end } }).select('transactionType amount paidAt').lean(),
     Order.distinct('items.dressId', {
       status: { $in: ['returned', 'inspecting', 'maintenance'] },
     }),
     Role.findOne({ code: 'CUSTOMER' }).select('_id').lean(),
-    Appointment.find({ appointmentDate: { $gte: start, $lte: end } }).select('status appointmentDate customerName phone serviceType').lean().catch(() => []),
+    Appointment.find({ appointmentDate: { $gte: start, $lt: end } }).select('status appointmentDate customerName phone serviceType').lean(),
   ]);
 
   const maintenance = await Dress.countDocuments({
@@ -141,7 +142,7 @@ export async function dashboard(role, period = 'month') {
     : [];
 
   const recordedDepositIds = new Set(recordedDeposits.map(String));
-  const today = dayStart(new Date());
+  const today = dayStart(now);
   const tomorrow = new Date(today);
   tomorrow.setDate(today.getDate() + 1);
   const todayDeliveries = await Order.countDocuments({
@@ -165,7 +166,7 @@ export async function dashboard(role, period = 'month') {
     completed: orders.filter((o) => o.status === 'completed').length,
   };
 
-  const chart = buckets(period, start, end).map((bucket) => ({
+  const chart = reportBuckets(period, start, end).map((bucket) => ({
     label: bucket.label,
     orders: orders.filter((order) => order.createdAt >= bucket.start && order.createdAt < bucket.end).length,
     completed: orders.filter((order) => order.createdAt >= bucket.start && order.createdAt < bucket.end && order.status === 'completed').length,
@@ -191,6 +192,13 @@ export async function dashboard(role, period = 'month') {
     ordersMissingDepositTransaction: activeOrders.filter((order) => !recordedDepositIds.has(String(order._id))).length,
     chart,
   };
+}
+
+export async function upcomingStaffAppointments(now = new Date()) {
+  return Appointment.find({
+    appointmentDate: { $gte: dayStart(now) },
+    status: { $in: ['pending', 'confirmed'] },
+  }).sort({ appointmentDate: 1, createdAt: 1, _id: 1 }).lean();
 }
 
 export async function revenueReport(period = 'month') {

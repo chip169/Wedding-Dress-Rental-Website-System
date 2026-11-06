@@ -127,6 +127,8 @@ export const createUser = async (userData) => {
     idCard: idCard?.trim() || '',
     address: address || {},
     isActive: true,
+    isEmailVerified: true, // Tài khoản do admin lập trực tiếp không cần mã OTP kích hoạt
+    createdByAdmin: true,
   });
 
   const populated = await User.findById(user._id).populate('roleId', 'code name description').lean();

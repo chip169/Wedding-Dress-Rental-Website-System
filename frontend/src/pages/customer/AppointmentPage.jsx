@@ -418,6 +418,10 @@ export default function AppointmentPage() {
                 <span className="font-bold text-[#733F49] whitespace-nowrap">{confirmedBooking.fullName}</span>{' '}
                 cùng người thân.
               </p>
+              <div className="mt-3.5 inline-flex items-center gap-2 bg-[#F0FDF4] text-[#166534] border border-[#BBF7D0] px-4 py-2 rounded-xl text-[13px] font-medium shadow-xs">
+                <Mail className="w-4 h-4 text-[#16a34a] shrink-0" />
+                <span>Toàn bộ thông tin lịch hẹn & mã check-in đã được gửi tới email <strong>{confirmedBooking.email}</strong></span>
+              </div>
             </div>
 
             {/* Luxury Invitation Pass (VIP Golden / Champagne Atelier Pass) */}
@@ -958,11 +962,11 @@ export default function AppointmentPage() {
                         </div>
                         <Link
                           to="/collection"
-                          target="_blank"
+
                           className="text-[12px] font-bold text-[#733F49] hover:underline flex items-center gap-1 shrink-0"
                         >
                           <span>Xem toàn bộ BST</span>
-                          <ExternalLink className="w-3.5 h-3.5" />
+                          <ArrowRight className="w-3.5 h-3.5" />
                         </Link>
                       </div>
 
@@ -1233,7 +1237,7 @@ export default function AppointmentPage() {
 
                       <div>
                         <label className="block font-jakarta text-[11px] font-bold uppercase tracking-wider text-[#733F49] mb-1.5">
-                          SỐ ĐIỆN THOẠI (ZALO) *
+                          SỐ ĐIỆN THOẠI *
                         </label>
                         <input
                           type="text"

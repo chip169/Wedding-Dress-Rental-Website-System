@@ -93,7 +93,7 @@ const Footer = ({ variant }) => {
             <ul className="list-none p-0 m-0 space-y-2">
               {[
                 'Về UniBridal Haute Couture',
-                'Bảng giá và Gói dịch vụ',
+                'Bộ sưu tập & Mẫu váy mới',
                 'Hướng dẫn đặt lịch thử váy',
                 'Câu hỏi thường gặp (FAQ)',
                 'Tuyển dụng và Hợp tác',

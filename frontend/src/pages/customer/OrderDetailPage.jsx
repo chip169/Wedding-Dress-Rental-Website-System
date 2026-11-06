@@ -1,6 +1,5 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
-import { message, Modal } from 'antd';
 import {
   ArrowLeft,
   CalendarDays,
@@ -9,18 +8,17 @@ import {
   CheckCircle2,
   Circle,
   Clock,
-  Package,
   Truck,
   RefreshCcw,
   Star,
   XCircle,
-  MessageCircle,
-  Printer,
-  AlertCircle,
+  FileSignature,
 } from 'lucide-react';
 import AccountLayout from '../../components/layout/AccountLayout';
-import { formatVnd, getOrder, updateOrderStatus } from '../../services/orderService';
-import { CustomerInspectionModal } from './OrderHistoryPage';
+import { formatVnd } from '../../services/orderService';
+import { getOrder } from '../../services/customerOrderService';
+import CustomerInspectionModal from '../../components/common/CustomerInspectionModal';
+import SignedContractModal from '../../components/common/SignedContractModal';
 
 /* ─────────────────────────────────────────────
    STATUS TIMELINE CONFIG
@@ -33,15 +31,9 @@ const TIMELINE_STEPS = [
     Icon: CheckCircle2,
   },
   {
-    key: 'preparing',
-    label: 'Chuẩn Bị',
-    subLabel: 'Đang chuẩn bị bàn giao',
-    Icon: Package,
-  },
-  {
     key: 'delivered',
-    label: 'Đã Giao',
-    subLabel: 'Váy đã được giao',
+    label: 'Đã Giao Váy',
+    subLabel: 'Váy đã được bàn giao',
     Icon: Truck,
   },
   {
@@ -52,8 +44,8 @@ const TIMELINE_STEPS = [
   },
   {
     key: 'returned',
-    label: 'Đã Trả',
-    subLabel: 'Váy đã được trả lại',
+    label: 'Đang Kiểm Định',
+    subLabel: 'Kiểm định & hoàn cọc',
     Icon: RefreshCcw,
   },
   {
@@ -68,11 +60,12 @@ const TIMELINE_STEPS = [
 const STATUS_STEP_MAP = {
   pending_payment: -1, // chưa cọc
   deposit_paid: 0,
-  preparing: 1,
-  delivered: 2,
-  renting: 3,
-  returned: 4,
-  completed: 5,
+  preparing: 0, // Fallback đơn cũ: hiển thị ở bước Đặt Cọc
+  delivered: 1,
+  renting: 2,
+  returned: 3,
+  completed: 4,
+  complete: 4,
 };
 
 /* ─────────────────────────────────────────────
@@ -97,129 +90,29 @@ function OrderStatusTimeline({ rawStatus }) {
   const activeIndex = STATUS_STEP_MAP[rawStatus] ?? -1;
 
   return (
-    <section
-      className="mt-6 rounded-2xl border border-[#EEDECF] bg-[#FFF9F6] px-5 py-6 sm:px-7"
-      aria-label="Trạng thái đơn hàng"
-    >
-      <p className="mb-5 text-[11px] font-bold uppercase tracking-[1.6px] text-[#BA7A83]">
-        ✦ Hành Trình Lễ Phục Của Nàng
-      </p>
-
-      {/* Desktop: horizontal row */}
-      <div className="hidden sm:flex items-start">
-        {TIMELINE_STEPS.map((step, idx) => {
-          const isCompleted = idx < activeIndex;
-          const isActive = idx === activeIndex;
-          const isPending = idx > activeIndex;
-          const { Icon } = step;
+    <section className="mt-6 rounded-2xl border border-[#EEDECF] bg-[#FFF9F6] px-5 py-6 sm:px-7" aria-label="Trạng thái đơn hàng">
+      <p className="mb-5 text-[11px] font-bold uppercase tracking-[1.6px] text-[#BA7A83]">✦ Hành Trình Lễ Phục Của Nàng</p>
+      <ol className="flex flex-col sm:flex-row sm:items-start">
+        {TIMELINE_STEPS.map(({ key, label, subLabel, Icon }, index) => {
+          const done = index < activeIndex;
+          const active = index === activeIndex;
+          const StepIcon = done ? CheckCircle2 : active ? Icon : Circle;
+          const circleClass = done ? 'bg-[#BA7A83] text-white' : active
+            ? 'border-2 border-[#BA7A83] bg-white text-[#BA7A83]'
+            : 'border border-[#EEDECF] bg-[#EEDECF]/60 text-[#EEDECF]';
 
           return (
-            <React.Fragment key={step.key}>
-              {/* Step node */}
-              <div className="flex flex-1 flex-col items-center gap-2 min-w-0">
-                {/* Circle */}
-                <div className="relative flex items-center justify-center">
-                  {isCompleted && (
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#BA7A83] shadow-sm">
-                      <CheckCircle2 className="h-5 w-5 text-white" />
-                    </div>
-                  )}
-                  {isActive && (
-                    <div className="relative flex h-10 w-10 items-center justify-center rounded-full border-2 border-[#BA7A83] bg-white shadow-sm">
-                      <Icon className="h-4 w-4 text-[#BA7A83]" />
-                      {/* Pulsing ring */}
-                      <span className="absolute inset-0 rounded-full animate-ping bg-[#BA7A83]/20" />
-                    </div>
-                  )}
-                  {isPending && (
-                    <div className="flex h-10 w-10 items-center justify-center rounded-full bg-[#EEDECF]/60 border border-[#EEDECF]">
-                      <Circle className="h-4 w-4 text-[#EEDECF]" />
-                    </div>
-                  )}
-                </div>
-
-                {/* Label */}
-                <div className="text-center px-1">
-                  <p
-                    className={`text-[11.5px] font-semibold leading-tight ${
-                      isCompleted || isActive ? 'text-[#804E55]' : 'text-[#BCAAA4]'
-                    }`}
-                  >
-                    {step.label}
-                  </p>
-                  {isActive && (
-                    <p className="mt-0.5 text-[10px] text-[#BA7A83] leading-tight">
-                      {step.subLabel}
-                    </p>
-                  )}
-                </div>
-              </div>
-
-              {/* Connector line (not after last) */}
-              {idx < TIMELINE_STEPS.length - 1 && (
-                <div
-                  className={`mt-5 h-0.5 flex-1 min-w-[16px] self-start transition-colors ${
-                    idx < activeIndex ? 'bg-[#BA7A83]' : 'bg-[#EEDECF]'
-                  }`}
-                />
+            <li key={key} className="relative flex gap-3 pb-4 last:pb-0 sm:min-w-0 sm:flex-1 sm:flex-col sm:items-center sm:gap-2 sm:pb-0">
+              {index < TIMELINE_STEPS.length - 1 && (
+                <span aria-hidden="true" className={`absolute bottom-0 left-[17px] top-10 w-0.5 sm:bottom-auto sm:left-[calc(50%+20px)] sm:right-[calc(-50%+20px)] sm:top-5 sm:h-0.5 sm:w-auto ${done ? 'bg-[#BA7A83]' : 'bg-[#EEDECF]'}`} />
               )}
-            </React.Fragment>
-          );
-        })}
-      </div>
-
-      {/* Mobile: vertical list */}
-      <ol className="flex flex-col gap-0 sm:hidden">
-        {TIMELINE_STEPS.map((step, idx) => {
-          const isCompleted = idx < activeIndex;
-          const isActive = idx === activeIndex;
-          const isPending = idx > activeIndex;
-          const { Icon } = step;
-          const isLast = idx === TIMELINE_STEPS.length - 1;
-
-          return (
-            <li key={step.key} className="flex gap-3">
-              {/* Left: circle + vertical line */}
-              <div className="flex flex-col items-center">
-                <div className="relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full">
-                  {isCompleted && (
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full bg-[#BA7A83]">
-                      <CheckCircle2 className="h-4 w-4 text-white" />
-                    </div>
-                  )}
-                  {isActive && (
-                    <div className="relative flex h-9 w-9 items-center justify-center rounded-full border-2 border-[#BA7A83] bg-white">
-                      <Icon className="h-4 w-4 text-[#BA7A83]" />
-                      <span className="absolute inset-0 rounded-full animate-ping bg-[#BA7A83]/20" />
-                    </div>
-                  )}
-                  {isPending && (
-                    <div className="flex h-9 w-9 items-center justify-center rounded-full border border-[#EEDECF] bg-[#EEDECF]/50">
-                      <Circle className="h-3.5 w-3.5 text-[#EEDECF]" />
-                    </div>
-                  )}
-                </div>
-                {!isLast && (
-                  <div
-                    className={`mt-1 w-0.5 flex-1 min-h-[16px] ${
-                      idx < activeIndex ? 'bg-[#BA7A83]' : 'bg-[#EEDECF]'
-                    }`}
-                  />
-                )}
-              </div>
-
-              {/* Right: text */}
-              <div className="pb-4">
-                <p
-                  className={`text-sm font-semibold leading-tight ${
-                    isCompleted || isActive ? 'text-[#804E55]' : 'text-[#BCAAA4]'
-                  }`}
-                >
-                  {step.label}
-                </p>
-                {(isActive || isCompleted) && (
-                  <p className="mt-0.5 text-[11px] text-[#BA7A83]">{step.subLabel}</p>
-                )}
+              <span className={`relative flex h-9 w-9 shrink-0 items-center justify-center rounded-full sm:h-10 sm:w-10 ${circleClass}`}>
+                <StepIcon className="h-4 w-4" />
+                {active && <span className="absolute inset-0 animate-ping rounded-full bg-[#BA7A83]/20" />}
+              </span>
+              <div className="sm:px-1 sm:text-center">
+                <p className={`text-sm font-semibold leading-tight sm:text-[11.5px] ${done || active ? 'text-[#804E55]' : 'text-[#BCAAA4]'}`}>{label}</p>
+                {(active || done) && <p className={`mt-0.5 text-[11px] leading-tight text-[#BA7A83] sm:text-[10px] ${done ? 'sm:hidden' : ''}`}>{subLabel}</p>}
               </div>
             </li>
           );
@@ -237,51 +130,32 @@ export default function OrderDetailPage() {
   const [order, setOrder] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
-  const [cancelling, setCancelling] = useState(false);
+  const [reload, setReload] = useState(0);
   const [isInspectionOpen, setIsInspectionOpen] = useState(false);
+  const [isContractOpen, setIsContractOpen] = useState(false);
 
   const fetchOrderDetail = () => {
-    getOrder(orderId)
-      .then((data) => {
-        setOrder(data);
-      })
-      .catch((issue) => {
-        setError(issue.message || 'Không tìm thấy thông tin đơn hàng.');
-      });
-  };
-
-  const handleCancelOrder = () => {
-    Modal.confirm({
-      title: 'Xác nhận yêu cầu hủy đơn thuê',
-      content: 'Nàng có chắc chắn muốn hủy đơn thuê này? Tiền cọc sẽ được xử lý hoàn trả theo chính sách hợp đồng của UniBridal.',
-      okText: 'Xác nhận hủy',
-      okType: 'danger',
-      cancelText: 'Đóng',
-      onOk: async () => {
-        setCancelling(true);
-        try {
-          await updateOrderStatus(order._id || order.id, 'cancelled');
-          message.success('Đã gửi yêu cầu hủy đơn thành công');
-          setOrder((prev) => ({
-            ...prev,
-            rawStatus: 'cancelled',
-            status: 'cancelled',
-            statusLabel: 'Đã hủy',
-          }));
-        } catch {
-          message.error('Không thể hủy đơn lúc này. Vui lòng liên hệ showroom.');
-        } finally {
-          setCancelling(false);
-        }
-      },
-    });
+    setIsInspectionOpen(false);
+    setReload((value) => value + 1);
   };
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setError('');
+    setOrder(null);
+    setIsInspectionOpen(false);
+    setIsContractOpen(false);
     getOrder(orderId)
       .then((data) => {
-        if (active) setOrder(data);
+        if (active) {
+          setOrder(data);
+          const isApproved = data?.inspection?.customerStatus === 'approved' || data?.inspection?.customerConfirmed;
+          // Tự động mở màn hình bắt buộc khách hàng xem biên bản và xác nhận hoàn cọc
+          if (!isApproved && (data?.rawStatus === 'returned' || data?.inspection)) {
+            setIsInspectionOpen(true);
+          }
+        }
       })
       .catch((issue) => {
         if (active) setError(issue.message || 'Không tìm thấy thông tin đơn hàng.');
@@ -292,15 +166,15 @@ export default function OrderDetailPage() {
     return () => {
       active = false;
     };
-  }, [orderId]);
+  }, [orderId, reload]);
+
+  const approved = order?.inspection?.customerStatus === 'approved';
 
   return (
     <AccountLayout
       hideSidebar
-      breadcrumb={[
-        { label: 'Lịch sử đơn hàng', to: '/profile/orders' },
-        { label: order ? `Chi tiết #${order.id}` : 'Chi tiết đơn hàng' },
-      ]}
+      hideBreadcrumb={true}
+      breadcrumb={[]}
     >
       <div className="account-detail-content">
         <div className="mb-4 flex justify-end">
@@ -318,7 +192,7 @@ export default function OrderDetailPage() {
           </section>
         ) : error ? (
           <section className="rounded-md bg-white p-8 text-center text-red-700" role="alert">
-            {error}
+            {error} <button type="button" onClick={fetchOrderDetail} className="ml-3 underline">Thử lại</button>
           </section>
         ) : (
           <>
@@ -343,7 +217,9 @@ export default function OrderDetailPage() {
                       <span className="relative inline-flex rounded-full h-3 w-3 bg-[#8C4654]"></span>
                     </span>
                     <span className="font-playfair font-bold text-[#5F2B36] text-[15px] sm:text-[16px] tracking-wide">
-                      ✦ Showroom đã lập Biên Bản Kiểm Định Trả Váy
+                      {approved
+                        ? '✦ Biên Bản Kiểm Định Đã Được Nàng Duyệt'
+                        : '✦ Yêu Cầu Bắt Buộc: Xem Biên Bản Kiểm Định & Xác Nhận Hoàn Cọc'}
                     </span>
                   </div>
                   <button
@@ -351,17 +227,23 @@ export default function OrderDetailPage() {
                     onClick={() => setIsInspectionOpen(true)}
                     className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#733F49] to-[#8C4654] hover:from-[#5A2D35] hover:to-[#733F49] text-white text-xs font-bold transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg border-0 shrink-0"
                   >
-                    <span>Xem Biên Bản &amp; Xác Nhận Hoàn Cọc</span>
+                    <span>
+                      {approved
+                        ? 'Xem Lại Biên Bản Đã Duyệt'
+                        : 'Xem Biên Bản & Xác Nhận Hoàn Cọc'}
+                    </span>
                   </button>
                 </div>
 
                 <p className="text-[12.5px] sm:text-[13px] leading-relaxed text-[#5E4D4F] m-0">
-                  Nàng vui lòng xem chi tiết hiện trạng váy và số tiền cọc được hoàn lại. Khi nàng đồng ý, hệ thống sẽ tự động hoàn cọc ngay lập tức; nếu chưa hài lòng nàng có quyền gửi đơn khiếu nại.
+                  {approved
+                    ? 'Nàng đã duyệt biên bản kiểm định. Đơn thuê đã hoàn tất; trạng thái hoàn cọc được theo dõi riêng trong biên bản.'
+                    : 'Nàng vui lòng kiểm tra hiện trạng váy và số tiền đề nghị hoàn. Showroom sẽ đối soát và xử lý hoàn cọc sau khi nàng xác nhận; nếu chưa đồng ý, nàng có thể gửi khiếu nại.'}
                 </p>
 
                 <div className="pt-1 flex items-center gap-1.5 text-[11px] text-[#8C7A7B]">
                   <span>📧</span>
-                  <span>Hệ thống đã đồng thời gửi thông báo và bản sao biên bản kiểm định chi tiết về email của nàng.</span>
+                  <span>Nàng có thể xem biên bản kiểm định và trạng thái xử lý hoàn cọc tại đây.</span>
                 </div>
               </div>
             )}
@@ -380,90 +262,72 @@ export default function OrderDetailPage() {
                   <Shirt size={14} className="mr-1 inline" />
                   Chi tiết lễ phục
                 </p>
-                <div className="mt-5 grid gap-5 sm:grid-cols-[160px_1fr]">
-                  {order.image && (
-                    <img
-                      src={order.image}
-                      alt={order.imageAlt}
-                      className="h-56 w-full object-cover rounded-xl"
-                    />
-                  )}
-                  <div>
-                    <h2 id="dress-detail-title" className="font-playfair text-xl">
-                      {order.dress}
-                    </h2>
-                    <p className="mt-2 text-xs text-[#874e57]">{order.category}</p>
-                    <p className="mt-4 text-sm">Kích cỡ: {order.size}</p>
-                    <p className="mt-2 text-sm">
-                      Trạng thái hiện tại:{' '}
-                      <span className="font-medium text-[#874e57]">{order.statusLabel}</span>
-                    </p>
-                  </div>
+                <div className="mt-5 space-y-5">
+                  {order.items.map((item, index) => (
+                    <article key={item._id || `${item.dressId}-${index}`} className="grid gap-5 border-b border-[#EEDECF] pb-4 last:border-b-0 sm:grid-cols-[120px_1fr]">
+                      {(item.image || order.image) && <img src={item.image || order.image} alt={item.name} className="h-40 w-28 rounded-xl object-cover" />}
+                      <div>
+                        <h3 className="font-playfair text-xl">{item.name || 'Lễ phục'}</h3>
+                        <p className="mt-2 text-sm">Kích cỡ: {item.size || 'Theo đơn hàng'}</p>
+                        <p className="mt-2 text-sm">Tiền thuê: {formatVnd(item.rentPrice)}</p>
+                        <p className="mt-2 text-sm">Tiền cọc: {formatVnd(item.depositAmount)}</p>
+                      </div>
+                    </article>
+                  ))}
                 </div>
               </section>
 
               {/* Finance */}
               <section
-                className="rounded-2xl bg-white px-5 py-6 sm:px-7 border border-[#EEDECF]"
+                className="rounded-2xl bg-white px-5 py-6 sm:px-7 border border-[#EEDECF] flex flex-col justify-between"
                 aria-labelledby="invoice-title"
               >
-                <p className="account-overline text-[#874e57]">
-                  Tài chính &amp; ký quỹ <Landmark size={15} className="float-right" />
-                </p>
-                <h2 id="invoice-title" className="mt-2 font-playfair text-xl">
-                  Phí Thuê &amp; Tiền Cọc Theo Đơn
-                </h2>
-                <dl className="mt-5 space-y-3 text-sm">
-                  <div className="flex justify-between gap-3">
-                    <dt>Tổng phí thuê trọn gói</dt>
-                    <dd className="font-semibold">{formatVnd(order.amount)}</dd>
+                <div>
+                  <div className="flex items-center justify-between">
+                    <p className="account-overline text-[#874e57]">
+                      Tài chính &amp; ký quỹ
+                    </p>
+                    <Landmark size={15} className="text-[#874e57]" />
                   </div>
-                  <div className="flex justify-between gap-3 border-t border-[#eee2df] pt-3">
-                    <dt>Tiền cọc bảo lãnh</dt>
-                    <dd className="font-semibold text-[#874e57]">{formatVnd(order.deposit)}</dd>
-                  </div>
-                </dl>
-                <p className="mt-5 rounded-lg bg-[#fcf0ed] p-4 text-xs leading-5 text-[#66504d]">
-                  Số tiền trên ghi nhận theo hợp đồng thuê. Tiền cọc sẽ được hoàn tất chuyển
-                  trả vào tài khoản của nàng sau khi chuyên viên UniBridal thu hồi và kiểm định
-                  lễ phục.
-                </p>
-              </section>
-            </div>
+                  <h2 id="invoice-title" className="mt-2 font-playfair text-xl">
+                    Tiền Cọc Theo Đơn
+                  </h2>
+                  <dl className="mt-4 space-y-3 text-sm">
+                    <div className="flex justify-between gap-3">
+                      <dt>Tổng phí thuê trọn gói</dt>
+                      <dd className="font-semibold">{formatVnd(order.amount)}</dd>
+                    </div>
+                    <div className="flex justify-between gap-3 border-t border-[#eee2df] pt-3">
+                      <dt>Tiền cọc bảo lãnh</dt>
+                      <dd className="font-semibold text-[#874e57]">{formatVnd(order.deposit)}</dd>
+                    </div>
+                  </dl>
+                  <p className="mt-4 rounded-xl bg-[#fcf0ed] p-3 text-xs leading-5 text-[#66504d]">
+                    Số tiền trên ghi nhận theo hợp đồng thuê. Tiền cọc sẽ được hoàn tất chuyển
+                    trả vào tài khoản của nàng sau khi chuyên viên UniBridal thu hồi và kiểm định
+                    lễ phục.
+                  </p>
+                </div>
 
-            {/* ── ACTION BUTTONS ── */}
-            <div className="mt-6 flex flex-wrap items-center justify-between gap-4 rounded-2xl bg-white p-5 border border-[#EEDECF] shadow-xs">
-              <div className="text-xs text-[#766966] flex items-center gap-2">
-                <AlertCircle size={15} className="text-[#BA7A83] shrink-0" />
-                <span>Cần thay đổi số đo hoặc hỗ trợ dời ngày thuê? Showroom UniBridal luôn sẵn sàng 24/7.</span>
-              </div>
-              <div className="flex flex-wrap items-center gap-3">
-                <Link
-                  to="/messages"
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl border border-[#BA7A83] text-[#804E55] text-xs font-semibold hover:bg-[#FFF9F6] transition-colors"
-                >
-                  <MessageCircle size={14} />
-                  Nhắn tin với Showroom
-                </Link>
-                {(order.rawStatus === 'deposit_paid' || order.rawStatus === 'pending_payment') && (
+                {/* Hợp đồng tích hợp ngay trong ô tài chính & bảng giá */}
+                <div className="mt-5 pt-4 border-t border-[#eee2df] flex flex-wrap items-center justify-between gap-3">
+                  <div>
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#874e57] block">HỢP ĐỒNG ĐÃ KÝ</span>
+                    <span className="text-xs text-stone-500 font-mono">
+                      {order.contract?.contractCode || order.contractCode
+                        ? `Mã: ${order.contract?.contractCode || order.contractCode}`
+                        : 'Hợp đồng điện tử đã lưu'}
+                    </span>
+                  </div>
                   <button
                     type="button"
-                    onClick={handleCancelOrder}
-                    disabled={cancelling}
-                    className="px-4 py-2 rounded-xl border border-red-200 bg-red-50 text-red-600 text-xs font-semibold hover:bg-red-100 transition-colors cursor-pointer"
+                    onClick={() => setIsContractOpen(true)}
+                    className="account-button-secondary inline-flex items-center gap-1.5 text-xs py-2 px-3 rounded-lg"
                   >
-                    {cancelling ? 'Đang xử lý...' : 'Yêu cầu hủy đơn'}
+                    <FileSignature size={15} /> Xem hợp đồng đã ký
                   </button>
-                )}
-                <button
-                  type="button"
-                  onClick={() => window.print()}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#BA7A83] hover:bg-[#a86a73] text-white text-xs font-semibold transition-colors cursor-pointer shadow-xs border-0"
-                >
-                  <Printer size={14} />
-                  In Biên Nhận Đơn
-                </button>
-              </div>
+                </div>
+              </section>
             </div>
 
             {/* Modal Biên Bản Kiểm Định & Quyết Toán Hoàn Cọc */}
@@ -472,6 +336,12 @@ export default function OrderDetailPage() {
                 order={order}
                 onClose={() => setIsInspectionOpen(false)}
                 onUpdated={fetchOrderDetail}
+              />
+            )}
+            {isContractOpen && (
+              <SignedContractModal
+                orderId={order._id || order.id}
+                onClose={() => setIsContractOpen(false)}
               />
             )}
           </>

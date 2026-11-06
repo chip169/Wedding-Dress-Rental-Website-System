@@ -99,7 +99,7 @@ async function seedData() {
 
       const orderObj = {
         orderCode,
-        customerId,
+        customerId: (i % 2 === 0) ? null : customerId,
         customerName: cust.name,
         customerPhone: cust.phone,
         customerEmail: cust.email,

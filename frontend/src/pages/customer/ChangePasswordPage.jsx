@@ -22,7 +22,9 @@ export default function ChangePasswordPage() {
     { label: 'Chứa ký tự đặc biệt (!@#$%...)', pass: /[^A-Za-z0-9]/.test(values.next) },
   ];
 
-  const score = rules.filter((rule) => rule.pass).length;
+  const hasMinLength = rules[0].pass;
+  const passedRules = rules.filter((rule) => rule.pass).length;
+  const score = hasMinLength ? passedRules : Math.min(passedRules, 1);
   const label = score <= 1 ? 'YẾU' : score === 2 ? 'TRUNG BÌNH' : score === 3 ? 'KHÁ' : 'MẠNH (RẤT AN TOÀN)';
   const same = values.confirm && values.next === values.confirm;
 
@@ -36,7 +38,8 @@ export default function ChangePasswordPage() {
   };
 
   const submit = async () => {
-    if (!values.current || score < 2 || !same || values.next === values.current) {
+    setTouched({ current: true, next: true, confirm: true });
+    if (!values.current || !hasMinLength || score < 2 || !same || values.next === values.current) {
       setNotice({ type: 'error', text: 'Vui lòng kiểm tra lại các trường mật khẩu.' });
       return;
     }
@@ -55,7 +58,7 @@ export default function ChangePasswordPage() {
   };
 
   return (
-    <AccountLayout breadcrumb={[{ label: 'Đổi mật khẩu' }]}>
+    <AccountLayout hideBreadcrumb={true} breadcrumb={[]}>
       <section className="profile-card rounded-lg bg-white px-5 py-7 sm:px-7" aria-labelledby="password-title">
         <p className="account-overline text-[#874e57]">Bảo mật tài khoản & sự riêng tư</p>
         <h1 id="password-title" className="mt-1 font-playfair text-[25px]">
@@ -162,7 +165,10 @@ export default function ChangePasswordPage() {
               </div>
             </div>
 
-            {touched.next && values.next && score < 2 && (
+            {touched.next && !hasMinLength && (
+              <p className="mt-2 text-xs text-red-700">Mật khẩu mới phải có tối thiểu 6 ký tự.</p>
+            )}
+            {touched.next && hasMinLength && score < 2 && (
               <p className="mt-2 text-xs text-red-700">Mật khẩu mới còn yếu. Hãy thêm chữ hoa, số hoặc ký tự đặc biệt.</p>
             )}
             {touched.next && values.next && values.next === values.current && (

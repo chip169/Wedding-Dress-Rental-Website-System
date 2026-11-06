@@ -11,27 +11,27 @@ router.post('/', optionalAuthenticate, orderController.createOrder);
 router.get('/my', authenticate, orderController.getMyOrders);
 
 // 3. Nhân viên / Quản trị viên xem tất cả đơn thuê (kết nối trực tiếp MongoDB)
-router.get('/', optionalAuthenticate, orderController.getAllOrders);
+router.get('/', authenticate, authorize('STAFF', 'ADMIN'), orderController.getAllOrders);
 
 // 3.1. Lấy danh sách các ngày đã kín lịch của váy
 router.get('/booked-dates', orderController.getDressBookedDates);
 
 // 4. Xem chi tiết đơn thuê theo ID hoặc Mã Đơn
-router.get('/:id', optionalAuthenticate, orderController.getOrderById);
+router.get('/:id', authenticate, orderController.getOrderById);
 
 // 5. Cập nhật trạng thái đơn thuê (Admin / Staff)
-router.patch('/:id/status', optionalAuthenticate, orderController.updateOrderStatus);
+router.patch('/:id/status', authenticate, authorize('STAFF', 'ADMIN'), orderController.updateOrderStatus);
 
 // 6. Nhân viên lập biên bản kiểm định tình trạng váy khi khách trả
-router.post('/:id/inspection', optionalAuthenticate, orderController.submitReturnInspection);
+router.post('/:id/inspection', authenticate, authorize('STAFF', 'ADMIN'), orderController.submitReturnInspection);
 
 // 7. Lấy biên bản kiểm định của đơn thuê
-router.get('/:id/inspection', optionalAuthenticate, orderController.getReturnInspection);
+router.get('/:id/inspection', authenticate, orderController.getReturnInspection);
 
 // 8. Khách hàng đồng ý biên bản kiểm định -> Tự động hoàn cọc
-router.post('/:id/inspection/approve', optionalAuthenticate, orderController.approveReturnInspection);
+router.post('/:id/inspection/approve', authenticate, orderController.approveReturnInspection);
 
 // 9. Khách hàng gửi khiếu nại biên bản kiểm định
-router.post('/:id/inspection/dispute', optionalAuthenticate, orderController.disputeReturnInspection);
+router.post('/:id/inspection/dispute', authenticate, orderController.disputeReturnInspection);
 
 export default router;

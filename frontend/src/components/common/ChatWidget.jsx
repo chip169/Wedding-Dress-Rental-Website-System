@@ -298,72 +298,72 @@ export default function ChatWidget() {
       {isOpen && (
         <aside
           aria-label="Cửa sổ tư vấn trực tuyến"
-          className="fixed z-50 w-[350px] sm:w-[380px] h-[500px] max-h-[calc(100vh-100px)] bg-white rounded-2xl shadow-[0_12px_45px_rgba(0,0,0,0.25)] border border-[#EADBDE] flex flex-col overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
-          style={{ bottom: '100px', right: '24px' }}
+          className="fixed z-50 w-[315px] sm:w-[335px] h-[435px] max-h-[calc(100vh-110px)] bg-white rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.22)] border border-[#EADBDE] flex flex-col overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
+          style={{ bottom: '86px', right: '20px' }}
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-[#9B5C66] via-[#B8737D] to-[#A35D67] text-white p-3.5 px-4 flex items-center justify-between shrink-0 shadow-sm">
-            <div className="flex items-center gap-3">
+          <div className="bg-gradient-to-r from-[#9B5C66] via-[#B8737D] to-[#A35D67] text-white p-2.5 px-3.5 flex items-center justify-between shrink-0 shadow-sm">
+            <div className="flex items-center gap-2.5">
               <div className="relative">
                 <img
                   src={chibiBrideImg}
                   alt="Stylist Mai Anh"
-                  className="w-10 h-10 rounded-full object-cover border-2 border-white/70 shadow-sm bg-[#FFF2F0]"
+                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-white/70 shadow-sm bg-[#FFF2F0]"
                 />
-                <span className="absolute bottom-0 right-0 w-3 h-3 rounded-full bg-emerald-400 border-2 border-white ring-1 ring-emerald-300 animate-pulse" />
+                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white ring-1 ring-emerald-300 animate-pulse" />
               </div>
               <div>
-                <div className="flex items-center gap-1.5">
-                  <h3 className="font-playfair text-[15.5px] font-bold text-white tracking-wide m-0 leading-tight">
+                <div className="flex items-center gap-1">
+                  <h3 className="font-playfair text-[14px] font-bold text-white tracking-wide m-0 leading-tight">
                     UniBridal Concierge
                   </h3>
-                  <Sparkles className="w-3.5 h-3.5 text-amber-200" />
+                  <Sparkles className="w-3 h-3 text-amber-200" />
                 </div>
-                <div className="flex items-center gap-1.5 text-[11.5px] text-white/85 font-jakarta">
+                <div className="flex items-center gap-1.5 text-[10.5px] text-white/85 font-jakarta">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
                   <span>Trực tuyến • Phản hồi tức thì</span>
                 </div>
               </div>
             </div>
 
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5">
               <button
                 type="button"
                 onClick={() => {
                   setIsOpen(false);
                   navigate('/tin-nhan');
                 }}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-white/80 hover:text-white hover:bg-white/15 transition-colors border-0 bg-transparent cursor-pointer"
+                className="w-6 h-6 rounded-md flex items-center justify-center text-white/80 hover:text-white hover:bg-white/15 transition-colors border-0 bg-transparent cursor-pointer"
                 title="Mở toàn màn hình"
               >
-                <ExternalLink className="w-4 h-4" />
+                <ExternalLink className="w-3.5 h-3.5" />
               </button>
               <button
                 type="button"
                 onClick={() => setIsOpen(false)}
-                className="w-7 h-7 rounded-lg flex items-center justify-center text-white/80 hover:text-white hover:bg-white/15 transition-colors border-0 bg-transparent cursor-pointer"
+                className="w-6 h-6 rounded-md flex items-center justify-center text-white/80 hover:text-white hover:bg-white/15 transition-colors border-0 bg-transparent cursor-pointer"
                 title="Thu nhỏ"
               >
-                <X className="w-4 h-4" />
+                <X className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>
 
           {/* Subheader Banner */}
-          <div className="bg-[#FFF5F6] border-b border-[#F5E6E8] px-3.5 py-1.5 flex items-center justify-between text-[11px] text-[#8C5D65] font-jakarta">
-            <span>✨ Chuyên viên cao cấp Mai Anh đang hỗ trợ bạn</span>
+          <div className="bg-[#FFF5F6] border-b border-[#F5E6E8] px-3 py-1 flex items-center justify-between text-[10.5px] text-[#8C5D65] font-jakarta">
+            <span>✨ Chuyên viên Mai Anh hỗ trợ</span>
             <Link
               to="/appointment"
               onClick={() => setIsOpen(false)}
-              className="font-semibold text-[#B8737D] hover:underline flex items-center gap-1"
+              className="font-semibold text-[#B8737D] hover:underline flex items-center gap-0.5"
             >
-              <Calendar className="w-3 h-3" />
+              <Calendar className="w-2.5 h-2.5" />
               <span>Đặt lịch</span>
             </Link>
           </div>
 
           {/* Messages Body */}
-          <div className="flex-1 p-3.5 space-y-3 overflow-y-auto bg-gradient-to-b from-[#FAF8F7] to-white text-[13px] font-jakarta">
+          <div className="flex-1 p-3 space-y-2.5 overflow-y-auto bg-gradient-to-b from-[#FAF8F7] to-white text-[12px] font-jakarta">
             {messages.map((msg) => {
               const isUser = msg.sender === 'user' || msg.senderRole === 'customer';
               return (
@@ -372,12 +372,12 @@ export default function ChatWidget() {
                   className={`flex flex-col ${isUser ? 'items-end' : 'items-start'}`}
                 >
                   {!isUser && (
-                    <span className="text-[10.5px] text-[#A69B97] mb-1 pl-1">
+                    <span className="text-[10px] text-[#A69B97] mb-0.5 pl-1">
                       {msg.name || 'Chuyên viên UniBridal'}
                     </span>
                   )}
                   <div
-                    className={`max-w-[82%] px-3.5 py-2.5 rounded-2xl shadow-xs leading-relaxed break-words ${
+                    className={`max-w-[84%] px-3 py-2 rounded-2xl shadow-xs leading-relaxed break-words ${
                       isUser
                         ? 'bg-gradient-to-r from-[#B8737D] to-[#A8646E] text-white rounded-br-xs'
                         : 'bg-white text-[#2C2523] border border-[#EADBDE] rounded-bl-xs'
@@ -385,9 +385,9 @@ export default function ChatWidget() {
                   >
                     {msg.text}
                   </div>
-                  <div className="flex items-center gap-1 text-[10px] text-[#B0A6A3] mt-0.5 px-1">
+                  <div className="flex items-center gap-1 text-[9.5px] text-[#B0A6A3] mt-0.5 px-1">
                     <span>{msg.time}</span>
-                    {isUser && <CheckCheck className="w-3 h-3 text-[#B8737D]" />}
+                    {isUser && <CheckCheck className="w-2.5 h-2.5 text-[#B8737D]" />}
                   </div>
                 </div>
               );
@@ -395,8 +395,8 @@ export default function ChatWidget() {
 
             {/* Typing Indicator */}
             {isTyping && (
-              <div className="flex items-center gap-2 text-stone-500 text-[12px] bg-white border border-[#EADBDE] px-3 py-2 rounded-2xl rounded-bl-xs w-fit shadow-xs">
-                <span className="text-[11px] text-[#8C5D65]">Mai Anh đang nhập</span>
+              <div className="flex items-center gap-1.5 text-stone-500 text-[11px] bg-white border border-[#EADBDE] px-2.5 py-1.5 rounded-2xl rounded-bl-xs w-fit shadow-xs">
+                <span className="text-[10.5px] text-[#8C5D65]">Mai Anh đang nhập</span>
                 <span className="flex gap-1 items-center">
                   <span className="w-1.5 h-1.5 rounded-full bg-[#B8737D] animate-bounce [animation-delay:-0.3s]" />
                   <span className="w-1.5 h-1.5 rounded-full bg-[#B8737D] animate-bounce [animation-delay:-0.15s]" />
@@ -409,13 +409,16 @@ export default function ChatWidget() {
           </div>
 
           {/* Quick Suggestions Chips */}
-          <div className="px-3 py-2 bg-[#FAF8F7] border-t border-[#F0E6E8] overflow-x-auto flex gap-1.5 no-scrollbar shrink-0">
+          <div
+            className="px-2.5 py-1.5 bg-[#FAF8F7] border-t border-[#F0E6E8] overflow-x-auto flex gap-1.5 no-scrollbar shrink-0 [scrollbar-width:none] [-ms-overflow-style:none] [&::-webkit-scrollbar]:hidden"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
             {QUICK_SUGGESTIONS.map((item) => (
               <button
                 key={item.id}
                 type="button"
                 onClick={() => handleSendMessage(item.text, true)}
-                className="text-[11px] font-medium text-[#7D535B] bg-white hover:bg-[#FFF2F0] hover:border-[#D498A0] border border-[#EADBDE] rounded-full px-2.5 py-1 whitespace-nowrap transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
+                className="text-[10.5px] font-medium text-[#7D535B] bg-white hover:bg-[#FFF2F0] hover:border-[#D498A0] border border-[#EADBDE] rounded-full px-2 py-0.5 whitespace-nowrap transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
               >
                 {item.label}
               </button>
@@ -423,8 +426,8 @@ export default function ChatWidget() {
           </div>
 
           {/* Footer Input Area */}
-          <div className="p-2.5 bg-white border-t border-[#EADBDE] shrink-0">
-            <div className="flex items-center gap-2 bg-[#FAF8F7] border border-[#EADBDE] focus-within:border-[#B8737D] focus-within:ring-2 focus-within:ring-[#B8737D]/20 rounded-xl px-3 py-1.5 transition-all">
+          <div className="p-2 bg-white border-t border-[#EADBDE] shrink-0">
+            <div className="flex items-center gap-1.5 bg-[#FAF8F7] border border-[#EADBDE] focus-within:border-[#B8737D] focus-within:ring-2 focus-within:ring-[#B8737D]/20 rounded-xl px-2.5 py-1 transition-all">
               <input
                 ref={inputRef}
                 type="text"
@@ -432,20 +435,20 @@ export default function ChatWidget() {
                 onChange={(e) => setInputText(e.target.value)}
                 onKeyDown={handleKeyDown}
                 placeholder="Nhập tin nhắn tư vấn..."
-                className="flex-1 bg-transparent border-0 outline-none text-[13px] text-[#2C2523] placeholder-[#A69B97]"
+                className="flex-1 bg-transparent border-0 outline-none text-[12px] text-[#2C2523] placeholder-[#A69B97]"
               />
               <button
                 type="button"
                 onClick={() => handleSendMessage()}
                 disabled={!inputText.trim()}
-                className={`w-8 h-8 rounded-lg flex items-center justify-center transition-all border-0 cursor-pointer ${
+                className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all border-0 cursor-pointer ${
                   inputText.trim()
                     ? 'bg-[#B8737D] text-white hover:bg-[#a35d67] shadow-sm active:scale-95'
                     : 'bg-stone-200 text-stone-400 cursor-not-allowed'
                 }`}
                 title="Gửi tin nhắn"
               >
-                <SendHorizontal className="w-4 h-4" />
+                <SendHorizontal className="w-3.5 h-3.5" />
               </button>
             </div>
           </div>

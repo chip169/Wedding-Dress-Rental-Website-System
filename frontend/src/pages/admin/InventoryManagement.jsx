@@ -207,10 +207,7 @@ export default function InventoryManagement() {
       if (maintenanceCount > 0) {
         statusType = 'drying';
         statusText = 'ĐANG BẢO DƯỠNG';
-        statusSubNote =
-          availableStock > 0
-            ? `Kiểm định sau thuê (${maintenanceCount} bộ) • Khả dụng: ${availableStock} bộ`
-            : `Đang kiểm định & bảo dưỡng (${maintenanceCount} bộ)`;
+        statusSubNote = `Kiểm định sau thuê (${maintenanceCount} bộ)`;
       } else if (availableStock <= 0 && totalStock > 0) {
         statusType = 'out_of_stock';
         statusText = 'HẾT HÀNG';
@@ -218,11 +215,11 @@ export default function InventoryManagement() {
       } else if (rentedCount > 0) {
         statusType = 'stored';
         statusText = 'CÒN HÀNG';
-        statusSubNote = `Sẵn sàng: ${availableStock} bộ • Đang thuê: ${rentedCount}`;
+        statusSubNote = `Đang thuê: ${rentedCount} bộ`;
       } else {
         statusType = 'stored';
         statusText = 'CÒN HÀNG';
-        statusSubNote = `Sẵn sàng phục vụ (${totalStock} bộ)`;
+        statusSubNote = '';
       }
     } else if (statusType === 'drying') {
       statusText = 'ĐANG BẢO DƯỠNG';
@@ -236,7 +233,7 @@ export default function InventoryManagement() {
     } else {
       statusType = 'stored';
       statusText = 'CÒN HÀNG';
-      statusSubNote = `Sẵn sàng phục vụ (${availableStock}/${totalStock} bộ)`;
+      statusSubNote = '';
     }
 
     return {
@@ -523,7 +520,7 @@ export default function InventoryManagement() {
       inspectingCount: 0,
       statusType: 'stored',
       statusText: 'CÒN HÀNG',
-      statusSubNote: `Sẵn sàng phục vụ (${totalCount} bộ)`,
+      statusSubNote: '',
       sizes: [
         { size: 'S', quantity: Number(newSizeS || 2), label: `Size S (${String(newSizeS).padStart(2, '0')} bộ)` },
         { size: 'M', quantity: Number(newSizeM || 2), label: `Size M (${String(newSizeM).padStart(2, '0')} bộ)` },

@@ -16,6 +16,9 @@ import {
   RECOMMENDED_DRESSES,
 } from '../../services/wishlistService';
 import { addToCart } from '../../services/cartService';
+import { getAllDresses, formatCurrencyVND } from '../../services/dressService';
+import { DRESS_CATALOG } from '../../data/dressCatalog';
+import logoEmblemImg from '../../assets/logo_emblem.png';
 
 export default function WishlistPage() {
   const navigate = useNavigate();
@@ -24,6 +27,42 @@ export default function WishlistPage() {
   const [wishlistItems, setWishlistItems] = useState(() => getWishlistDresses());
   const [wishlistIds, setWishlistIds] = useState(() => getWishlistIds());
   const [toastMessage, setToastMessage] = useState(null);
+  const [collectionDresses, setCollectionDresses] = useState(() => DRESS_CATALOG || []);
+  const [recommendedDresses, setRecommendedDresses] = useState([]);
+
+  // Lấy toàn bộ danh sách sản phẩm từ Bộ Sưu Tập (API MongoDB + Fallback DRESS_CATALOG)
+  useEffect(() => {
+    let active = true;
+    getAllDresses()
+      .then((res) => {
+        if (!active) return;
+        if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+          setCollectionDresses(res.data);
+        }
+      })
+      .catch(() => {});
+    return () => {
+      active = false;
+    };
+  }, []);
+
+  // Lấy 4 mẫu từ Bộ Sưu Tập làm sản phẩm gợi ý (ưu tiên các mẫu nàng chưa thêm vào Wishlist)
+  useEffect(() => {
+    const source = collectionDresses && collectionDresses.length > 0 ? collectionDresses : DRESS_CATALOG;
+    const currentWishlist = getWishlistIds();
+    const unliked = source.filter(
+      (d) => !currentWishlist.some((wId) => String(wId) === String(d.id) || (d.code && String(wId) === String(d.code)))
+    );
+    const pool = unliked.length >= 4 ? unliked : source;
+    setRecommendedDresses(
+      pool.slice(0, 4).map((d) => ({
+        ...d,
+        categoryBadge: d.categoryName ? d.categoryName.toUpperCase() : (d.silhouette || 'VÁY CƯỚI CAO CẤP').toUpperCase(),
+        sizeDisplay: d.badgeSub || d.size || (Array.isArray(d.sizes) ? `SIZE: ${d.sizes.join(' - ')}` : 'SIZE: S - M'),
+        priceFormatted: d.price ? (typeof d.price === 'string' && d.price.includes('₫') ? d.price : formatCurrencyVND(d.price)) : (d.priceNumber ? formatCurrencyVND(d.priceNumber) : '5.200.000₫'),
+      }))
+    );
+  }, [collectionDresses]);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
 
   // Lắng nghe sự kiện thay đổi Wishlist từ các trang khác hoặc cùng trang
@@ -258,6 +297,15 @@ export default function WishlistPage() {
                     >
                       <Heart className="w-3.5 h-3.5 fill-[#804E55] text-[#804E55]" />
                     </button>
+
+                    {/* Logo UniBridal Watermark */}
+                    <div className="absolute bottom-2.5 right-2.5 pointer-events-none select-none opacity-85 group-hover:opacity-100 transition-opacity" title="UniBridal Haute Couture">
+                      <img
+                        src={logoEmblemImg}
+                        alt="UniBridal Emblem"
+                        className="w-[34px] h-[34px] object-contain drop-shadow-[0px_2px_4px_rgba(0,0,0,0.3)]"
+                      />
+                    </div>
                   </div>
 
                   {/* Thông Tin Chi Tiết Thẻ */}
@@ -361,9 +409,9 @@ export default function WishlistPage() {
 
             {/* Lưới 4 cột gợi ý */}
             <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-4 sm:gap-5">
-              {RECOMMENDED_DRESSES.map((recDress) => {
+              {recommendedDresses.map((recDress) => {
                 const isSaved = wishlistIds.some(
-                  (id) => Number(id) === recDress.id || String(id) === String(recDress.id)
+                  (id) => String(id) === String(recDress.id) || (recDress.code && String(id) === String(recDress.code))
                 );
 
                 return (
@@ -380,6 +428,15 @@ export default function WishlistPage() {
                         className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
                       />
 
+                      {/* Watermark Logo UniBridal */}
+                      <div className="absolute bottom-2.5 right-2.5 pointer-events-none select-none opacity-85 group-hover:opacity-100 transition-opacity">
+                        <img
+                          src={logoEmblemImg}
+                          alt="UniBridal Emblem"
+                          className="w-[34px] h-[34px] object-contain drop-shadow-[0px_2px_4px_rgba(0,0,0,0.3)]"
+                        />
+                      </div>
+
                       {/* Nút Trái Tim: Outline nếu chưa thêm, Filled nếu đã thêm */}
                       <button
                         type="button"
@@ -387,14 +444,16 @@ export default function WishlistPage() {
                           e.stopPropagation();
                           handleToggleRecommended(recDress);
                         }}
-                        className="absolute top-2.5 right-2.5 w-[32px] h-[32px] rounded-[8px] bg-white flex items-center justify-center border border-[#EEDECF] shadow-[0px_2px_8px_rgba(0,0,0,0.08)] cursor-pointer z-10 transition-transform active:scale-90 p-0"
+                        className={`absolute top-2.5 right-2.5 w-[32px] h-[32px] rounded-[8px] bg-white flex items-center justify-center border shadow-[0px_2px_8px_rgba(0,0,0,0.08)] cursor-pointer z-10 transition-all active:scale-90 p-0 ${
+                          isSaved ? 'border-red-200 bg-red-50/70 text-red-500' : 'border-[#EEDECF] text-[#4A3E3F] hover:text-red-500 hover:border-red-200'
+                        }`}
                         title={isSaved ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
                       >
                         <Heart
-                          className={`w-3.5 h-3.5 transition-colors ${
+                          className={`w-3.5 h-3.5 transition-all duration-200 ${
                             isSaved
-                              ? 'fill-[#804E55] text-[#804E55]'
-                              : 'text-[#4A3E3F] hover:text-[#804E55]'
+                              ? 'fill-red-500 text-red-500 scale-110'
+                              : 'text-[#4A3E3F]'
                           }`}
                         />
                       </button>
@@ -407,7 +466,7 @@ export default function WishlistPage() {
                         <div className="text-[10px] font-jakarta font-semibold tracking-wider text-[#8A7978] uppercase mb-1 flex items-center justify-between">
                           <span className="truncate max-w-[140px]">{recDress.categoryBadge}</span>
                           <span>•</span>
-                          <span className="shrink-0">{recDress.size}</span>
+                          <span className="shrink-0">{recDress.sizeDisplay || recDress.size}</span>
                         </div>
 
                         {/* Tên Váy */}

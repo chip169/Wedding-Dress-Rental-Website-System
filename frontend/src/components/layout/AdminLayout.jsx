@@ -14,7 +14,8 @@ import {
   X,
   Layers,
   FileSignature,
-  Users
+  Users,
+  FolderTree
 } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import heroBride from '../../assets/hero_bride.jpg';
@@ -40,25 +41,27 @@ export default function AdminLayout({
   const getActiveKey = () => {
     if (activeMenu) {
       const lower = activeMenu.toLowerCase();
+      if (lower.includes('lịch tổng quan') || lower === 'lich-tong-quan' || lower === 'schedule' || lower.includes('lịch hẹn') || lower === 'appointments' || lower === 'lich-hen') return 'lich-tong-quan';
       if (lower.includes('tổng quan') || lower === 'dashboard') return 'dashboard';
       if (lower.includes('đơn thuê') || lower === 'don-thue') return 'don-thue';
-      if (lower.includes('lịch hẹn') || lower === 'appointments' || lower === 'lich-hen') return 'appointments';
       if (lower.includes('mẫu hợp đồng') || lower === 'contract-templates') return 'contract-templates';
       if (lower.includes('hợp đồng') || lower === 'contracts') return 'contracts';
+      if (lower.includes('danh mục') || lower === 'categories' || lower === 'danh-muc') return 'categories';
       if (lower.includes('tài khoản') || lower.includes('account') || lower.includes('user')) return 'accounts';
       if (lower.includes('kho hàng') || lower === 'inventory') return 'inventory';
       if (lower.includes('chăm sóc') || lower === 'customer-care') return 'customer-care';
       if (lower.includes('doanh thu') || lower === 'revenue') return 'revenue';
     }
+    if (currentPath.includes('/lich-tong-quan') || currentPath.includes('/schedule') || currentPath.includes('/lich-hen') || currentPath.includes('/appointments')) return 'lich-tong-quan';
     if (currentPath.includes('/dashboard')) return 'dashboard';
     if (currentPath.includes('/reports') || currentPath.includes('/revenue')) return 'revenue';
     if (currentPath.includes('/accounts') || currentPath.includes('/users') || currentPath.includes('/tai-khoan')) return 'accounts';
     if (currentPath.includes('/don-thue') || currentPath.includes('/orders')) return 'don-thue';
-    if (currentPath.includes('/lich-hen') || currentPath.includes('/appointments')) return 'appointments';
     if (currentPath.includes('/kho-hang') || currentPath.includes('/inventory')) return 'inventory';
     if (currentPath.includes('/cham-soc-khach-hang') || currentPath.includes('/customer-care')) return 'customer-care';
     if (currentPath.includes('/hop-dong') || currentPath.includes('/contracts')) return 'contracts';
     if (currentPath.includes('/mau-hop-dong') || currentPath.includes('/contract-templates')) return 'contract-templates';
+    if (currentPath.includes('/danh-muc') || currentPath.includes('/categories')) return 'categories';
     return 'dashboard';
   };
 
@@ -72,16 +75,16 @@ export default function AdminLayout({
       to: isStaff ? '/staff/dashboard' : '/admin/dashboard'
     },
     {
+      key: 'lich-tong-quan',
+      label: 'Lịch Tổng Quan',
+      icon: CalendarDays,
+      to: isStaff ? '/staff/lich-tong-quan' : '/admin/lich-tong-quan'
+    },
+    {
       key: 'don-thue',
       label: 'Quản Lý Đơn Thuê',
       icon: CalendarCheck,
       to: isStaff ? '/staff/don-thue' : '/admin/don-thue'
-    },
-    {
-      key: 'appointments',
-      label: 'Quản Lý Lịch Hẹn',
-      icon: CalendarDays,
-      to: isStaff ? '/staff/lich-hen' : '/admin/lich-hen'
     },
     {
       key: 'contracts',
@@ -102,6 +105,12 @@ export default function AdminLayout({
       to: isStaff ? '/staff/cham-soc-khach-hang' : '/admin/cham-soc-khach-hang'
     },
     ...(!isStaff ? [
+      {
+        key: 'categories',
+        label: 'Quản Lý Danh Mục',
+        icon: FolderTree,
+        to: '/admin/danh-muc'
+      },
       {
         key: 'accounts',
         label: 'Quản Lý Tài Khoản',
@@ -128,8 +137,8 @@ export default function AdminLayout({
   const userRoleText = isStaff ? 'STAFF MODE' : 'ADMIN MODE';
 
   const handleLogout = () => {
+    navigate('/login', { replace: true });
     logout();
-    navigate('/login');
   };
 
   return (

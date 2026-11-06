@@ -1,6 +1,7 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
 import { getMe, logout as serviceLogout } from '../services/authService';
 import { getProfile } from '../services/profileService';
+import { syncUserWishlistFromBackend, WISHLIST_EVENT } from '../services/wishlistService';
 
 const AuthContext = createContext(null);
 const AUTH_USER_KEY = 'unibridal.authUser';
@@ -37,6 +38,9 @@ export function AuthProvider({ children }) {
     setToken(null);
     setUser(null);
     setIsLoading(false);
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent(WISHLIST_EVENT));
+    }, 50);
   };
 
   // Đồng bộ thông tin người dùng từ backend khi mở app
@@ -67,6 +71,7 @@ export function AuthProvider({ children }) {
           setUser(profileData);
           localStorage.setItem('user', JSON.stringify(profileData));
           localStorage.setItem(AUTH_USER_KEY, JSON.stringify(profileData));
+          syncUserWishlistFromBackend(profileData);
         }
       } catch (err) {
         if (active && (err?.status === 401 || err?.response?.status === 401)) {
@@ -103,6 +108,10 @@ export function AuthProvider({ children }) {
 
     setToken(authToken);
     setUser(userData);
+    setTimeout(() => {
+      window.dispatchEvent(new CustomEvent(WISHLIST_EVENT));
+      syncUserWishlistFromBackend(userData);
+    }, 50);
   };
 
   const updateUser = (profile) => {

@@ -54,7 +54,7 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
   const categories = [
     {
       title: 'Tất Cả Thiết Kế Bộ Sưu Tập',
-      subtitle: 'Khám phá hơn 70+ mẫu trang phục cưới cao cấp',
+      subtitle: 'Khám phá 25 tuyệt phẩm váy cưới Haute Couture 2026',
       href: '/collection',
     },
     {
@@ -68,14 +68,14 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
       href: '#silhouettes',
     },
     {
-      title: 'Vest Cưới và Tuxedo',
-      subtitle: 'Phong cách quý ông Châu Âu thanh lịch',
-      href: '/collection',
+      title: 'Váy Cưới Lụa Tối Giản',
+      subtitle: 'Lụa Mikado Ý & Satin tơ tằm thanh tao',
+      href: '/collection?category=silk-gown',
     },
     {
-      title: 'Áo Dài Cưới Truyền Thống',
-      subtitle: 'Gấm thêu tay hoàng gia cao cấp',
-      href: '/collection',
+      title: 'Váy Cưới Hoàng Gia Princess',
+      subtitle: 'Đính kết pha lê Swarovski lộng lẫy',
+      href: '/collection?category=princess',
     },
   ];
 
@@ -167,13 +167,13 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
   const handleLogout = () => {
     setIsUserMenuOpen(false);
     setMobileMenuOpen(false);
+    navigate('/', { replace: true });
     logout();
     clearProfile();
     if (onLogout) {
       onLogout();
       return;
     }
-    navigate('/');
   };
 
   const handleMouseEnter = () => {
@@ -280,7 +280,7 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
               title="Giỏ thuê váy"
             >
               <ShoppingBag className="w-[18px] h-[18px] stroke-[1.8] text-[#2C2523]" />
-              {cartCount > 0 && (
+              {isCartPage && cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-[#B8737D] text-white font-jakarta text-[9.5px] font-bold flex items-center justify-center leading-none shadow-xs">
                   {cartCount}
                 </span>
@@ -307,6 +307,11 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
               title="Tủ đồ trong mơ (Danh sách yêu thích)"
             >
               <Heart className="w-[18px] h-[18px] stroke-[1.8] text-[#2C2523]" />
+              {isWishlistPage && wishlistCount > 0 && (
+                <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-[#B8737D] text-white font-jakarta text-[9.5px] font-bold flex items-center justify-center leading-none shadow-xs">
+                  {wishlistCount}
+                </span>
+              )}
             </Link>
           )}
 

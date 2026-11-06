@@ -1,7 +1,6 @@
 import dotenv from 'dotenv';
 import app from './src/app.js';
 import connectDB from './src/config/db.js';
-import seedRBAC from './src/utils/seedRBAC.js';
 import seedContractTemplates from './src/utils/seedContractTemplate.js';
 
 dotenv.config();
@@ -13,7 +12,6 @@ const startServer = async () => {
   try {
     const conn = await connectDB();
     if (conn) {
-      await seedRBAC();
       await seedContractTemplates();
     }
   } catch (error) {

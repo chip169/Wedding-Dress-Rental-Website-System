@@ -50,6 +50,20 @@ const userSchema = new mongoose.Schema(
       bust: { type: Number, default: null },   // Vòng 1 (cm)
       waist: { type: Number, default: null },  // Vòng 2 (cm)
       hips: { type: Number, default: null },   // Vòng 3 (cm)
+      heel: { type: Number, default: null },   // Chiều cao giày (cm)
+    },
+    gender: {
+      type: String,
+      enum: ['female', 'male', 'unspecified'],
+      default: 'unspecified',
+    },
+    birthday: {
+      type: Date,
+      default: null,
+    },
+    weddingDate: {
+      type: Date,
+      default: null,
     },
     address: {
       street: { type: String, default: '' },
@@ -71,6 +85,10 @@ const userSchema = new mongoose.Schema(
       },
     ],
     isEmailVerified: {
+      type: Boolean,
+      default: false,
+    },
+    createdByAdmin: {
       type: Boolean,
       default: false,
     },

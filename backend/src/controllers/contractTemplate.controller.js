@@ -65,6 +65,32 @@ export const updateTemplate = async (req, res, next) => {
   }
 };
 
+export const deleteTemplate = async (req, res, next) => {
+  try {
+    const deleted = await templateService.deleteTemplate(req.params.id);
+    res.status(200).json({
+      success: true,
+      message: 'Xóa mẫu hợp đồng thành công',
+      data: deleted,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const duplicateTemplate = async (req, res, next) => {
+  try {
+    const duplicated = await templateService.duplicateTemplate(req.params.id);
+    res.status(201).json({
+      success: true,
+      message: 'Nhân bản mẫu hợp đồng thành công',
+      data: duplicated,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 /**
  * Hiển thị trực tiếp bản PDF / Văn bản Hợp đồng A4 chuẩn in ấn
  */

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useState, useEffect } from 'react';
-import { getWishlistIds, toggleWishlist as toggleServiceWishlist, isWishlisted, WISHLIST_EVENT } from '../services/wishlistService';
+import { getWishlistIds, toggleWishlist as toggleServiceWishlist, isWishlisted, WISHLIST_EVENT, syncUserWishlistFromBackend } from '../services/wishlistService';
 
 const WishlistContext = createContext();
 
@@ -27,7 +27,7 @@ export function WishlistProvider({ children }) {
   const wishlistCount = wishlistIds.length;
 
   return (
-    <WishlistContext.Provider value={{ wishlistIds, wishlistCount, toggleWishlist: toggle, isInWishlist: isWishlisted }}>
+    <WishlistContext.Provider value={{ wishlistIds, wishlistCount, toggleWishlist: toggle, isInWishlist: isWishlisted, syncWishlist: syncUserWishlistFromBackend }}>
       {children}
     </WishlistContext.Provider>
   );

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { MoveHorizontal } from 'lucide-react';
 
 const dashboardChartStyles = `
@@ -62,24 +62,39 @@ const PLOT_RIGHT = 22;
 const PLOT_TOP = 18;
 const PLOT_BOTTOM = 220;
 
-export default function DashboardChart({ labels, primary, secondary, trend, max, ticks, primaryLabel, secondaryLabel, trendLabel, chartId, unit = '', variant = 'staff' }) {
+export default function DashboardChart({ labels, primary, secondary = [], trend = [], max, ticks, primaryLabel, secondaryLabel, trendLabel, chartId, unit = '', variant = 'staff', chartType = 'combo', tooltipValues, formatTooltipValue }) {
+  const [hoveredIndex, setHoveredIndex] = useState(null);
   const plotHeight = PLOT_BOTTOM - PLOT_TOP;
   const plotWidth = W - PLOT_LEFT - PLOT_RIGHT;
-  const groupWidth = plotWidth / labels.length;
+  const groupWidth = plotWidth / Math.max(1, labels.length);
   const y = (value) => PLOT_BOTTOM - (Math.min(max, value) / max) * plotHeight;
   const points = trend.map((value, index) => `${PLOT_LEFT + groupWidth * (index + .5)},${y(value)}`).join(' ');
+  const barOnly = chartType === 'bar';
+  const legendLabels = [primaryLabel, !barOnly && secondaryLabel, !barOnly && trendLabel].filter(Boolean);
+  const tooltipEnabled = barOnly && Array.isArray(tooltipValues) && typeof formatTooltipValue === 'function';
+  const tooltipVisible = tooltipEnabled && hoveredIndex !== null && labels[hoveredIndex] != null;
+  const tooltipX = Math.max(PLOT_LEFT, Math.min(W - PLOT_RIGHT - 220, PLOT_LEFT + groupWidth * (hoveredIndex + .5) - 110));
+  const tooltipY = tooltipVisible ? Math.max(0, y(primary[hoveredIndex]) - 66) : 0;
 
   return (
     <>
       <style>{dashboardChartStyles}</style>
       <div className="ub-chart-legend" aria-label="Chú giải biểu đồ">
         <span><i className="ub-chart-dot primary" />{primaryLabel}</span>
-        <span><i className="ub-chart-dot secondary" />{secondaryLabel}</span>
-        <span><i className="ub-chart-line-key" />{trendLabel}</span>
+        {!barOnly && <span><i className="ub-chart-dot secondary" />{secondaryLabel}</span>}
+        {!barOnly && <span><i className="ub-chart-line-key" />{trendLabel}</span>}
       </div>
       <p className="ub-chart-scroll-hint"><MoveHorizontal size={14} /> Vuốt ngang để xem toàn bộ biểu đồ</p>
-      <div className="ub-chart-scroll" role="region" tabIndex={0} aria-label={`Biểu đồ có thể cuộn ngang: ${primaryLabel}, ${secondaryLabel} và ${trendLabel} theo ${labels.join(', ')}`}>
-        <svg viewBox={`0 0 ${W} ${H}`} className="ub-chart-svg" aria-hidden="true" preserveAspectRatio="xMidYMid meet">
+      <div className="ub-chart-scroll" role="region" tabIndex={0} onMouseLeave={() => setHoveredIndex(null)} aria-label={`Biểu đồ có thể cuộn ngang: ${legendLabels.join(', ')} theo ${labels.join(', ')}`}>
+        <svg viewBox={`0 0 ${W} ${H}`} className="ub-chart-svg" aria-hidden={tooltipEnabled ? undefined : true} preserveAspectRatio="xMidYMid meet">
+          {barOnly && (
+            <defs>
+              <linearGradient id={`${chartId}-bar-gradient`} x1="0" y1="0" x2="0" y2="1">
+                <stop offset="0%" stopColor="#B8737D" />
+                <stop offset="100%" stopColor="#733F49" />
+              </linearGradient>
+            </defs>
+          )}
           {ticks.map((tick) => (
             <g key={tick}>
               <line x1={PLOT_LEFT} x2={W - PLOT_RIGHT} y1={y(tick)} y2={y(tick)} stroke="#f0e6e2" strokeDasharray={tick === 0 ? undefined : '3 4'} />
@@ -88,17 +103,40 @@ export default function DashboardChart({ labels, primary, secondary, trend, max,
           ))}
           {labels.map((label, index) => {
             const center = PLOT_LEFT + groupWidth * (index + .5);
-            const barWidth = Math.min(25, groupWidth * .26);
+            const barWidth = barOnly ? Math.min(42, groupWidth * .42) : Math.min(25, groupWidth * .26);
             return (
               <g key={`${chartId}-${label}`}>
-                <rect x={center - barWidth - 2} y={y(primary[index])} width={barWidth} height={PLOT_BOTTOM - y(primary[index])} rx="1.5" fill={variant === 'admin' && index !== labels.length - 1 ? '#cc9ca1' : '#87565c'} />
-                <rect x={center + 2} y={y(secondary[index])} width={barWidth} height={PLOT_BOTTOM - y(secondary[index])} rx="1.5" fill="#efd8c2" />
+                <rect x={barOnly ? center - barWidth / 2 : center - barWidth - 2} y={y(primary[index])} width={barWidth} height={PLOT_BOTTOM - y(primary[index])} rx={barOnly ? 5 : 1.5} fill={barOnly ? `url(#${chartId}-bar-gradient)` : variant === 'admin' && index !== labels.length - 1 ? '#cc9ca1' : '#87565c'} />
+                {!barOnly && <rect x={center + 2} y={y(secondary[index])} width={barWidth} height={PLOT_BOTTOM - y(secondary[index])} rx="1.5" fill="#efd8c2" />}
                 <text x={center} y={PLOT_BOTTOM + 18} textAnchor="middle" className="ub-chart-axis ub-chart-x">{label}</text>
+                {tooltipEnabled && (
+                  <rect
+                    x={PLOT_LEFT + groupWidth * index}
+                    y={PLOT_TOP}
+                    width={groupWidth}
+                    height={plotHeight}
+                    fill="transparent"
+                    tabIndex={0}
+                    aria-label={`${label}: ${formatTooltipValue(tooltipValues[index] ?? 0)}`}
+                    onMouseEnter={() => setHoveredIndex(index)}
+                    onMouseLeave={() => setHoveredIndex(null)}
+                    onFocus={() => setHoveredIndex(index)}
+                    onBlur={() => setHoveredIndex(null)}
+                    onClick={() => setHoveredIndex(index)}
+                  />
+                )}
               </g>
             );
           })}
-          <polyline points={points} fill="none" stroke="#8c704d" strokeWidth="2.2" strokeDasharray={variant === 'admin' ? undefined : '3 4'} />
-          {trend.map((value, index) => <circle key={index} cx={PLOT_LEFT + groupWidth * (index + .5)} cy={y(value)} r="3.4" fill="#fff" stroke="#9e6b55" strokeWidth="2" />)}
+          {!barOnly && <polyline points={points} fill="none" stroke="#8c704d" strokeWidth="2.2" strokeDasharray={variant === 'admin' ? undefined : '3 4'} />}
+          {!barOnly && trend.map((value, index) => <circle key={index} cx={PLOT_LEFT + groupWidth * (index + .5)} cy={y(value)} r="3.4" fill="#fff" stroke="#9e6b55" strokeWidth="2" />)}
+          {tooltipVisible && (
+            <g role="tooltip" pointerEvents="none" transform={`translate(${tooltipX}, ${tooltipY})`}>
+              <rect width="220" height="58" rx="7" fill="#fff8f6" stroke="#d9b9bd" />
+              <text x="12" y="21" fill="#6e5654" fontSize="11">{labels[hoveredIndex]}</text>
+              <text x="12" y="43" fill="#733F49" fontSize="14" fontWeight="700">{formatTooltipValue(tooltipValues[hoveredIndex] ?? 0)}</text>
+            </g>
+          )}
         </svg>
       </div>
     </>

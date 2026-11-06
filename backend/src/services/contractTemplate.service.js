@@ -6,10 +6,10 @@ import ContractTemplate from '../models/ContractTemplate.model.js';
 
 export const getAllTemplates = async (query = {}) => {
   const filter = {};
-  if (query.category) {
+  if (query.category && query.category !== 'all') {
     filter.category = query.category;
   }
-  if (query.status) {
+  if (query.status && query.status !== 'all') {
     filter.status = query.status;
   }
 
@@ -57,12 +57,14 @@ export const createTemplate = async (templateData) => {
   return newTemplate;
 };
 
-export const updateTemplate = async (id, updateData) => {
+export const updateTemplate = async (idOrCode, updateData) => {
+  const query = idOrCode.match(/^[0-9a-fA-F]{24}$/) ? { _id: idOrCode } : { code: idOrCode.toUpperCase() };
+
   if (updateData.isDefault) {
-    await ContractTemplate.updateMany({ _id: { $ne: id } }, { isDefault: false });
+    await ContractTemplate.updateMany({ ...query, isDefault: true }, { isDefault: false });
   }
 
-  const updated = await ContractTemplate.findByIdAndUpdate(id, updateData, {
+  const updated = await ContractTemplate.findOneAndUpdate(query, updateData, {
     new: true,
     runValidators: true,
   });
@@ -73,5 +75,37 @@ export const updateTemplate = async (id, updateData) => {
     throw error;
   }
   return updated;
+};
+
+export const deleteTemplate = async (idOrCode) => {
+  const query = idOrCode.match(/^[0-9a-fA-F]{24}$/) ? { _id: idOrCode } : { code: idOrCode.toUpperCase() };
+  const deleted = await ContractTemplate.findOneAndDelete(query);
+
+  if (!deleted) {
+    const error = new Error('Không tìm thấy mẫu hợp đồng để xóa');
+    error.statusCode = 404;
+    throw error;
+  }
+  return deleted;
+};
+
+export const duplicateTemplate = async (idOrCode) => {
+  const original = await getTemplateByIdOrCode(idOrCode);
+  const copyObj = original.toObject ? original.toObject() : { ...original };
+  delete copyObj._id;
+  delete copyObj.createdAt;
+  delete copyObj.updatedAt;
+
+  const randomSuffix = Math.floor(1000 + Math.random() * 9000);
+  copyObj.code = `TPL-COPY-${randomSuffix}`;
+  copyObj.name = `${copyObj.name} (Bản sao)`;
+  copyObj.status = 'draft';
+  copyObj.badge = 'Bản sao nhân bản';
+  copyObj.version = 'v1.0-draft';
+  copyObj.isDefault = false;
+  copyObj.appliedCount = 0;
+
+  const duplicated = await ContractTemplate.create(copyObj);
+  return duplicated;
 };
 

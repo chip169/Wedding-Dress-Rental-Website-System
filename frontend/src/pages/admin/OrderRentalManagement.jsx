@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
-import { message, Modal, Radio, Input } from 'antd';
+import { message, Modal, Radio, Input, Dropdown, notification } from 'antd';
 import {
   Search,
   ChevronDown,
@@ -17,6 +17,7 @@ import {
   Download,
   RefreshCw,
   AlertTriangle,
+  AlertCircle,
   Camera,
   UploadCloud,
   Archive,
@@ -25,6 +26,8 @@ import {
   FolderArchive,
   Banknote,
   CreditCard,
+  UserCheck,
+  UserX,
 } from 'lucide-react';
 import HangerIcon from '../../components/common/HangerIcon';
 import {
@@ -57,9 +60,9 @@ const STATUS_CONFIG = {
 /** Các chuyển tiếp status hợp lệ (chỉ tiến, không lui) */
 const NEXT_STATUSES = {
   pending_payment: ['deposit_paid', 'cancelled'],
-  deposit_paid: ['preparing', 'cancelled'],
-  active: ['preparing', 'cancelled'],
-  confirmed: ['preparing', 'cancelled'],
+  deposit_paid: ['delivered', 'cancelled'],
+  active: ['delivered', 'cancelled'],
+  confirmed: ['delivered', 'cancelled'],
   preparing: ['delivered', 'cancelled'],
   delivered: ['renting', 'cancelled'],
   renting: [], // Bắt buộc nhân viên bấm nút [Kiểm Định], không dùng dropdown tùy ý
@@ -71,8 +74,8 @@ const NEXT_STATUSES = {
 
 const FILTER_OPTIONS = [
   { value: 'all', label: 'Tất Cả Trạng Thái' },
+  { value: 'disputed', label: '⚠️ Khách Khiếu Nại' },
   { value: 'deposit_paid', label: 'Đã Đặt Cọc' },
-  { value: 'preparing', label: 'Đang Chuẩn Bị' },
   { value: 'delivered', label: 'Đã Giao Váy' },
   { value: 'renting', label: 'Đang Thuê' },
   { value: 'returned', label: 'Chờ Hoàn Cọc' },
@@ -105,11 +108,12 @@ function calcLate(rentalEndDate) {
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StatusBadge({ status, order }) {
-  if (status === 'returned') {
-    const custStatus = order?.inspection?.customerStatus;
-    if (custStatus === 'disputed') {
+  const custStatus = order?.inspection?.customerStatus || order?.inspectionCustomerStatus;
+  if (status === 'returned' || status === 'disputed' || custStatus === 'disputed') {
+    if (custStatus === 'disputed' || status === 'disputed') {
       return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEE2E2] text-[#991B1B] border border-[#FECACA]">
+        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEE2E2] text-[#991B1B] border border-[#FECACA] animate-pulse">
+          <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
           Khách Khiếu Nại
         </span>
       );
@@ -139,30 +143,12 @@ function StatusBadge({ status, order }) {
 }
 
 function UpdateStatusDropdown({ order, onUpdated }) {
-  const [open, setOpen] = useState(false);
   const [loading, setLoading] = useState(false);
-  const dropdownRef = useRef(null);
   const nexts = NEXT_STATUSES[order.status] || [];
-
-  // Tự động đóng dropdown khi click ra ngoài
-  useEffect(() => {
-    function handleClickOutside(event) {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target)) {
-        setOpen(false);
-      }
-    }
-    if (open) {
-      document.addEventListener('mousedown', handleClickOutside);
-    }
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [open]);
 
   if (nexts.length === 0) return null;
 
   const handleChange = async (newStatus) => {
-    setOpen(false);
     setLoading(true);
     try {
       await updateOrderStatus(order._id, newStatus);
@@ -175,60 +161,65 @@ function UpdateStatusDropdown({ order, onUpdated }) {
     }
   };
 
+  const menuItems = [
+    {
+      key: 'header',
+      type: 'group',
+      label: (
+        <span className="text-[10px] font-bold uppercase tracking-wider text-[#8C7A7B] block py-0.5">
+          Chuyển bước tiếp theo
+        </span>
+      ),
+      children: nexts.map((s) => {
+        const cfg = STATUS_CONFIG[s] || { label: s };
+        const isCancel = s === 'cancelled';
+        return {
+          key: s,
+          label: (
+            <div className="flex items-center justify-between py-1 min-w-[175px]">
+              <span className="flex items-center gap-2">
+                <span className={`w-2 h-2 rounded-full shrink-0 ${isCancel ? 'bg-red-500' : 'bg-[#733F49]'}`} />
+                <span className={`text-[12.5px] font-medium ${isCancel ? 'text-red-600' : 'text-[#4A3E3F]'}`}>
+                  {cfg.label}
+                </span>
+              </span>
+              <ChevronRight size={13} className="text-[#8C7A7B] opacity-50" />
+            </div>
+          ),
+          onClick: () => handleChange(s),
+        };
+      }),
+    },
+  ];
+
   return (
-    <div ref={dropdownRef} className="relative inline-block text-left whitespace-normal">
+    <Dropdown
+      menu={{ items: menuItems }}
+      trigger={['click']}
+      placement="bottomRight"
+      disabled={loading}
+    >
       <button
         type="button"
         disabled={loading}
-        onClick={() => setOpen((v) => !v)}
         className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FAF2EE] border border-[#EFE2DC] text-[12px] text-[#554748] font-medium hover:bg-[#F3E7E2] hover:text-[#733F49] transition-all disabled:opacity-60 cursor-pointer shadow-2xs"
       >
         <SlidersHorizontal size={12} className="text-[#846E63]" />
         <span>Cập nhật</span>
-        <ChevronDown size={12} className={`transition-transform text-[#846E63] ${open ? 'rotate-180' : ''}`} />
+        <ChevronDown size={12} className="text-[#846E63]" />
       </button>
-
-      {open && (
-        <div className="absolute right-0 top-full mt-1.5 w-52 bg-white rounded-xl shadow-2xl border border-[#EFE5E1] py-1.5 z-50 flex flex-col divide-y divide-[#F9F0EB]">
-          <div className="px-3.5 py-1.5 bg-[#FCF8F5] text-[10.5px] font-bold uppercase tracking-wider text-[#8C7A7B]">
-            Chuyển bước tiếp theo
-          </div>
-          <div className="py-1 flex flex-col">
-            {nexts.map((s) => {
-              const cfg = STATUS_CONFIG[s] || { label: s };
-              const isCancel = s === 'cancelled';
-              return (
-                <button
-                  key={s}
-                  type="button"
-                  onClick={() => handleChange(s)}
-                  className={`w-full flex items-center justify-between px-3.5 py-2 text-left text-[12px] transition-colors font-medium border-0 bg-transparent cursor-pointer ${isCancel
-                      ? 'text-red-600 hover:bg-red-50 hover:text-red-700'
-                      : 'text-[#4A3E3F] hover:bg-[#FAF4EE] hover:text-[#733F49]'
-                    }`}
-                >
-                  <span className="flex items-center gap-2">
-                    <span className={`w-2 h-2 rounded-full shrink-0 ${isCancel ? 'bg-red-500' : 'bg-[#733F49]'}`} />
-                    <span>{cfg.label}</span>
-                  </span>
-                  <ChevronRight size={13} className="opacity-40" />
-                </button>
-              );
-            })}
-          </div>
-        </div>
-      )}
-    </div>
+    </Dropdown>
   );
 }
 
 function InspectionModal({ order, onClose, onSuccess }) {
   const isCompletedOrder = order.status === 'completed' || order.status === 'complete';
   const isReturnedOrder = order.status === 'returned';
-  const [isEditing, setIsEditing] = useState(!isReturnedOrder);
-  const isReadOnly = isCompletedOrder || (!isEditing && isReturnedOrder);
+  const [customerStatus, setCustomerStatus] = useState(order.inspectionCustomerStatus || order.inspection?.customerStatus || 'pending');
+  const isCustomerApproved = customerStatus === 'approved';
+  const [isEditing, setIsEditing] = useState(!isReturnedOrder && !isCustomerApproved);
+  const isReadOnly = isCompletedOrder || isCustomerApproved || (!isEditing && isReturnedOrder);
 
-  const [customerStatus, setCustomerStatus] = useState('pending');
   const [disputeReason, setDisputeReason] = useState('');
   const [refundBankDetails, setRefundBankDetails] = useState(null);
 
@@ -258,7 +249,12 @@ function InspectionModal({ order, onClose, onSuccess }) {
       .then((res) => {
         const insp = res?.data || res;
         if (insp && (insp.itemsCondition || insp.totalDeduction !== undefined)) {
-          if (insp.customerStatus) setCustomerStatus(insp.customerStatus);
+          if (insp.customerStatus) {
+            setCustomerStatus(insp.customerStatus);
+            if (insp.customerStatus === 'approved') {
+              setIsEditing(false);
+            }
+          }
           if (insp.disputeReason) setDisputeReason(insp.disputeReason);
           if (insp.refundBankDetails) setRefundBankDetails(insp.refundBankDetails);
           if (insp.evidencePhotos?.length) {
@@ -272,18 +268,18 @@ function InspectionModal({ order, onClose, onSuccess }) {
                   insp.itemsCondition.find((c) => String(c.dressId) === String(it.dressId));
                 return match
                   ? {
-                      ...it,
-                      condition: match.condition || it.condition,
-                      damageNotes: match.note || match.damageNotes || '',
-                      compensation: match.repairFee ?? match.compensation ?? 0,
-                    }
+                    ...it,
+                    condition: match.condition || it.condition,
+                    damageNotes: match.note || match.damageNotes || '',
+                    compensation: match.repairFee ?? match.compensation ?? 0,
+                  }
                   : it;
               })
             );
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [order._id]);
 
   // Xử lý chụp ảnh / tải ảnh bằng chứng hiện trạng váy
@@ -337,6 +333,11 @@ function InspectionModal({ order, onClose, onSuccess }) {
   };
 
   const handleSubmit = async () => {
+    if (isCustomerApproved) {
+      message.error('Khách hàng đã duyệt biên bản kiểm định, hồ sơ đã khóa và không thể chỉnh sửa.');
+      return;
+    }
+
     // Validate không được nhập số tiền lớn hơn váy
     for (const ic of itemsCondition) {
       const maxLimit = ic.maxPrice || order.totalDeposit || order.totalRentPrice || 0;
@@ -383,12 +384,14 @@ function InspectionModal({ order, onClose, onSuccess }) {
               <h3 className="font-playfair text-[15px] font-bold text-[#5F2B36] m-0">
                 {isCompletedOrder
                   ? 'Hồ Sơ Lưu Trữ Đơn Thuê & Quyết Toán Cọc'
-                  : isReturnedOrder
-                  ? 'Biên Bản Kiểm Định Trả Váy (Đã Kiểm Định)'
-                  : 'Kiểm Định Trả Váy & Giám Định Hiện Trạng'}
+                  : isCustomerApproved
+                    ? 'Biên Bản Kiểm Định Trả Váy (Khách Đã Duyệt)'
+                    : isReturnedOrder
+                      ? 'Biên Bản Kiểm Định Trả Váy (Đã Kiểm Định)'
+                      : 'Kiểm Định Trả Váy & Giám Định Hiện Trạng'}
               </h3>
               <p className="text-[10.5px] text-[#8C7D7E] m-0">
-                Đơn #{order.orderCode} • Showroom Atelier kiểm tra phom dáng &amp; phụ kiện
+                Đơn #{order.orderCode}
               </p>
             </div>
           </div>
@@ -417,10 +420,15 @@ function InspectionModal({ order, onClose, onSuccess }) {
 
           {customerStatus === 'approved' && (
             <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 space-y-1">
-              <div className="flex items-center gap-1.5 text-[11.5px]">
-                <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
-                <span>
-                  <strong>Khách hàng đã đồng ý biên bản.</strong> Hệ thống đã tự động hoàn cọc cho khách.
+              <div className="flex items-center justify-between gap-1.5 text-[11.5px] flex-wrap">
+                <div className="flex items-center gap-1.5">
+                  <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+                  <span>
+                    <strong>Khách hàng đã duyệt biên bản.</strong>
+                  </span>
+                </div>
+                <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-300">
+                  Đã Khóa Chỉnh Sửa
                 </span>
               </div>
               {refundBankDetails?.accountNumber && (
@@ -443,9 +451,18 @@ function InspectionModal({ order, onClose, onSuccess }) {
 
           {/* Dải thông tin tóm tắt đơn hàng gọn gàng 1 dòng */}
           <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-[#FAF5F2] border border-[#F0E6E2] text-[11.5px]">
-            <div>
+            <div className="flex items-center gap-1.5">
               <span className="text-[#8C7D7E]">Khách hàng: </span>
               <strong className="text-[#2C2523]">{order.customerName}</strong>
+              {order.hasAccount || order.customerId ? (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-[#FAF0EC] text-[#733F49] border border-[#F2D8D4]">
+                  <UserCheck size={10} className="text-[#B8737D]" /> Thành Viên
+                </span>
+              ) : (
+                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-medium bg-[#F5F2F0] text-[#7A6A6B] border border-[#E8DFDC]">
+                  <UserX size={10} className="text-[#A39192]" /> Khách Vãng Lai
+                </span>
+              )}
             </div>
             <div>
               <span className="text-[#8C7D7E]">Ngày thuê: </span>
@@ -594,9 +611,9 @@ function InspectionModal({ order, onClose, onSuccess }) {
                   onClick={onClose}
                   className="flex-1 py-2 rounded-xl border border-[#EFE5E1] text-[12px] font-bold text-[#5F4E50] hover:bg-[#FAF5F2] transition-colors bg-transparent cursor-pointer"
                 >
-                  {isCompletedOrder ? 'Đóng Hồ Sơ Lưu Trữ' : 'Đóng'}
+                  {isCompletedOrder ? 'Đóng Hồ Sơ Lưu Trữ' : isCustomerApproved ? 'Đóng (Khách Đã Duyệt - Hồ Sơ Đã Khóa)' : 'Đóng'}
                 </button>
-                {!isCompletedOrder && (
+                {!isCompletedOrder && !isCustomerApproved && (
                   <button
                     type="button"
                     onClick={() => setIsEditing(true)}
@@ -654,7 +671,7 @@ function RefundModal({ order, onClose, onSuccess }) {
           setInspectionData(insp);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
   }, [order._id]);
 
   const lateDays = inspectionData?.lateDays ?? calcLate(order.rentalEndDate);
@@ -708,7 +725,18 @@ function RefundModal({ order, onClose, onSuccess }) {
           <div className="p-3.5 rounded-xl bg-[#FAF5F2] border border-[#F0E6E2] space-y-2">
             <div className="flex items-center justify-between">
               <span className="text-[#8C7D7E]">Khách hàng nhận hoàn cọc:</span>
-              <span className="font-bold text-[#2C2523] text-[13px]">{order.customerName}</span>
+              <div className="flex items-center gap-1.5">
+                <span className="font-bold text-[#2C2523] text-[13px]">{order.customerName}</span>
+                {order.hasAccount || order.customerId ? (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9.5px] font-bold bg-[#FAF0EC] text-[#733F49] border border-[#F2D8D4]">
+                    <UserCheck size={10} className="text-[#B8737D]" /> Thành Viên
+                  </span>
+                ) : (
+                  <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9.5px] font-medium bg-[#F5F2F0] text-[#7A6A6B] border border-[#E8DFDC]">
+                    <UserX size={10} className="text-[#A39192]" /> Khách Vãng Lai
+                  </span>
+                )}
+              </div>
             </div>
             <div className="flex items-center justify-between">
               <span className="text-[#8C7D7E]">Số điện thoại liên hệ:</span>
@@ -915,6 +943,64 @@ export default function OrderRentalManagement() {
     };
   }, [globalStats, orders]);
 
+  // ── Đơn hàng có khiếu nại từ khách hàng ─────────────────────────────────
+  const disputedOrders = useMemo(() => {
+    return orders.filter(
+      (o) =>
+        o.inspection?.customerStatus === 'disputed' ||
+        o.inspectionCustomerStatus === 'disputed' ||
+        o.status === 'disputed'
+    );
+  }, [orders]);
+
+  const notifiedDisputesRef = useRef(new Set());
+
+  // Hiển thị thông báo nổi lên (pop-up notification) ngay khi phát hiện đơn hàng có khiếu nại
+  useEffect(() => {
+    if (disputedOrders.length > 0) {
+      disputedOrders.forEach((ord) => {
+        const key = `dispute_${ord._id || ord.orderCode}`;
+        if (!notifiedDisputesRef.current.has(key)) {
+          notifiedDisputesRef.current.add(key);
+          notification.error({
+            key,
+            message: (
+              <span className="font-bold text-red-900 text-[13.5px]">
+                ⚠️ CÓ ĐƠN KHIẾU NẠI CẦN XỬ LÝ GẤP
+              </span>
+            ),
+            description: (
+              <div className="space-y-1.5 text-xs font-jakarta">
+                <p className="m-0 text-[#2C2523]">
+                  Đơn hàng <strong>#{ord.orderCode}</strong> — Khách hàng <strong>{ord.customerName}</strong> ({ord.customerPhone || 'SĐT'}) vừa gửi khiếu nại về biên bản kiểm định.
+                </p>
+                {ord.inspection?.disputeReason && (
+                  <p className="m-0 text-red-700 italic bg-red-50 p-2 rounded-lg border border-red-200">
+                    "{ord.inspection.disputeReason}"
+                  </p>
+                )}
+                <div className="pt-1.5 flex items-center justify-end">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      notification.destroy(key);
+                      setInspectionOrder(ord);
+                    }}
+                    className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold border-0 cursor-pointer shadow-xs transition-colors"
+                  >
+                    Xem &amp; Xử Lý Ngay →
+                  </button>
+                </div>
+              </div>
+            ),
+            duration: 12,
+            placement: 'topRight',
+          });
+        }
+      });
+    }
+  }, [disputedOrders]);
+
   // ── Client-side filter (for demo fallback & search) ───────────────────────
   const filteredOrders = useMemo(() => {
     const qRaw = searchTerm.trim().toLowerCase();
@@ -929,11 +1015,26 @@ export default function OrderRentalManagement() {
         (o.customerPhone || '').includes(cleanQ) ||
         (o.items || []).some((it) => (it.name || '').toLowerCase().includes(qRaw));
 
-      const matchStatus = statusFilter === 'all' || o.status === statusFilter;
+      const isDisputed =
+        o.inspection?.customerStatus === 'disputed' ||
+        o.inspectionCustomerStatus === 'disputed' ||
+        o.status === 'disputed';
+
+      const matchStatus =
+        statusFilter === 'all'
+          ? true
+          : statusFilter === 'disputed'
+          ? isDisputed
+          : o.status === statusFilter;
 
       // Khi người dùng đang tìm kiếm cụ thể: Hiển thị ngay kết quả kể cả đơn nằm ở Kho Lưu Trữ
       if (cleanQ) {
         return matchSearch && matchStatus;
+      }
+
+      // Khi lọc đơn khiếu nại: Hiển thị luôn không phân biệt active/archived
+      if (statusFilter === 'disputed') {
+        return matchSearch && isDisputed;
       }
 
       // Khi không tìm kiếm: Phân tách rõ ràng giữa Đơn Đang Xử Lý và Kho Lưu Trữ
@@ -980,6 +1081,70 @@ export default function OrderRentalManagement() {
           Theo dõi và quản lý toàn bộ đơn thuê váy cưới — cập nhật trạng thái vòng đời, kiểm định trả váy và hoàn cọc.
         </p>
       </div>
+
+      {/* Banner thông báo nổi bật khi có đơn khiếu nại */}
+      {disputedOrders.length > 0 && (
+        <div className="mb-8 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#FEF2F2] via-[#FFF1F2] to-[#FEF2F2] border-2 border-red-300 shadow-md space-y-3 font-jakarta animate-fadeIn">
+          <div className="flex items-center justify-between flex-wrap gap-2">
+            <div className="flex items-center gap-2.5">
+              <span className="flex h-3 w-3 relative">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
+              </span>
+              <span className="font-bold text-red-900 text-[14px] sm:text-[15.5px] flex items-center gap-2">
+                <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
+                <span>CẢNH BÁO: CÓ {disputedOrders.length} ĐƠN HÀNG ĐANG BỊ KHÁCH KHIẾU NẠI!</span>
+              </span>
+            </div>
+            <button
+              type="button"
+              onClick={() => {
+                setStatusFilter('disputed');
+                setActivePage(1);
+              }}
+              className="text-xs font-bold text-red-700 hover:text-red-900 underline cursor-pointer bg-transparent border-0"
+            >
+              Lọc danh sách {disputedOrders.length} đơn khiếu nại →
+            </button>
+          </div>
+
+          <div className="space-y-2">
+            {disputedOrders.map((ord) => (
+              <div
+                key={ord._id || ord.orderCode}
+                className="p-3.5 bg-white/95 rounded-xl border border-red-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs"
+              >
+                <div className="space-y-1">
+                  <div className="flex items-center gap-2 flex-wrap">
+                    <span className="font-mono font-bold text-red-800 bg-red-100 px-2.5 py-0.5 rounded-md border border-red-200">
+                      #{ord.orderCode}
+                    </span>
+                    <strong className="text-gray-900 text-[13px]">{ord.customerName}</strong>
+                    <span className="text-gray-500 font-medium">({ord.customerPhone || 'Không có SĐT'})</span>
+                    <span className="text-stone-300">•</span>
+                    <span className="text-stone-700 font-medium">
+                      {ord.items?.[0]?.name || ord.dress || 'Lễ phục'}
+                    </span>
+                  </div>
+                  {ord.inspection?.disputeReason && (
+                    <p className="text-red-700 italic m-0 bg-red-50/80 p-2 rounded-lg border border-red-100">
+                      <strong>Lý do khiếu nại:</strong> "{ord.inspection.disputeReason}"
+                    </p>
+                  )}
+                </div>
+                <button
+                  type="button"
+                  onClick={() => setInspectionOrder(ord)}
+                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-bold text-xs shrink-0 cursor-pointer shadow-xs transition-all flex items-center justify-center gap-1.5 border-0"
+                >
+                  <AlertCircle size={14} />
+                  <span>Xem &amp; Xử Lý Khiếu Nại Ngay</span>
+                </button>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
 
       {/* 4 Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-5 mb-8">
@@ -1113,45 +1278,6 @@ export default function OrderRentalManagement() {
             </button>
           )}
         </div>
-
-        <div className="flex justify-end mt-4">
-          <div className="relative">
-            <button
-              type="button"
-              onClick={() => setFilterDropdownOpen((v) => !v)}
-              className="flex items-center justify-between gap-3 px-4 py-2 rounded-lg bg-[#FAF2EE] border border-[#EFE2DC] text-[12.5px] text-[#554748] font-medium hover:bg-[#F3E7E2] transition-colors"
-            >
-              <span>{selectedFilterLabel}</span>
-              <ChevronDown
-                size={14}
-                className={`text-[#8C7D7E] transition-transform ${filterDropdownOpen ? 'rotate-180' : ''}`}
-              />
-            </button>
-
-            {filterDropdownOpen && (
-              <div className="absolute right-0 top-full mt-1.5 w-56 bg-white rounded-xl shadow-lg border border-[#EFE5E1] py-1.5 z-20">
-                {FILTER_OPTIONS.map((opt) => (
-                  <button
-                    key={opt.value}
-                    type="button"
-                    onClick={() => {
-                      setStatusFilter(opt.value);
-                      setActivePage(1);
-                      setFilterDropdownOpen(false);
-                    }}
-                    className={`w-full flex items-center justify-between px-4 py-2 text-left text-[13px] transition-colors ${statusFilter === opt.value
-                        ? 'bg-[#F9EDE9] text-[#733F49] font-bold'
-                        : 'bg-transparent text-[#5F4E50] hover:bg-[#FAF5F2]'
-                      }`}
-                  >
-                    <span>{opt.label}</span>
-                    {statusFilter === opt.value && <Check size={14} />}
-                  </button>
-                ))}
-              </div>
-            )}
-          </div>
-        </div>
       </div>
 
       {/* View Mode Tabs: Đơn Đang Xử Lý vs Kho Lưu Trữ */}
@@ -1160,18 +1286,16 @@ export default function OrderRentalManagement() {
           <button
             type="button"
             onClick={() => { setViewMode('active'); setStatusFilter('all'); setActivePage(1); }}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-bold transition-all cursor-pointer ${
-              viewMode === 'active'
-                ? 'bg-[#733F49] text-white shadow-md'
-                : 'bg-white border border-[#EFE5E1] text-[#7A6B6C] hover:bg-[#FAF4F0]'
-            }`}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-bold transition-all cursor-pointer ${viewMode === 'active'
+              ? 'bg-[#733F49] text-white shadow-md'
+              : 'bg-white border border-[#EFE5E1] text-[#7A6B6C] hover:bg-[#FAF4F0]'
+              }`}
           >
             <SlidersHorizontal size={14} />
             <span>Đơn Đang Xử Lý</span>
             <span
-              className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                viewMode === 'active' ? 'bg-white/20 text-white' : 'bg-[#FAF0EC] text-[#733F49]'
-              }`}
+              className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${viewMode === 'active' ? 'bg-white/20 text-white' : 'bg-[#FAF0EC] text-[#733F49]'
+                }`}
             >
               {activeOrdersCount}
             </span>
@@ -1180,18 +1304,16 @@ export default function OrderRentalManagement() {
           <button
             type="button"
             onClick={() => { setViewMode('archived'); setStatusFilter('all'); setActivePage(1); }}
-            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-bold transition-all cursor-pointer ${
-              viewMode === 'archived'
-                ? 'bg-[#1E8347] text-white shadow-md'
-                : 'bg-white border border-[#EFE5E1] text-[#7A6B6C] hover:bg-[#FAF4F0]'
-            }`}
+            className={`flex items-center gap-2 px-5 py-2.5 rounded-xl text-[13px] font-bold transition-all cursor-pointer ${viewMode === 'archived'
+              ? 'bg-[#1E8347] text-white shadow-md'
+              : 'bg-white border border-[#EFE5E1] text-[#7A6B6C] hover:bg-[#FAF4F0]'
+              }`}
           >
             <Archive size={14} />
             <span>Kho Lưu Trữ Đơn Hoàn Tất</span>
             <span
-              className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${
-                viewMode === 'archived' ? 'bg-white/20 text-white' : 'bg-[#EAF7EE] text-[#1E8347]'
-              }`}
+              className={`px-2 py-0.5 rounded-full text-[11px] font-bold ${viewMode === 'archived' ? 'bg-white/20 text-white' : 'bg-[#EAF7EE] text-[#1E8347]'
+                }`}
             >
               {archivedOrdersCount}
             </span>
@@ -1212,7 +1334,7 @@ export default function OrderRentalManagement() {
 
       {/* Main Table */}
       <div className="bg-white rounded-2xl border border-[#EFE5E1] shadow-xs overflow-hidden mb-6">
-        <div className="overflow-x-auto">
+        <div className="overflow-x-auto min-h-[260px]">
           <table className="w-full text-left border-collapse min-w-[960px]">
             <thead>
               <tr className="border-b border-[#F2E5E0] bg-[#FFF6F3]">
@@ -1267,9 +1389,20 @@ export default function OrderRentalManagement() {
                 filteredOrders.map((order) => {
                   const firstItem = order.items?.[0] || {};
                   const canInspect = order.status === 'renting' || order.status === 'delivered';
+                  const isDisputed =
+                    order.inspection?.customerStatus === 'disputed' ||
+                    order.inspectionCustomerStatus === 'disputed' ||
+                    order.status === 'disputed';
 
                   return (
-                    <tr key={order._id || order.orderCode} className="hover:bg-[#FCF9F7] transition-colors">
+                    <tr
+                      key={order._id || order.orderCode}
+                      className={`transition-colors ${
+                        isDisputed
+                          ? 'bg-red-50/40 hover:bg-red-50/70 border-l-4 border-l-red-500'
+                          : 'hover:bg-[#FCF9F7]'
+                      }`}
+                    >
                       {/* Mã đơn */}
                       <td className="py-4 px-5">
                         <div className="flex items-center gap-1.5 flex-wrap">
@@ -1286,11 +1419,39 @@ export default function OrderRentalManagement() {
 
                       {/* Khách hàng */}
                       <td className="py-4 px-4">
-                        <div className="text-[13.5px] font-semibold text-[#2C2523] leading-tight">
-                          {order.customerName || '—'}
+                        <div className="flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[13.5px] font-semibold text-[#2C2523] leading-tight">
+                            {order.customerName || '—'}
+                          </span>
+                          {/* Dấu hiệu nhận biết đơn CÓ TÀI KHOẢN vs KHÔNG CÓ TÀI KHOẢN (Guest) */}
+                          {order.hasAccount || order.customerId ? (
+                            <span
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-[#FAF0EC] text-[#733F49] border border-[#F2D8D4] shrink-0"
+                              title="Khách hàng thành viên đã có tài khoản UniBridal"
+                            >
+                              <UserCheck size={11} className="text-[#B8737D]" />
+                              <span>Thành Viên</span>
+                            </span>
+                          ) : (
+                            <span
+                              className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-medium bg-[#F5F2F0] text-[#7A6A6B] border border-[#E8DFDC] shrink-0"
+                              title="Khách vãng lai thuê trực tiếp (Chưa tạo tài khoản)"
+                            >
+                              <UserX size={11} className="text-[#A39192]" />
+                              <span>Khách Vãng Lai</span>
+                            </span>
+                          )}
                         </div>
-                        <div className="text-[11.5px] text-[#8A797A] mt-0.5">
-                          {order.customerPhone || '—'}
+                        <div className="text-[11.5px] text-[#8A797A] mt-1 flex items-center gap-1.5">
+                          <span>{order.customerPhone || '—'}</span>
+                          {order.customerEmail && (
+                            <>
+                              <span className="text-[#D0C0BE]">•</span>
+                              <span className="truncate max-w-[120px] text-[#7A6A6B]" title={order.customerEmail}>
+                                {order.customerEmail}
+                              </span>
+                            </>
+                          )}
                         </div>
                       </td>
 
@@ -1358,15 +1519,28 @@ export default function OrderRentalManagement() {
                               <ShieldCheck size={13} />
                               <span>Kiểm Định Trả Váy</span>
                             </button>
-                          ) : order.status === 'returned' ? (
+                          ) : order.status === 'returned' || isDisputed ? (
                             <button
                               type="button"
                               onClick={() => setInspectionOrder(order)}
-                              title="Xem biên bản kiểm định hiện trạng (Chờ khách duyệt & nhận hoàn cọc tự động)"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FAF0EB] text-[#733F49] text-[12px] font-bold hover:bg-[#F3E2DB] transition-all cursor-pointer border border-[#ECD9D3]"
+                              title={isDisputed ? 'Khách đã gửi khiếu nại — Nhấn để xem và đối soát xử lý' : 'Xem biên bản kiểm định hiện trạng'}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all cursor-pointer border ${
+                                isDisputed
+                                  ? 'bg-red-600 text-white hover:bg-red-700 border-red-600 shadow-xs'
+                                  : 'bg-[#FAF0EB] text-[#733F49] hover:bg-[#F3E2DB] border-[#ECD9D3]'
+                              }`}
                             >
-                              <Eye size={13} />
-                              <span>Xem Kiểm Định</span>
+                              {isDisputed ? (
+                                <>
+                                  <AlertTriangle size={13} />
+                                  <span>Xử Lý Khiếu Nại</span>
+                                </>
+                              ) : (
+                                <>
+                                  <Eye size={13} />
+                                  <span>Xem Kiểm Định</span>
+                                </>
+                              )}
                             </button>
                           ) : (
                             <UpdateStatusDropdown
@@ -1436,8 +1610,8 @@ export default function OrderRentalManagement() {
                   type="button"
                   onClick={() => setActivePage(p)}
                   className={`w-8 h-8 rounded-lg font-bold flex items-center justify-center transition-colors ${activePage === p
-                      ? 'bg-[#78434D] text-white shadow-xs'
-                      : 'bg-white border border-[#EFE5E1] shadow-2xs text-[#4A3B3D] hover:bg-[#F5ECE8]'
+                    ? 'bg-[#78434D] text-white shadow-xs'
+                    : 'bg-white border border-[#EFE5E1] shadow-2xs text-[#4A3B3D] hover:bg-[#F5ECE8]'
                     }`}
                 >
                   {p}

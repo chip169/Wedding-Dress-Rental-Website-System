@@ -3,6 +3,7 @@ import { Link } from 'react-router-dom';
 import { CheckCircle } from 'lucide-react';
 import heroBrideImg from '../../assets/hero_bride.jpg';
 import laceDetailImg from '../../assets/lace_detail.jpg';
+import logoEmblemImg from '../../assets/logo_emblem.png';
 
 const HeroSection = ({ onOpenBooking }) => {
   return (
@@ -84,6 +85,17 @@ const HeroSection = ({ onOpenBooking }) => {
                 className="w-full h-full object-cover object-top"
               />
               <div className="absolute inset-0 bg-gradient-to-t from-[rgba(44,37,35,0.4)] via-transparent to-transparent pointer-events-none" />
+              {/* Logo UniBridal Watermark */}
+              <div
+                className="absolute bottom-5 right-5 z-10 pointer-events-none select-none transition-transform duration-300 hover:scale-110"
+                title="UniBridal Haute Couture"
+              >
+                <img
+                  src={logoEmblemImg}
+                  alt="UniBridal Emblem"
+                  className="w-[52px] h-[52px] object-contain drop-shadow-[0px_2px_8px_rgba(0,0,0,0.4)]"
+                />
+              </div>
             </div>
 
             {/* Floating Overlap Card 1: Luxury Lace Detail */}

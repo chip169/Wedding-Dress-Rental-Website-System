@@ -1,31 +1,27 @@
 import { formatCurrencyVND } from '../../utils/formatCurrency';
 import React, { useEffect, useMemo, useState } from 'react';
 import {
-  Banknote,
-  Gem,
   PackageCheck,
   CalendarDays,
   TrendingUp,
   Sparkles,
-  Clock,
-  CheckCircle2,
   ArrowRight,
-  ShieldCheck,
   Users,
   Layers,
   ArrowUpRight,
-  FileText
 } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import DashboardChart from '../../components/common/DashboardChart';
+import { roundedChartScale } from '../../utils/chartScale';
 import { getAdminDashboard } from '../../services/reportService';
 
 const PERIODS = { week: '7 ngày qua', month: 'Tháng này', quarter: 'Quý này', year: 'Năm nay' };
-const money = (value) => formatCurrencyVND(value);
+const money = (value) => value == null ? '—' : formatCurrencyVND(value);
 
 export default function AdminDashboardPage() {
   const [period, setPeriod] = useState('month');
+  const [reload, setReload] = useState(0);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -34,6 +30,7 @@ export default function AdminDashboardPage() {
     let active = true;
     setError('');
     setLoading(true);
+    setData(null);
     getAdminDashboard(period)
       .then((value) => {
         if (!active) return;
@@ -51,21 +48,18 @@ export default function AdminDashboardPage() {
     return () => {
       active = false;
     };
-  }, [period]);
+  }, [period, reload]);
 
   const chart = useMemo(() => {
     const values = data?.chart || [];
     const primary = values.map((item) => (item.orderValue || 0) / 1_000_000);
-    const rawMax = Math.max(4, ...primary);
-    const step = Math.ceil(rawMax / 4);
-    const max = step * 4;
+    const { max, ticks } = roundedChartScale(Math.max(0, ...primary));
     return {
       labels: values.map((item) => item.label),
       primary,
-      secondary: values.map(() => 0),
-      trend: primary,
+      tooltipValues: values.map((item) => item.orderValue || 0),
       max,
-      ticks: [0, step, step * 2, step * 3, max],
+      ticks,
       unit: 'tr',
     };
   }, [data]);
@@ -96,7 +90,7 @@ export default function AdminDashboardPage() {
     >
       {error && (
         <div role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          <span className="font-semibold">⚠️ Lỗi kết nối Cơ sở dữ liệu:</span> {error}
+          <span className="font-semibold">⚠️ Lỗi kết nối Cơ sở dữ liệu:</span> {error} <button type="button" onClick={() => setReload((value) => value + 1)} className="ml-3 underline">Thử lại</button>
         </div>
       )}
       {data?.ordersMissingDepositTransaction > 0 && (
@@ -105,53 +99,32 @@ export default function AdminDashboardPage() {
         </p>
       )}
 
-      {/* 6 Top Metric Cards Nâng Cấp */}
+      {loading && <p role="status" className="mb-4 text-sm text-stone-500">Đang tải thống kê...</p>}
+      {/* Tổng đơn thuê, lịch hẹn và người dùng */}
       <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" aria-label="Chỉ số kinh doanh trọng yếu">
         {[
           {
-            title: 'DOANH THU THỰC NHẬN',
-            value: money(data?.revenue),
-            note: 'Doanh thu cho thuê ròng trong kỳ',
-            growth: '+24.8%',
-            Icon: TrendingUp,
-            color: 'rose',
-          },
-          {
-            title: 'GIÁ TRỊ ĐƠN ĐÃ ĐẶT CỌC',
-            value: money(data?.orderValue),
-            note: `Ghi nhận từ các đơn hợp đồng hợp lệ`,
-            Icon: Banknote,
-            color: 'gold',
-          },
-          {
-            title: 'TỔNG ĐƠN THUÊ LỄ PHỤC',
+            title: 'TỔNG ĐƠN THUÊ',
             value: data?.totalOrders ?? '—',
             note: `${data?.completedOrders ?? 0} đơn đã hoàn tất & quyết toán`,
             Icon: PackageCheck,
             color: 'rose',
           },
           {
-            title: 'LỊCH HẸN THỬ VÁY VIP',
-            value: data?.totalAppointments ?? 9,
-            note: `${data?.todayAppointments ?? 2} lịch hẹn cần tiếp đón hôm nay`,
+            title: 'TỔNG LỊCH HẸN',
+            value: data?.totalAppointments ?? '—',
+            note: `${data?.todayAppointments ?? '—'} lịch hẹn cần tiếp đón hôm nay`,
             Icon: CalendarDays,
             color: 'gold',
           },
           {
-            title: 'LỄ PHỤC KIỂM ĐỊNH & BẢO DƯỠNG',
-            value: `${data?.maintenance ?? 4} mẫu`,
-            note: 'Váy vừa hoàn tất cần kiểm định vi khí hậu',
-            Icon: Clock,
-            color: 'rose',
-          },
-          {
-            title: 'CỘNG ĐỒNG NÀNG DÂU',
-            value: data?.members ?? '—',
-            note: 'Tài khoản khách hàng đang hoạt động',
+            title: 'SỐ USER',
+            value: data?.totalUsers ?? '—',
+            note: 'Toàn bộ tài khoản trên hệ thống',
             Icon: Users,
             color: 'gold',
           },
-        ].map(({ title, value, note, growth, Icon, color }) => (
+        ].map(({ title, value, note, Icon, color }) => (
           <article
             key={title}
             className="ub-dashboard-metric admin-metric min-w-0 rounded-2xl border border-[#EFE5E1] bg-white p-5 shadow-xs hover:shadow-md transition-shadow"
@@ -165,7 +138,6 @@ export default function AdminDashboardPage() {
             <div className="text-[28px] font-bold text-[#2C2523] tracking-tight leading-none mb-2 font-serif">{value}</div>
             <div className="flex items-center justify-between text-xs text-[#8A797A] pt-2 border-t border-[#F5EAE6]">
               <span>{note}</span>
-              {growth && <span className="font-bold text-emerald-700 bg-emerald-50 px-2 py-0.5 rounded-full border border-emerald-200">{growth}</span>}
             </div>
           </article>
         ))}
@@ -191,15 +163,14 @@ export default function AdminDashboardPage() {
           </Link>
         </div>
 
-        {/* 6 Bước Pipeline Grid */}
-        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-6 gap-3">
+        {/* 5 Bước Pipeline Grid */}
+        <div className="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
           {[
-            { label: 'Đã Đặt Cọc', count: data?.ordersPipeline?.deposit_paid ?? 2, color: 'border-amber-200 bg-amber-50 text-amber-800' },
-            { label: 'Đang Chuẩn Bị', count: data?.ordersPipeline?.preparing ?? 1, color: 'border-blue-200 bg-blue-50 text-blue-800' },
-            { label: 'Đã Giao Váy', count: data?.ordersPipeline?.delivered ?? 1, color: 'border-purple-200 bg-purple-50 text-purple-800' },
-            { label: 'Khách Đang Thuê', count: data?.ordersPipeline?.renting ?? 0, color: 'border-indigo-200 bg-indigo-50 text-indigo-800' },
-            { label: 'Chờ Kiểm Định', count: data?.ordersPipeline?.returned ?? 4, color: 'border-rose-200 bg-rose-50 text-rose-800' },
-            { label: 'Đã Hoàn Tất', count: data?.ordersPipeline?.completed ?? 7, color: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
+            { label: 'Đã Đặt Cọc', count: data?.ordersPipeline?.deposit_paid ?? '—', color: 'border-amber-200 bg-amber-50 text-amber-800' },
+            { label: 'Đã Giao Váy', count: data?.ordersPipeline?.delivered ?? '—', color: 'border-purple-200 bg-purple-50 text-purple-800' },
+            { label: 'Khách Đang Thuê', count: data?.ordersPipeline?.renting ?? '—', color: 'border-indigo-200 bg-indigo-50 text-indigo-800' },
+            { label: 'Chờ Kiểm Định', count: data?.ordersPipeline?.returned ?? '—', color: 'border-rose-200 bg-rose-50 text-rose-800' },
+            { label: 'Đã Hoàn Tất', count: data?.ordersPipeline?.completed ?? '—', color: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
           ].map((step, idx) => (
             <div key={step.label} className={`rounded-xl border p-3 flex flex-col justify-between ${step.color}`}>
               <div className="text-[10.5px] font-bold uppercase tracking-wider opacity-85">
@@ -232,9 +203,9 @@ export default function AdminDashboardPage() {
             chartId={`admin-${period}`}
             {...chart}
             primaryLabel="Giá trị đơn"
-            secondaryLabel=""
-            trendLabel="Xu hướng"
+            chartType="bar"
             variant="admin"
+            formatTooltipValue={money}
           />
         )}
       </section>

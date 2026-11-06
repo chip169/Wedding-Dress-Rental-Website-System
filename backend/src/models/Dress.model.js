@@ -30,7 +30,7 @@ const dressSchema = new mongoose.Schema(
     },
     silhouette: {
       type: String,
-      enum: ['Ballgown', 'Mermaid', 'A-Line', 'Silk Gown', 'Princess', 'Traditional', 'Tuxedo', 'Other'],
+      enum: ['Ballgown', 'Mermaid', 'A-Line', 'Silk Gown', 'Princess', 'Other'],
       default: 'Other',
     },
     description: {

@@ -50,20 +50,6 @@ export async function verifyEmailOtp(verifyData) {
     }
     return res;
   } catch (error) {
-    if (error.status) {
-      throw error;
-    }
-    if (verifyData.otp && verifyData.otp.length === 6) {
-      const mockUser = {
-        _id: `usr_${Date.now()}`,
-        fullName: 'Khách Hàng Mới',
-        email: verifyData.email,
-        role: 'customer',
-      };
-      localStorage.setItem('token', 'mock_verified_token');
-      localStorage.setItem('user', JSON.stringify(mockUser));
-      return { success: true, message: 'Kích hoạt tài khoản thành công', data: { user: mockUser, token: 'mock_verified_token' } };
-    }
     throw error;
   }
 }
@@ -73,12 +59,7 @@ export async function verifyEmailOtp(verifyData) {
  * @param {string} email
  */
 export async function resendVerificationOtp(email) {
-  try {
-    return await axiosClient.post('/auth/resend-otp', { email });
-  } catch (error) {
-    if (error.status) throw error;
-    return { success: true, message: 'Đã gửi lại mã OTP xác thực mới.' };
-  }
+  return await axiosClient.post('/auth/resend-otp', { email });
 }
 
 /**
@@ -86,12 +67,7 @@ export async function resendVerificationOtp(email) {
  * @param {string} email
  */
 export async function forgotPassword(email) {
-  try {
-    return await axiosClient.post('/auth/forgot-password', { email });
-  } catch (error) {
-    if (error.status) throw error;
-    return { success: true, message: 'Mã OTP đã được gửi về email của bạn.' };
-  }
+  return await axiosClient.post('/auth/forgot-password', { email });
 }
 
 /**
@@ -99,15 +75,7 @@ export async function forgotPassword(email) {
  * @param {Object} data - { email, otp }
  */
 export async function verifyResetOtp(data) {
-  try {
-    return await axiosClient.post('/auth/verify-reset-otp', data);
-  } catch (error) {
-    if (error.status) throw error;
-    if (data.otp && data.otp.length === 6) {
-      return { success: true, message: 'Xác thực mã OTP thành công.' };
-    }
-    throw error;
-  }
+  return await axiosClient.post('/auth/verify-reset-otp', data);
 }
 
 /**
@@ -115,26 +83,14 @@ export async function verifyResetOtp(data) {
  * @param {Object} data - { email, otp, newPassword }
  */
 export async function resetPassword(data) {
-  try {
-    return await axiosClient.post('/auth/reset-password', data);
-  } catch (error) {
-    return { success: true, message: 'Đặt lại mật khẩu thành công.' };
-  }
+  return await axiosClient.post('/auth/reset-password', data);
 }
 
 /**
  * Lấy thông tin người dùng hiện tại đang đăng nhập
  */
 export async function getMe() {
-  try {
-    return await axiosClient.get('/auth/me');
-  } catch (error) {
-    const cached = localStorage.getItem('user');
-    if (cached) {
-      return { success: true, data: JSON.parse(cached) };
-    }
-    throw error;
-  }
+  return await axiosClient.get('/auth/me');
 }
 
 /**

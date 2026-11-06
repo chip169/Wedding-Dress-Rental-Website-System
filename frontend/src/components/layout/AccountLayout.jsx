@@ -10,6 +10,7 @@ const accountLayoutStyles = `
 :where(.profile-page) button { background-color: transparent; font-family: inherit; cursor: pointer; }
 .profile-page { background: #fff8f6; }
 .profile-main { min-height: 809.5px; }
+.profile-footer { background: #fff1ed; min-height: 378px; }
 .profile-page button, .profile-page a, .profile-page input { -webkit-tap-highlight-color: transparent; }
 .profile-page :is(button, a, input):focus-visible { outline: 2px solid #874e57; outline-offset: 4px; }
 .account-overline { font-size: 10px; line-height: 1.4; letter-spacing: .13em; text-transform: uppercase; }
@@ -35,6 +36,9 @@ const accountLayoutStyles = `
   .account-order-card { padding: 16px; }
   .account-order-card img { width: 85px; height: 110px; }
   .account-detail-content h1 { font-size: 28px; }
+}
+@media (max-width: 479px) {
+  .profile-card { padding-left: 18px; padding-right: 18px; }
 }
 `;
 
@@ -82,7 +86,7 @@ export default function AccountLayout({ children, breadcrumb = [], notice, onLog
   const navigate = useNavigate();
   const { logout: logoutAccount } = useAuth();
   const [isBookingOpen, setIsBookingOpen] = useState(false);
-  const logout = onLogout || (() => { logoutAccount(); navigate('/login'); });
+  const logout = onLogout || (() => { navigate('/login', { replace: true }); logoutAccount(); });
 
   const shouldShowBreadcrumb = !hideBreadcrumb && breadcrumb && breadcrumb.length > 0;
 

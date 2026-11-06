@@ -22,4 +22,10 @@ router.post('/', optionalAuthenticate, templateController.createTemplate);
 // Cập nhật mẫu hợp đồng
 router.put('/:id', optionalAuthenticate, templateController.updateTemplate);
 
+// Xóa mẫu hợp đồng
+router.delete('/:id', optionalAuthenticate, templateController.deleteTemplate);
+
+// Nhân bản mẫu hợp đồng
+router.post('/:id/duplicate', optionalAuthenticate, templateController.duplicateTemplate);
+
 export default router;

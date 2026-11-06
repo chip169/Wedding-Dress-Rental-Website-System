@@ -136,3 +136,20 @@ export async function updateContractTemplate(id, updateData) {
   return await axiosClient.put(`/contract-templates/${id}`, updateData);
 }
 
+/**
+ * Xóa mẫu hợp đồng khỏi hệ thống
+ * @param {string} id
+ */
+export async function deleteContractTemplate(id) {
+  return await axiosClient.delete(`/contract-templates/${id}`);
+}
+
+/**
+ * Nhân bản mẫu hợp đồng
+ * @param {string} id
+ */
+export async function duplicateContractTemplate(id) {
+  return await axiosClient.post(`/contract-templates/${id}/duplicate`);
+}
+
+

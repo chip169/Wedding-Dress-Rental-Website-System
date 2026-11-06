@@ -1,14 +1,46 @@
 import Order from '../models/Order.model.js';
 import ReturnInspection from '../models/ReturnInspection.model.js';
+import Contract from '../models/Contract.model.js';
+import ContractTemplate from '../models/ContractTemplate.model.js';
 import User from '../models/User.model.js';
 import {
   sendInspectionNotificationEmail,
   sendRefundConfirmationEmail,
+  sendDepositSuccessEmail,
 } from '../utils/sendEmail.js';
 
 /**
  * Service xử lý nghiệp vụ Đơn Thuê Váy & Hợp Đồng (Orders)
  */
+
+/**
+ * Hàm hỗ trợ parse ngày an toàn từ định dạng ISO YYYY-MM-DD hoặc DD/MM/YYYY
+ */
+function parseDateSafe(val, fallbackDate = new Date()) {
+  if (!val) return fallbackDate;
+  if (val instanceof Date) {
+    return isNaN(val.getTime()) ? fallbackDate : val;
+  }
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (!trimmed || trimmed === 'undefined' || trimmed === 'null' || trimmed === 'Invalid Date' || trimmed === 'NaN') {
+      return fallbackDate;
+    }
+    if (trimmed.includes('/')) {
+      const parts = trimmed.split('/');
+      if (parts.length === 3) {
+        const d = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const y = parseInt(parts[2], 10);
+        const dt = new Date(y, m, d);
+        if (!isNaN(dt.getTime())) return dt;
+      }
+    }
+    const parsed = new Date(trimmed);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+  return fallbackDate;
+}
 
 export const createOrder = async (orderData, currentUser = null) => {
   const {
@@ -77,10 +109,8 @@ export const createOrder = async (orderData, currentUser = null) => {
   const randomSuffix = Math.floor(100 + Math.random() * 900);
   const orderCode = `UB-2026-${randomSuffix}`;
 
-  const resolvedStartDate = rentalStartDate ? new Date(rentalStartDate) : new Date();
-  const resolvedEndDate = rentalEndDate
-    ? new Date(rentalEndDate)
-    : new Date(Date.now() + 4 * 24 * 60 * 60 * 1000);
+  const resolvedStartDate = parseDateSafe(rentalStartDate, new Date());
+  const resolvedEndDate = parseDateSafe(rentalEndDate, new Date(Date.now() + 4 * 24 * 60 * 60 * 1000));
 
   const newOrder = new Order({
     orderCode,
@@ -110,6 +140,73 @@ export const createOrder = async (orderData, currentUser = null) => {
   });
 
   await newOrder.save();
+
+  // Tự động khởi tạo hợp đồng điện tử có hiệu lực pháp lý
+  try {
+    const defaultTemplate = await ContractTemplate.findOne({
+      $or: [{ code: 'TPL-HC-01' }, { isDefault: true }],
+    }).lean();
+
+    const firstItem = newOrder.items[0] || {};
+    await Contract.create({
+      contractCode: newOrder.contractCode,
+      orderId: newOrder._id,
+      customerId: newOrder.customerId || null,
+      templateId: defaultTemplate?._id || null,
+      templateName: defaultTemplate?.name || 'Hợp Đồng Thuê Lễ Phục Cưới Cao Cấp (Haute Couture)',
+      customerName: newOrder.customerName || 'Cô Dâu UniBridal',
+      phone: newOrder.customerPhone || '0908123888',
+      idCard: newOrder.customerCccd || '',
+      dressInfo: {
+        dressId: firstItem.dressId || null,
+        name: firstItem.name || 'Váy Cưới Haute Couture',
+        code: firstItem.code || 'UB-HC-2026',
+        size: firstItem.size || 'S',
+        image: firstItem.image || '',
+      },
+      startDate: newOrder.rentalStartDate,
+      endDate: newOrder.rentalEndDate,
+      rentalPrice: newOrder.totalRentPrice,
+      depositAmount: newOrder.totalDeposit,
+      totalValue: newOrder.totalPayment,
+      status: 'active',
+      signedAt: new Date(),
+      signedMethod: 'Chữ ký điện tử trực tuyến',
+      packageType: `Gói ${newOrder.rentalDays} Ngày Tiêu Chuẩn`,
+      clauses: defaultTemplate?.clauses || [],
+    });
+  } catch (contractErr) {
+    console.error('[AUTO CREATE CONTRACT ERROR]:', contractErr.message);
+  }
+
+  // Tự động gửi email xác nhận đặt cọc thành công
+  try {
+    const targetEmail = newOrder.customerEmail || currentUser?.email;
+    if (targetEmail) {
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+      sendDepositSuccessEmail({
+        to: targetEmail,
+        fullName: newOrder.customerName || 'Quý khách',
+        orderCode: newOrder.orderCode,
+        contractCode: newOrder.contractCode,
+        items: newOrder.items,
+        rentalStartDate: newOrder.rentalStartDate,
+        rentalEndDate: newOrder.rentalEndDate,
+        weddingDate: orderData.weddingDate,
+        rentalDays: newOrder.rentalDays,
+        totalRentPrice: newOrder.totalRentPrice,
+        totalDeposit: newOrder.totalDeposit,
+        depositPaidAmount: newOrder.depositPaidAmount,
+        remainingAmount: Math.max(0, newOrder.totalPayment - newOrder.depositPaidAmount),
+        deliveryMethod: newOrder.deliveryMethod,
+        shippingAddress: newOrder.shippingAddress,
+        orderDetailUrl: `${clientUrl}/profile/orders`,
+      }).catch((err) => console.error('[EMAIL DEPOSIT SEND ERROR]', err.message));
+    }
+  } catch (err) {
+    console.error('[TRIGGER DEPOSIT EMAIL ERROR]', err.message);
+  }
+
   return newOrder;
 };
 
@@ -137,7 +234,16 @@ export const getMyOrders = async (userId) => {
 
 export const getAllOrders = async (filters = {}) => {
   const query = {};
-  if (filters.status) query.status = filters.status;
+  if (filters.status === 'disputed') {
+    const disputedInspections = await ReturnInspection.find({ customerStatus: 'disputed' }).select('orderId').lean();
+    const disputedOrderIds = disputedInspections.map((i) => i.orderId);
+    query.$or = [
+      { _id: { $in: disputedOrderIds } },
+      { status: 'disputed' }
+    ];
+  } else if (filters.status) {
+    query.status = filters.status;
+  }
   if (filters.search) {
     const rawSearch = String(filters.search).trim();
     const cleanSearch = rawSearch.replace(/^[#\s]+/, ''); // Loại bỏ ký tự # nếu người dùng nhập "#UB-2026-0012"
@@ -168,13 +274,32 @@ export const getAllOrders = async (filters = {}) => {
   ]);
 
   const orderIds = orders.map((o) => o._id);
-  const inspections = await ReturnInspection.find({ orderId: { $in: orderIds } }).lean();
+  const [inspections, contracts] = await Promise.all([
+    ReturnInspection.find({ orderId: { $in: orderIds } }).lean(),
+    Contract.find({ orderId: { $in: orderIds } }).lean(),
+  ]);
   const inspectionMap = new Map(inspections.map((i) => [String(i.orderId), i]));
+  const contractMap = new Map(contracts.map((c) => [String(c.orderId), c]));
 
-  const enrichedOrders = orders.map((o) => ({
-    ...o,
-    inspection: inspectionMap.get(String(o._id)) || null,
-  }));
+  const enrichedOrders = orders.map((o) => {
+    const hasAccount = Boolean(o.customerId && String(o.customerId).trim() !== '');
+    const insp = inspectionMap.get(String(o._id)) || null;
+    const contract = contractMap.get(String(o._id)) || null;
+    let status = o.status;
+    const isCustomerApproved = insp?.customerStatus === 'approved' || insp?.customerConfirmed;
+    if (isCustomerApproved && status !== 'completed' && status !== 'complete') {
+      status = 'completed';
+      Order.updateOne({ _id: o._id }, { $set: { status: 'completed' } }).catch(() => {});
+    }
+    return {
+      ...o,
+      status,
+      hasAccount,
+      isGuest: !hasAccount,
+      inspection: insp,
+      contract: contract || o.contract || null,
+    };
+  });
 
   return {
     orders: enrichedOrders,
@@ -200,8 +325,15 @@ export const getOrderByIdOrCode = async (idOrCode) => {
     throw new Error('Không tìm thấy thông tin đơn thuê.');
   }
   const inspection = await ReturnInspection.findOne({ orderId: order._id }).lean();
+  let status = order.status;
+  const isCustomerApproved = inspection?.customerStatus === 'approved' || inspection?.customerConfirmed;
+  if (isCustomerApproved && status !== 'completed' && status !== 'complete') {
+    status = 'completed';
+    Order.updateOne({ _id: order._id }, { $set: { status: 'completed' } }).catch(() => {});
+  }
   return {
     ...order,
+    status,
     inspection: inspection || null,
   };
 };
@@ -220,6 +352,21 @@ export const updateOrderStatus = async (idOrCode, status) => {
       { orderId: order._id },
       { isRefunded: true, refundedAt: new Date(), customerStatus: 'approved', customerConfirmedAt: new Date() }
     );
+    // Tự động đồng bộ hợp đồng pháp lý sang trạng thái hoàn thành
+    await Contract.findOneAndUpdate(
+      { $or: [{ orderId: order._id }, { contractCode: order.contractCode }] },
+      { status: 'completed' }
+    ).catch(() => {});
+  } else if (status === 'cancelled') {
+    await Contract.findOneAndUpdate(
+      { $or: [{ orderId: order._id }, { contractCode: order.contractCode }] },
+      { status: 'cancelled' }
+    ).catch(() => {});
+  } else if (['deposit_paid', 'active', 'delivered', 'renting'].includes(status)) {
+    await Contract.findOneAndUpdate(
+      { $or: [{ orderId: order._id }, { contractCode: order.contractCode }] },
+      { status: 'active' }
+    ).catch(() => {});
   }
 
   return order;
@@ -284,6 +431,11 @@ export const submitReturnInspection = async (orderId, data, staffUser) => {
   // Upsert: nếu đã có biên bản kiểm định thì cập nhật lại biên bản và số tiền trừ
   let inspection = await ReturnInspection.findOne({ orderId });
   if (inspection) {
+    if (inspection.customerStatus === 'approved' || inspection.customerConfirmed) {
+      const err = new Error('Khách hàng đã duyệt biên bản kiểm định, không thể chỉnh sửa.');
+      err.statusCode = 400;
+      throw err;
+    }
     inspection.staffId = staffUser?._id || inspection.staffId;
     inspection.returnedAt = new Date();
     inspection.lateDays = lateDays;
@@ -338,6 +490,8 @@ export const submitReturnInspection = async (orderId, data, staffUser) => {
         to: customerEmail,
         fullName: customerName,
         orderCode: order.orderCode,
+        inspectorName: staffUser?.fullName || 'Chuyên Viên Atelier UniBridal',
+        inspectionDate: inspection.returnedAt,
         totalDeposit: order.totalDeposit,
         totalDeduction: inspection.totalDeduction,
         finalRefundAmount: inspection.finalRefundAmount,

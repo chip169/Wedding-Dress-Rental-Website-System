@@ -1,4 +1,5 @@
 import * as orderService from '../services/order.service.js';
+import * as customer from '../services/customerAccountService.js';
 
 export const createOrder = async (req, res, next) => {
   try {
@@ -22,7 +23,7 @@ export const getMyOrders = async (req, res, next) => {
         data: [],
       });
     }
-    const orders = await orderService.getMyOrders(req.user._id);
+    const orders = await customer.listOrders(req.user._id);
     res.status(200).json({
       success: true,
       message: 'Lấy danh sách đơn thuê cá nhân thành công',
@@ -54,6 +55,7 @@ export const getAllOrders = async (req, res, next) => {
 
 export const getOrderById = async (req, res, next) => {
   try {
+    await customer.assertOrderAccess(req.user, req.params.id);
     const order = await orderService.getOrderByIdOrCode(req.params.id);
     res.status(200).json({
       success: true,
@@ -107,6 +109,7 @@ export const submitReturnInspection = async (req, res, next) => {
 
 export const getReturnInspection = async (req, res, next) => {
   try {
+    await customer.assertOrderAccess(req.user, req.params.id);
     const inspection = await orderService.getReturnInspection(req.params.id);
     res.status(200).json({
       success: true,
@@ -120,11 +123,13 @@ export const getReturnInspection = async (req, res, next) => {
 
 export const approveReturnInspection = async (req, res, next) => {
   try {
-    const result = await orderService.approveReturnInspection(req.params.id, req.body, req.user);
+    const result = await customer.confirmInspection(req.user._id, req.params.id, req.body);
     res.status(200).json({
       success: true,
-      message: 'Khách hàng đã đồng ý biên bản kiểm định. Hệ thống đã tự động hoàn cọc và hoàn tất đơn hàng!',
+      message: 'Đã xác nhận biên bản kiểm định. Đơn hàng đã hoàn tất thành công.',
       data: result,
+      order: result.order,
+      inspection: result.inspection,
     });
   } catch (error) {
     next(error);
@@ -133,7 +138,7 @@ export const approveReturnInspection = async (req, res, next) => {
 
 export const disputeReturnInspection = async (req, res, next) => {
   try {
-    const result = await orderService.disputeReturnInspection(req.params.id, req.body, req.user);
+    const result = await customer.disputeInspection(req.user._id, req.params.id, req.body.reason);
     res.status(200).json({
       success: true,
       message: 'Gửi khiếu nại biên bản kiểm định thành công! Chuyên viên showroom sẽ liên hệ giải quyết.',

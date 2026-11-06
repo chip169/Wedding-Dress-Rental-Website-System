@@ -10,8 +10,9 @@ const STATUS = {
   preparing: ['active', 'Đang chuẩn bị bàn giao'],
   delivered: ['active', 'Đã bàn giao'],
   renting: ['active', 'Đang thuê'],
-  returned: ['active', 'Đã trả váy'],
+  returned: ['active', 'Đang kiểm định'],
   completed: ['complete', 'Hoàn tất'],
+  complete: ['complete', 'Hoàn tất'],
   cancelled: ['cancelled', 'Đã hủy'],
 };
 
@@ -21,17 +22,22 @@ export const formatVnd = (value) => formatCurrencyVND(value);
 export function mapOrder(order) {
   if (!order) return null;
   const item = order.items?.[0] || {};
-  const [status, statusLabel] = STATUS[order.status] || ['active', order.statusLabel || order.status || 'Đang xử lý'];
+  let currentRawStatus = order.status;
+  const isApproved = order.inspection?.customerStatus === 'approved' || order.inspection?.customerConfirmed;
+  if (isApproved && currentRawStatus !== 'cancelled') {
+    currentRawStatus = 'completed';
+  }
+  const [status, statusLabel] = STATUS[currentRawStatus] || ['active', order.statusLabel || currentRawStatus || 'Đang xử lý'];
   return {
     id: order.orderCode || order.id || order._id,
     _id: order._id || order.id,
     orderCode: order.orderCode || order.id,
     status,
     statusLabel,
-    rawStatus: order.status,
+    rawStatus: currentRawStatus,
     date: fmtDate(order.rentalStartDate || order.createdAt || order.date),
-    dress: item.name || order.dress || 'Lễ phục',
-    image: order.image || (item.dressId ? dressImage(item.dressId) : elysianImage),
+    dress: order.items?.map((entry) => entry.name).filter(Boolean).join(', ') || order.dress || 'Lễ phục',
+    image: order.image || (item.image ? dressImage({ image: item.image }) : typeof item.dressId === 'object' && item.dressId ? dressImage(item.dressId) : elysianImage),
     imageAlt: order.imageAlt || item.name || 'Lễ phục',
     category: item.dressId?.silhouette || order.category || 'Haute Couture',
     size: item.size || order.size || '—',
@@ -48,6 +54,11 @@ export function mapOrder(order) {
     shippingAddress: order.shippingAddress,
     items: order.items || [],
     inspection: order.inspection || null,
+    customerName: order.customerName || '',
+    contract: order.contract || null,
+    contractCode: order.contractCode || '',
+    contractSignature: order.contractSignature || '',
+    rentalDays: order.rentalDays,
   };
 }
 

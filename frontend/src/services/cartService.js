@@ -39,6 +39,11 @@ function migratePreviewIds(items, store, key) {
   return migrated;
 }
 
+function rentalDays(value) {
+  const days = Number(value);
+  return Number.isFinite(days) ? Math.max(1, Math.min(14, Math.trunc(days))) : 1;
+}
+
 export function getCart() {
   const store = storage();
   if (!store) return [];
@@ -46,7 +51,9 @@ export function getCart() {
     const raw = store.getItem(CART_KEY);
     if (raw === null || raw === '[{"id":"1","days":1},{"id":"4","days":1}]') return [];
     const parsed = JSON.parse(raw);
-    return Array.isArray(parsed) ? migratePreviewIds(parsed, store, CART_KEY) : [];
+    if (!Array.isArray(parsed)) return [];
+    const valid = parsed.filter((item) => item && ['string', 'number'].includes(typeof item.id));
+    return migratePreviewIds(valid, store, CART_KEY).map((item) => ({ ...item, days: rentalDays(item.days) }));
   } catch { return []; }
 }
 
@@ -56,14 +63,39 @@ function saveCart(items) {
   return items;
 }
 
+const isDatabaseId = (id) => /^[a-f\d]{24}$/i.test(String(id));
+
 export function refreshCartWithDresses(dresses) {
-  const byCode = new Map(dresses.map((dress) => [dress.code, dress]));
-  const byName = new Map(dresses.map((dress) => [dress.name, dress]));
-  return saveCart(getCart().map((item) => {
+  const byId = new Map(dresses.map((dress) => [String(dress._id || dress.id), dress]));
+  const byCode = new Map(dresses.filter((dress) => dress.code).map((dress) => [dress.code, dress]));
+  const byName = new Map();
+  dresses.forEach((dress) => {
+    // A legacy name is usable only when it identifies a single catalog item.
+    byName.set(dress.name, byName.has(dress.name) ? null : dress);
+  });
+  const normalized = [];
+  const positions = new Map();
+  getCart().forEach((item) => {
     const existing = CART_CATALOG[item.id];
-    const dress = byCode.get(item.code) || byName.get(item.name || existing?.name);
-    return dress ? { ...item, code: dress.code, name: dress.name, image: dress.image, price: dress.rentPrice, deposit: dress.depositAmount, status: dress.status, unavailable: dress.status === 'retired' } : { ...item, unavailable: true };
-  }));
+    const dress = byId.get(String(item.id)) || byCode.get(item.code || existing?.code) ||
+      (!isDatabaseId(item.id) && byName.get(item.name || existing?.name));
+    if (!dress) {
+      normalized.push({ ...item, unavailable: true });
+      return;
+    }
+    const id = String(dress._id || dress.id);
+    const days = rentalDays(item.days);
+    if (positions.has(id)) {
+      const previous = normalized[positions.get(id)];
+      previous.days = Math.max(previous.days, days);
+      return;
+    }
+    positions.set(id, normalized.length);
+    normalized.push({ ...item, id, days, detailHref: `/dresses/${id}`, code: dress.code, name: dress.name,
+      image: dressImage(dress), price: dress.rentPrice, deposit: dress.depositAmount,
+      status: dress.status, unavailable: dress.status !== 'available' });
+  });
+  return saveCart(normalized);
 }
 
 function parseMoney(value) {
@@ -72,9 +104,10 @@ function parseMoney(value) {
 }
 
 export function addToCart(dress) {
-  const id = String(dress.id ?? dress._id);
+  const id = String(dress._id ?? dress.id);
   const current = getCart();
-  if (current.some((item) => item.id === id)) return false;
+  if (current.some((item) => String(item.id) === id || (item.code && item.code === dress.code) ||
+    (!isDatabaseId(item.id) && (item.name || CART_CATALOG[item.id]?.name) === dress.name))) return false;
   const item = {
     id,
     days: 1,
@@ -92,11 +125,11 @@ export function addToCart(dress) {
 }
 
 export function updateCartDays(id, days) {
-  return saveCart(getCart().map((item) => item.id === String(id) ? { ...item, days: Math.max(1, Math.min(14, days)) } : item));
+  return saveCart(getCart().map((item) => String(item.id) === String(id) ? { ...item, days: rentalDays(days) } : item));
 }
 
 export function removeFromCart(id) {
-  return saveCart(getCart().filter((item) => item.id !== String(id)));
+  return saveCart(getCart().filter((item) => String(item.id) !== String(id)));
 }
 
 export function clearCart() {
@@ -106,7 +139,7 @@ export function clearCart() {
 export function resolveCartItem(item) {
   const resolved = { ...CART_CATALOG[item.id], ...item };
   const catalogId = /^WDR-(\d{3})$/.exec(resolved.code || '')?.[1];
-  return { ...resolved, image: dressImage(resolved), detailHref: catalogId ? `/dresses/${Number(catalogId)}` : resolved.detailHref };
+  return { ...resolved, image: dressImage(resolved), detailHref: resolved.detailHref !== undefined ? resolved.detailHref : catalogId ? `/dresses/${Number(catalogId)}` : undefined };
 }
 
 export function getWishlist() {

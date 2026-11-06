@@ -1,8 +1,45 @@
 import Appointment from '../models/Appointment.model.js';
+import { sendAppointmentSuccessEmail } from '../utils/sendEmail.js';
+
+const BRANCH_DETAILS = {
+  'hcm-q1': {
+    name: 'UniBridal Flagship Showroom Q.1 TP.HCM',
+    address: '128 Đồng Khởi, P. Bến Nghé, Quận 1, TP. Hồ Chí Minh',
+    phone: '1800 8998',
+  },
+  'hn-hk': {
+    name: 'UniBridal Heritage Showroom Hoàn Kiếm Hà Nội',
+    address: '45 Tràng Tiền, P. Tràng Tiền, Q. Hoàn Kiếm, Hà Nội',
+    phone: '1800 8999',
+  },
+};
 
 /**
  * Service xử lý nghiệp vụ Lịch Hẹn Thử Váy (Appointments)
  */
+
+function parseDateSafe(val, fallbackDate = null) {
+  if (!val) return fallbackDate;
+  if (val instanceof Date) {
+    return isNaN(val.getTime()) ? fallbackDate : val;
+  }
+  if (typeof val === 'string') {
+    const trimmed = val.trim();
+    if (trimmed.includes('/')) {
+      const parts = trimmed.split('/');
+      if (parts.length === 3) {
+        const d = parseInt(parts[0], 10);
+        const m = parseInt(parts[1], 10) - 1;
+        const y = parseInt(parts[2], 10);
+        const dt = new Date(y, m, d);
+        if (!isNaN(dt.getTime())) return dt;
+      }
+    }
+    const parsed = new Date(trimmed);
+    if (!isNaN(parsed.getTime())) return parsed;
+  }
+  return fallbackDate;
+}
 
 export const createAppointment = async (appointmentData, currentUser = null) => {
   const {
@@ -42,8 +79,8 @@ export const createAppointment = async (appointmentData, currentUser = null) => 
     customerPhone: resolvedPhone.trim(),
     customerEmail: (customerEmail || email || '').trim(),
     branch: branch || branchId || 'hcm-q1',
-    appointmentDate: new Date(resolvedDate),
-    weddingDate: weddingDate ? new Date(weddingDate) : null,
+    appointmentDate: parseDateSafe(resolvedDate, new Date()),
+    weddingDate: parseDateSafe(weddingDate, null),
     timeSlot: timeSlot.trim(),
     guestsCount: Number(guestsCount) || 2,
     interestedDresses: interestedDresses || selectedDresses || [],
@@ -53,6 +90,32 @@ export const createAppointment = async (appointmentData, currentUser = null) => 
   });
 
   await newAppointment.save();
+
+  // Tự động gửi email giấy mời danh dự thử váy Private Suite
+  try {
+    const targetEmail = newAppointment.customerEmail || currentUser?.email;
+    if (targetEmail) {
+      const branchInfo = BRANCH_DETAILS[newAppointment.branch] || BRANCH_DETAILS['hcm-q1'];
+      sendAppointmentSuccessEmail({
+        to: targetEmail,
+        fullName: newAppointment.customerName,
+        appointmentCode: newAppointment.appointmentCode,
+        appointmentDate: newAppointment.appointmentDate,
+        timeSlot: newAppointment.timeSlot,
+        branchName: branchInfo.name,
+        branchAddress: branchInfo.address,
+        branchPhone: branchInfo.phone,
+        guestsCount: newAppointment.guestsCount,
+        interestedDresses: newAppointment.interestedDresses,
+        vipServices: newAppointment.vipServices,
+        stylistName: 'Chuyên Viên Stylist UniBridal',
+        notes: newAppointment.notes,
+      }).catch((err) => console.error('[EMAIL APPOINTMENT SEND ERROR]', err.message));
+    }
+  } catch (err) {
+    console.error('[TRIGGER APPOINTMENT EMAIL ERROR]', err.message);
+  }
+
   return newAppointment;
 };
 

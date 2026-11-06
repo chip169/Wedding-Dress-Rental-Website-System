@@ -1,11 +1,11 @@
 import React from 'react';
-import { useLocation } from 'react-router-dom';
+import { useLocation, Navigate } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import NotFoundPage from '../../pages/common/NotFoundPage';
 
 /**
  * Route Guard phân quyền trên giao diện Frontend
- * Hiển thị màn hình 404/Quyền truy cập khi chưa đăng nhập hoặc không đủ thẩm quyền
+ * Chuyển hướng trực tiếp đến /login khi chưa đăng nhập, ngăn ngừa chèn màn 404/401 khi đăng xuất
  * @param {Array<string>} allowedRoles - ['admin'], ['staff', 'admin'], ['customer']
  */
 export default function ProtectedRoute({ children, allowedRoles }) {
@@ -20,12 +20,12 @@ export default function ProtectedRoute({ children, allowedRoles }) {
     );
   }
 
-  // Chưa đăng nhập -> Hiển thị màn hình yêu cầu đăng nhập (401/404)
+  // Chưa đăng nhập -> Tự động chuyển hướng ngay sang trang đăng nhập (/login) mượt mà
   if (!isLoggedIn) {
-    return <NotFoundPage type="unauthenticated" />;
+    return <Navigate to="/login" replace state={{ from: location }} />;
   }
 
-  // Đã đăng nhập nhưng không đủ quyền (ví dụ Customer vào link Admin/Staff) -> Hiển thị màn hình giới hạn quyền (403/404)
+  // Đã đăng nhập nhưng không đủ quyền (ví dụ Customer vào link Admin/Staff) -> Hiển thị màn hình giới hạn quyền (403)
   if (allowedRoles && !allowedRoles.includes(role)) {
     return <NotFoundPage type="forbidden" />;
   }

@@ -7,41 +7,37 @@ import {
   ShieldPlus,
   Calendar,
   Clock,
-  Check,
-  X,
   Phone,
   Sparkles,
-  Users,
 } from 'lucide-react';
 import { message } from 'antd';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import DashboardChart from '../../components/common/DashboardChart';
 import { getStaffDashboard } from '../../services/reportService';
-import {
-  getAppointmentsApi,
-  updateAppointmentStatusApi,
-  APPOINTMENT_EVENT,
-} from '../../services/appointmentService';
+import { APPOINTMENT_EVENT } from '../../services/appointmentService';
+import { getStaffAppointments, updateStaffAppointmentStatus } from '../../services/staffDashboardService';
 
 const PERIODS = { week: '7 ngày qua', month: 'Tháng này', quarter: 'Quý này' };
+const STATUS_LABELS = { confirmed: 'Đã xác nhận', completed: 'Hoàn tất', cancelled: 'Đã hủy' };
 
 export default function StaffDashboardPage() {
   const [period, setPeriod] = useState('week');
+  const [reload, setReload] = useState(0);
   const [data, setData] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
   const [appointments, setAppointments] = useState([]);
   const [loadingApt, setLoadingApt] = useState(false);
+  const [appointmentsError, setAppointmentsError] = useState('');
 
   const fetchAppointments = useCallback(async () => {
     setLoadingApt(true);
+    setAppointmentsError('');
     try {
-      const res = await getAppointmentsApi();
-      const list = Array.isArray(res?.data) ? res.data : (res?.data?.data || []);
-      setAppointments(list);
+      setAppointments(await getStaffAppointments());
     } catch {
       setAppointments([]);
-      message.error('Lỗi kết nối cơ sở dữ liệu khi tải danh sách lịch hẹn.');
+      setAppointmentsError('Không thể tải danh sách lịch hẹn từ máy chủ. Vui lòng làm mới lịch để thử lại.');
     } finally {
       setLoadingApt(false);
     }
@@ -55,8 +51,8 @@ export default function StaffDashboardPage() {
 
   const handleUpdateStatus = async (id, newStatus) => {
     try {
-      await updateAppointmentStatusApi(id, newStatus);
-      message.success(`Đã cập nhật trạng thái lịch hẹn thành "${newStatus === 'confirmed' ? 'Đã xác nhận' : newStatus === 'completed' ? 'Hoàn tất' : 'Đã hủy'}"`);
+      await updateStaffAppointmentStatus(id, newStatus);
+      message.success(`Đã cập nhật lịch hẹn thành "${STATUS_LABELS[newStatus]}".`);
       fetchAppointments();
     } catch {
       message.error('Cập nhật trạng thái lịch hẹn thất bại.');
@@ -67,24 +63,22 @@ export default function StaffDashboardPage() {
     let active = true;
     setError('');
     setLoading(true);
+    setData(null);
     getStaffDashboard(period)
       .then((value) => {
         if (!active) return;
-        if (value) {
-          setData(value?.data || value);
-        }
-        setLoading(false);
+        setData(value);
       })
-      .catch((err) => {
+      .catch(() => {
         if (!active) return;
         setData(null);
         setError('Lỗi kết nối cơ sở dữ liệu: Không thể tải dữ liệu bảng điều khiển từ máy chủ MongoDB.');
-        setLoading(false);
-      });
+      })
+      .finally(() => { if (active) setLoading(false); });
     return () => {
       active = false;
     };
-  }, [period]);
+  }, [period, reload]);
 
   const chart = useMemo(() => {
     const values = data?.chart || [];
@@ -137,9 +131,10 @@ export default function StaffDashboardPage() {
     >
       {error && (
         <div role="alert" className="mb-6 rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">
-          <span className="font-semibold">⚠️ Lỗi kết nối Cơ sở dữ liệu:</span> {error}
+          {error} <button type="button" onClick={() => setReload((value) => value + 1)} className="ml-3 underline">Thử lại</button>
         </div>
       )}
+      {loading && <p role="status" className="mb-4 text-sm text-stone-500">Đang tải thống kê...</p>}
       {data?.ordersMissingDepositTransaction > 0 && (
         <p role="alert" className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
           Có {data.ordersMissingDepositTransaction} đơn đã chuyển sang trạng thái đặt cọc nhưng chưa có giao dịch cọc thành công. Vui lòng đối soát với bộ phận thu ngân.
@@ -237,9 +232,13 @@ export default function StaffDashboardPage() {
           </button>
         </div>
 
-        {appointments.length === 0 ? (
+        {loadingApt ? (
+          <p role="status" className="py-12 text-center text-[#8C7D7E] text-[13px]">Đang tải danh sách lịch hẹn...</p>
+        ) : appointmentsError ? (
+          <p role="alert" className="rounded-lg border border-red-200 bg-red-50 p-4 text-sm text-red-800">{appointmentsError}</p>
+        ) : appointments.length === 0 ? (
           <div className="py-12 text-center text-[#8C7D7E] text-[13px]">
-            Hiện chưa có lịch hẹn thử váy nào được ghi nhận.
+            Không có lịch hẹn chờ xử lý trong hôm nay và sắp tới.
           </div>
         ) : (
           <div className="overflow-x-auto">

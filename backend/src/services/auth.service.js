@@ -241,9 +241,19 @@ export const authService = {
       throw err;
     }
 
-    // Kiểm tra đã xác thực email chưa
-    if (!user.isEmailVerified) {
-      // Tự động sinh OTP mới gửi cho khách nếu chưa xác thực
+    const roleCode = user.roleId?.code || 'CUSTOMER';
+    const roleUpper = roleCode.toUpperCase();
+
+    // Tài khoản do Admin lập HOẶC tài khoản nội bộ (ADMIN, STAFF, MANAGER) không yêu cầu mã OTP kích hoạt
+    if (user.createdByAdmin || ['ADMIN', 'STAFF', 'MANAGER'].includes(roleUpper)) {
+      if (!user.isEmailVerified) {
+        user.isEmailVerified = true;
+        user.emailVerificationOtp = null;
+        user.emailVerificationExpires = null;
+        await user.save();
+      }
+    } else if (!user.isEmailVerified) {
+      // Tự động sinh OTP mới gửi cho khách vãng lai tự đăng ký nếu chưa kích hoạt
       const otp = generateOtp();
       user.emailVerificationOtp = otp;
       user.emailVerificationExpires = new Date(Date.now() + OTP_EXPIRES_MS);
@@ -257,7 +267,6 @@ export const authService = {
       throw err;
     }
 
-    const roleCode = user.roleId?.code || 'CUSTOMER';
     const token = generateToken(user, roleCode);
 
     return {

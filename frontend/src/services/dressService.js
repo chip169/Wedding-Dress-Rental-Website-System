@@ -40,11 +40,11 @@ export function convertCatalogItemToDress(item) {
       { id: 'M', label: 'M', note: '52 - 58kg', bust: '87-90cm', waist: '68-73cm' },
       { id: 'L', label: 'L', note: '58 - 65kg', bust: '91-95cm', waist: '74-78cm' },
     ],
-    images: [
+    images: (item.images && item.images.length >= 4) ? item.images : [
       item.image,
-      laceDetail,
-      card9MannequinAtelier,
-      heroBride,
+      item.image?.replace('.jpg', '_mannequin.jpg') || card9MannequinAtelier,
+      item.image?.replace('.jpg', '_left.jpg') || laceDetail,
+      item.image?.replace('.jpg', '_right.jpg') || heroBride,
     ],
     price: priceNum,
     depositAmount: depositNum,
@@ -161,6 +161,30 @@ export async function getDressById(idOrSlug) {
           priceNumber: d.rentPrice || d.price,
           depositAmount: d.depositAmount || 15000000,
           image: (d.images && d.images[0]) || d.image || '/assets/dresses/dress_01.jpg',
+          images: (Array.isArray(d.images) && d.images.length > 0) ? (
+            ((['UB-025', 'UB-024', 'UB-023', 'UB-022', 'UB-021', 'UB-020', 'UB-019', 'UB-018', 'UB-017', 'UB-016', 'UB-015', 'UB-014', 'UB-013', 'UB-012', 'UB-010', 'UB-001'].includes(d.code) || (d.images[0] && (d.images[0].includes('dress_25') || d.images[0].includes('dress_24') || d.images[0].includes('dress_23') || d.images[0].includes('dress_22') || d.images[0].includes('dress_21') || d.images[0].includes('dress_20') || d.images[0].includes('dress_19') || d.images[0].includes('dress_18') || d.images[0].includes('dress_17') || d.images[0].includes('dress_16') || d.images[0].includes('dress_15') || d.images[0].includes('dress_14') || d.images[0].includes('dress_13') || d.images[0].includes('dress_12')))) && !d.images.some(img => img.includes('banquet')))
+              ? [...d.images, (d.code === 'UB-025' || d.images[0]?.includes('dress_25')) ? '/assets/dresses/dress_25_banquet.jpg' : (d.code === 'UB-024' || d.images[0]?.includes('dress_24')) ? '/assets/dresses/dress_24_banquet.jpg' : (d.code === 'UB-023' || d.images[0]?.includes('dress_23')) ? '/assets/dresses/dress_23_banquet.jpg' : (d.code === 'UB-022' || d.images[0]?.includes('dress_22')) ? '/assets/dresses/dress_22_banquet.jpg' : (d.code === 'UB-021' || d.images[0]?.includes('dress_21')) ? '/assets/dresses/dress_21_banquet.jpg' : (d.code === 'UB-020' || d.images[0]?.includes('dress_20')) ? '/assets/dresses/dress_20_banquet.jpg' : (d.code === 'UB-019' || d.images[0]?.includes('dress_19')) ? '/assets/dresses/dress_19_banquet.jpg' : (d.code === 'UB-018' || d.images[0]?.includes('dress_18')) ? '/assets/dresses/dress_18_banquet.jpg' : (d.code === 'UB-017' || d.images[0]?.includes('dress_17')) ? '/assets/dresses/dress_17_banquet.jpg' : (d.code === 'UB-016' || d.images[0]?.includes('dress_16')) ? '/assets/dresses/dress_16_banquet.jpg' : (d.code === 'UB-015' || d.images[0]?.includes('dress_15')) ? '/assets/dresses/dress_15_banquet.jpg' : (d.code === 'UB-014' || d.images[0]?.includes('dress_14')) ? '/assets/dresses/dress_14_banquet.jpg' : (d.code === 'UB-013' || d.images[0]?.includes('dress_13')) ? '/assets/dresses/dress_13_banquet.jpg' : '/assets/dresses/dress_12_banquet.jpg']
+              : d.images
+          ) : [
+            (d.images && d.images[0]) || d.image || '/assets/dresses/dress_01.jpg',
+            ((d.images && d.images[0]) || d.image || '/assets/dresses/dress_01.jpg').replace('.jpg', '_mannequin.jpg'),
+            ((d.images && d.images[0]) || d.image || '/assets/dresses/dress_01.jpg').replace('.jpg', '_left.jpg'),
+            ((d.images && d.images[0]) || d.image || '/assets/dresses/dress_01.jpg').replace('.jpg', '_right.jpg'),
+            ...(((d.code === 'UB-012' || (d.image && d.image.includes('dress_12')))) ? ['/assets/dresses/dress_12_banquet.jpg'] : []),
+            ...(((d.code === 'UB-013' || (d.image && d.image.includes('dress_13')))) ? ['/assets/dresses/dress_13_banquet.jpg'] : []),
+            ...(((d.code === 'UB-014' || (d.image && d.image.includes('dress_14')))) ? ['/assets/dresses/dress_14_banquet.jpg'] : []),
+            ...(((d.code === 'UB-015' || (d.image && d.image.includes('dress_15')))) ? ['/assets/dresses/dress_15_banquet.jpg'] : []),
+            ...(((d.code === 'UB-016' || (d.image && d.image.includes('dress_16')))) ? ['/assets/dresses/dress_16_banquet.jpg'] : []),
+            ...(((d.code === 'UB-017' || (d.image && d.image.includes('dress_17')))) ? ['/assets/dresses/dress_17_banquet.jpg'] : []),
+            ...(((d.code === 'UB-018' || (d.image && d.image.includes('dress_18')))) ? ['/assets/dresses/dress_18_banquet.jpg'] : []),
+            ...(((d.code === 'UB-019' || (d.image && d.image.includes('dress_19')))) ? ['/assets/dresses/dress_19_banquet.jpg'] : []),
+            ...(((d.code === 'UB-020' || (d.image && d.image.includes('dress_20')))) ? ['/assets/dresses/dress_20_banquet.jpg'] : []),
+            ...(((d.code === 'UB-021' || (d.image && d.image.includes('dress_21')))) ? ['/assets/dresses/dress_21_banquet.jpg'] : []),
+            ...(((d.code === 'UB-022' || (d.image && d.image.includes('dress_22')))) ? ['/assets/dresses/dress_22_banquet.jpg'] : []),
+            ...(((d.code === 'UB-023' || (d.image && d.image.includes('dress_23')))) ? ['/assets/dresses/dress_23_banquet.jpg'] : []),
+            ...(((d.code === 'UB-024' || (d.image && d.image.includes('dress_24')))) ? ['/assets/dresses/dress_24_banquet.jpg'] : []),
+            ...(((d.code === 'UB-025' || (d.image && d.image.includes('dress_25')))) ? ['/assets/dresses/dress_25_banquet.jpg'] : []),
+          ],
           sizes: formatDressSizes(d.sizes),
           colors: d.colorOptions && d.colorOptions.length > 0 ? d.colorOptions : [
             { name: d.color || 'Trắng Tinh Khôi', hex: '#FFFFFF', border: '#D9D9D9' },
@@ -170,13 +194,26 @@ export async function getDressById(idOrSlug) {
       };
     }
   } catch (error) {
-    console.error('Error fetching dress by id:', error);
+    console.warn('Lỗi kết nối API/MongoDB khi tải váy cưới, kích hoạt fallback sang DRESS_CATALOG:', error?.message || error);
+  }
+
+  // Fallback an toàn sang DRESS_CATALOG theo ID, Code (UB-001...), Index hoặc Slug
+  const strQuery = String(idOrSlug || '').trim();
+  const numQuery = Number(strQuery);
+  const foundCatalogItem = DRESS_CATALOG.find((item) => {
+    if (String(item.id) === strQuery) return true;
+    if (item.code && String(item.code).toLowerCase() === strQuery.toLowerCase()) return true;
+    if (item.name && item.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').includes(strQuery.toLowerCase())) return true;
+    return false;
+  }) || (Number.isInteger(numQuery) && numQuery > 0 && numQuery <= DRESS_CATALOG.length ? DRESS_CATALOG[numQuery - 1] : null);
+
+  if (foundCatalogItem) {
     return {
-      success: false,
-      data: null,
-      message: 'Lỗi kết nối cơ sở dữ liệu: Không thể lấy thông tin váy cưới từ MongoDB.',
+      success: true,
+      data: convertCatalogItemToDress(foundCatalogItem),
     };
   }
+
   return {
     success: false,
     data: null,
@@ -189,25 +226,38 @@ export async function getDressById(idOrSlug) {
  */
 export async function getRelatedDresses(currentId) {
   const targetId = String(currentId || '');
-  const currentItem = DRESS_CATALOG.find((d) => String(d.id) === targetId || String(d.code) === targetId);
-  const currentCategory = currentItem?.category;
+  let allDresses = [];
 
-  let related = DRESS_CATALOG.filter(
-    (d) => String(d.id) !== targetId && String(d.code) !== targetId && (!currentCategory || d.category === currentCategory)
+  try {
+    const res = await getAllDresses();
+    if (res?.success && Array.isArray(res.data) && res.data.length > 0) {
+      allDresses = res.data;
+    }
+  } catch (err) {
+    // fallback to local catalog
+  }
+
+  if (!allDresses || allDresses.length === 0) {
+    allDresses = DRESS_CATALOG.map((item) => convertCatalogItemToDress(item));
+  }
+
+  const currentItem = allDresses.find((d) => String(d.id) === targetId || String(d.code) === targetId);
+  const currentCategory = currentItem?.category || currentItem?.silhouetteCategory;
+
+  let related = allDresses.filter(
+    (d) => String(d.id) !== targetId && String(d.code) !== targetId && (!currentCategory || d.category === currentCategory || d.silhouetteCategory === currentCategory)
   );
 
   if (related.length < 4) {
-    const remaining = DRESS_CATALOG.filter(
+    const remaining = allDresses.filter(
       (d) => String(d.id) !== targetId && String(d.code) !== targetId && !related.some((r) => String(r.id) === String(d.id))
     );
     related = [...related, ...remaining];
   }
 
-  const selected = related.slice(0, 4).map((item) => convertCatalogItemToDress(item));
-
   return {
     success: true,
-    data: selected,
+    data: related.slice(0, 4),
   };
 }
 
@@ -224,27 +274,48 @@ export async function getAllDresses(params = {}) {
       : Array.isArray(res?.data?.data)
       ? res.data.data
       : [];
-    const mapped = rawList.map((d) => ({
-      ...d,
-      id: String(d._id || d.id),
-      name: d.name,
-      priceNumber: d.rentPrice || d.price,
-      price: d.rentPrice || d.price,
-      image: (d.images && d.images[0]) || d.image || '/assets/dresses/dress_01.jpg',
-      badgeMain: d.collectionTag || 'HAUTE COUTURE',
-      badgeSub: d.sizes?.length ? `Size: ${d.sizes.join(' - ')}` : 'Đủ size',
-      size: d.sizes?.length ? `Size: ${d.sizes.join(' - ')}` : 'Size: S - M',
-      sizes: d.sizes,
-      category: (d.silhouette || 'ballgown').toLowerCase().replace(/\s+/g, '-'),
-      categoryName: d.silhouette || 'Ballgown',
-    }));
+    const mapped = rawList.map((d) => {
+      const pNum = typeof d.rentPrice === 'number'
+        ? d.rentPrice
+        : typeof d.priceNumber === 'number'
+        ? d.priceNumber
+        : typeof d.price === 'number'
+        ? d.price
+        : (parseInt(String(d.price || d.rentPrice || '5200000').replace(/\D/g, ''), 10) || 5200000);
+
+      let pCat = '5-10';
+      if (pNum < 5000000) pCat = 'under-5';
+      else if (pNum <= 10000000) pCat = '5-10';
+      else if (pNum <= 20000000) pCat = '10-20';
+      else pCat = 'vip';
+
+      return {
+        ...d,
+        id: String(d._id || d.id),
+        name: d.name,
+        rentPrice: pNum,
+        priceNumber: pNum,
+        price: formatCurrencyVND(pNum),
+        depositAmount: d.depositAmount ? (typeof d.depositAmount === 'string' && d.depositAmount.includes('₫') ? d.depositAmount : formatCurrencyVND(d.depositAmount)) : '15.000.000₫',
+        priceCategory: pCat,
+        image: (d.images && d.images[0]) || d.image || '/assets/dresses/dress_01.jpg',
+        badgeMain: d.collectionTag || (pCat === 'vip' ? 'HAUTE COUTURE VIP' : 'HAUTE COUTURE'),
+        badgeSub: d.sizes?.length ? `Size: ${d.sizes.join(' - ')}` : 'Đủ size',
+        size: d.sizes?.length ? `Size: ${d.sizes.join(' - ')}` : 'Size: S - M',
+        sizes: d.sizes,
+        material: d.material || 'Lụa Mikado Ý & Ren Pháp',
+        silhouette: d.silhouette || 'Ballgown',
+        category: (d.silhouette || 'ballgown').toLowerCase().replace(/\s+/g, '-'),
+        categoryName: d.silhouette || 'Ballgown',
+      };
+    });
     return { success: true, data: mapped };
   } catch (error) {
-    console.error('Error in getAllDresses from database:', error);
+    console.warn('Lỗi kết nối getAllDresses từ MongoDB, kích hoạt fallback sang DRESS_CATALOG:', error?.message || error);
     return {
-      success: false,
-      data: [],
-      message: 'Lỗi kết nối cơ sở dữ liệu: Không thể tải danh sách áo cưới từ MongoDB.',
+      success: true,
+      data: DRESS_CATALOG,
+      message: 'Tải danh sách áo cưới thành công từ bộ sưu tập tĩnh.',
     };
   }
 }

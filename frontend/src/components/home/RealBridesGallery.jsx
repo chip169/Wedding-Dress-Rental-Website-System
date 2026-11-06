@@ -1,4 +1,5 @@
 import React from 'react';
+import logoEmblemImg from '../../assets/logo_emblem.png';
 
 const reviews = [
   {
@@ -69,12 +70,26 @@ const RealBridesGallery = () => {
               key={rev.id}
               className="bg-[#FDFBF7] border border-[#EEDECF] rounded-2xl overflow-hidden shadow-[0px_4px_16px_rgba(44,37,35,0.04)] flex flex-col justify-between"
             >
-              <div className="h-[280px] overflow-hidden">
+              <div className="relative h-[280px] overflow-hidden">
                 <img
                   src={rev.image}
                   alt={rev.author}
                   className="w-full h-full object-cover object-top hover:scale-105 transition-transform duration-500"
                 />
+
+                {/* Logo UniBridal Watermark */}
+                <div
+                  className="absolute bottom-3 right-3.5 z-10 pointer-events-none select-none transition-transform duration-300 hover:scale-110"
+                  title="UniBridal Haute Couture"
+                >
+                  <img
+                    src={logoEmblemImg}
+                    alt="UniBridal Emblem"
+                    className="w-[38px] h-[38px] object-contain drop-shadow-[0px_2px_6px_rgba(0,0,0,0.35)]"
+                  />
+  
+                </div>
+
               </div>
 
               <div className="p-6 flex flex-col justify-between flex-1">
