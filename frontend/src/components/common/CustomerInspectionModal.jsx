@@ -630,10 +630,9 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-[#FAF5F2] text-[#5F2B36] border-b border-[#EFE5E1] text-[11.5px] font-bold">
-                      <th className="py-2.5 px-3 whitespace-nowrap">Nhóm Lỗi Hư Hại</th>
-                      <th className="py-2.5 px-3">Hiện Trạng Thực Tế</th>
-                      <th className="py-2.5 px-3 whitespace-nowrap">Mức Phí Đền Bù Niêm Yết</th>
-                      <th className="py-2.5 px-3 whitespace-nowrap">Thẩm Quyền Xử Lý</th>
+                      <th className="py-2.5 px-3 w-[26%] whitespace-nowrap">Nhóm Lỗi Hư Hại</th>
+                      <th className="py-2.5 px-3 w-[46%]">Hiện Trạng Thực Tế</th>
+                      <th className="py-2.5 px-3 w-[28%] whitespace-nowrap">Mức Phí Đền Bù Niêm Yết</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#F2E5E0] text-[11.5px]">
@@ -642,19 +641,6 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
                         <td className="py-2.5 px-3 font-bold text-[#2C2523] whitespace-nowrap">{row.name}</td>
                         <td className="py-2.5 px-3 text-[#5C4D4D]">{row.description}</td>
                         <td className="py-2.5 px-3 font-bold whitespace-nowrap" style={{ color: row.color }}>{row.feeLabel}</td>
-                        <td className="py-2.5 px-3 whitespace-nowrap">
-                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${
-                            row.authority === 'admin_only'
-                              ? 'bg-rose-100 text-rose-800 border-rose-300'
-                              : row.authority === 'admin'
-                              ? 'bg-red-50 text-red-700 border-red-200'
-                              : row.authority === 'both'
-                              ? 'bg-purple-50 text-purple-700 border-purple-200'
-                              : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                          }`}>
-                            {row.authorityLabel}
-                          </span>
-                        </td>
                       </tr>
                     ))}
                   </tbody>

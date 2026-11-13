@@ -479,10 +479,9 @@ function DamagePriceCatalogModal({ open, onClose }) {
             <table className="w-full min-w-[650px] text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-[#FAF5F2] text-[#5F2B36] border-b border-[#EFE5E1] text-[10.5px] font-bold uppercase tracking-wider sticky top-0 z-10">
-                  <th className="py-2 px-3 w-[22%] whitespace-nowrap bg-[#FAF5F2]">Nhóm Lỗi Hư Hại</th>
-                  <th className="py-2 px-3 w-[36%] bg-[#FAF5F2]">Hiện Trạng Thực Tế</th>
-                  <th className="py-2 px-3 w-[22%] whitespace-nowrap bg-[#FAF5F2]">Mức Phí Niêm Yết</th>
-                  <th className="py-2 px-3 w-[20%] whitespace-nowrap text-center bg-[#FAF5F2]">Thẩm Quyền Xử Lý</th>
+                  <th className="py-2 px-3 w-[26%] whitespace-nowrap bg-[#FAF5F2]">Nhóm Lỗi Hư Hại</th>
+                  <th className="py-2 px-3 w-[46%] bg-[#FAF5F2]">Hiện Trạng Thực Tế</th>
+                  <th className="py-2 px-3 w-[28%] whitespace-nowrap bg-[#FAF5F2]">Mức Phí Niêm Yết</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F2E5E0] text-[11px]">
@@ -496,18 +495,6 @@ function DamagePriceCatalogModal({ open, onClose }) {
                     </td>
                     <td className="py-1 px-3 font-bold align-middle whitespace-nowrap" style={{ color: row.color }}>
                       {row.feeLabel}
-                    </td>
-                    <td className="py-1 px-3 align-middle whitespace-nowrap text-center">
-                      <span className={`inline-flex items-center justify-center px-2 py-0.5 rounded text-[10px] font-bold border ${row.authority === 'admin_only'
-                        ? 'bg-rose-100 text-rose-800 border-rose-300'
-                        : row.authority === 'admin'
-                          ? 'bg-red-50 text-red-700 border-red-200'
-                          : row.authority === 'both'
-                            ? 'bg-purple-50 text-purple-700 border-purple-200'
-                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        }`}>
-                        {row.authorityLabel}
-                      </span>
                     </td>
                   </tr>
                 ))}
@@ -993,17 +980,6 @@ function InspectionModal({ order, onClose, onSuccess }) {
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <span className="text-[11.5px] font-bold text-[#5F4E50] flex items-center gap-1.5">
                         <span>Nhóm lỗi theo Bảng Giá Niêm Yết:</span>
-                        <span className="text-[10px] text-[#8C7D7E] font-normal"></span>
-                      </span>
-                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border ${catItem.authority === 'admin_only'
-                        ? 'bg-rose-100 text-rose-800 border-rose-300'
-                        : catItem.authority === 'admin'
-                          ? 'bg-red-50 text-red-700 border-red-200'
-                          : catItem.authority === 'both'
-                            ? 'bg-purple-50 text-purple-700 border-purple-200'
-                            : 'bg-emerald-50 text-emerald-700 border-emerald-200'
-                        }`}>
-                        {catItem.authorityLabel}
                       </span>
                     </div>
 
@@ -1015,7 +991,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
                     >
                       {DAMAGE_PRICE_CATALOG.map((cat) => (
                         <option key={cat.id} value={cat.id}>
-                          {cat.name} — Phí: {cat.feeLabel} [{cat.authorityLabel}]
+                          {cat.name} — Phí: {cat.feeLabel}
                         </option>
                       ))}
                     </select>
