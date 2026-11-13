@@ -519,7 +519,6 @@ function DamagePriceCatalogModal({ open, onClose }) {
 }
 
 function InspectionModal({ order, onClose, onSuccess }) {
-  const [showPriceCatalogModal, setShowPriceCatalogModal] = useState(false);
   const isCompletedOrder = order.status === 'completed' || order.status === 'complete';
   const isReturnedOrder = order.status === 'waiting_refund' || order.status === 'returned';
   const isGuestOrder = !order.hasAccount && !order.customerId && !order.userId;
@@ -821,25 +820,13 @@ function InspectionModal({ order, onClose, onSuccess }) {
               </p>
             </div>
           </div>
-          <div className="flex items-center gap-2">
-            <button
-              type="button"
-              onClick={() => setShowPriceCatalogModal(true)}
-              className="px-2.5 py-1 rounded-xl bg-white border border-[#E0D0CA] text-[#733F49] hover:bg-[#FAF0EC] text-[11px] font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
-              title="Xem Bảng giá niêm yết đền bù thiệt hại"
-            >
-              <FileSpreadsheet size={13} className="text-[#B8737D]" />
-              <span className="hidden sm:inline">Bảng Giá Đền Bù Niêm Yết</span>
-              <span className="sm:hidden">Bảng Giá</span>
-            </button>
-            <button
-              type="button"
-              onClick={onClose}
-              className="w-8 h-8 rounded-full bg-white text-[#7A6B6C] hover:text-[#733F49] hover:bg-[#FAF0EC] flex items-center justify-center transition-colors cursor-pointer border border-[#EFE5E1]"
-            >
-              <X size={15} />
-            </button>
-          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-white text-[#7A6B6C] hover:text-[#733F49] hover:bg-[#FAF0EC] flex items-center justify-center transition-colors cursor-pointer border border-[#EFE5E1]"
+          >
+            <X size={15} />
+          </button>
         </div>
 
         <div className="p-4 sm:p-5 space-y-3.5 text-xs font-jakarta">
@@ -1337,12 +1324,6 @@ function InspectionModal({ order, onClose, onSuccess }) {
           </div>
         </div>
       </div>
-
-      {/* Bảng Giá Đền Bù Thiệt Hại Niêm Yết Popup */}
-      <DamagePriceCatalogModal
-        open={showPriceCatalogModal}
-        onClose={() => setShowPriceCatalogModal(false)}
-      />
     </div>
   );
 }
