@@ -15,6 +15,7 @@ import {
   ChevronRight,
   X,
   ShieldCheck,
+  ShieldAlert,
   Check,
   Download,
   RefreshCw,
@@ -292,10 +293,9 @@ function OrderDetailModal({ order, onClose }) {
               <FileText size={17} />
             </div>
             <div>
-              <h3 className="font-playfair text-lg font-bold text-[#5F2B36] m-0 leading-tight">
-                <h3 className="font-sans text-lg font-bold text-[#5F2B36] m-0 leading-tight">
-                  Chi Tiết Đơn Thuê
-                </h3>
+              <h3 className="font-sans text-lg font-bold text-[#5F2B36] m-0 leading-tight">
+                Chi Tiết Đơn Thuê
+              </h3>
                 <div className="mt-1 flex items-center gap-1.5">
                   <span className="text-[11px] text-[#8C7D7E] font-medium">Mã đơn thuê:</span>
                   <span className="px-2 py-0.5 rounded bg-[#FAF0EC] text-[#733F49] font-mono text-[11px] font-bold border border-[#F2D8D4]">
@@ -459,10 +459,9 @@ function DamagePriceCatalogModal({ open, onClose }) {
               <FileSpreadsheet size={15} />
             </div>
             <div>
-              <h3 className="font-playfair text-[15px] font-bold text-[#5F2B36] m-0 leading-tight">
-                <h3 className="font-sans text-[15px] font-bold text-[#5F2B36] m-0 leading-tight">
-                  Bảng Giá Đền Bù Thiệt Hại Niêm Yết
-                </h3>
+              <h3 className="font-sans text-[15px] font-bold text-[#5F2B36] m-0 leading-tight">
+                Bảng Giá Đền Bù Thiệt Hại Niêm Yết
+              </h3>
             </div>
           </div>
           <button
@@ -528,9 +527,6 @@ function InspectionModal({ order, onClose, onSuccess }) {
   const isCustomerApproved = customerStatus === 'approved';
 
   // 1. Khi đơn ĐANG THUÊ ('renting'): Nhân viên bấm [Kiểm Định Trả Váy] để kiểm tra & chọn lỗi (isReadOnly = false)
-  // 2. Khi đơn ĐÃ KIỂM ĐỊNH ('waiting_refund' / 'returned' / 'completed'): Bấm [Biên Bản] là CHẾ ĐỘ XEM (isReadOnly = true)
-  const [isEditing, setIsEditing] = useState(false);
-  const isReadOnly = isCompletedOrder || (!isEditing && isReturnedOrder);
   // 2. Khi đơn ĐÃ KIỂM ĐỊNH ('waiting_refund' / 'returned' / 'completed'): Bấm [Biên Bản] là CHẾ ĐỘ XEM CỐ ĐỊNH, KHÔNG ĐƯỢC PHÉP CHỈNH SỬA
   const isReadOnly = isCompletedOrder || isReturnedOrder;
 
@@ -713,11 +709,13 @@ function InspectionModal({ order, onClose, onSuccess }) {
     });
   };
 
-  const handleSubmit = async () => {
+  const handleSubmit = async (actionType = 'complete') => {
     if (isCustomerApproved) {
       message.error('Khách hàng đã duyệt biên bản kiểm định, hồ sơ đã khóa và không thể chỉnh sửa.');
       return;
     }
+
+    const isHoldCase = actionType === 'hold' || itemsCondition.some((ic) => ic.condition === 'total_damage');
 
     // 1. Kiểm tra tình trạng váy & BẮT BUỘC CHỤP ẢNH LỖI ĐẦY ĐỦ
     const hasDamage = itemsCondition.some(
@@ -742,9 +740,9 @@ function InspectionModal({ order, onClose, onSuccess }) {
       return;
     }
 
-    const isDisputeCase = customerDecision === 'disputed';
-    if (!isDisputeCase && finalRefund > 0 && !onSiteAccountNum.trim()) {
-      message.warning('Quy định: Vui lòng nhập Số tài khoản (STK) của khách để thực hiện chuyển khoản hoàn cọc.');
+    // Nếu hoàn tất kiểm định và có tiền hoàn trả thì bắt buộc nhập STK
+    if (!isHoldCase && finalRefund > 0 && !onSiteAccountNum.trim()) {
+      message.warning('Vui lòng nhập Số tài khoản (STK) nhận tiền của khách để đối soát chuyển khoản hoàn cọc.');
       return;
     }
 
@@ -764,17 +762,17 @@ function InspectionModal({ order, onClose, onSuccess }) {
         };
       });
 
-      const isDisputeCase = customerDecision === 'disputed';
-
       const body = {
         itemsCondition: payload,
         evidencePhotos,
-        holdForAdmin: isDisputeCase,
-        customerAgreed: !isDisputeCase,
-        confirmOnSite: !isDisputeCase,
-        disputeReason: isDisputeCase ? (customerDisputeNote.trim() || 'Khách không đồng ý với mức phạt/biên bản kiểm định tại chỗ') : '',
+        holdForAdmin: isHoldCase,
+        customerAgreed: !isHoldCase,
+        confirmOnSite: !isHoldCase,
+        disputeReason: isHoldCase
+          ? (customerDisputeNote.trim() || (itemsCondition.some((ic) => ic.condition === 'total_damage') ? 'Váy bị lỗi nặng / hư hại nghiêm trọng không thể may lại, chuyển Admin thẩm định xử lý' : 'Tạm giữ kiểm định - Chuyển Quản lý showroom đàm phán cùng khách hàng'))
+          : '',
         refundMethod: 'bank_transfer',
-        refundBankDetails: !isDisputeCase ? {
+        refundBankDetails: !isHoldCase ? {
           bankName: onSiteBankName || 'Vietcombank',
           accountNumber: onSiteAccountNum || '',
           accountHolder: onSiteAccountHolder || order.customerName || '',
@@ -784,12 +782,11 @@ function InspectionModal({ order, onClose, onSuccess }) {
 
       await submitReturnInspection(order._id, body);
 
-      if (isDisputeCase) {
-        message.warning('Đã lưu ảnh bằng chứng & chuyển đơn sang [Tạm giữ - Chờ Quản lý đàm phán]. Đã gửi email biên bản kiểm tra tới khách hàng!');
+      if (isHoldCase) {
+        message.warning('Đã tạm giữ kiểm định & chuyển đơn sang [Tạm giữ - Chờ Quản lý đàm phán]!');
       } else {
-        message.success(`Đã hoàn tất kiểm định váy! Đơn chuyển sang [Chờ Hoàn Cọc] và hệ thống đã gửi email biên bản kiểm tra tới khách hàng.`);
+        message.success(`Đã hoàn tất kiểm định váy! Đơn chuyển sang [Chờ Hoàn Cọc] (${fmtVnd(finalRefund)}).`);
       }
-      setIsEditing(false);
       onSuccess();
     } catch (err) {
       message.error(err?.response?.data?.message || err.message || 'Gửi biên bản kiểm định thất bại. Vui lòng thử lại.');
@@ -808,8 +805,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
               <ShieldCheck size={20} />
             </div>
             <div>
-              <h3 className="font-playfair text-[16px] font-bold text-[#5F2B36] m-0 tracking-tight">
-                <h3 className="font-sans text-[16px] font-bold text-[#5F2B36] m-0 tracking-tight">
+              <h3 className="font-sans text-[16px] font-bold text-[#5F2B36] m-0 tracking-tight">
                   {isCompletedOrder
                     ? 'Hồ Sơ Lưu Trữ Đơn Thuê & Quyết Toán Cọc'
                     : isCustomerApproved
@@ -921,10 +917,9 @@ function InspectionModal({ order, onClose, onSuccess }) {
                 <div key={idx} className="p-3 rounded-2xl border border-[#EFE5E1] bg-white space-y-2.5 shadow-2xs">
                   <div className="flex items-center justify-between flex-wrap gap-2 pb-1.5 border-b border-[#F7EFEA]">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-playfair font-bold text-[13.5px] text-[#5F2B36]">
-                        <span className="font-sans font-bold text-[13.5px] text-[#5F2B36]">
-                          {ic.name}
-                        </span>
+                      <span className="font-sans font-bold text-[13.5px] text-[#5F2B36]">
+                        {ic.name}
+                      </span>
                         {itemCode && (
                           <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#FAF0EC] text-[#733F49] font-mono text-[10px] font-bold border border-[#F2D8D4] leading-none">
                             {itemCode}
@@ -1149,7 +1144,6 @@ function InspectionModal({ order, onClose, onSuccess }) {
               </div>
               <div className="text-right sm:text-right">
                 <span className="text-[#1E8347] text-[10px] uppercase font-bold tracking-wider block">Dự Kiến Hoàn Trả</span>
-                <strong className="text-[16px] text-[#1E8347] font-playfair font-bold">{fmtVnd(finalRefund)}</strong>
                 <strong className="text-[16px] text-[#1E8347] font-sans font-bold">{fmtVnd(finalRefund)}</strong>
               </div>
             </div>
@@ -1158,185 +1152,78 @@ function InspectionModal({ order, onClose, onSuccess }) {
             </p>
           </div>
 
-          {/* Xác nhận & Ý kiến phản hồi của Khách Hàng */}
+          {/* Thông tin tài khoản nhận hoàn cọc của Khách Hàng */}
           {!isReadOnly && (
             <div className="p-4 rounded-2xl border border-[#DDC6C0] bg-[#FAF5F2] space-y-3">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <span className="font-bold text-[13px] text-[#5F2B36] flex items-center gap-2">
-                  <span className="w-5 h-5 rounded-full bg-[#733F49] text-white flex items-center justify-center text-[10.5px] font-bold">✓</span>
-                  Ý Kiến Xác Nhận Của Khách Hàng
+                  <CreditCard size={15} className="text-[#733F49]" />
+                  <span>Thông Tin Nhận Chuyển Khoản Hoàn Cọc Của Khách</span>
                 </span>
-                {isGuestOrder && (
-                  <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full border border-amber-200">
-                    Khách trải nghiệm tại Showroom
+                <span className="text-[10.5px] text-emerald-800 font-semibold bg-emerald-100/80 px-2.5 py-0.5 rounded-full border border-emerald-200">
+                  Hoàn cọc qua chuyển khoản (STK)
+                </span>
+              </div>
+
+              {/* Form điền STK */}
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 bg-white p-3.5 rounded-xl border border-[#E8DCD5]">
+                <div>
+                  <span className="text-[10.5px] text-[#7A6A6B] block mb-1 font-semibold">
+                    Ngân hàng <span className="text-red-600">*</span>
                   </span>
-                )}
-              </div>
-
-              {/* 2 Thẻ lựa chọn phương án đối soát */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                {/* Phương Án 1: Khách Đồng Thuận */}
-                <div
-                  onClick={() => setCustomerDecision('agreed')}
-                  className={`p-3 rounded-2xl border-2 cursor-pointer transition-all ${customerDecision === 'agreed'
-                    ? 'border-[#1E8347] bg-[#F3FAF5] shadow-xs'
-                    : 'border-[#E5D7D0] bg-white hover:border-[#BCE2C5]'
-                    }`}
-                >
-                  <div className="flex items-start gap-2.5">
-                    <input
-                      type="radio"
-                      name="customerDecisionRadio"
-                      checked={customerDecision === 'agreed'}
-                      onChange={() => setCustomerDecision('agreed')}
-                      className="mt-0.5 accent-[#1E8347] cursor-pointer"
-                    />
-                    <div>
-                      <div className="font-bold text-[12.5px] text-[#1E6B37]">
-                        Đồng Thuận Quyết Toán (Tại Chỗ)
-                      </div>
-                      <p className="text-[10.5px] text-[#4A5D4E] mt-0.5 m-0 leading-tight">
-                        Khách hàng đồng ý với kết quả kiểm định. Showroom tiến hành hoàn cọc và hoàn tất hợp đồng.
-                      </p>
-                    </div>
-                  </div>
+                  <Input
+                    size="small"
+                    placeholder="VD: Vietcombank, MB, Techcombank..."
+                    value={onSiteBankName}
+                    onChange={(e) => setOnSiteBankName(e.target.value)}
+                    className="text-xs"
+                  />
                 </div>
-
-                {/* Phương Án 2: Khách Bảo Lưu Ý Kiến */}
-                <div
-                  onClick={() => setCustomerDecision('disputed')}
-                  className={`p-3 rounded-2xl border-2 cursor-pointer transition-all ${customerDecision === 'disputed'
-                    ? 'border-[#8B2635] bg-red-50/60 shadow-xs'
-                    : 'border-[#E5D7D0] bg-white hover:border-red-300'
-                    }`}
-                >
-                  <div className="flex items-start gap-2.5">
-                    <input
-                      type="radio"
-                      name="customerDecisionRadio"
-                      checked={customerDecision === 'disputed'}
-                      onChange={() => setCustomerDecision('disputed')}
-                      className="mt-0.5 accent-[#8B2635] cursor-pointer"
-                    />
-                    <div>
-                      <div className="font-bold text-[12.5px] text-[#8B2635]">
-                        Bảo Lưu Ý Kiến (Chuyển Quản Lý)
-                      </div>
-                      <p className="text-[10.5px] text-[#7F3A3A] mt-0.5 m-0 leading-tight">
-                        Khách cần trao đổi thêm về mức khấu trừ. Chuyển hồ sơ để Quản lý showroom trực tiếp liên hệ hỗ trợ.
-                      </p>
-                    </div>
-                  </div>
+                <div>
+                  <span className="text-[10.5px] text-[#7A6A6B] block mb-1 font-semibold">
+                    Số tài khoản (STK) <span className="text-red-600">*</span>
+                  </span>
+                  <Input
+                    size="small"
+                    placeholder="Nhập STK nhận tiền..."
+                    value={onSiteAccountNum}
+                    onChange={(e) => setOnSiteAccountNum(e.target.value)}
+                    className="text-xs font-mono font-bold text-[#1E8347]"
+                  />
+                </div>
+                <div>
+                  <span className="text-[10.5px] text-[#7A6A6B] block mb-1 font-semibold">
+                    Tên chủ tài khoản <span className="text-red-600">*</span>
+                  </span>
+                  <Input
+                    size="small"
+                    placeholder="TÊN CHỦ TÀI KHOẢN"
+                    value={onSiteAccountHolder}
+                    onChange={(e) => setOnSiteAccountHolder(e.target.value.toUpperCase())}
+                    className="text-xs font-semibold"
+                  />
                 </div>
               </div>
 
-              {/* Chi tiết Phương Án 1: Khách Đồng Thuận */}
-              {customerDecision === 'agreed' && (
-                <div className="pt-2.5 border-t border-[#D5E8D8] space-y-2.5 text-[11.5px] animate-fadeIn">
-                  <div className="flex items-center justify-between flex-wrap gap-2">
-                    <span className="text-[#3F5946] font-bold flex items-center gap-1.5 text-xs">
-                      <CreditCard size={14} className="text-[#1E8347]" />
-                      <span>Hình thức nhận hoàn cọc: <strong className="text-[#1E8347]">Chuyển khoản (STK)</strong></span>
-                    </span>
-                    <span className="text-[10px] text-emerald-800 font-semibold bg-emerald-100/80 px-2 py-0.5 rounded border border-emerald-200">
-                      Chính sách duy nhất: CK ngân hàng
-                    </span>
-                  </div>
-
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1.5 bg-white p-3 rounded-xl border border-[#D5E8D8]">
-                    <div>
-                      <span className="text-[10.5px] text-[#7A6A6B] block mb-1 font-semibold">
-                        Ngân hàng <span className="text-red-600">*</span>
-                      </span>
-                      <Input
-                        size="small"
-                        placeholder="VD: Vietcombank, MB..."
-                        value={onSiteBankName}
-                        onChange={(e) => setOnSiteBankName(e.target.value)}
-                        className="text-xs"
-                      />
-                    </div>
-                    <div>
-                      <span className="text-[10.5px] text-[#7A6A6B] block mb-1 font-semibold">
-                        Số tài khoản (STK) <span className="text-red-600">*</span>
-                      </span>
-                      <Input
-                        size="small"
-                        placeholder="Nhập STK nhận tiền..."
-                        value={onSiteAccountNum}
-                        onChange={(e) => setOnSiteAccountNum(e.target.value)}
-                        className="text-xs font-mono font-bold text-[#1E8347]"
-                      />
-                    </div>
-                    <div>
-                      <span className="text-[10.5px] text-[#7A6A6B] block mb-1 font-semibold">
-                        Tên chủ tài khoản <span className="text-red-600">*</span>
-                      </span>
-                      <Input
-                        size="small"
-                        placeholder="TÊN CHỦ TÀI KHOẢN"
-                        value={onSiteAccountHolder}
-                        onChange={(e) => setOnSiteAccountHolder(e.target.value.toUpperCase())}
-                        className="text-xs font-semibold"
-                      />
-                    </div>
-                  </div>
-
-                  <p className="text-[11px] text-[#2E7D47] m-0 bg-emerald-50/70 p-2 rounded-xl border border-emerald-100 flex items-center gap-1.5">
-                    <CheckCircle2 size={13} className="shrink-0" />
-                    <span>Sau khi hoàn tất kiểm định, đơn sẽ tự động chuyển sang <strong>Chờ hoàn cọc</strong> ({fmtVnd(finalRefund)}).</span>
-                  </p>
-                </div>
-              )}
-
-              {/* Chi tiết Phương Án 2: Khách Bảo Lưu Ý Kiến */}
-              {customerDecision === 'disputed' && (
-                <div className="pt-2.5 border-t border-red-200 space-y-2.5 text-[11.5px] animate-fadeIn">
-                  <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-amber-900 text-[11.5px] leading-relaxed">
-                    <div className="font-bold flex items-center gap-1.5 text-amber-950 mb-0.5">
-                      <Clock size={13} className="text-amber-700" />
-                      <span>Quy trình bảo lưu hồ sơ:</span>
-                    </div>
-                    <span>Toàn bộ hình ảnh đối soát và ghi chú hiện trạng sẽ được bảo lưu nguyên vẹn trên hệ thống. Đơn hàng chuyển sang trạng thái <strong>"Tạm giữ - Chờ Quản lý đàm phán"</strong> để Quản lý showroom trực tiếp liên hệ và thống nhất phương án hỗ trợ tối ưu cùng khách hàng.</span>
-                  </div>
-                  <div>
-                    <span className="text-[11px] font-semibold text-[#662020] block mb-1">
-                      Nội dung phản hồi / Nguyện vọng của khách hàng:
-                    </span>
-                    <Input.TextArea
-                      rows={2}
-                      placeholder="Ghi nhận chi tiết ý kiến phản hồi của khách hàng để Quản lý nắm thông tin khi liên hệ đàm phán..."
-                      value={customerDisputeNote}
-                      onChange={(e) => setCustomerDisputeNote(e.target.value)}
-                      className="text-xs"
-                    />
-                  </div>
-                </div>
-              )}
+              {/* Ghi chú phản hồi / Lý do tạm giữ nếu có */}
+              <div>
+                <span className="text-[11px] font-semibold text-[#662020] block mb-1">
+                  Ghi chú kiểm định / Lý do tạm giữ (nếu có khiếu nại hoặc lỗi nặng cần chuyển Admin):
+                </span>
+                <Input.TextArea
+                  rows={2}
+                  placeholder="Ghi nhận chi tiết phản hồi của khách hoặc mô tả khi tạm giữ chuyển Quản lý / Admin..."
+                  value={customerDisputeNote}
+                  onChange={(e) => setCustomerDisputeNote(e.target.value)}
+                  className="text-xs rounded-xl"
+                />
+              </div>
             </div>
           )}
 
           {/* Actions - Nút bấm hoàn tất chuẩn mực */}
           <div className="flex gap-2.5 pt-1.5">
             {isReadOnly ? (
-              <div className="flex w-full gap-2.5">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 py-2.5 rounded-xl border border-[#EFE5E1] text-[12px] font-bold text-[#5F4E50] hover:bg-[#FAF5F2] transition-colors bg-transparent cursor-pointer"
-                >
-                  {isCompletedOrder ? 'Đóng Hồ Sơ Lưu Trữ' : 'Đóng Biên Bản (Chỉ Xem)'}
-                </button>
-                {!isCompletedOrder && !isCustomerApproved && (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="flex-1 py-2.5 rounded-xl bg-[#733F49] text-[12px] font-bold text-white hover:bg-[#5C3038] transition-colors border-0 cursor-pointer shadow-xs"
-                  >
-                    Chỉnh Sửa Chi Phí Khấu Trừ
-                  </button>
-                )}
-              </div>
               <button
                 type="button"
                 onClick={onClose}
@@ -1348,40 +1235,31 @@ function InspectionModal({ order, onClose, onSuccess }) {
               <>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (isReturnedOrder) setIsEditing(false);
-                    else onClose();
-                  }}
                   onClick={onClose}
-                  className="w-28 py-2.5 rounded-xl border border-[#EFE5E1] text-[12px] font-bold text-[#5F4E50] hover:bg-[#FAF5F2] transition-colors bg-transparent cursor-pointer"
+                  className="px-4 py-2.5 rounded-xl border border-[#EFE5E1] text-[12px] font-bold text-[#5F4E50] hover:bg-[#FAF5F2] transition-colors bg-transparent cursor-pointer"
                 >
                   Hủy
                 </button>
-                {customerDecision === 'agreed' ? (
-                  <button
-                    type="button"
-                    disabled={submitting}
-                    onClick={handleSubmit}
-                    className="flex-1 py-2.5 rounded-xl bg-[#1E8347] hover:bg-[#166534] text-white text-[12.5px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 shadow-xs"
-                  >
-                    {submitting ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={15} />}
-                    <span>Hoàn Tất Kiểm Định Váy → Chuyển [Chờ Hoàn Cọc] ({fmtVnd(finalRefund)})</span>
-                  </button>
-                ) : (
-                  <button
-                    type="button"
-                    disabled={submitting}
-                    onClick={handleSubmit}
-                    className="flex-1 py-2.5 rounded-xl bg-[#8B2635] hover:bg-[#701E2A] text-white text-[12.5px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 shadow-xs"
-                  >
-                    {submitting ? <RefreshCw size={14} className="animate-spin" /> : <PhoneCall size={14} />}
-                    <span>
-                      {itemsCondition.some((ic) => ic.condition === 'total_damage')
-                        ? 'Gửi Hồ Sơ Lỗi Nặng Cho Admin Xử Lý'
-                        : 'Bảo Lưu Đơn & Chuyển Quản Lý'}
-                    </span>
-                  </button>
-                )}
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => handleSubmit('hold')}
+                  className="flex-1 py-2.5 rounded-xl bg-[#8B2635] hover:bg-[#701E2A] text-white text-[12px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-1.5 shadow-xs"
+                  title="Tạm giữ kiểm định để chuyển Quản lý / Admin xử lý đàm phán"
+                >
+                  {submitting ? <RefreshCw size={13} className="animate-spin" /> : <ShieldAlert size={14} />}
+                  <span>Tạm Giữ Kiểm Định</span>
+                </button>
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={() => handleSubmit('complete')}
+                  className="flex-1 py-2.5 rounded-xl bg-[#1E8347] hover:bg-[#166534] text-white text-[12px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-1.5 shadow-xs"
+                  title="Hoàn tất kiểm định và chuyển đơn sang trạng thái Chờ Hoàn Cọc"
+                >
+                  {submitting ? <RefreshCw size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                  <span>Hoàn Tất Kiểm Định Váy</span>
+                </button>
               </>
             )}
           </div>
@@ -1493,8 +1371,7 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
               <PhoneCall size={16} />
             </div>
             <div>
-              <h3 className="font-playfair text-[15px] font-bold text-red-950 m-0">
-                <h3 className="font-sans text-[15px] font-bold text-red-950 m-0">
+              <h3 className="font-sans text-[15px] font-bold text-red-950 m-0">
                   Admin Đàm Phán Mức Phạt & Hoàn Tất Đơn
                 </h3>
                 <p className="text-[10.5px] text-red-700 m-0 font-medium">
@@ -1838,8 +1715,7 @@ function RefundModal({ order, onClose, onSuccess }) {
               <Banknote size={20} />
             </div>
             <div>
-              <h3 className="font-playfair text-[18px] font-bold text-[#196C3B]">
-                <h3 className="font-sans text-[18px] font-bold text-[#196C3B]">
+              <h3 className="font-sans text-[18px] font-bold text-[#196C3B]">
                   Quyết Toán và Hoàn Cọc Cho Khách (Bước 2)
                 </h3>
                 <p className="text-[11.5px] text-[#6E8276]">
@@ -1910,10 +1786,9 @@ function RefundModal({ order, onClose, onSuccess }) {
                 <span className="font-bold text-[13px] text-[#2C2523] block">SỐ TIỀN THỰC TẾ HOÀN TRẢ:</span>
                 <span className="text-[11px] text-[#8C7D7E]">Đúng theo biên bản kiểm định đối soát</span>
               </div>
-              <span className="font-playfair text-[20px] font-bold text-[#1E8347]">
-                <span className="font-sans text-[20px] font-bold text-[#1E8347]">
-                  {fmtVnd(finalRefund)}
-                </span>
+              <span className="font-sans text-[20px] font-bold text-[#1E8347]">
+                {fmtVnd(finalRefund)}
+              </span>
             </div>
           </div>
 
