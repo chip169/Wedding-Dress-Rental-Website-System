@@ -191,7 +191,7 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
             </div>
             <div>
               <div className="flex items-center gap-2">
-                <h3 className="font-playfair text-lg font-bold text-[#5F2B36] m-0">
+                <h3 className="font-sans text-lg font-bold text-[#5F2B36] m-0">
                   {step === 'bank_form'
                     ? needsBankDetails ? 'Điền Tài Khoản Nhận Hoàn Cọc' : 'Xác Nhận Biên Bản Kiểm Định'
                     : 'Biên Bản Kiểm Định Trả Váy & Quyết Toán Cọc'}
@@ -244,7 +244,7 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
                     (Tiền cọc ban đầu {formatVnd(initialDeposit)} - Khấu trừ {formatVnd(totalDeduction)})
                   </span>
                 </div>
-                <span className="font-playfair text-2xl font-bold text-[#15803D]">
+                <span className="font-sans text-2xl font-bold text-[#15803D]">
                   {formatVnd(finalRefund)}
                 </span>
               </div>
@@ -520,7 +520,7 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
                             Chuyển khoản trực tiếp về STK
                           </span>
                         </div>
-                        <span className="font-playfair text-[22px] font-bold text-[#1E8347]">
+                        <span className="font-sans text-[22px] font-bold text-[#1E8347]">
                           {formatVnd(finalRefund)}
                         </span>
                       </div>
@@ -609,7 +609,7 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
                   <FileSpreadsheet size={16} />
                 </div>
                 <div>
-                  <h3 className="font-playfair text-[16px] font-bold text-[#5F2B36] m-0">
+                  <h3 className="font-sans text-[16px] font-bold text-[#5F2B36] m-0">
                     Bảng Giá Đền Bù Thiệt Hại Niêm Yết
                   </h3>
                   <p className="text-[10.5px] text-[#8C7D7E] m-0">

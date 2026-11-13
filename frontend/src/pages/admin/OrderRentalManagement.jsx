@@ -292,7 +292,7 @@ function OrderDetailModal({ order, onClose }) {
               <FileText size={17} />
             </div>
             <div>
-              <h3 className="font-playfair text-lg font-bold text-[#5F2B36] m-0 leading-tight">
+              <h3 className="font-sans text-lg font-bold text-[#5F2B36] m-0 leading-tight">
                 Chi Tiết Đơn Thuê
               </h3>
               <div className="mt-1 flex items-center gap-1.5">
@@ -458,7 +458,7 @@ function DamagePriceCatalogModal({ open, onClose }) {
               <FileSpreadsheet size={15} />
             </div>
             <div>
-              <h3 className="font-playfair text-[15px] font-bold text-[#5F2B36] m-0 leading-tight">
+              <h3 className="font-sans text-[15px] font-bold text-[#5F2B36] m-0 leading-tight">
                 Bảng Giá Đền Bù Thiệt Hại Niêm Yết
               </h3>
             </div>
@@ -526,9 +526,8 @@ function InspectionModal({ order, onClose, onSuccess }) {
   const isCustomerApproved = customerStatus === 'approved';
 
   // 1. Khi đơn ĐANG THUÊ ('renting'): Nhân viên bấm [Kiểm Định Trả Váy] để kiểm tra & chọn lỗi (isReadOnly = false)
-  // 2. Khi đơn ĐÃ KIỂM ĐỊNH ('waiting_refund' / 'returned' / 'completed'): Bấm [Biên Bản] là CHẾ ĐỘ XEM (isReadOnly = true)
-  const [isEditing, setIsEditing] = useState(false);
-  const isReadOnly = isCompletedOrder || (!isEditing && isReturnedOrder);
+  // 2. Khi đơn ĐÃ KIỂM ĐỊNH ('waiting_refund' / 'returned' / 'completed'): Bấm [Biên Bản] là CHẾ ĐỘ XEM CỐ ĐỊNH, KHÔNG ĐƯỢC PHÉP CHỈNH SỬA
+  const isReadOnly = isCompletedOrder || isReturnedOrder;
 
   const [disputeReason, setDisputeReason] = useState('');
   const [refundBankDetails, setRefundBankDetails] = useState(null);
@@ -804,7 +803,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
               <ShieldCheck size={20} />
             </div>
             <div>
-              <h3 className="font-playfair text-[16px] font-bold text-[#5F2B36] m-0 tracking-tight">
+              <h3 className="font-sans text-[16px] font-bold text-[#5F2B36] m-0 tracking-tight">
                 {isCompletedOrder
                   ? 'Hồ Sơ Lưu Trữ Đơn Thuê & Quyết Toán Cọc'
                   : isCustomerApproved
@@ -916,7 +915,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
                 <div key={idx} className="p-3 rounded-2xl border border-[#EFE5E1] bg-white space-y-2.5 shadow-2xs">
                   <div className="flex items-center justify-between flex-wrap gap-2 pb-1.5 border-b border-[#F7EFEA]">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-playfair font-bold text-[13.5px] text-[#5F2B36]">
+                      <span className="font-sans font-bold text-[13.5px] text-[#5F2B36]">
                         {ic.name}
                       </span>
                       {itemCode && (
@@ -1099,7 +1098,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
               </div>
               <div className="text-right sm:text-right">
                 <span className="text-[#1E8347] text-[10px] uppercase font-bold tracking-wider block">Dự Kiến Hoàn Trả</span>
-                <strong className="text-[16px] text-[#1E8347] font-playfair font-bold">{fmtVnd(finalRefund)}</strong>
+                <strong className="text-[16px] text-[#1E8347] font-sans font-bold">{fmtVnd(finalRefund)}</strong>
               </div>
             </div>
             <p className="text-[10.5px] text-[#8C7D7E] m-0 mt-2 italic text-center sm:text-left">
@@ -1268,32 +1267,18 @@ function InspectionModal({ order, onClose, onSuccess }) {
           {/* Actions - Nút bấm hoàn tất chuẩn mực */}
           <div className="flex gap-2.5 pt-1.5">
             {isReadOnly ? (
-              <div className="flex w-full gap-2.5">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 py-2.5 rounded-xl border border-[#EFE5E1] text-[12px] font-bold text-[#5F4E50] hover:bg-[#FAF5F2] transition-colors bg-transparent cursor-pointer"
-                >
-                  {isCompletedOrder ? 'Đóng Hồ Sơ Lưu Trữ' : 'Đóng Biên Bản (Chỉ Xem)'}
-                </button>
-                {!isCompletedOrder && !isCustomerApproved && (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="flex-1 py-2.5 rounded-xl bg-[#733F49] text-[12px] font-bold text-white hover:bg-[#5C3038] transition-colors border-0 cursor-pointer shadow-xs"
-                  >
-                    Chỉnh Sửa Chi Phí Khấu Trừ
-                  </button>
-                )}
-              </div>
+              <button
+                type="button"
+                onClick={onClose}
+                className="w-full py-2.5 rounded-xl border border-[#EFE5E1] text-[12.5px] font-bold text-[#5F4E50] hover:bg-[#FAF5F2] transition-colors bg-white cursor-pointer shadow-2xs"
+              >
+                {isCompletedOrder ? 'Đóng Hồ Sơ Lưu Trữ' : 'Đóng Biên Bản'}
+              </button>
             ) : (
               <>
                 <button
                   type="button"
-                  onClick={() => {
-                    if (isReturnedOrder) setIsEditing(false);
-                    else onClose();
-                  }}
+                  onClick={onClose}
                   className="w-28 py-2.5 rounded-xl border border-[#EFE5E1] text-[12px] font-bold text-[#5F4E50] hover:bg-[#FAF5F2] transition-colors bg-transparent cursor-pointer"
                 >
                   Hủy
@@ -1430,7 +1415,7 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
               <PhoneCall size={16} />
             </div>
             <div>
-              <h3 className="font-playfair text-[15px] font-bold text-red-950 m-0">
+              <h3 className="font-sans text-[15px] font-bold text-red-950 m-0">
                 Admin Đàm Phán Mức Phạt & Hoàn Tất Đơn
               </h3>
               <p className="text-[10.5px] text-red-700 m-0 font-medium">
@@ -1774,7 +1759,7 @@ function RefundModal({ order, onClose, onSuccess }) {
               <Banknote size={20} />
             </div>
             <div>
-              <h3 className="font-playfair text-[18px] font-bold text-[#196C3B]">
+              <h3 className="font-sans text-[18px] font-bold text-[#196C3B]">
                 Quyết Toán và Hoàn Cọc Cho Khách (Bước 2)
               </h3>
               <p className="text-[11.5px] text-[#6E8276]">
@@ -1845,7 +1830,7 @@ function RefundModal({ order, onClose, onSuccess }) {
                 <span className="font-bold text-[13px] text-[#2C2523] block">SỐ TIỀN THỰC TẾ HOÀN TRẢ:</span>
                 <span className="text-[11px] text-[#8C7D7E]">Đúng theo biên bản kiểm định đối soát</span>
               </div>
-              <span className="font-playfair text-[20px] font-bold text-[#1E8347]">
+              <span className="font-sans text-[20px] font-bold text-[#1E8347]">
                 {fmtVnd(finalRefund)}
               </span>
             </div>
