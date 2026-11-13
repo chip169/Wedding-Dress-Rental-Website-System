@@ -538,9 +538,11 @@ function InspectionModal({ order, onClose, onSuccess }) {
   const isGuestOrder = !order.hasAccount && !order.customerId && !order.userId;
   const [customerStatus, setCustomerStatus] = useState(order.inspectionCustomerStatus || order.inspection?.customerStatus || 'pending');
   const isCustomerApproved = customerStatus === 'approved';
-  // Luôn cho phép Staff/Admin kiểm định và chọn lỗi cho các đơn chưa hoàn tất lưu kho
-  const [isEditing, setIsEditing] = useState(true);
-  const isReadOnly = isCompletedOrder;
+
+  // 1. Khi đơn ĐANG THUÊ ('renting'): Nhân viên bấm [Kiểm Định Trả Váy] để kiểm tra & chọn lỗi (isReadOnly = false)
+  // 2. Khi đơn ĐÃ KIỂM ĐỊNH ('waiting_refund' / 'returned' / 'completed'): Bấm [Biên Bản] là CHẾ ĐỘ XEM (isReadOnly = true)
+  const [isEditing, setIsEditing] = useState(false);
+  const isReadOnly = isCompletedOrder || (!isEditing && isReturnedOrder);
 
   const [disputeReason, setDisputeReason] = useState('');
   const [refundBankDetails, setRefundBankDetails] = useState(null);
@@ -1331,7 +1333,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
                   onClick={onClose}
                   className="flex-1 py-2.5 rounded-xl border border-[#EFE5E1] text-[12px] font-bold text-[#5F4E50] hover:bg-[#FAF5F2] transition-colors bg-transparent cursor-pointer"
                 >
-                  {isCompletedOrder ? 'Đóng Hồ Sơ Lưu Trữ' : isCustomerApproved ? 'Đóng (Khách Đã Duyệt - Hồ Sơ Đã Khóa)' : 'Đóng'}
+                  {isCompletedOrder ? 'Đóng Hồ Sơ Lưu Trữ' : 'Đóng Biên Bản (Chỉ Xem)'}
                 </button>
                 {!isCompletedOrder && !isCustomerApproved && (
                   <button
