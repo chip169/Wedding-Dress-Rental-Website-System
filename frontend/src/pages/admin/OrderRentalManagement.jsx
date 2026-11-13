@@ -292,15 +292,16 @@ function OrderDetailModal({ order, onClose }) {
               <FileText size={17} />
             </div>
             <div>
-              <h3 className="font-sans text-lg font-bold text-[#5F2B36] m-0 leading-tight">
-                Chi Tiết Đơn Thuê
-              </h3>
-              <div className="mt-1 flex items-center gap-1.5">
-                <span className="text-[11px] text-[#8C7D7E] font-medium">Mã đơn thuê:</span>
-                <span className="px-2 py-0.5 rounded bg-[#FAF0EC] text-[#733F49] font-mono text-[11px] font-bold border border-[#F2D8D4]">
-                  {order.orderCode || order._id}
-                </span>
-              </div>
+              <h3 className="font-playfair text-lg font-bold text-[#5F2B36] m-0 leading-tight">
+                <h3 className="font-sans text-lg font-bold text-[#5F2B36] m-0 leading-tight">
+                  Chi Tiết Đơn Thuê
+                </h3>
+                <div className="mt-1 flex items-center gap-1.5">
+                  <span className="text-[11px] text-[#8C7D7E] font-medium">Mã đơn thuê:</span>
+                  <span className="px-2 py-0.5 rounded bg-[#FAF0EC] text-[#733F49] font-mono text-[11px] font-bold border border-[#F2D8D4]">
+                    {order.orderCode || order._id}
+                  </span>
+                </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -458,9 +459,10 @@ function DamagePriceCatalogModal({ open, onClose }) {
               <FileSpreadsheet size={15} />
             </div>
             <div>
-              <h3 className="font-sans text-[15px] font-bold text-[#5F2B36] m-0 leading-tight">
-                Bảng Giá Đền Bù Thiệt Hại Niêm Yết
-              </h3>
+              <h3 className="font-playfair text-[15px] font-bold text-[#5F2B36] m-0 leading-tight">
+                <h3 className="font-sans text-[15px] font-bold text-[#5F2B36] m-0 leading-tight">
+                  Bảng Giá Đền Bù Thiệt Hại Niêm Yết
+                </h3>
             </div>
           </div>
           <button
@@ -526,6 +528,9 @@ function InspectionModal({ order, onClose, onSuccess }) {
   const isCustomerApproved = customerStatus === 'approved';
 
   // 1. Khi đơn ĐANG THUÊ ('renting'): Nhân viên bấm [Kiểm Định Trả Váy] để kiểm tra & chọn lỗi (isReadOnly = false)
+  // 2. Khi đơn ĐÃ KIỂM ĐỊNH ('waiting_refund' / 'returned' / 'completed'): Bấm [Biên Bản] là CHẾ ĐỘ XEM (isReadOnly = true)
+  const [isEditing, setIsEditing] = useState(false);
+  const isReadOnly = isCompletedOrder || (!isEditing && isReturnedOrder);
   // 2. Khi đơn ĐÃ KIỂM ĐỊNH ('waiting_refund' / 'returned' / 'completed'): Bấm [Biên Bản] là CHẾ ĐỘ XEM CỐ ĐỊNH, KHÔNG ĐƯỢC PHÉP CHỈNH SỬA
   const isReadOnly = isCompletedOrder || isReturnedOrder;
 
@@ -803,20 +808,21 @@ function InspectionModal({ order, onClose, onSuccess }) {
               <ShieldCheck size={20} />
             </div>
             <div>
-              <h3 className="font-sans text-[16px] font-bold text-[#5F2B36] m-0 tracking-tight">
-                {isCompletedOrder
-                  ? 'Hồ Sơ Lưu Trữ Đơn Thuê & Quyết Toán Cọc'
-                  : isCustomerApproved
-                    ? 'Biên Bản Giám Định Lễ Phục (Khách Đã Duyệt)'
-                    : isReturnedOrder
-                      ? 'Biên Bản Giám Định Lễ Phục '
-                      : 'Biên Bản Giám Định Hiện Trạng & Quyết Toán Cọc'}
-              </h3>
-              <p className="text-[11px] text-[#8C7D7E] m-0 flex items-center gap-1.5 mt-0.5">
-                <span>Mã đơn: <strong className="font-mono text-[#5F2B36]">#{order.orderCode}</strong></span>
+              <h3 className="font-playfair text-[16px] font-bold text-[#5F2B36] m-0 tracking-tight">
+                <h3 className="font-sans text-[16px] font-bold text-[#5F2B36] m-0 tracking-tight">
+                  {isCompletedOrder
+                    ? 'Hồ Sơ Lưu Trữ Đơn Thuê & Quyết Toán Cọc'
+                    : isCustomerApproved
+                      ? 'Biên Bản Giám Định Lễ Phục (Khách Đã Duyệt)'
+                      : isReturnedOrder
+                        ? 'Biên Bản Giám Định Lễ Phục '
+                        : 'Biên Bản Giám Định Hiện Trạng & Quyết Toán Cọc'}
+                </h3>
+                <p className="text-[11px] text-[#8C7D7E] m-0 flex items-center gap-1.5 mt-0.5">
+                  <span>Mã đơn: <strong className="font-mono text-[#5F2B36]">#{order.orderCode}</strong></span>
 
 
-              </p>
+                </p>
             </div>
           </div>
           <button
@@ -915,24 +921,25 @@ function InspectionModal({ order, onClose, onSuccess }) {
                 <div key={idx} className="p-3 rounded-2xl border border-[#EFE5E1] bg-white space-y-2.5 shadow-2xs">
                   <div className="flex items-center justify-between flex-wrap gap-2 pb-1.5 border-b border-[#F7EFEA]">
                     <div className="flex items-center gap-2 flex-wrap">
-                      <span className="font-sans font-bold text-[13.5px] text-[#5F2B36]">
-                        {ic.name}
-                      </span>
-                      {itemCode && (
-                        <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#FAF0EC] text-[#733F49] font-mono text-[10px] font-bold border border-[#F2D8D4] leading-none">
-                          {itemCode}
+                      <span className="font-playfair font-bold text-[13.5px] text-[#5F2B36]">
+                        <span className="font-sans font-bold text-[13.5px] text-[#5F2B36]">
+                          {ic.name}
                         </span>
-                      )}
-                      {(ic.size || order.items?.[idx]?.size) && (
-                        <span className="inline-block px-1.5 py-0.5 rounded bg-[#FCECE8] text-[#B8737D] text-[10px] font-bold leading-none">
-                          Size {ic.size || order.items?.[idx]?.size}
-                        </span>
-                      )}
-                      {(ic.color || order.items?.[idx]?.color || order.color) && (
-                        <span className="inline-block px-1.5 py-0.5 rounded bg-[#FAF4EE] text-[#733F49] text-[10px] font-bold leading-none border border-[#F0E5DC]">
-                          Màu {ic.color || order.items?.[idx]?.color || order.color || 'Trắng Sữa'}
-                        </span>
-                      )}
+                        {itemCode && (
+                          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#FAF0EC] text-[#733F49] font-mono text-[10px] font-bold border border-[#F2D8D4] leading-none">
+                            {itemCode}
+                          </span>
+                        )}
+                        {(ic.size || order.items?.[idx]?.size) && (
+                          <span className="inline-block px-1.5 py-0.5 rounded bg-[#FCECE8] text-[#B8737D] text-[10px] font-bold leading-none">
+                            Size {ic.size || order.items?.[idx]?.size}
+                          </span>
+                        )}
+                        {(ic.color || order.items?.[idx]?.color || order.color) && (
+                          <span className="inline-block px-1.5 py-0.5 rounded bg-[#FAF4EE] text-[#733F49] text-[10px] font-bold leading-none border border-[#F0E5DC]">
+                            Màu {ic.color || order.items?.[idx]?.color || order.color || 'Trắng Sữa'}
+                          </span>
+                        )}
                     </div>
                     <span className="text-[11px] text-[#8C7D7E]">
                       Tiền cọc: <strong className="text-[#5F2B36]">{fmtVnd(maxLimit)}</strong>
@@ -940,26 +947,78 @@ function InspectionModal({ order, onClose, onSuccess }) {
                   </div>
 
                   {/* Chọn nhóm lỗi hư hại theo Bảng giá niêm yết */}
-                  <div className="space-y-1.5">
-                    <div className="flex items-center justify-between gap-2 flex-wrap">
-                      <span className="text-[11.5px] font-bold text-[#5F4E50] flex items-center gap-1.5">
-                        <span>Nhóm lỗi theo Bảng Giá Niêm Yết:</span>
-                      </span>
+                  {ic.condition === 'total_damage' ? (
+                    <div className="p-3 rounded-2xl bg-rose-50 border border-rose-300 text-rose-950 space-y-2 animate-fadeIn">
+                      <div className="flex items-center justify-between flex-wrap gap-2">
+                        <div className="flex items-center gap-2">
+                          <span className="w-6 h-6 rounded-lg bg-rose-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
+                            ⚠️
+                          </span>
+                          <div>
+                            <span className="font-bold text-[12.5px] text-rose-950 block">
+                              9. HỎNG HOÀN TOÀN (Lỗi nặng — Cần Admin duyệt)
+                            </span>
+                            <span className="text-[11px] text-rose-700 font-medium">
+                              Tịch thu 100% tiền cọc ({fmtVnd(maxLimit)}) • Cần Admin xác nhận
+                            </span>
+                          </div>
+                        </div>
+                        {!isReadOnly && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateCondition(idx, 'normal_wear');
+                              setCustomerDecision('agreed');
+                            }}
+                            className="px-2.5 py-1 rounded-lg bg-white border border-rose-300 text-rose-800 hover:bg-rose-100 text-[11px] font-bold cursor-pointer transition-colors shadow-2xs"
+                          >
+                            ↩ Hủy báo lỗi nặng, chọn lại
+                          </button>
+                        )}
+                      </div>
+                      <div className="p-2 rounded-xl bg-white/80 border border-rose-200 text-[11px] text-rose-900 leading-relaxed">
+                        <strong>Quy chuẩn nghiêm ngặt:</strong> Trường hợp lỗi nặng hỏng hoàn toàn sẽ được chuyển trực tiếp cho Quản lý / Admin để thẩm định đối soát bằng chứng hình ảnh và duyệt quyết toán.
+                      </div>
                     </div>
+                  ) : (
+                    <div className="space-y-1.5">
+                      <div className="flex items-center justify-between gap-2 flex-wrap">
+                        <span className="text-[11.5px] font-bold text-[#5F4E50] flex items-center gap-1.5">
+                          <span>Nhóm lỗi theo Bảng Giá Niêm Yết:</span>
+                        </span>
+                        {!isReadOnly && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              updateCondition(idx, 'total_damage');
+                              setCustomerDecision('disputed');
+                              if (!customerDisputeNote) {
+                                setCustomerDisputeNote('Váy bị hư hại nghiêm trọng / lỗi nặng không thể may lại, chuyển Quản lý & Admin trực tiếp thẩm định xử lý.');
+                              }
+                            }}
+                            className="px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
+                            title="Báo cáo lỗi nặng cần Admin xử lý"
+                          >
+                            <AlertTriangle size={12} className="text-red-600 shrink-0" />
+                            <span>Ghi lỗi nặng (Gửi Admin)</span>
+                          </button>
+                        )}
+                      </div>
 
-                    <select
-                      disabled={isReadOnly}
-                      value={ic.condition}
-                      onChange={(e) => updateCondition(idx, e.target.value)}
-                      className="w-full px-3 py-2 rounded-xl border border-[#DDC6C0] bg-white text-xs font-semibold text-[#2C2523] outline-none focus:border-[#733F49] cursor-pointer disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed transition-colors"
-                    >
-                      {DAMAGE_PRICE_CATALOG.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.name} — Phí: {cat.feeLabel}
-                        </option>
-                      ))}
-                    </select>
-                  </div>
+                      <select
+                        disabled={isReadOnly}
+                        value={ic.condition}
+                        onChange={(e) => updateCondition(idx, e.target.value)}
+                        className="w-full px-3 py-2 rounded-xl border border-[#DDC6C0] bg-white text-xs font-semibold text-[#2C2523] outline-none focus:border-[#733F49] cursor-pointer disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed transition-colors"
+                      >
+                        {DAMAGE_PRICE_CATALOG.filter((cat) => !cat.isAdminOnly).map((cat) => (
+                          <option key={cat.id} value={cat.id}>
+                            {cat.name} — Phí: {cat.feeLabel}
+                          </option>
+                        ))}
+                      </select>
+                    </div>
+                  )}
 
                   {/* Chi tiết hiện trạng & Mức phí đền bù khóa cố định */}
                   {ic.condition !== 'normal_wear' && ic.condition !== 'good' && (
@@ -1004,14 +1063,6 @@ function InspectionModal({ order, onClose, onSuccess }) {
                         <FileCheck size={13} className="text-[#1E8347] shrink-0" />
                         <span>Đối chiếu: Mức phí được quy định cố định tại <strong>Điều 5 & Phụ lục Hợp đồng thuê váy</strong> để đối soát cùng khách hàng.</span>
                       </div>
-
-                      {/* Cảnh báo quyền phê duyệt Admin nếu là lỗi nặng */}
-                      {catItem.isAdminOnly && (
-                        <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[11px] flex items-center gap-1.5">
-                          <AlertTriangle size={13} className="shrink-0 text-rose-600" />
-                          <span><strong>Quy chuẩn nghiêm ngặt:</strong> Nhóm lỗi này thuộc thẩm quyền <strong>{catItem.authorityLabel}</strong>. Vui lòng chọn Phương án 2 để chuyển Quản lý trực tiếp đàm phán và phê duyệt.</span>
-                        </div>
-                      )}
                     </div>
                   )}
                 </div>
@@ -1098,6 +1149,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
               </div>
               <div className="text-right sm:text-right">
                 <span className="text-[#1E8347] text-[10px] uppercase font-bold tracking-wider block">Dự Kiến Hoàn Trả</span>
+                <strong className="text-[16px] text-[#1E8347] font-playfair font-bold">{fmtVnd(finalRefund)}</strong>
                 <strong className="text-[16px] text-[#1E8347] font-sans font-bold">{fmtVnd(finalRefund)}</strong>
               </div>
             </div>
@@ -1267,6 +1319,24 @@ function InspectionModal({ order, onClose, onSuccess }) {
           {/* Actions - Nút bấm hoàn tất chuẩn mực */}
           <div className="flex gap-2.5 pt-1.5">
             {isReadOnly ? (
+              <div className="flex w-full gap-2.5">
+                <button
+                  type="button"
+                  onClick={onClose}
+                  className="flex-1 py-2.5 rounded-xl border border-[#EFE5E1] text-[12px] font-bold text-[#5F4E50] hover:bg-[#FAF5F2] transition-colors bg-transparent cursor-pointer"
+                >
+                  {isCompletedOrder ? 'Đóng Hồ Sơ Lưu Trữ' : 'Đóng Biên Bản (Chỉ Xem)'}
+                </button>
+                {!isCompletedOrder && !isCustomerApproved && (
+                  <button
+                    type="button"
+                    onClick={() => setIsEditing(true)}
+                    className="flex-1 py-2.5 rounded-xl bg-[#733F49] text-[12px] font-bold text-white hover:bg-[#5C3038] transition-colors border-0 cursor-pointer shadow-xs"
+                  >
+                    Chỉnh Sửa Chi Phí Khấu Trừ
+                  </button>
+                )}
+              </div>
               <button
                 type="button"
                 onClick={onClose}
@@ -1278,6 +1348,10 @@ function InspectionModal({ order, onClose, onSuccess }) {
               <>
                 <button
                   type="button"
+                  onClick={() => {
+                    if (isReturnedOrder) setIsEditing(false);
+                    else onClose();
+                  }}
                   onClick={onClose}
                   className="w-28 py-2.5 rounded-xl border border-[#EFE5E1] text-[12px] font-bold text-[#5F4E50] hover:bg-[#FAF5F2] transition-colors bg-transparent cursor-pointer"
                 >
@@ -1301,7 +1375,11 @@ function InspectionModal({ order, onClose, onSuccess }) {
                     className="flex-1 py-2.5 rounded-xl bg-[#8B2635] hover:bg-[#701E2A] text-white text-[12.5px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 shadow-xs"
                   >
                     {submitting ? <RefreshCw size={14} className="animate-spin" /> : <PhoneCall size={14} />}
-                    <span>Bảo Lưu Đơn & Chuyển Quản Lý</span>
+                    <span>
+                      {itemsCondition.some((ic) => ic.condition === 'total_damage')
+                        ? 'Gửi Hồ Sơ Lỗi Nặng Cho Admin Xử Lý'
+                        : 'Bảo Lưu Đơn & Chuyển Quản Lý'}
+                    </span>
                   </button>
                 )}
               </>
@@ -1415,12 +1493,13 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
               <PhoneCall size={16} />
             </div>
             <div>
-              <h3 className="font-sans text-[15px] font-bold text-red-950 m-0">
-                Admin Đàm Phán Mức Phạt & Hoàn Tất Đơn
-              </h3>
-              <p className="text-[10.5px] text-red-700 m-0 font-medium">
-                Đơn #{order.orderCode} • Trạng thái: Tạm giữ - Chờ Admin đàm phán
-              </p>
+              <h3 className="font-playfair text-[15px] font-bold text-red-950 m-0">
+                <h3 className="font-sans text-[15px] font-bold text-red-950 m-0">
+                  Admin Đàm Phán Mức Phạt & Hoàn Tất Đơn
+                </h3>
+                <p className="text-[10.5px] text-red-700 m-0 font-medium">
+                  Đơn #{order.orderCode} • Trạng thái: Tạm giữ - Chờ Admin đàm phán
+                </p>
             </div>
           </div>
           <button
@@ -1759,12 +1838,13 @@ function RefundModal({ order, onClose, onSuccess }) {
               <Banknote size={20} />
             </div>
             <div>
-              <h3 className="font-sans text-[18px] font-bold text-[#196C3B]">
-                Quyết Toán và Hoàn Cọc Cho Khách (Bước 2)
-              </h3>
-              <p className="text-[11.5px] text-[#6E8276]">
-                Đơn #{order.orderCode} • Hoàn trả tiền cọc bảo lãnh sau khi đã qua bước kiểm định
-              </p>
+              <h3 className="font-playfair text-[18px] font-bold text-[#196C3B]">
+                <h3 className="font-sans text-[18px] font-bold text-[#196C3B]">
+                  Quyết Toán và Hoàn Cọc Cho Khách (Bước 2)
+                </h3>
+                <p className="text-[11.5px] text-[#6E8276]">
+                  Đơn #{order.orderCode} • Hoàn trả tiền cọc bảo lãnh sau khi đã qua bước kiểm định
+                </p>
             </div>
           </div>
           <button
@@ -1830,9 +1910,10 @@ function RefundModal({ order, onClose, onSuccess }) {
                 <span className="font-bold text-[13px] text-[#2C2523] block">SỐ TIỀN THỰC TẾ HOÀN TRẢ:</span>
                 <span className="text-[11px] text-[#8C7D7E]">Đúng theo biên bản kiểm định đối soát</span>
               </div>
-              <span className="font-sans text-[20px] font-bold text-[#1E8347]">
-                {fmtVnd(finalRefund)}
-              </span>
+              <span className="font-playfair text-[20px] font-bold text-[#1E8347]">
+                <span className="font-sans text-[20px] font-bold text-[#1E8347]">
+                  {fmtVnd(finalRefund)}
+                </span>
             </div>
           </div>
 
