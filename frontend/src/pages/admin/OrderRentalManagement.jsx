@@ -296,12 +296,12 @@ function OrderDetailModal({ order, onClose }) {
               <h3 className="font-sans text-lg font-bold text-[#5F2B36] m-0 leading-tight">
                 Chi Tiết Đơn Thuê
               </h3>
-                <div className="mt-1 flex items-center gap-1.5">
-                  <span className="text-[11px] text-[#8C7D7E] font-medium">Mã đơn thuê:</span>
-                  <span className="px-2 py-0.5 rounded bg-[#FAF0EC] text-[#733F49] font-mono text-[11px] font-bold border border-[#F2D8D4]">
-                    {order.orderCode || order._id}
-                  </span>
-                </div>
+              <div className="mt-1 flex items-center gap-1.5">
+                <span className="text-[11px] text-[#8C7D7E] font-medium">Mã đơn thuê:</span>
+                <span className="px-2 py-0.5 rounded bg-[#FAF0EC] text-[#733F49] font-mono text-[11px] font-bold border border-[#F2D8D4]">
+                  {order.orderCode || order._id}
+                </span>
+              </div>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -806,19 +806,19 @@ function InspectionModal({ order, onClose, onSuccess }) {
             </div>
             <div>
               <h3 className="font-sans text-[16px] font-bold text-[#5F2B36] m-0 tracking-tight">
-                  {isCompletedOrder
-                    ? 'Hồ Sơ Lưu Trữ Đơn Thuê & Quyết Toán Cọc'
-                    : isCustomerApproved
-                      ? 'Biên Bản Giám Định Lễ Phục (Khách Đã Duyệt)'
-                      : isReturnedOrder
-                        ? 'Biên Bản Giám Định Lễ Phục '
-                        : 'Biên Bản Giám Định Hiện Trạng & Quyết Toán Cọc'}
-                </h3>
-                <p className="text-[11px] text-[#8C7D7E] m-0 flex items-center gap-1.5 mt-0.5">
-                  <span>Mã đơn: <strong className="font-mono text-[#5F2B36]">#{order.orderCode}</strong></span>
+                {isCompletedOrder
+                  ? 'Hồ Sơ Lưu Trữ Đơn Thuê & Quyết Toán Cọc'
+                  : isCustomerApproved
+                    ? 'Biên Bản Giám Định Lễ Phục (Khách Đã Duyệt)'
+                    : isReturnedOrder
+                      ? 'Biên Bản Giám Định Lễ Phục '
+                      : 'Biên Bản Giám Định Hiện Trạng & Quyết Toán Cọc'}
+              </h3>
+              <p className="text-[11px] text-[#8C7D7E] m-0 flex items-center gap-1.5 mt-0.5">
+                <span>Mã đơn: <strong className="font-mono text-[#5F2B36]">#{order.orderCode}</strong></span>
 
 
-                </p>
+              </p>
             </div>
           </div>
           <button
@@ -875,15 +875,6 @@ function InspectionModal({ order, onClose, onSuccess }) {
               <div>
                 <div className="flex items-center gap-1.5 flex-wrap">
                   <strong className="text-[13px] text-[#2C2523]">{order.customerName}</strong>
-                  {order.hasAccount || order.customerId ? (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-[#FAF0EC] text-[#733F49] border border-[#F2D8D4]">
-                      <CircleUser size={10} className="text-[#B8737D]" /> Thành Viên VIP
-                    </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-medium bg-[#F5F2F0] text-[#7A6A6B] border border-[#E8DFDC]">
-                      Khách Showroom
-                    </span>
-                  )}
                 </div>
                 {order.customerPhone && (
                   <span className="text-[11px] text-[#8C7D7E] block mt-0.5 font-mono">{order.customerPhone}</span>
@@ -920,21 +911,21 @@ function InspectionModal({ order, onClose, onSuccess }) {
                       <span className="font-sans font-bold text-[13.5px] text-[#5F2B36]">
                         {ic.name}
                       </span>
-                        {itemCode && (
-                          <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#FAF0EC] text-[#733F49] font-mono text-[10px] font-bold border border-[#F2D8D4] leading-none">
-                            {itemCode}
-                          </span>
-                        )}
-                        {(ic.size || order.items?.[idx]?.size) && (
-                          <span className="inline-block px-1.5 py-0.5 rounded bg-[#FCECE8] text-[#B8737D] text-[10px] font-bold leading-none">
-                            Size {ic.size || order.items?.[idx]?.size}
-                          </span>
-                        )}
-                        {(ic.color || order.items?.[idx]?.color || order.color) && (
-                          <span className="inline-block px-1.5 py-0.5 rounded bg-[#FAF4EE] text-[#733F49] text-[10px] font-bold leading-none border border-[#F0E5DC]">
-                            Màu {ic.color || order.items?.[idx]?.color || order.color || 'Trắng Sữa'}
-                          </span>
-                        )}
+                      {itemCode && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#FAF0EC] text-[#733F49] font-mono text-[10px] font-bold border border-[#F2D8D4] leading-none">
+                          {itemCode}
+                        </span>
+                      )}
+                      {(ic.size || order.items?.[idx]?.size) && (
+                        <span className="inline-block px-1.5 py-0.5 rounded bg-[#FCECE8] text-[#B8737D] text-[10px] font-bold leading-none">
+                          Size {ic.size || order.items?.[idx]?.size}
+                        </span>
+                      )}
+                      {(ic.color || order.items?.[idx]?.color || order.color) && (
+                        <span className="inline-block px-1.5 py-0.5 rounded bg-[#FAF4EE] text-[#733F49] text-[10px] font-bold leading-none border border-[#F0E5DC]">
+                          Màu {ic.color || order.items?.[idx]?.color || order.color || 'Trắng Sữa'}
+                        </span>
+                      )}
                     </div>
                     <span className="text-[11px] text-[#8C7D7E]">
                       Tiền cọc: <strong className="text-[#5F2B36]">{fmtVnd(maxLimit)}</strong>
@@ -1372,11 +1363,11 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
             </div>
             <div>
               <h3 className="font-sans text-[15px] font-bold text-red-950 m-0">
-                  Admin Đàm Phán Mức Phạt & Hoàn Tất Đơn
-                </h3>
-                <p className="text-[10.5px] text-red-700 m-0 font-medium">
-                  Đơn #{order.orderCode} • Trạng thái: Tạm giữ - Chờ Admin đàm phán
-                </p>
+                Admin Đàm Phán Mức Phạt & Hoàn Tất Đơn
+              </h3>
+              <p className="text-[10.5px] text-red-700 m-0 font-medium">
+                Đơn #{order.orderCode} • Trạng thái: Tạm giữ - Chờ Admin đàm phán
+              </p>
             </div>
           </div>
           <button
@@ -1716,11 +1707,11 @@ function RefundModal({ order, onClose, onSuccess }) {
             </div>
             <div>
               <h3 className="font-sans text-[18px] font-bold text-[#196C3B]">
-                  Quyết Toán và Hoàn Cọc Cho Khách (Bước 2)
-                </h3>
-                <p className="text-[11.5px] text-[#6E8276]">
-                  Đơn #{order.orderCode} • Hoàn trả tiền cọc bảo lãnh sau khi đã qua bước kiểm định
-                </p>
+                Quyết Toán và Hoàn Cọc Cho Khách (Bước 2)
+              </h3>
+              <p className="text-[11.5px] text-[#6E8276]">
+                Đơn #{order.orderCode} • Hoàn trả tiền cọc bảo lãnh sau khi đã qua bước kiểm định
+              </p>
             </div>
           </div>
           <button
