@@ -13,7 +13,7 @@ export const DAMAGE_PRICE_CATALOG = [
     description: 'Bụi bẩn gấu váy đi lại, mồ hôi, nhăn vải',
     feeType: 'fixed',
     fixedFee: 0,
-    feeLabel: '0 VNĐ (Miễn phí trong gói giặt)',
+    feeLabel: '0 VNĐ ',
     authority: 'staff',
     authorityLabel: 'Staff chốt ngay',
     isAdminOnly: false,

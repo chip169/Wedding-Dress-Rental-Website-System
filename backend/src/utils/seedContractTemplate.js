@@ -49,7 +49,7 @@ const HAUTE_COUTURE_CLAUSES = [
     content:
       '6.1. Bàn giao hoàn trả trễ hạn: Nếu Bên B hoàn trả sau 20:00 ngày kết thúc thuê mà không có thỏa thuận gia hạn trước bằng văn bản, Bên B chịu phí lưu dụng là 800.000 VNĐ/ngày để bù đắp chi phí gián đoạn lịch của cô dâu tiếp theo.\n' +
       '6.2. Hai bên thống nhất áp dụng cố định Bảng giá đền bù thiệt hại niêm yết công khai tại Atelier để đối chiếu khi hoàn trả lễ phục, không phụ thuộc ý chí chủ quan của nhân viên:\n' +
-      '   • Nhóm 1 (Hao mòn tự nhiên): 0 VNĐ (Miễn phí trong gói giặt);\n' +
+      '   • Nhóm 1 (Hao mòn tự nhiên): 0 VNĐ ;\n' +
       '   • Nhóm 2 (Vết bẩn nhẹ - son môi, phấn trang điểm): 250.000 VNĐ;\n' +
       '   • Nhóm 3 (Sút chỉ / Tuột cúc - đứt chỉ viền, bung cườm): 200.000 VNĐ;\n' +
       '   • Nhóm 4 (Vết bẩn cứng đầu - rượu vang, dầu mỡ sậm màu): 500.000 VNĐ;\n' +

@@ -58,7 +58,7 @@ const STANDARD_HAUTE_COUTURE_CLAUSES = [
     content:
       '5.1. Bên B cam kết giữ gìn trang phục cẩn trọng, không tự ý cắt may, ủi nhiệt độ cao hoặc tẩy hóa chất.\n' +
       '5.2. Hai bên thống nhất áp dụng Bảng giá đền bù thiệt hại cố định niêm yết (Phụ lục 1) để đối chiếu khi hoàn trả lễ phục, không phụ thuộc ý chí chủ quan của nhân viên:\n' +
-      '   • Nhóm 1 (Hao mòn tự nhiên): 0 VNĐ (Miễn phí trong gói giặt);\n' +
+      '   • Nhóm 1 (Hao mòn tự nhiên): 0 VNĐ ;\n' +
       '   • Nhóm 2 (Vết bẩn nhẹ - son môi, phấn trang điểm): 250.000 VNĐ;\n' +
       '   • Nhóm 3 (Sút chỉ / Tuột cúc - đứt chỉ viền, bung cườm): 200.000 VNĐ;\n' +
       '   • Nhóm 4 (Vết bẩn cứng đầu - rượu vang, dầu mỡ sậm màu): 500.000 VNĐ;\n' +
@@ -258,8 +258,8 @@ export default function SignedContractModal({ orderId, order: propOrder, contrac
       (rawOrder.contract?.signedAt
         ? new Date(rawOrder.contract.signedAt).toLocaleDateString('vi-VN')
         : rawOrder.createdAt
-        ? new Date(rawOrder.createdAt).toLocaleDateString('vi-VN')
-        : new Date().toLocaleDateString('vi-VN'));
+          ? new Date(rawOrder.createdAt).toLocaleDateString('vi-VN')
+          : new Date().toLocaleDateString('vi-VN'));
 
     // Chữ ký Bên B
     const signature = rawOrder.contractSignature || cData.contractSignature || rawOrder.contract?.contractSignature || customerName;
