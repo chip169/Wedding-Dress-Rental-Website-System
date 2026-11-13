@@ -993,7 +993,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
                     <div className="flex items-center justify-between gap-2 flex-wrap">
                       <span className="text-[11.5px] font-bold text-[#5F4E50] flex items-center gap-1.5">
                         <span>Nhóm lỗi theo Bảng Giá Niêm Yết:</span>
-                        <span className="text-[10px] text-[#8C7D7E] font-normal">(Staff không tự ý định giá)</span>
+                        <span className="text-[10px] text-[#8C7D7E] font-normal"></span>
                       </span>
                       <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border ${catItem.authority === 'admin_only'
                         ? 'bg-rose-100 text-rose-800 border-rose-300'
@@ -2029,6 +2029,7 @@ export default function OrderRentalManagement() {
   const [refundOrder, setRefundOrder] = useState(null); // for refund modal (bước 2 cũ)
   const [detailOrder, setDetailOrder] = useState(null); // for detail modal (chi tiết đơn thuê)
   const [statusMenuId, setStatusMenuId] = useState(null); // row dropdown open id
+  const [showDamageCatalogModal, setShowDamageCatalogModal] = useState(false); // Modal bảng giá đền bù niêm yết ra ngoài trang đơn thuê
 
   const isArchived = (order) => order.status === 'completed' || order.status === 'complete' || order.status === 'cancelled';
   const activeOrdersCount = useMemo(() => {
@@ -2333,18 +2334,30 @@ export default function OrderRentalManagement() {
             Theo dõi, điều phối tiến độ đơn thuê váy cưới và biên bản kiểm định hoàn cọc hệ thống UniBridal.
           </p>
         </div>
-        <button
-          type="button"
-          onClick={() => {
-            loadOrders();
-          }}
-          disabled={loading}
-          className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[#E8DDD8] bg-white text-[#5F2B36] hover:bg-[#FAF0EC] text-xs font-bold transition-all shadow-xs cursor-pointer self-start sm:self-auto disabled:opacity-60"
-          title="Làm mới danh sách đơn thuê từ máy chủ"
-        >
-          <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
-          <span>{loading ? 'Đang tải...' : 'Làm mới'}</span>
-        </button>
+        <div className="flex items-center gap-2.5 self-start sm:self-auto flex-wrap">
+          <button
+            type="button"
+            onClick={() => setShowDamageCatalogModal(true)}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[#ECD9D3] bg-white hover:bg-[#FAF0EC] text-[#733F49] text-xs font-bold transition-all shadow-xs cursor-pointer"
+            title="Tra cứu Bảng Giá Đền Bù Thiệt Hại Niêm Yết"
+          >
+            <FileSpreadsheet size={15} className="text-[#B8737D]" />
+            <span>Bảng Giá Đền Bù Niêm Yết</span>
+          </button>
+
+          <button
+            type="button"
+            onClick={() => {
+              loadOrders();
+            }}
+            disabled={loading}
+            className="inline-flex items-center gap-2 px-3.5 py-2 rounded-xl border border-[#E8DDD8] bg-white text-[#5F2B36] hover:bg-[#FAF0EC] text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-60"
+            title="Làm mới danh sách đơn thuê từ máy chủ"
+          >
+            <RefreshCw size={14} className={loading ? 'animate-spin' : ''} />
+            <span>{loading ? 'Đang tải...' : 'Làm mới'}</span>
+          </button>
+        </div>
       </div>
 
       {/* Banner thông báo nổi bật khi có đơn khiếu nại */}
@@ -2932,6 +2945,12 @@ export default function OrderRentalManagement() {
           onClose={() => setDetailOrder(null)}
         />
       )}
+
+      {/* Modal Bảng Giá Đền Bù Thiệt Hại Niêm Yết tra cứu ngoài trang */}
+      <DamagePriceCatalogModal
+        open={showDamageCatalogModal}
+        onClose={() => setShowDamageCatalogModal(false)}
+      />
     </AdminLayout>
   );
 }
