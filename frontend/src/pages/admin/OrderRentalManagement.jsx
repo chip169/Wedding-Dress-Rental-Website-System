@@ -658,6 +658,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
   const totalCompensation = itemsCondition.reduce((acc, ic) => acc + Number(ic.compensation || 0), 0);
   const totalDeduction = Math.min(totalDeposit, lateFee + totalCompensation);
   const finalRefund = Math.max(0, totalDeposit - totalDeduction);
+  const hasSevereDamage = itemsCondition.some((ic) => ic.condition === 'total_damage');
 
   // Thay đổi nhóm lỗi theo Bảng giá niêm yết (Khóa giá cố định, Staff không được tự ý sửa)
   const updateCondition = (idx, newCondId) => {
@@ -679,8 +680,10 @@ function InspectionModal({ order, onClose, onSuccess }) {
     });
 
     if (cat.isAdminOnly) {
-      message.warning(`Lỗi "${cat.shortName}" theo bảng giá niêm yết cần [${cat.authorityLabel}]. Hệ thống tự động chuyển sang Phương án 2 (Bảo lưu & chuyển Quản lý).`);
-      setCustomerDecision('disputed');
+      message.warning(`Lỗi "${cat.shortName}" cần [${cat.authorityLabel}]. Hệ thống kích hoạt nút [Tạm Giữ Kiểm Định] để chuyển Admin.`);
+      if (!customerDisputeNote) {
+        setCustomerDisputeNote('Váy bị hư hại nghiêm trọng / lỗi nặng không thể may lại, chuyển Quản lý & Admin trực tiếp thẩm định xử lý.');
+      }
     }
   };
 
@@ -933,78 +936,28 @@ function InspectionModal({ order, onClose, onSuccess }) {
                   </div>
 
                   {/* Chọn nhóm lỗi hư hại theo Bảng giá niêm yết */}
-                  {ic.condition === 'total_damage' ? (
-                    <div className="p-3 rounded-2xl bg-rose-50 border border-rose-300 text-rose-950 space-y-2 animate-fadeIn">
-                      <div className="flex items-center justify-between flex-wrap gap-2">
-                        <div className="flex items-center gap-2">
-                          <span className="w-6 h-6 rounded-lg bg-rose-600 text-white flex items-center justify-center text-xs font-bold shrink-0">
-                            ⚠️
-                          </span>
-                          <div>
-                            <span className="font-bold text-[12.5px] text-rose-950 block">
-                              9. HỎNG HOÀN TOÀN (Lỗi nặng — Cần Admin duyệt)
-                            </span>
-                            <span className="text-[11px] text-rose-700 font-medium">
-                              Tịch thu 100% tiền cọc ({fmtVnd(maxLimit)}) • Cần Admin xác nhận
-                            </span>
-                          </div>
-                        </div>
-                        {!isReadOnly && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              updateCondition(idx, 'normal_wear');
-                              setCustomerDecision('agreed');
-                            }}
-                            className="px-2.5 py-1 rounded-lg bg-white border border-rose-300 text-rose-800 hover:bg-rose-100 text-[11px] font-bold cursor-pointer transition-colors shadow-2xs"
-                          >
-                            ↩ Hủy báo lỗi nặng, chọn lại
-                          </button>
-                        )}
-                      </div>
-                      <div className="p-2 rounded-xl bg-white/80 border border-rose-200 text-[11px] text-rose-900 leading-relaxed">
-                        <strong>Quy chuẩn nghiêm ngặt:</strong> Trường hợp lỗi nặng hỏng hoàn toàn sẽ được chuyển trực tiếp cho Quản lý / Admin để thẩm định đối soát bằng chứng hình ảnh và duyệt quyết toán.
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-1.5">
-                      <div className="flex items-center justify-between gap-2 flex-wrap">
-                        <span className="text-[11.5px] font-bold text-[#5F4E50] flex items-center gap-1.5">
-                          <span>Nhóm lỗi theo Bảng Giá Niêm Yết:</span>
-                        </span>
-                        {!isReadOnly && (
-                          <button
-                            type="button"
-                            onClick={() => {
-                              updateCondition(idx, 'total_damage');
-                              setCustomerDecision('disputed');
-                              if (!customerDisputeNote) {
-                                setCustomerDisputeNote('Váy bị hư hại nghiêm trọng / lỗi nặng không thể may lại, chuyển Quản lý & Admin trực tiếp thẩm định xử lý.');
-                              }
-                            }}
-                            className="px-2.5 py-1 rounded-lg border border-red-200 bg-red-50 text-red-700 hover:bg-red-100 text-[11px] font-bold flex items-center gap-1 cursor-pointer transition-colors shadow-2xs"
-                            title="Báo cáo lỗi nặng cần Admin xử lý"
-                          >
-                            <AlertTriangle size={12} className="text-red-600 shrink-0" />
-                            <span>Ghi lỗi nặng (Gửi Admin)</span>
-                          </button>
-                        )}
-                      </div>
+                  <div className="space-y-1.5">
+                    <span className="text-[11.5px] font-bold text-[#5F4E50] block">
+                      Nhóm lỗi theo Bảng Giá Niêm Yết:
+                    </span>
 
-                      <select
-                        disabled={isReadOnly}
-                        value={ic.condition}
-                        onChange={(e) => updateCondition(idx, e.target.value)}
-                        className="w-full px-3 py-2 rounded-xl border border-[#DDC6C0] bg-white text-xs font-semibold text-[#2C2523] outline-none focus:border-[#733F49] cursor-pointer disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed transition-colors"
-                      >
-                        {DAMAGE_PRICE_CATALOG.filter((cat) => !cat.isAdminOnly).map((cat) => (
-                          <option key={cat.id} value={cat.id}>
-                            {cat.name} — Phí: {cat.feeLabel}
-                          </option>
-                        ))}
-                      </select>
-                    </div>
-                  )}
+                    <select
+                      disabled={isReadOnly}
+                      value={ic.condition}
+                      onChange={(e) => updateCondition(idx, e.target.value)}
+                      className={`w-full px-3 py-2 rounded-xl border text-xs font-semibold outline-none transition-colors cursor-pointer disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed ${
+                        ic.condition === 'total_damage'
+                          ? 'border-red-400 bg-red-50/60 text-red-950 focus:border-red-600'
+                          : 'border-[#DDC6C0] bg-white text-[#2C2523] focus:border-[#733F49]'
+                      }`}
+                    >
+                      {DAMAGE_PRICE_CATALOG.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name} — Phí: {cat.feeLabel}
+                        </option>
+                      ))}
+                    </select>
+                  </div>
 
                   {/* Chi tiết hiện trạng & Mức phí đền bù khóa cố định */}
                   {ic.condition !== 'normal_wear' && ic.condition !== 'good' && (
@@ -1231,26 +1184,29 @@ function InspectionModal({ order, onClose, onSuccess }) {
                 >
                   Hủy
                 </button>
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => handleSubmit('hold')}
-                  className="flex-1 py-2.5 rounded-xl bg-[#8B2635] hover:bg-[#701E2A] text-white text-[12px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-1.5 shadow-xs"
-                  title="Tạm giữ kiểm định để chuyển Quản lý / Admin xử lý đàm phán"
-                >
-                  {submitting ? <RefreshCw size={13} className="animate-spin" /> : <ShieldAlert size={14} />}
-                  <span>Tạm Giữ Kiểm Định</span>
-                </button>
-                <button
-                  type="button"
-                  disabled={submitting}
-                  onClick={() => handleSubmit('complete')}
-                  className="flex-1 py-2.5 rounded-xl bg-[#1E8347] hover:bg-[#166534] text-white text-[12px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-1.5 shadow-xs"
-                  title="Hoàn tất kiểm định và chuyển đơn sang trạng thái Chờ Hoàn Cọc"
-                >
-                  {submitting ? <RefreshCw size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                  <span>Hoàn Tất Kiểm Định Váy</span>
-                </button>
+                {hasSevereDamage ? (
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={() => handleSubmit('hold')}
+                    className="flex-1 py-2.5 rounded-xl bg-[#8B2635] hover:bg-[#701E2A] text-white text-[12.5px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-1.5 shadow-xs"
+                    title="Tạm giữ kiểm định do váy bị lỗi nặng để chuyển Admin trực tiếp thẩm định"
+                  >
+                    {submitting ? <RefreshCw size={13} className="animate-spin" /> : <ShieldAlert size={14} />}
+                    <span>Tạm Giữ Kiểm Định (Chuyển Admin)</span>
+                  </button>
+                ) : (
+                  <button
+                    type="button"
+                    disabled={submitting}
+                    onClick={() => handleSubmit('complete')}
+                    className="flex-1 py-2.5 rounded-xl bg-[#1E8347] hover:bg-[#166534] text-white text-[12.5px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-1.5 shadow-xs"
+                    title="Hoàn tất kiểm định và chuyển đơn sang trạng thái Chờ Hoàn Cọc"
+                  >
+                    {submitting ? <RefreshCw size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}
+                    <span>Hoàn Tất Kiểm Định Váy</span>
+                  </button>
+                )}
               </>
             )}
           </div>
