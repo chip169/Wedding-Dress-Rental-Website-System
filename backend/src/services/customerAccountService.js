@@ -63,7 +63,7 @@ export async function orderDetail(userId, identifier) {
     const [inspection, contract] = await Promise.all([
         getInspection(userId, identifier),
         Contract.findOne({ orderId: order._id })
-            .select('contractCode templateName customerName phone idCard status signedAt signedMethod contractPdfUrl clauses')
+            .select('contractCode templateName customerName phone idCard status signedAt signedMethod contractPdfUrl clauses contractSignature')
             .lean(),
     ]);
     const orderObj = order.toObject();

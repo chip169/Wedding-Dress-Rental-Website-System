@@ -45,13 +45,11 @@ const dressSchema = new mongoose.Schema(
       type: String,
       default: 'Trắng',
     },
-    sizes: [
-      {
-        type: String,
-        enum: ['XS', 'S', 'M', 'L', 'XL', 'FreeSize'],
-        default: ['S', 'M'],
-      },
-    ],
+    sizes: {
+      type: [String],
+      enum: ['XS', 'S', 'M', 'L', 'XL', 'FreeSize'],
+      default: ['S', 'M'],
+    },
     images: [
       {
         type: String,

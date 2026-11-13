@@ -1,12 +1,51 @@
-const REVENUE_TYPES = ['rental_payment', 'damage_compensation'];
 export const paymentDate = (payment) => payment.paidAt || payment.createdAt;
 export const sumPayments = (payments, types) => payments.reduce((sum, payment) => sum + (types.includes(payment.transactionType) ? Number(payment.amount || 0) : 0), 0);
 export const growthRate = (current, previous) => previous > 0 ? Math.round((current - previous) / previous * 1000) / 10 : current === 0 ? 0 : null;
+export const depositBalance = (payments) =>
+    sumPayments(payments, ['deposit_payment']) - sumPayments(payments, ['deposit_refund']);
+
+export function retainedDepositCharges(payments, inspections) {
+    const depositsByOrder = new Map();
+    for (const payment of payments) {
+        if (!['deposit_payment', 'deposit_refund'].includes(payment.transactionType) || !payment.orderId)
+            continue;
+        const orderId = String(payment.orderId._id ?? payment.orderId);
+        const deposits = depositsByOrder.get(orderId) ?? [];
+        deposits.push(payment);
+        depositsByOrder.set(orderId, deposits);
+    }
+
+    return inspections.flatMap((inspection) => {
+        const date = inspection.customerConfirmedAt || inspection.refundedAt;
+        const deposits = depositsByOrder.get(String(inspection.orderId));
+        if (!date || !deposits)
+            return [];
+
+        const balanceAtApproval = depositBalance(deposits.filter((payment) => paymentDate(payment) <= date));
+        const retained = Math.max(0, Math.min(inspection.totalDeduction, balanceAtApproval, depositBalance(deposits)));
+        if (!retained)
+            return [];
+
+        // Apply the late fee first, as it is capped at the deposit before damage is added.
+        const latePenaltyRevenue = Math.min(retained, Number(inspection.latePenaltyFee || 0));
+        return [{ date, damagePayment: retained - latePenaltyRevenue, latePenaltyRevenue }];
+    });
+}
+
+export function revenueTotals(payments, charges) {
+    const rentalRevenue = sumPayments(payments, ['rental_payment']);
+    const damagePayment = sumPayments(payments, ['damage_compensation']) +
+        charges.reduce((sum, charge) => sum + charge.damagePayment, 0);
+    const latePenaltyRevenue = charges.reduce((sum, charge) => sum + charge.latePenaltyRevenue, 0);
+    return { revenue: rentalRevenue + damagePayment + latePenaltyRevenue, rentalRevenue, damagePayment, latePenaltyRevenue };
+}
+
 const dayStart = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 export function reportBounds(period, now = new Date()) {
     let start = dayStart(now), end;
-    if (period === 'week') {
-        start.setDate(start.getDate() - 6);
+    if (period === 'today' || period === 'week') {
+        if (period === 'week')
+            start.setDate(start.getDate() - 6);
         end = dayStart(now);
         end.setDate(end.getDate() + 1);
     }
@@ -37,10 +76,11 @@ export function previousBounds(period, start) {
 export const isInPeriod = (date, start, end) => date && new Date(date) >= start && new Date(date) < end;
 export function reportBuckets(period, start, end) {
     const result = [];
+    const daily = period === 'today' || period === 'week';
     let cursor = new Date(start);
     while (cursor < end) {
         const next = new Date(cursor);
-        if (period === 'week')
+        if (daily)
             next.setDate(next.getDate() + 1);
         else if (period === 'month')
             next.setDate(next.getDate() + 7);
@@ -50,22 +90,22 @@ export function reportBuckets(period, start, end) {
             next.setTime(end.getTime());
         const last = new Date(next.getTime() - 1);
         const date = (d) => `${d.getDate()}/${d.getMonth() + 1}`;
-        const label = period === 'week' ? date(cursor) : period === 'month' ? `Tuần ${result.length + 1} (${date(cursor)} – ${date(last)})` : `Tháng ${cursor.getMonth() + 1}`;
-        result.push({ start: new Date(cursor), end: next, label, shortLabel: period === 'week' || period === 'month' ? date(cursor) : `T${cursor.getMonth() + 1}` });
+        const label = daily ? date(cursor) : period === 'month' ? `Tuần ${result.length + 1} (${date(cursor)} – ${date(last)})` : `Tháng ${cursor.getMonth() + 1}`;
+        result.push({ start: new Date(cursor), end: next, label, shortLabel: daily || period === 'month' ? date(cursor) : `T${cursor.getMonth() + 1}` });
         cursor = next;
     }
     return result;
 }
-export function revenueChart(payments, orders, period, start, end) {
+export function revenueChart(payments, orders, period, start, end, charges) {
     let previous = null;
     return reportBuckets(period, start, end).map((bucket) => {
         const selected = payments.filter((p) => isInPeriod(paymentDate(p), bucket.start, bucket.end));
-        const revenue = sumPayments(selected, REVENUE_TYPES);
-        const row = { label: bucket.label, shortLabel: bucket.shortLabel, revenue,
-            rentalRevenue: sumPayments(selected, ['rental_payment']), depositRevenue: sumPayments(selected, ['deposit_payment']),
+        const totals = revenueTotals(selected, charges.filter((charge) => isInPeriod(charge.date, bucket.start, bucket.end)));
+        const row = { label: bucket.label, shortLabel: bucket.shortLabel, ...totals,
+            depositRevenue: sumPayments(selected, ['deposit_payment']),
             transactions: selected.length, orders: orders.filter((o) => isInPeriod(o.createdAt, bucket.start, bucket.end)).length,
-            growthRate: previous === null ? null : growthRate(revenue, previous) };
-        previous = revenue;
+            growthRate: previous === null ? null : growthRate(totals.revenue, previous) };
+        previous = totals.revenue;
         return row;
     });
 }

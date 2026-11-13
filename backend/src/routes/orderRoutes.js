@@ -35,4 +35,7 @@ router.post('/:id/inspection/approve', authenticate, orderController.approveRetu
 // 9. Khách hàng gửi khiếu nại biên bản kiểm định
 router.post('/:id/inspection/dispute', authenticate, orderController.disputeReturnInspection);
 
+// 10. Admin duyệt đàm phán mức phạt và hoàn tất đơn (Trường hợp 2)
+router.post('/:id/inspection/admin-settle', authenticate, authorize('ADMIN', 'STAFF'), orderController.settleInspectionAdmin);
+
 export default router;

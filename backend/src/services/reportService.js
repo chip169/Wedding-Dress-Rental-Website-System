@@ -111,7 +111,7 @@ function buckets(period, start, end) {
 }
 
 export async function dashboard(role, period = 'month', now = new Date()) {
-  if (!['week', 'month', 'quarter', 'year'].includes(period)) period = 'month';
+  if (!['today', 'week', 'month', 'quarter', 'year'].includes(period)) period = 'month';
   const { start, end } = reportBounds(period, now);
   const [orders, payments, maintenanceOrdersDressIds, appointments, members] = await Promise.all([
     Order.find({ createdAt: { $gte: start, $lt: end } }).select('status createdAt rentalStartDate rentalEndDate totalRentPrice totalDeposit items customerName orderCode').lean(),

@@ -83,9 +83,10 @@ async function seedData() {
       const status = statuses[i];
       const orderCode = `UB-2026-${(i + 1).toString().padStart(4, '0')}`;
       
-      // Distribute orders across November 2026
-      const dayOfMonth = (i % 20) + 1;
-      const createdAt = new Date(2026, 10, dayOfMonth, 10 + (i % 8), 15 * (i % 4));
+      // Phân bố các đơn mẫu về quá khứ (cách đây 1 đến 15 ngày so với ngày hôm nay)
+      // Đảm bảo không bao giờ có ngày tạo trong tương lai làm chìm các đơn thực tế mới tạo
+      const daysAgo = Math.max(1, 15 - i);
+      const createdAt = new Date(today.getTime() - daysAgo * 24 * 60 * 60 * 1000 + (i % 8) * 3600 * 1000);
       
       // Đảm bảo có đơn bàn giao đúng ngày hôm nay
       const rentalStartDate = i === 1 

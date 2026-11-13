@@ -20,6 +20,7 @@ import { getOrder } from '../../services/customerOrderService';
 import { formatCurrencyVND } from '../../utils/formatCurrency';
 import { formatShortDate } from '../../utils/formatDate';
 import { HIEU_SIGNATURE_BASE64 } from '../../assets/images/signatureHieuBase64';
+import { DAMAGE_PRICE_CATALOG } from '../../data/damagePriceCatalog';
 
 // Danh sách các điều khoản pháp lý tiêu chuẩn Haute Couture
 const STANDARD_HAUTE_COUTURE_CLAUSES = [
@@ -53,10 +54,20 @@ const STANDARD_HAUTE_COUTURE_CLAUSES = [
       '4.3. Trường hợp phát sinh vết bẩn nhẹ thông thường tẩy được bằng giặt hấp sinh học, Bên A cam kết MIỄN PHÍ và không trừ tiền cọc.'
   },
   {
-    title: 'ĐIỀU 5: TRÁCH NHIỆM BẢO QUẢN VÀ BỒI THƯỜNG HƯ TỔN',
+    title: 'ĐIỀU 5: TRÁCH NHIỆM BẢO QUẢN VÀ BẢNG GIÁ ĐỀN BÙ THIỆT HẠI NIÊM YẾT',
     content:
       '5.1. Bên B cam kết giữ gìn trang phục cẩn trọng, không tự ý cắt may, ủi nhiệt độ cao hoặc tẩy hóa chất.\n' +
-      '5.2. Trường hợp làm rách ren thủng lớn, cháy vải hoặc đứt gãy gọng siết eo corsetry, Bên B đồng ý chịu chi phí phục chế nguyên trạng theo bảng giá niêm yết tại Atelier hoặc trừ trực tiếp vào quỹ cọc bảo lãnh.'
+      '5.2. Hai bên thống nhất áp dụng Bảng giá đền bù thiệt hại cố định niêm yết (Phụ lục 1) để đối chiếu khi hoàn trả lễ phục, không phụ thuộc ý chí chủ quan của nhân viên:\n' +
+      '   • Nhóm 1 (Hao mòn tự nhiên): 0 VNĐ (Miễn phí trong gói giặt);\n' +
+      '   • Nhóm 2 (Vết bẩn nhẹ - son môi, phấn trang điểm): 250.000 VNĐ;\n' +
+      '   • Nhóm 3 (Sút chỉ / Tuột cúc - đứt chỉ viền, bung cườm): 200.000 VNĐ;\n' +
+      '   • Nhóm 4 (Vết bẩn cứng đầu - rượu vang, dầu mỡ sậm màu): 500.000 VNĐ;\n' +
+      '   • Nhóm 5 (Rách gấu ren nhỏ < 5cm do giẫm gót): 500.000 VNĐ;\n' +
+      '   • Nhóm 6 (Hỏng khóa lưng - zipper): 300.000 VNĐ;\n' +
+      '   • Nhóm 7 (Rách tùng voan lớn > 10cm, rách vải chính): 1.500.000 VNĐ;\n' +
+      '   • Nhóm 8 (Mất phụ kiện đi kèm): 500.000 VNĐ / món;\n' +
+      '   • Nhóm 9 (Hỏng hoàn toàn - cháy vải, rách nát không thể phục hồi): Tịch thu 100% tiền cọc bảo lãnh.\n' +
+      '5.3. Chi phí đền bù (nếu có) được khấu trừ trực tiếp vào quỹ cọc bảo lãnh. Số tiền cọc còn lại được Bên A hoàn trả đầy đủ vào STK ngân hàng của Bên B.'
   },
   {
     title: 'ĐIỀU 6: HIỆU LỰC HỢP ĐỒNG ĐIỆN TỬ',
@@ -251,7 +262,7 @@ export default function SignedContractModal({ orderId, order: propOrder, contrac
         : new Date().toLocaleDateString('vi-VN'));
 
     // Chữ ký Bên B
-    const signature = rawOrder.contractSignature || cData.contractSignature || customerName;
+    const signature = rawOrder.contractSignature || cData.contractSignature || rawOrder.contract?.contractSignature || customerName;
 
     return {
       orderCode,
@@ -507,6 +518,38 @@ export default function SignedContractModal({ orderId, order: propOrder, contrac
                       </div>
                     ))}
                   </div>
+
+                  {/* Phụ lục 1: Bảng giá đền bù thiệt hại niêm yết đối chiếu */}
+                  <div className="mt-4 pt-4 border-t border-[#EFE5E1]">
+                    <h4 className="font-serif font-bold text-sm text-[#733F49] uppercase mb-2 flex items-center justify-between">
+                      <span>PHỤ LỤC 1: BẢNG GIÁ ĐỀN BÙ THIỆT HẠI NIÊM YẾT ĐỐI CHIẾU</span>
+                      <span className="text-[10px] font-sans font-normal text-[#8C7D7E] italic lowercase">
+                        (Áp dụng chuẩn hóa theo Điều 5 Hợp đồng)
+                      </span>
+                    </h4>
+                    <div className="overflow-x-auto border border-[#EFE5E1] rounded-2xl bg-white shadow-2xs">
+                      <table className="w-full text-left text-xs border-collapse font-sans">
+                        <thead className="bg-[#FAF5F2] border-b border-[#EFE5E1] text-[#7A6A6B] font-bold">
+                          <tr>
+                            <th className="p-2.5 w-[25%]">Nhóm Lỗi Hư Hại</th>
+                            <th className="p-2.5 w-[45%]">Mô Tả Hiện Trạng</th>
+                            <th className="p-2.5 w-[30%] text-right">Mức Phí Bồi Thường Cố Định</th>
+                          </tr>
+                        </thead>
+                        <tbody className="divide-y divide-[#F6EEEB] text-[11.5px]">
+                          {DAMAGE_PRICE_CATALOG.map((row) => (
+                            <tr key={row.id} className="hover:bg-[#FCFAF8]">
+                              <td className="p-2.5 font-bold text-[#2C2523]">{row.name}</td>
+                              <td className="p-2.5 text-[#5C4D4D]">{row.description}</td>
+                              <td className="p-2.5 text-right font-bold" style={{ color: row.color }}>
+                                {row.feeLabel}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
                 </div>
 
                 {/* Khối chữ ký điện tử hai bên */}
@@ -558,12 +601,12 @@ export default function SignedContractModal({ orderId, order: propOrder, contrac
                           className="max-h-16 w-auto object-contain select-none"
                         />
                       ) : (
-                        <div className="font-serif italic text-lg sm:text-xl text-[#733F49] font-bold tracking-wider px-3 py-1 border-b border-[#733F49]/40">
-                          {effectiveData.customerName}
+                        <div className="font-serif italic text-xl sm:text-2xl text-[#733F49] font-bold tracking-wider px-4 py-1 border-b-2 border-[#733F49]/40 select-none">
+                          {effectiveData.signature || effectiveData.customerName}
                         </div>
                       )}
                       <div className="mt-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-700 text-[9px] font-bold inline-flex items-center gap-1">
-                        <CheckCircle2 size={11} /> E-SIGNED BY {effectiveData.customerName.toUpperCase()}
+                        <CheckCircle2 size={11} /> E-SIGNED BY {String(effectiveData.signature || effectiveData.customerName).toUpperCase()}
                       </div>
                     </div>
 

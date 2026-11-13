@@ -30,7 +30,15 @@ import {
   CreditCard,
   UserCheck,
   UserX,
-  Crown,
+  CircleUser,
+  PhoneCall,
+  Copy,
+  CheckCheck,
+  Lock,
+  FileSpreadsheet,
+  BookOpen,
+  FileEdit,
+  FileCheck,
 } from 'lucide-react';
 import HangerIcon from '../../components/common/HangerIcon';
 import {
@@ -39,9 +47,15 @@ import {
   updateOrderStatus,
   submitReturnInspection,
   getReturnInspection,
+  settleInspectionAdmin,
 } from '../../services/orderService';
 import { formatCurrencyVND } from '../../utils/formatCurrency';
 import { DRESS_CATALOG } from '../../data/dressCatalog';
+import {
+  DAMAGE_PRICE_CATALOG,
+  getDamageCatalogItem,
+  computeCompensation,
+} from '../../data/damagePriceCatalog';
 import { recordCompletedOrderMaintenance } from '../../utils/maintenanceStorage';
 
 // Helper lấy mã sản phẩm (SKU) của váy cưới từ item hoặc fallback vào catalog
@@ -76,6 +90,8 @@ const STATUS_CONFIG = {
   delivered: { label: 'Đã Giao Váy', bg: 'bg-[#FFEDD5]', text: 'text-[#C2410C]' },
   renting: { label: 'Đang Thuê', bg: 'bg-[#EDE9FE]', text: 'text-[#6D28D9]' },
   returned: { label: 'Chờ Hoàn Cọc', bg: 'bg-[#FEF3C7]', text: 'text-[#B45309]' },
+  waiting_refund: { label: 'Chờ Hoàn Cọc', bg: 'bg-[#FEF3C7]', text: 'text-[#B45309]' },
+  disputed: { label: 'Tạm giữ - Chờ Admin đàm phán', bg: 'bg-[#FEE2E2]', text: 'text-[#991B1B]' },
   complete: { label: 'Hoàn Tất', bg: 'bg-[#A7F3D0]', text: 'text-[#064E3B]' },
   completed: { label: 'Hoàn Tất', bg: 'bg-[#A7F3D0]', text: 'text-[#064E3B]' },
   cancelled: { label: 'Đã Hủy', bg: 'bg-[#F3F4F6]', text: 'text-[#6B7280]' },
@@ -91,6 +107,7 @@ const NEXT_STATUSES = {
   delivered: ['renting', 'cancelled'],
   renting: [], // Bắt buộc nhân viên bấm nút [Kiểm Định], không dùng dropdown tùy ý
   returned: ['completed'],
+  waiting_refund: ['completed'],
   complete: [],
   completed: [],
   cancelled: [],
@@ -102,7 +119,7 @@ const FILTER_OPTIONS = [
   { value: 'deposit_paid', label: 'Đã Đặt Cọc' },
   { value: 'delivered', label: 'Đã Giao Váy' },
   { value: 'renting', label: 'Đang Thuê' },
-  { value: 'returned', label: 'Chờ Hoàn Cọc' },
+  { value: 'waiting_refund', label: 'Chờ Hoàn Cọc' },
   { value: 'completed', label: 'Hoàn Tất' },
   { value: 'cancelled', label: 'Đã Hủy' },
 ];
@@ -145,25 +162,18 @@ function calcLate(rentalEndDate) {
 
 function StatusBadge({ status, order }) {
   const custStatus = order?.inspection?.customerStatus || order?.inspectionCustomerStatus;
-  if (status === 'returned' || status === 'disputed' || custStatus === 'disputed') {
-    if (custStatus === 'disputed' || status === 'disputed') {
-      return (
-        <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEE2E2] text-[#991B1B] border border-[#FECACA] animate-pulse">
-          <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
-          Khách Khiếu Nại
-        </span>
-      );
-    }
-    if (custStatus === 'approved') {
-      return (
-        <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#DCFCE7] text-[#166534] border border-[#BBF7D0]">
-          Khách Đã Duyệt
-        </span>
-      );
-    }
+  if (status === 'disputed' || custStatus === 'disputed') {
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold bg-[#FEF3C7] text-[#B45309]">
-        Chờ Khách Duyệt
+      <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEE2E2] text-[#991B1B] border border-[#FECACA] animate-pulse">
+        <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
+        Tạm Giữ - Chờ Admin Đàm Phán
+      </span>
+    );
+  }
+  if (status === 'waiting_refund' || status === 'returned') {
+    return (
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A]">
+        Chờ Hoàn Cọc
       </span>
     );
   }
@@ -319,7 +329,7 @@ function OrderDetailModal({ order, onClose }) {
                   <span className="font-bold text-[#2C2523] inline-flex items-center gap-1.5 truncate" title={order.customerName}>
                     {order.customerName || '—'}
                     {(order.hasAccount || order.customerId) && (
-                      <Crown size={13} className="text-[#D4AF37] fill-[#FDF3D6] shrink-0" title="Khách hàng thành viên" />
+                      <CircleUser size={15} className="text-[#733F49] shrink-0" title="Khách hàng thành viên" />
                     )}
                   </span>
                 </div>
@@ -419,9 +429,105 @@ function OrderDetailModal({ order, onClose }) {
   );
 }
 
+function DamagePriceCatalogModal({ open, onClose }) {
+  if (!open) return null;
+  return (
+    <div className="fixed inset-0 z-[60] flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white rounded-3xl max-w-5xl w-full max-h-[92vh] flex flex-col shadow-2xl border border-[#EFE5E1] overflow-hidden">
+        {/* Header */}
+        <div className="flex items-center justify-between px-6 py-4 border-b border-[#F0E6E2] bg-gradient-to-r from-[#FFF8F6] via-[#FCF4F0] to-[#FFF8F6]">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-[#FAF0EC] flex items-center justify-center text-[#733F49] border border-[#ECD9D3] shadow-2xs">
+              <FileSpreadsheet size={20} />
+            </div>
+            <div>
+              <h3 className="font-playfair text-[18px] font-bold text-[#5F2B36] m-0">
+                Bảng Giá Đền Bù Thiệt Hại Niêm Yết
+              </h3>
+              <p className="text-[11.5px] text-[#8C7D7E] m-0 mt-0.5">
+                Quy định niêm yết Atelier Haute Couture • Nhân viên không được tự ý quyết định mức giá
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-8 h-8 rounded-full bg-white text-[#7A6B6C] hover:text-[#733F49] flex items-center justify-center transition-colors border border-[#EFE5E1] cursor-pointer"
+          >
+            <X size={16} />
+          </button>
+        </div>
+
+        {/* Table Body */}
+        <div className="p-5 overflow-y-auto flex-1">
+          <div className="overflow-x-auto rounded-2xl border border-[#EFE5E1] shadow-2xs">
+            <table className="w-full min-w-[780px] text-left text-xs border-collapse">
+              <thead>
+                <tr className="bg-[#FAF5F2] text-[#5F2B36] border-b border-[#EFE5E1] text-[12px] font-bold">
+                  <th className="py-3 px-4 w-[22%] whitespace-nowrap">Nhóm Lỗi Hư Hại</th>
+                  <th className="py-3 px-4 w-[34%]">Hiện Trạng Thực Tế</th>
+                  <th className="py-3 px-4 w-[24%] whitespace-nowrap">Mức Phí Đền Bù Niêm Yết</th>
+                  <th className="py-3 px-4 w-[20%] whitespace-nowrap text-center">Thẩm Quyền Xử Lý</th>
+                </tr>
+              </thead>
+              <tbody className="divide-y divide-[#F2E5E0] text-[12px]">
+                {DAMAGE_PRICE_CATALOG.map((row) => (
+                  <tr key={row.id} className="hover:bg-[#FFF9F6] transition-colors">
+                    <td className="py-3 px-4 font-bold text-[#2C2523] align-middle">
+                      {row.name}
+                    </td>
+                    <td className="py-3 px-4 text-[#5C4D4D] leading-relaxed align-middle">
+                      {row.description}
+                    </td>
+                    <td className="py-3 px-4 font-bold align-middle whitespace-nowrap" style={{ color: row.color }}>
+                      {row.feeLabel}
+                    </td>
+                    <td className="py-3 px-4 align-middle whitespace-nowrap text-center">
+                      <span className={`inline-flex items-center justify-center px-3 py-1 rounded-lg text-[11px] font-bold border ${row.authority === 'admin_only'
+                          ? 'bg-rose-100 text-rose-800 border-rose-300'
+                          : row.authority === 'admin'
+                            ? 'bg-red-50 text-red-700 border-red-200'
+                            : row.authority === 'both'
+                              ? 'bg-purple-50 text-purple-700 border-purple-200'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        }`}>
+                        {row.authorityLabel}
+                      </span>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+
+          <div className="mt-4 p-3.5 rounded-xl bg-[#FAF5F2] border border-[#EFE5E1] text-[11.5px] text-[#7A6B6C] leading-relaxed flex items-start gap-2">
+            <span className="text-amber-600 font-bold shrink-0 text-sm">⚠️</span>
+            <span>
+              <strong className="text-[#5F2B36]">Lưu ý bắt buộc:</strong> Toàn bộ chi phí phục chế được hệ thống khóa và tính tự động theo bảng giá niêm yết trên. Nhân viên có trách nhiệm ghi nhận đúng hiện trạng và chụp ảnh đối soát, tuyệt đối không được tự ý thương lượng hay điều chỉnh đơn giá đền bù với khách hàng.
+            </span>
+          </div>
+        </div>
+
+        {/* Footer */}
+        <div className="px-6 py-3.5 border-t border-[#F0E6E2] bg-[#FAF5F2] flex justify-end">
+          <button
+            type="button"
+            onClick={onClose}
+            className="px-5 py-2 rounded-xl bg-[#733F49] text-white text-xs font-bold hover:bg-[#5C3038] shadow-xs transition-colors cursor-pointer"
+          >
+            Đã hiểu & Đóng bảng giá
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function InspectionModal({ order, onClose, onSuccess }) {
+  const [showPriceCatalogModal, setShowPriceCatalogModal] = useState(false);
   const isCompletedOrder = order.status === 'completed' || order.status === 'complete';
-  const isReturnedOrder = order.status === 'returned';
+  const isReturnedOrder = order.status === 'waiting_refund' || order.status === 'returned';
+  const isGuestOrder = !order.hasAccount && !order.customerId && !order.userId;
   const [customerStatus, setCustomerStatus] = useState(order.inspectionCustomerStatus || order.inspection?.customerStatus || 'pending');
   const isCustomerApproved = customerStatus === 'approved';
   const [isEditing, setIsEditing] = useState(!isReturnedOrder && !isCustomerApproved);
@@ -429,6 +535,15 @@ function InspectionModal({ order, onClose, onSuccess }) {
 
   const [disputeReason, setDisputeReason] = useState('');
   const [refundBankDetails, setRefundBankDetails] = useState(null);
+
+  // 2. Ý kiến khách hàng về biên bản kiểm định (Trường hợp 1: Chốt tại chỗ | Trường hợp 2: Giữ đơn chuyển Admin)
+  const [customerDecision, setCustomerDecision] = useState('agreed'); // 'agreed' | 'disputed'
+  const [customerDisputeNote, setCustomerDisputeNote] = useState('');
+  const [refundMethod] = useState('bank_transfer'); // Chỉ có 1 hình thức duy nhất là Chuyển khoản (STK)
+  const [onSiteBankName, setOnSiteBankName] = useState('Vietcombank');
+  const [onSiteAccountNum, setOnSiteAccountNum] = useState('');
+  const [onSiteAccountHolder, setOnSiteAccountHolder] = useState(order.customerName || '');
+  const [onSiteNotes, setOnSiteNotes] = useState('');
 
   const [itemsCondition, setItemsCondition] = useState(
     () =>
@@ -440,7 +555,8 @@ function InspectionModal({ order, onClose, onSuccess }) {
         return {
           dressId: item.dressId || item.id || item._id || 'item_default',
           name: item.name,
-          condition: 'good',
+          condition: 'normal_wear',
+          selectedOption: null,
           damageNotes: '',
           compensation: 0,
           rentPrice: itemRent,
@@ -476,14 +592,16 @@ function InspectionModal({ order, onClose, onSuccess }) {
                 const match =
                   insp.itemsCondition[idx] ||
                   insp.itemsCondition.find((c) => String(c.dressId) === String(it.dressId));
-                return match
-                  ? {
-                    ...it,
-                    condition: match.condition || it.condition,
-                    damageNotes: match.note || match.damageNotes || '',
-                    compensation: match.repairFee ?? match.compensation ?? 0,
-                  }
-                  : it;
+                if (!match) return it;
+                const matchedCond = match.condition === 'good' ? 'normal_wear' : (match.condition || 'normal_wear');
+                const catItem = getDamageCatalogItem(matchedCond);
+                return {
+                  ...it,
+                  condition: matchedCond,
+                  damageNotes: match.note || match.damageNotes || '',
+                  selectedOption: match.repairFee ?? match.compensation ?? catItem.defaultFee,
+                  compensation: match.repairFee ?? match.compensation ?? 0,
+                };
               })
             );
           }
@@ -533,32 +651,66 @@ function InspectionModal({ order, onClose, onSuccess }) {
   };
 
   const lateDays = calcLate(order.rentalEndDate);
-  const dailyLateFee = itemsCondition.reduce((acc, ic) => acc + ic.rentPrice * 0.05, 0);
-  const lateFee = lateDays * dailyLateFee;
-  const totalCompensation = itemsCondition.reduce((acc, ic) => acc + Number(ic.compensation || 0), 0);
-  const totalDeduction = lateFee + totalCompensation;
-  const finalRefund = Math.max(0, (order.totalDeposit ?? 0) - totalDeduction);
+  const totalDeposit = Number(order.totalDeposit || 0);
+  const totalRentPrice = Number(order.totalRentPrice || itemsCondition.reduce((acc, ic) => acc + (ic.rentPrice || 0), 0) || 0);
 
-  const updateItem = (idx, field, value) => {
+  // Phạt trễ hạn: 50% tiền thuê mỗi ngày, quá 5 ngày chưa trả tịch thu 100% tiền cọc
+  let lateFee = 0;
+  if (lateDays > 5) {
+    lateFee = totalDeposit;
+  } else if (lateDays > 0) {
+    lateFee = Math.min(totalDeposit, lateDays * Math.round(totalRentPrice * 0.5));
+  }
+  const totalCompensation = itemsCondition.reduce((acc, ic) => acc + Number(ic.compensation || 0), 0);
+  const totalDeduction = Math.min(totalDeposit, lateFee + totalCompensation);
+  const finalRefund = Math.max(0, totalDeposit - totalDeduction);
+
+  // Thay đổi nhóm lỗi theo Bảng giá niêm yết (Khóa giá cố định, Staff không được tự ý sửa)
+  const updateCondition = (idx, newCondId) => {
+    if (isReadOnly) return;
+    const cat = getDamageCatalogItem(newCondId);
+    const maxLimit = itemsCondition[idx]?.maxDeposit || itemsCondition[idx]?.depositAmount || order.totalDeposit || 0;
+    const comp = computeCompensation(newCondId, null, maxLimit);
+
+    setItemsCondition((prev) => {
+      const next = [...prev];
+      next[idx] = {
+        ...next[idx],
+        condition: newCondId,
+        compensation: comp,
+        // Khi chọn lỗi, mặc định điền mô tả hiện trạng để nhân viên có thể sửa đổi hoặc bổ sung chi tiết
+        damageNotes: (newCondId === 'normal_wear' || newCondId === 'good') ? '' : (cat.description || ''),
+      };
+      return next;
+    });
+
+    if (cat.isAdminOnly) {
+      message.warning(`Lỗi "${cat.shortName}" theo bảng giá niêm yết cần [${cat.authorityLabel}]. Hệ thống tự động chuyển sang Phương án 2 (Bảo lưu & chuyển Quản lý).`);
+      setCustomerDecision('disputed');
+    }
+  };
+
+  const updateOption = (idx, optVal) => {
+    if (isReadOnly) return;
+    const curCond = itemsCondition[idx]?.condition || 'normal_wear';
+    const maxLimit = itemsCondition[idx]?.maxDeposit || itemsCondition[idx]?.depositAmount || order.totalDeposit || 0;
+    const comp = computeCompensation(curCond, optVal, maxLimit);
+    setItemsCondition((prev) => {
+      const next = [...prev];
+      next[idx] = {
+        ...next[idx],
+        selectedOption: optVal,
+        compensation: comp,
+      };
+      return next;
+    });
+  };
+
+  const updateNotes = (idx, noteText) => {
     if (isReadOnly) return;
     setItemsCondition((prev) => {
       const next = [...prev];
-      let val = value;
-      if (field === 'compensation') {
-        const numVal = Math.max(0, Number(val || 0));
-        const maxLimit = next[idx]?.maxDeposit || next[idx]?.depositAmount || order.totalDeposit || 0;
-        if (numVal > maxLimit && maxLimit > 0) {
-          message.warning(`Số tiền bồi thường không được vượt quá tiền cọc (Tối đa ${fmtVnd(maxLimit)})`);
-          val = maxLimit;
-        } else {
-          val = numVal;
-        }
-      }
-      next[idx] = { ...next[idx], [field]: val };
-      if (field === 'condition' && value === 'good') {
-        next[idx].damageNotes = '';
-        next[idx].compensation = 0;
-      }
+      next[idx] = { ...next[idx], damageNotes: noteText };
       return next;
     });
   };
@@ -569,7 +721,16 @@ function InspectionModal({ order, onClose, onSuccess }) {
       return;
     }
 
-    // Validate không được nhập số tiền lớn hơn tiền cọc
+    // 1. Kiểm tra tình trạng váy & BẮT BUỘC CHỤP ẢNH LỖI ĐẦY ĐỦ
+    const hasDamage = itemsCondition.some(
+      (ic) => (ic.condition !== 'normal_wear' && ic.condition !== 'good') || Number(ic.compensation || 0) > 0
+    );
+    if (hasDamage && (!evidencePhotos || evidencePhotos.length === 0)) {
+      message.error('Quy định bắt buộc: Phải chụp hoặc tải ít nhất 1 ảnh bằng chứng lỗi hư hại của váy trước khi gửi!');
+      return;
+    }
+
+    // Validate không được vượt quá tiền cọc
     for (const ic of itemsCondition) {
       const maxLimit = ic.maxDeposit || ic.depositAmount || order.totalDeposit || 0;
       if (Number(ic.compensation || 0) > maxLimit && maxLimit > 0) {
@@ -583,93 +744,139 @@ function InspectionModal({ order, onClose, onSuccess }) {
       return;
     }
 
+    const isDisputeCase = customerDecision === 'disputed';
+    if (!isDisputeCase && finalRefund > 0 && !onSiteAccountNum.trim()) {
+      message.warning('Quy định: Vui lòng nhập Số tài khoản (STK) của khách để thực hiện chuyển khoản hoàn cọc.');
+      return;
+    }
+
     setSubmitting(true);
     try {
-      const payload = itemsCondition.map((ic) => ({
-        dressId: ic.dressId,
-        condition: ic.condition,
-        note: ic.damageNotes || '',
-        damageNotes: ic.damageNotes || '',
-        repairFee: Number(ic.compensation || 0),
-        compensation: Number(ic.compensation || 0),
-      }));
-
-      await submitReturnInspection(order._id, {
-        itemsCondition: payload,
-        evidencePhotos,
+      const payload = itemsCondition.map((ic) => {
+        const cat = getDamageCatalogItem(ic.condition);
+        return {
+          dressId: ic.dressId,
+          condition: ic.condition,
+          damageName: cat.name,
+          feeLabel: cat.feeLabel,
+          note: ic.damageNotes || cat.description || '',
+          damageNotes: ic.damageNotes || cat.description || '',
+          repairFee: Number(ic.compensation || 0),
+          compensation: Number(ic.compensation || 0),
+        };
       });
 
-      message.success('Đã lưu biên bản kiểm định thành công! Hệ thống đã gửi email thông báo kèm liên kết xác nhận hoàn cọc tới khách hàng.');
+      const isDisputeCase = customerDecision === 'disputed';
+
+      const body = {
+        itemsCondition: payload,
+        evidencePhotos,
+        holdForAdmin: isDisputeCase,
+        customerAgreed: !isDisputeCase,
+        confirmOnSite: !isDisputeCase,
+        disputeReason: isDisputeCase ? (customerDisputeNote.trim() || 'Khách không đồng ý với mức phạt/biên bản kiểm định tại chỗ') : '',
+        refundMethod: 'bank_transfer',
+        refundBankDetails: !isDisputeCase ? {
+          bankName: onSiteBankName || 'Vietcombank',
+          accountNumber: onSiteAccountNum || '',
+          accountHolder: onSiteAccountHolder || order.customerName || '',
+          notes: onSiteNotes || 'Chuyển khoản trực tiếp cho khách qua STK',
+        } : null,
+      };
+
+      await submitReturnInspection(order._id, body);
+
+      if (isDisputeCase) {
+        message.warning('Đã lưu ảnh bằng chứng & chuyển đơn sang [Tạm giữ - Chờ Quản lý đàm phán]. Đã gửi email biên bản kiểm tra tới khách hàng!');
+      } else {
+        message.success(`Đã hoàn tất kiểm định váy! Đơn chuyển sang [Chờ Hoàn Cọc] và hệ thống đã gửi email biên bản kiểm tra tới khách hàng.`);
+      }
       setIsEditing(false);
       onSuccess();
-    } catch {
-      message.error('Gửi biên bản kiểm định thất bại. Vui lòng thử lại.');
+    } catch (err) {
+      message.error(err?.response?.data?.message || err.message || 'Gửi biên bản kiểm định thất bại. Vui lòng thử lại.');
     } finally {
       setSubmitting(false);
     }
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/50 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[94vh] overflow-y-auto shadow-2xl border border-[#EFE5E1]">
-        {/* Header - Thu gọn chiều cao */}
-        <div className="flex items-center justify-between py-2.5 px-4 border-b border-[#F0E6E2] bg-[#FFF6F3] rounded-t-2xl">
-          <div className="flex items-center gap-2">
-            <ShieldCheck size={18} className="text-[#B8737D]" />
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white rounded-3xl max-w-2xl w-full max-h-[94vh] overflow-y-auto shadow-2xl border border-[#EFE5E1]">
+        {/* Header - Chuẩn Atelier Haute Couture sang trọng */}
+        <div className="flex items-center justify-between py-3 px-5 border-b border-[#F0E6E2] bg-gradient-to-r from-[#FFF8F6] via-[#FCF4F0] to-[#FFF8F6] rounded-t-3xl">
+          <div className="flex items-center gap-3">
+            <div className="w-9 h-9 rounded-xl bg-[#FAF0EC] flex items-center justify-center text-[#733F49] border border-[#ECD9D3] shadow-2xs">
+              <ShieldCheck size={20} />
+            </div>
             <div>
-              <h3 className="font-playfair text-[15px] font-bold text-[#5F2B36] m-0">
+              <h3 className="font-playfair text-[16px] font-bold text-[#5F2B36] m-0 tracking-tight">
                 {isCompletedOrder
-                  ? 'Hồ Sơ Lưu Trữ Đơn Thuê và Quyết Toán Cọc'
+                  ? 'Hồ Sơ Lưu Trữ Đơn Thuê & Quyết Toán Cọc'
                   : isCustomerApproved
-                    ? 'Biên Bản Kiểm Định Trả Váy (Khách Đã Duyệt)'
+                    ? 'Biên Bản Giám Định Lễ Phục (Khách Đã Duyệt)'
                     : isReturnedOrder
-                      ? 'Biên Bản Kiểm Định Trả Váy (Đã Kiểm Định)'
-                      : 'Kiểm Định Trả Váy và Giám Định Hiện Trạng'}
+                      ? 'Biên Bản Giám Định Lễ Phục (Đã Hoàn Tất Kiểm Tra - Chờ Hoàn Cọc)'
+                      : 'Biên Bản Giám Định Hiện Trạng & Quyết Toán Cọc'}
               </h3>
-              <p className="text-[10.5px] text-[#8C7D7E] m-0">
-                Đơn #{order.orderCode}
+              <p className="text-[11px] text-[#8C7D7E] m-0 flex items-center gap-1.5 mt-0.5">
+                <span>Mã hồ sơ: <strong className="font-mono text-[#5F2B36]">#{order.orderCode}</strong></span>
+                <span>•</span>
+                <span>Atelier UniBridal Standard</span>
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={onClose}
-            className="w-7 h-7 rounded-full bg-[#F2E3DC] text-[#7A6B6C] hover:text-[#733F49] flex items-center justify-center transition-colors cursor-pointer border-0"
-          >
-            <X size={14} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowPriceCatalogModal(true)}
+              className="px-2.5 py-1 rounded-xl bg-white border border-[#E0D0CA] text-[#733F49] hover:bg-[#FAF0EC] text-[11px] font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
+              title="Xem Bảng giá niêm yết đền bù thiệt hại"
+            >
+              <FileSpreadsheet size={13} className="text-[#B8737D]" />
+              <span className="hidden sm:inline">Bảng Giá Đền Bù Niêm Yết</span>
+              <span className="sm:hidden">Bảng Giá</span>
+            </button>
+            <button
+              type="button"
+              onClick={onClose}
+              className="w-8 h-8 rounded-full bg-white text-[#7A6B6C] hover:text-[#733F49] hover:bg-[#FAF0EC] flex items-center justify-center transition-colors cursor-pointer border border-[#EFE5E1]"
+            >
+              <X size={15} />
+            </button>
+          </div>
         </div>
 
-        <div className="p-3.5 space-y-2.5 text-xs">
+        <div className="p-4 sm:p-5 space-y-3.5 text-xs font-jakarta">
           {/* Status banner nếu khách đã phản hồi */}
           {customerStatus === 'disputed' && (
-            <div className="p-2.5 rounded-xl bg-red-50 border border-red-200 text-xs text-red-800 space-y-1">
-              <div className="font-bold flex items-center gap-1.5 text-red-900 text-[11.5px]">
-                <AlertTriangle size={13} />
-                <span>Khách hàng đã gửi khiếu nại về biên bản:</span>
+            <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200 text-xs text-amber-900 space-y-1 animate-fadeIn">
+              <div className="font-bold flex items-center gap-2 text-amber-950 text-[12px]">
+                <Clock size={14} className="text-amber-700" />
+                <span>Hồ sơ đang ở trạng thái Tạm Giữ — Chờ Quản lý trực tiếp đàm phán:</span>
               </div>
-              <p className="italic bg-white p-1.5 rounded-lg border border-red-100 text-[#4A3B3D] text-[11px] m-0">
-                "{disputeReason || 'Khách hàng không đồng ý với mức bồi thường khấu trừ cọc'}"
+              <p className="italic bg-white p-2 rounded-xl border border-amber-100 text-[#4A3B3D] text-[11.5px] m-0 leading-relaxed">
+                "{disputeReason || 'Khách hàng có ý kiến phản hồi về chi phí phục chế tổn thất'}"
               </p>
             </div>
           )}
 
           {customerStatus === 'approved' && (
-            <div className="p-2.5 rounded-xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 space-y-1">
-              <div className="flex items-center justify-between gap-1.5 text-[11.5px] flex-wrap">
-                <div className="flex items-center gap-1.5">
-                  <CheckCircle2 size={14} className="text-emerald-600 shrink-0" />
+            <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 space-y-1">
+              <div className="flex items-center justify-between gap-2 text-[12px] flex-wrap">
+                <div className="flex items-center gap-2">
+                  <CheckCircle2 size={15} className="text-emerald-600 shrink-0" />
                   <span>
-                    <strong>Khách hàng đã duyệt biên bản.</strong>
+                    <strong>Khách hàng đã đồng thuận biên bản giám định.</strong>
                   </span>
                 </div>
                 <span className="px-2 py-0.5 rounded-md bg-emerald-100 text-emerald-800 text-[10px] font-bold border border-emerald-300">
-                  Đã Khóa Chỉnh Sửa
+                  Hồ Sơ Đã Khóa
                 </span>
               </div>
               {refundBankDetails?.accountNumber && (
-                <div className="p-2 rounded-lg bg-white/90 border border-emerald-200 text-[11px] text-[#2C2523] space-y-0.5">
-                  <div>• Ngân hàng: <strong>{refundBankDetails.bankName || 'Ngân hàng nội địa'}</strong> • STK: <strong className="font-mono">{refundBankDetails.accountNumber}</strong> • Chủ TK: <strong>{refundBankDetails.accountHolder}</strong></div>
+                <div className="p-2.5 rounded-xl bg-white/90 border border-emerald-200 text-[11.5px] text-[#2C2523] space-y-0.5 mt-1">
+                  <div>• Ngân hàng thụ hưởng: <strong>{refundBankDetails.bankName || 'Ngân hàng nội địa'}</strong> • STK: <strong className="font-mono">{refundBankDetails.accountNumber}</strong> • Chủ TK: <strong>{refundBankDetails.accountHolder}</strong></div>
                   {refundBankDetails.notes && <div>• Ghi chú: <em>{refundBankDetails.notes}</em></div>}
                 </div>
               )}
@@ -677,137 +884,214 @@ function InspectionModal({ order, onClose, onSuccess }) {
           )}
 
           {customerStatus === 'pending' && isReturnedOrder && (
-            <div className="p-2 px-3 rounded-xl bg-amber-50 border border-amber-200 text-[11px] text-amber-800 flex items-center gap-1.5">
-              <Clock size={13} className="text-amber-600 shrink-0" />
-              <span>
-                <strong>Đang chờ khách duyệt và điền STK:</strong> Khách xác nhận thì hệ thống sẽ tự động hoàn cọc ngay.
-              </span>
+            <div className="p-2.5 px-3 rounded-2xl bg-amber-50 border border-amber-200 text-[11.5px] text-amber-800 flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-1.5">
+                <Clock size={14} className="text-amber-600 shrink-0" />
+                <span>
+                  <strong>Đang chờ xác nhận từ khách:</strong> {isGuestOrder ? 'Khách trải nghiệm tại Showroom.' : 'Khách xác nhận trực tuyến hệ thống sẽ đối soát hoàn cọc ngay.'}
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => {
+                  setIsEditing(true);
+                  setCustomerDecision('agreed');
+                }}
+                className="px-3 py-1 rounded-lg bg-[#1E8347] text-white font-bold text-[11px] cursor-pointer hover:bg-[#166534] transition-colors border-0 flex items-center gap-1 shrink-0 shadow-2xs"
+              >
+                <CheckCircle2 size={13} />
+                <span>Xác nhận tại quầy ngay</span>
+              </button>
             </div>
           )}
 
-          {/* Dải thông tin tóm tắt đơn hàng gọn gàng 1 dòng */}
-          <div className="flex flex-wrap items-center justify-between gap-2 px-3 py-1.5 rounded-lg bg-[#FAF5F2] border border-[#F0E6E2] text-[11.5px]">
-            <div className="flex items-center gap-1.5">
-              <span className="text-[#8C7D7E]">Khách hàng: </span>
-              <strong className="text-[#2C2523]">{order.customerName}</strong>
-              {order.hasAccount || order.customerId ? (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-bold bg-[#FAF0EC] text-[#733F49] border border-[#F2D8D4]">
-                  <UserCheck size={10} className="text-[#B8737D]" /> Thành Viên
+          {/* Dải thông tin khách hàng & lịch trình chuẩn Atelier */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#FAF5F2] to-[#FFFBF9] border border-[#EFE5E1] grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-full bg-[#FAF0EC] text-[#733F49] font-bold text-xs flex items-center justify-center border border-[#ECD9D3] shrink-0">
+                {order.customerName?.charAt(0) || 'K'}
+              </div>
+              <div>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <strong className="text-[13px] text-[#2C2523]">{order.customerName}</strong>
+                  {order.hasAccount || order.customerId ? (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-bold bg-[#FAF0EC] text-[#733F49] border border-[#F2D8D4]">
+                      <CircleUser size={10} className="text-[#B8737D]" /> Thành Viên VIP
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded text-[9.5px] font-medium bg-[#F5F2F0] text-[#7A6A6B] border border-[#E8DFDC]">
+                      Khách Showroom
+                    </span>
+                  )}
+                </div>
+                {order.customerPhone && (
+                  <span className="text-[11px] text-[#8C7D7E] block mt-0.5 font-mono">{order.customerPhone}</span>
+                )}
+              </div>
+            </div>
+            <div className="flex flex-col sm:items-end justify-center text-xs">
+              <div className="text-[#7A6B6C]">
+                Thời gian thuê: <strong className="text-[#2C2523]">{fmtDate(order.rentalStartDate)} – {fmtDate(order.rentalEndDate)}</strong>
+              </div>
+              {lateDays > 0 ? (
+                <span className={`inline-block mt-1 px-2 py-0.5 rounded text-[10.5px] font-bold ${lateDays > 5 ? 'bg-red-100 text-red-800 border border-red-200' : 'bg-amber-100 text-amber-800 border border-amber-200'
+                  }`}>
+                  {lateDays > 5 ? `Trễ hạn ${lateDays} ngày (Tịch thu 100% cọc: -${fmtVnd(lateFee)})` : `Trễ hạn ${lateDays} ngày (Phạt 50%/ngày: -${fmtVnd(lateFee)})`}
                 </span>
               ) : (
-                <span className="inline-flex items-center gap-1 px-1.5 py-0.2 rounded text-[9px] font-medium bg-[#F5F2F0] text-[#7A6A6B] border border-[#E8DFDC]">
-                  <UserX size={10} className="text-[#A39192]" /> Khách Vãng Lai
+                <span className="text-[11px] text-emerald-700 font-semibold mt-0.5 flex items-center gap-1">
+                  <CheckCircle2 size={12} /> Bàn giao đúng hạn hợp đồng
                 </span>
               )}
             </div>
-            <div>
-              <span className="text-[#8C7D7E]">Ngày thuê: </span>
-              <strong className="text-[#2C2523]">
-                {fmtDate(order.rentalStartDate)} – {fmtDate(order.rentalEndDate)}
-              </strong>
-            </div>
-            {lateDays > 0 && (
-              <span className="text-amber-800 font-bold bg-amber-100 px-2 py-0.5 rounded text-[11px]">
-                Trễ {lateDays} ngày (+{fmtVnd(lateFee)})
-              </span>
-            )}
           </div>
 
-          {/* Items inspection - Kiểm định váy */}
-          {itemsCondition.map((ic, idx) => {
-            const maxLimit = ic.maxDeposit || ic.depositAmount || order.totalDeposit || 0;
-            const itemCode = getDressCode(ic) || getDressCode(order.items?.[idx]);
-            return (
-              <div key={idx} className="p-2.5 px-3 rounded-xl border border-[#EFE5E1] bg-white space-y-1.5">
-                <div className="flex items-center justify-between flex-wrap gap-1">
-                  <div className="flex items-center gap-1.5 flex-wrap">
-                    <span className="font-bold text-[12.5px] text-[#5F2B36]">
-                      {ic.name}
+          {/* Danh sách lễ phục & Giám định tình trạng */}
+          <div className="space-y-2.5">
+            {itemsCondition.map((ic, idx) => {
+              const maxLimit = ic.maxDeposit || ic.depositAmount || order.totalDeposit || 0;
+              const itemCode = getDressCode(ic) || getDressCode(order.items?.[idx]);
+              const catItem = getDamageCatalogItem(ic.condition);
+              return (
+                <div key={idx} className="p-3 rounded-2xl border border-[#EFE5E1] bg-white space-y-2.5 shadow-2xs">
+                  <div className="flex items-center justify-between flex-wrap gap-2 pb-1.5 border-b border-[#F7EFEA]">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="font-playfair font-bold text-[13.5px] text-[#5F2B36]">
+                        {ic.name}
+                      </span>
+                      {itemCode && (
+                        <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#FAF0EC] text-[#733F49] font-mono text-[10px] font-bold border border-[#F2D8D4] leading-none">
+                          {itemCode}
+                        </span>
+                      )}
+                      {(ic.size || order.items?.[idx]?.size) && (
+                        <span className="inline-block px-1.5 py-0.5 rounded bg-[#FCECE8] text-[#B8737D] text-[10px] font-bold leading-none">
+                          Size {ic.size || order.items?.[idx]?.size}
+                        </span>
+                      )}
+                      {(ic.color || order.items?.[idx]?.color || order.color) && (
+                        <span className="inline-block px-1.5 py-0.5 rounded bg-[#FAF4EE] text-[#733F49] text-[10px] font-bold leading-none border border-[#F0E5DC]">
+                          Màu {ic.color || order.items?.[idx]?.color || order.color || 'Trắng Sữa'}
+                        </span>
+                      )}
+                    </div>
+                    <span className="text-[11px] text-[#8C7D7E]">
+                      Giá trị bảo lãnh: <strong className="text-[#5F2B36]">{fmtVnd(maxLimit)}</strong>
                     </span>
-                    {itemCode && (
-                      <span className="inline-flex items-center px-1.5 py-0.5 rounded bg-[#FAF0EC] text-[#733F49] font-mono text-[10px] font-bold border border-[#F2D8D4] leading-none">
-                        {itemCode}
-                      </span>
-                    )}
-                    {(ic.size || order.items?.[idx]?.size) && (
-                      <span className="inline-block px-1.5 py-0.5 rounded bg-[#FCECE8] text-[#B8737D] text-[10px] font-bold leading-none">
-                        Size: {ic.size || order.items?.[idx]?.size}
-                      </span>
-                    )}
-                    {(ic.color || order.items?.[idx]?.color || order.color) && (
-                      <span className="inline-block px-1.5 py-0.5 rounded bg-[#FAF4EE] text-[#733F49] text-[10px] font-bold leading-none border border-[#F0E5DC]">
-                        Màu: {ic.color || order.items?.[idx]?.color || order.color || 'Trắng Sữa'}
-                      </span>
-                    )}
                   </div>
-                  <span className="text-[10.5px] text-[#8C7D7E]">
-                    (Tiền cọc: <strong className="text-[#5F2B36]">{fmtVnd(maxLimit)}</strong>)
-                  </span>
-                </div>
 
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-[11px] text-[#8C7D7E]">Tình trạng:</span>
-                  <Radio.Group
-                    disabled={isReadOnly}
-                    value={ic.condition}
-                    onChange={(e) => updateItem(idx, 'condition', e.target.value)}
-                    className="flex flex-wrap gap-1.5 text-[11px]"
-                  >
-                    {CONDITION_OPTIONS.map((opt) => (
-                      <Radio key={opt.value} value={opt.value}>
-                        <span className="text-[11.5px]">{opt.label}</span>
-                      </Radio>
-                    ))}
-                  </Radio.Group>
-                </div>
-
-                {ic.condition !== 'good' && (
-                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 animate-fadeIn">
-                    <Input
-                      disabled={isReadOnly}
-                      placeholder="Ghi chú hư hỏng (ren, khóa, gấu...)"
-                      value={ic.damageNotes}
-                      onChange={(e) => updateItem(idx, 'damageNotes', e.target.value)}
-                      className="text-xs"
-                      size="middle"
-                    />
-                    <div>
-                      <Input
-                        disabled={isReadOnly}
-                        placeholder={`Số tiền bồi thường (tối đa ${fmtVnd(maxLimit)})`}
-                        value={ic.compensation ? String(ic.compensation).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''}
-                        onChange={(e) => {
-                          const rawDigits = e.target.value.replace(/\D/g, '');
-                          const num = rawDigits ? parseInt(rawDigits, 10) : 0;
-                          updateItem(idx, 'compensation', num);
-                        }}
-                        suffix={<span className="text-[#8C7D7E] font-medium text-xs">đ</span>}
-                        className="text-xs"
-                        size="middle"
-                      />
-                      <span className="text-[10px] text-amber-800 block mt-0.5">
-                        * Tối đa không vượt quá tiền cọc: {fmtVnd(maxLimit)}
+                  {/* Chọn nhóm lỗi hư hại theo Bảng giá niêm yết */}
+                  <div className="space-y-1.5">
+                    <div className="flex items-center justify-between gap-2 flex-wrap">
+                      <span className="text-[11.5px] font-bold text-[#5F4E50] flex items-center gap-1.5">
+                        <span>Nhóm lỗi theo Bảng Giá Niêm Yết:</span>
+                        <span className="text-[10px] text-[#8C7D7E] font-normal">(Staff không tự ý định giá)</span>
+                      </span>
+                      <span className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-bold border ${catItem.authority === 'admin_only'
+                          ? 'bg-rose-100 text-rose-800 border-rose-300'
+                          : catItem.authority === 'admin'
+                            ? 'bg-red-50 text-red-700 border-red-200'
+                            : catItem.authority === 'both'
+                              ? 'bg-purple-50 text-purple-700 border-purple-200'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                        }`}>
+                        {catItem.authorityLabel}
                       </span>
                     </div>
+
+                    <select
+                      disabled={isReadOnly}
+                      value={ic.condition}
+                      onChange={(e) => updateCondition(idx, e.target.value)}
+                      className="w-full px-3 py-2 rounded-xl border border-[#DDC6C0] bg-white text-xs font-semibold text-[#2C2523] outline-none focus:border-[#733F49] cursor-pointer"
+                    >
+                      {DAMAGE_PRICE_CATALOG.map((cat) => (
+                        <option key={cat.id} value={cat.id}>
+                          {cat.name} — Phí: {cat.feeLabel} [{cat.authorityLabel}]
+                        </option>
+                      ))}
+                    </select>
                   </div>
+
+                  {/* Chi tiết hiện trạng & Mức phí đền bù khóa cố định */}
+                  {ic.condition !== 'normal_wear' && ic.condition !== 'good' && (
+                    <div className="p-3 rounded-xl bg-[#FFF9F6] border border-[#F4E1D8] space-y-2.5 animate-fadeIn text-xs">
+                      {/* Hiện trạng thực tế (Cho phép nhân viên trực tiếp điền / chỉnh sửa) */}
+                      <div>
+                        <div className="flex items-center justify-between mb-1.5">
+                          <label className="text-[11.5px] font-bold text-[#733F49] flex items-center gap-1.5">
+                            <FileEdit size={13} className="text-[#8D3B4C]" />
+                            Hiện trạng thực tế:
+                          </label>
+                          <span className="text-[10px] text-[#8C7D7E] italic">
+                            * Có thể chỉnh sửa hoặc điền chi tiết vị trí lỗi trên váy
+                          </span>
+                        </div>
+                        <Input.TextArea
+                          rows={2}
+                          disabled={isReadOnly}
+                          placeholder="Mô tả hiện trạng thực tế, vị trí vết bẩn hoặc lỗi hư hại trên váy..."
+                          value={ic.damageNotes !== undefined && ic.damageNotes !== '' ? ic.damageNotes : catItem.description}
+                          onChange={(e) => updateNotes(idx, e.target.value)}
+                          className="text-xs rounded-xl border-[#E5D7D0] focus:border-[#733F49]"
+                        />
+                      </div>
+
+                      {/* Hộp hiển thị mức bồi thường khóa cố định */}
+                      <div className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-[#EFE2DC] flex-wrap gap-2">
+                        <div className="flex items-center gap-1.5 text-xs">
+                          <Lock size={13} className="text-[#8C7D7E]" />
+                          <span className="text-[#5F4E50] font-semibold">Mức phí đền bù niêm yết:</span>
+                          <span className="text-sm font-bold text-red-700">
+                            {catItem.feeType === 'deposit_100' ? `Tịch thu 100% Cọc (${fmtVnd(ic.compensation)})` : fmtVnd(ic.compensation)}
+                          </span>
+                        </div>
+                        <span className="text-[10px] text-[#8C7D7E] italic">
+                          🔒 Khóa cố định 1 mức theo Bảng giá niêm yết
+                        </span>
+                      </div>
+
+                      {/* Đối chiếu hợp đồng */}
+                      <div className="text-[11px] text-[#5C4D4D] bg-[#F7F2EF] p-2 rounded-lg border border-[#EDE0D8] flex items-center gap-1.5">
+                        <FileCheck size={13} className="text-[#1E8347] shrink-0" />
+                        <span>Đối chiếu: Mức phí được quy định cố định tại <strong>Điều 5 & Phụ lục Hợp đồng thuê váy</strong> để đối soát cùng khách hàng.</span>
+                      </div>
+
+                      {/* Cảnh báo quyền phê duyệt Admin nếu là lỗi nặng */}
+                      {catItem.isAdminOnly && (
+                        <div className="p-2 rounded-lg bg-rose-50 border border-rose-200 text-rose-800 text-[11px] flex items-center gap-1.5">
+                          <AlertTriangle size={13} className="shrink-0 text-rose-600" />
+                          <span><strong>Quy chuẩn nghiêm ngặt:</strong> Nhóm lỗi này thuộc thẩm quyền <strong>{catItem.authorityLabel}</strong>. Vui lòng chọn Phương án 2 để chuyển Quản lý trực tiếp đàm phán và phê duyệt.</span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+                </div>
+              );
+            })}
+          </div>
+
+          {/* Hồ sơ ảnh giám định hiện trạng */}
+          <div className="p-3 rounded-2xl border border-[#EFE5E1] bg-[#FAF6F3] space-y-2">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2 flex-wrap">
+                <Camera size={15} className="text-[#733F49]" />
+                <span className="font-bold text-[12px] text-[#2C2523]">
+                  Hồ Sơ Ảnh Giám Định Hiện Trạng ({evidencePhotos.length})
+                </span>
+                {itemsCondition.some((ic) => ic.condition !== 'good' || Number(ic.compensation || 0) > 0) && (
+                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${evidencePhotos.length > 0
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                    : 'bg-red-100 text-red-700 border border-red-200 animate-pulse'
+                    }`}>
+                    {evidencePhotos.length > 0 ? '✓ Đã đính kèm ảnh đối soát' : '⚠️ Bắt buộc chụp ảnh lỗi'}
+                  </span>
                 )}
               </div>
-            );
-          })}
-
-          {/* CHỤP ẢNH VÀ LƯU BẰNG CHỨNG HIỆN TRẠNG VÁY - Thu gọn thanh mảnh */}
-          <div className="p-2 px-3 rounded-xl border border-[#EFE5E1] bg-[#FCF8F5] space-y-1.5">
-            <div className="flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-1.5">
-                <Camera size={14} className="text-[#733F49]" />
-                <span className="font-bold text-[12px] text-[#2C2523]">
-                  Ảnh Bằng Chứng Đối Soát ({evidencePhotos.length})
-                </span>
-              </div>
               {!isReadOnly && (
-                <label className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-[#733F49] text-white text-[11px] font-bold cursor-pointer hover:bg-[#5C3038] transition-colors shadow-2xs">
-                  <Camera size={12} />
-                  <span>+ Chụp / Tải ảnh</span>
+                <label className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#733F49] text-white text-[11px] font-bold cursor-pointer hover:bg-[#5C3038] transition-colors shadow-2xs">
+                  <Camera size={13} />
+                  <span>+ Thêm Ảnh Giám Định</span>
                   <input
                     type="file"
                     accept="image/*"
@@ -821,20 +1105,20 @@ function InspectionModal({ order, onClose, onSuccess }) {
             </div>
 
             {evidencePhotos.length === 0 ? (
-              <div className="py-1.5 px-3 rounded-lg border border-dashed border-[#DDC6C0] text-center bg-white text-[11px] text-[#8C7D7E] flex items-center justify-center gap-1.5">
-                <Camera size={13} className="text-[#A38D91]" />
-                <span>Chưa có ảnh bằng chứng (nhấn nút "+ Chụp / Tải ảnh" để thêm ảnh đối soát)</span>
+              <div className="py-2.5 px-3 rounded-xl border border-dashed border-[#DDC6C0] text-center bg-white text-[11px] text-[#8C7D7E] flex items-center justify-center gap-2">
+                <Camera size={14} className="text-[#A38D91]" />
+                <span>Chưa có ảnh giám định hiện trạng (nhấn nút "+ Thêm Ảnh Giám Định" để tải ảnh)</span>
               </div>
             ) : (
               <div className="flex flex-wrap gap-2 pt-0.5">
                 {evidencePhotos.map((photo, pIdx) => (
-                  <div key={pIdx} className="relative w-12 h-12 rounded-lg overflow-hidden border border-[#E5D7D0] group">
-                    <img src={photo} alt={`Bằng chứng ${pIdx + 1}`} className="w-full h-full object-cover" />
+                  <div key={pIdx} className="relative w-14 h-14 rounded-xl overflow-hidden border border-[#E5D7D0] group shadow-2xs">
+                    <img src={photo} alt={`Bằng chứng ${pIdx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
                     {!isReadOnly && (
                       <button
                         type="button"
                         onClick={() => removePhoto(pIdx)}
-                        className="absolute top-0.5 right-0.5 w-4 h-4 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-red-600 transition-colors cursor-pointer border-0"
+                        className="absolute top-1 right-1 w-4 h-4 rounded-full bg-black/70 text-white flex items-center justify-center hover:bg-red-600 transition-colors cursor-pointer border-0"
                       >
                         <X size={10} />
                       </button>
@@ -845,77 +1129,653 @@ function InspectionModal({ order, onClose, onSuccess }) {
             )}
           </div>
 
-          {/* Summary - Bảng quyết toán thu gọn 1 hàng */}
-          <div className="p-2.5 px-3.5 rounded-xl bg-[#FFF6F3] border border-[#EFE5E1] text-[11.5px] flex items-center justify-between flex-wrap gap-2">
-            <div className="space-x-2 text-[#7A6B6C]">
-              <span>Cọc ban đầu: <strong className="text-[#2C2523]">{fmtVnd(order.totalDeposit)}</strong></span>
-              {lateDays > 0 && <span className="text-[#92400E]">• Trễ: <strong>-{fmtVnd(lateFee)}</strong></span>}
-              {totalCompensation > 0 && <span className="text-[#B84E5D]">• Bồi thường: <strong>-{fmtVnd(totalCompensation)}</strong></span>}
+          {/* Bảng Quyết Toán Tài Chính Chuẩn Showroom */}
+          <div className="p-3.5 rounded-2xl bg-gradient-to-r from-[#FFF8F6] via-[#FAF3F0] to-[#FFF8F6] border border-[#EFE5E1] text-xs">
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pb-2.5 border-b border-[#F0E4DE]">
+              <div>
+                <span className="text-[#8C7D7E] text-[10px] uppercase font-bold tracking-wider block">Cọc Ban Đầu</span>
+                <strong className="text-[13.5px] text-[#2C2523]">{fmtVnd(order.totalDeposit)}</strong>
+              </div>
+              <div>
+                <span className="text-[#8C7D7E] text-[10px] uppercase font-bold tracking-wider block">Phạt Trễ Hạn</span>
+                <strong className={`text-[13.5px] ${lateFee > 0 ? 'text-amber-700' : 'text-[#8C7D7E]'}`}>
+                  {lateFee > 0 ? `-${fmtVnd(lateFee)}` : '0 đ'}
+                </strong>
+              </div>
+              <div>
+                <span className="text-[#8C7D7E] text-[10px] uppercase font-bold tracking-wider block">Chi Phí Phục Chế</span>
+                <strong className={`text-[13.5px] ${totalCompensation > 0 ? 'text-red-700' : 'text-[#8C7D7E]'}`}>
+                  {totalCompensation > 0 ? `-${fmtVnd(totalCompensation)}` : '0 đ'}
+                </strong>
+              </div>
+              <div className="text-right sm:text-right">
+                <span className="text-[#1E8347] text-[10px] uppercase font-bold tracking-wider block">Dự Kiến Hoàn Trả</span>
+                <strong className="text-[16px] text-[#1E8347] font-playfair font-bold">{fmtVnd(finalRefund)}</strong>
+              </div>
             </div>
-            <div className="flex items-center gap-1.5">
-              <span className="font-bold text-[#5F2B36]">Dự kiến hoàn trả:</span>
-              <span className="text-[15px] font-bold text-[#1E8347]">{fmtVnd(finalRefund)}</span>
-            </div>
+            <p className="text-[10.5px] text-[#8C7D7E] m-0 mt-2 italic text-center sm:text-left">
+              * Số tiền hoàn cọc thực tế sẽ được quyết toán sau khi thống nhất biên bản giám định hiện trạng.
+            </p>
           </div>
 
-          {/* Actions - Nút bấm thu gọn */}
-          <div className="flex gap-2.5 pt-1">
-            {isReadOnly ? (
-              <div className="flex w-full gap-2.5">
-                <button
-                  type="button"
-                  onClick={onClose}
-                  className="flex-1 py-2 rounded-xl border border-[#EFE5E1] text-[12px] font-bold text-[#5F4E50] hover:bg-[#FAF5F2] transition-colors bg-transparent cursor-pointer"
-                >
-                  {isCompletedOrder ? 'Đóng Hồ Sơ Lưu Trữ' : isCustomerApproved ? 'Đóng (Khách Đã Duyệt - Hồ Sơ Đã Khóa)' : 'Đóng'}
-                </button>
-                {!isCompletedOrder && !isCustomerApproved && (
-                  <button
-                    type="button"
-                    onClick={() => setIsEditing(true)}
-                    className="flex-1 py-2 rounded-xl bg-[#733F49] text-[12px] font-bold text-white hover:bg-[#5C3038] transition-colors border-0 cursor-pointer shadow-xs"
-                  >
-                    Chỉnh Sửa Số Tiền Trừ / Bồi Thường
-                  </button>
+          {/* Xác nhận & Ý kiến phản hồi của Khách Hàng */}
+          {!isReadOnly && (
+            <div className="p-4 rounded-2xl border border-[#DDC6C0] bg-[#FAF5F2] space-y-3">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="font-bold text-[13px] text-[#5F2B36] flex items-center gap-2">
+                  <span className="w-5 h-5 rounded-full bg-[#733F49] text-white flex items-center justify-center text-[10.5px] font-bold">✓</span>
+                  Ý Kiến Xác Nhận Của Khách Hàng
+                </span>
+                {isGuestOrder && (
+                  <span className="text-[10px] bg-amber-100 text-amber-800 font-bold px-2 py-0.5 rounded-full border border-amber-200">
+                    Khách trải nghiệm tại Showroom
+                  </span>
                 )}
               </div>
-            ) : (
-              <>
+
+              {/* 2 Thẻ lựa chọn phương án đối soát */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                {/* Phương Án 1: Khách Đồng Thuận */}
+                <div
+                  onClick={() => setCustomerDecision('agreed')}
+                  className={`p-3 rounded-2xl border-2 cursor-pointer transition-all ${customerDecision === 'agreed'
+                      ? 'border-[#1E8347] bg-[#F3FAF5] shadow-xs'
+                      : 'border-[#E5D7D0] bg-white hover:border-[#BCE2C5]'
+                    }`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      type="radio"
+                      name="customerDecisionRadio"
+                      checked={customerDecision === 'agreed'}
+                      onChange={() => setCustomerDecision('agreed')}
+                      className="mt-0.5 accent-[#1E8347] cursor-pointer"
+                    />
+                    <div>
+                      <div className="font-bold text-[12.5px] text-[#1E6B37]">
+                        Đồng Thuận Quyết Toán (Tại Chỗ)
+                      </div>
+                      <p className="text-[10.5px] text-[#4A5D4E] mt-0.5 m-0 leading-tight">
+                        Khách hàng đồng ý với kết quả kiểm định. Showroom tiến hành hoàn cọc và hoàn tất hợp đồng.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Phương Án 2: Khách Bảo Lưu Ý Kiến */}
+                <div
+                  onClick={() => setCustomerDecision('disputed')}
+                  className={`p-3 rounded-2xl border-2 cursor-pointer transition-all ${customerDecision === 'disputed'
+                      ? 'border-[#8B2635] bg-red-50/60 shadow-xs'
+                      : 'border-[#E5D7D0] bg-white hover:border-red-300'
+                    }`}
+                >
+                  <div className="flex items-start gap-2.5">
+                    <input
+                      type="radio"
+                      name="customerDecisionRadio"
+                      checked={customerDecision === 'disputed'}
+                      onChange={() => setCustomerDecision('disputed')}
+                      className="mt-0.5 accent-[#8B2635] cursor-pointer"
+                    />
+                    <div>
+                      <div className="font-bold text-[12.5px] text-[#8B2635]">
+                        Bảo Lưu Ý Kiến (Chuyển Quản Lý)
+                      </div>
+                      <p className="text-[10.5px] text-[#7F3A3A] mt-0.5 m-0 leading-tight">
+                        Khách cần trao đổi thêm về mức khấu trừ. Chuyển hồ sơ để Quản lý showroom trực tiếp liên hệ hỗ trợ.
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Chi tiết Phương Án 1: Khách Đồng Thuận */}
+              {customerDecision === 'agreed' && (
+                <div className="pt-2.5 border-t border-[#D5E8D8] space-y-2.5 text-[11.5px] animate-fadeIn">
+                  <div className="flex items-center justify-between flex-wrap gap-2">
+                    <span className="text-[#3F5946] font-bold flex items-center gap-1.5 text-xs">
+                      <CreditCard size={14} className="text-[#1E8347]" />
+                      <span>Hình thức nhận hoàn cọc: <strong className="text-[#1E8347]">Chuyển khoản (STK)</strong></span>
+                    </span>
+                    <span className="text-[10px] text-emerald-800 font-semibold bg-emerald-100/80 px-2 py-0.5 rounded border border-emerald-200">
+                      Chính sách duy nhất: CK ngân hàng
+                    </span>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 pt-1.5 bg-white p-3 rounded-xl border border-[#D5E8D8]">
+                    <div>
+                      <span className="text-[10.5px] text-[#7A6A6B] block mb-1 font-semibold">
+                        Ngân hàng <span className="text-red-600">*</span>
+                      </span>
+                      <Input
+                        size="small"
+                        placeholder="VD: Vietcombank, MB..."
+                        value={onSiteBankName}
+                        onChange={(e) => setOnSiteBankName(e.target.value)}
+                        className="text-xs"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10.5px] text-[#7A6A6B] block mb-1 font-semibold">
+                        Số tài khoản (STK) <span className="text-red-600">*</span>
+                      </span>
+                      <Input
+                        size="small"
+                        placeholder="Nhập STK nhận tiền..."
+                        value={onSiteAccountNum}
+                        onChange={(e) => setOnSiteAccountNum(e.target.value)}
+                        className="text-xs font-mono font-bold text-[#1E8347]"
+                      />
+                    </div>
+                    <div>
+                      <span className="text-[10.5px] text-[#7A6A6B] block mb-1 font-semibold">
+                        Tên chủ tài khoản <span className="text-red-600">*</span>
+                      </span>
+                      <Input
+                        size="small"
+                        placeholder="TÊN CHỦ TÀI KHOẢN"
+                        value={onSiteAccountHolder}
+                        onChange={(e) => setOnSiteAccountHolder(e.target.value.toUpperCase())}
+                        className="text-xs font-semibold"
+                      />
+                    </div>
+                  </div>
+
+                  <p className="text-[11px] text-[#2E7D47] m-0 bg-emerald-50/70 p-2 rounded-xl border border-emerald-100 flex items-center gap-1.5">
+                    <CheckCircle2 size={13} className="shrink-0" />
+                    <span>Sau khi hoàn tất kiểm định, đơn sẽ tự động chuyển sang <strong>Chờ hoàn cọc</strong> ({fmtVnd(finalRefund)}).</span>
+                  </p>
+                </div>
+              )}
+
+          {/* Chi tiết Phương Án 2: Khách Bảo Lưu Ý Kiến */}
+          {customerDecision === 'disputed' && (
+            <div className="pt-2.5 border-t border-red-200 space-y-2.5 text-[11.5px] animate-fadeIn">
+              <div className="p-3 rounded-xl bg-amber-50/70 border border-amber-200 text-amber-900 text-[11.5px] leading-relaxed">
+                <div className="font-bold flex items-center gap-1.5 text-amber-950 mb-0.5">
+                  <Clock size={13} className="text-amber-700" />
+                  <span>Quy trình bảo lưu hồ sơ:</span>
+                </div>
+                <span>Toàn bộ hình ảnh đối soát và ghi chú hiện trạng sẽ được bảo lưu nguyên vẹn trên hệ thống. Đơn hàng chuyển sang trạng thái <strong>"Tạm giữ - Chờ Quản lý đàm phán"</strong> để Quản lý showroom trực tiếp liên hệ và thống nhất phương án hỗ trợ tối ưu cùng khách hàng.</span>
+              </div>
+              <div>
+                <span className="text-[11px] font-semibold text-[#662020] block mb-1">
+                  Nội dung phản hồi / Nguyện vọng của khách hàng:
+                </span>
+                <Input.TextArea
+                  rows={2}
+                  placeholder="Ghi nhận chi tiết ý kiến phản hồi của khách hàng để Quản lý nắm thông tin khi liên hệ đàm phán..."
+                  value={customerDisputeNote}
+                  onChange={(e) => setCustomerDisputeNote(e.target.value)}
+                  className="text-xs"
+                />
+              </div>
+            </div>
+          )}
+        </div>
+          )}
+
+        {/* Actions - Nút bấm hoàn tất chuẩn mực */}
+        <div className="flex gap-2.5 pt-1.5">
+          {isReadOnly ? (
+            <div className="flex w-full gap-2.5">
+              <button
+                type="button"
+                onClick={onClose}
+                className="flex-1 py-2.5 rounded-xl border border-[#EFE5E1] text-[12px] font-bold text-[#5F4E50] hover:bg-[#FAF5F2] transition-colors bg-transparent cursor-pointer"
+              >
+                {isCompletedOrder ? 'Đóng Hồ Sơ Lưu Trữ' : isCustomerApproved ? 'Đóng (Khách Đã Duyệt - Hồ Sơ Đã Khóa)' : 'Đóng'}
+              </button>
+              {!isCompletedOrder && !isCustomerApproved && (
                 <button
                   type="button"
-                  onClick={() => {
-                    if (isReturnedOrder) setIsEditing(false);
-                    else onClose();
-                  }}
-                  className="flex-1 py-2 rounded-xl border border-[#EFE5E1] text-[12px] font-bold text-[#5F4E50] hover:bg-[#FAF5F2] transition-colors bg-transparent cursor-pointer"
+                  onClick={() => setIsEditing(true)}
+                  className="flex-1 py-2.5 rounded-xl bg-[#733F49] text-[12px] font-bold text-white hover:bg-[#5C3038] transition-colors border-0 cursor-pointer shadow-xs"
                 >
-                  Hủy
+                  Chỉnh Sửa Chi Phí Khấu Trừ
                 </button>
+              )}
+            </div>
+          ) : (
+            <>
+              <button
+                type="button"
+                onClick={() => {
+                  if (isReturnedOrder) setIsEditing(false);
+                  else onClose();
+                }}
+                className="w-28 py-2.5 rounded-xl border border-[#EFE5E1] text-[12px] font-bold text-[#5F4E50] hover:bg-[#FAF5F2] transition-colors bg-transparent cursor-pointer"
+              >
+                Hủy
+              </button>
+              {customerDecision === 'agreed' ? (
                 <button
                   type="button"
                   disabled={submitting}
                   onClick={handleSubmit}
-                  className="flex-1 py-2 rounded-xl bg-[#733F49] text-[12px] font-bold text-white hover:bg-[#5C3038] transition-colors border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 shadow-xs"
+                  className="flex-1 py-2.5 rounded-xl bg-[#1E8347] hover:bg-[#166534] text-white text-[12.5px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 shadow-xs"
                 >
-                  {submitting ? (
-                    <RefreshCw size={13} className="animate-spin" />
-                  ) : (
-                    <ShieldCheck size={14} />
-                  )}
-                  <span>Lưu và Gửi Biên Bản Cho Khách Hàng</span>
+                  {submitting ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={15} />}
+                  <span>Hoàn Tất Kiểm Định Váy → Chuyển [Chờ Hoàn Cọc] ({fmtVnd(finalRefund)})</span>
                 </button>
-              </>
-            )}
-          </div>
+              ) : (
+                <button
+                  type="button"
+                  disabled={submitting}
+                  onClick={handleSubmit}
+                  className="flex-1 py-2.5 rounded-xl bg-[#8B2635] hover:bg-[#701E2A] text-white text-[12.5px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 shadow-xs"
+                >
+                  {submitting ? <RefreshCw size={14} className="animate-spin" /> : <PhoneCall size={14} />}
+                  <span>Bảo Lưu Đơn & Chuyển Quản Lý</span>
+                </button>
+              )}
+            </>
+          )}
         </div>
       </div>
     </div>
+
+    {/* Bảng Giá Đền Bù Thiệt Hại Niêm Yết Popup */}
+    <DamagePriceCatalogModal
+      open={showPriceCatalogModal}
+      onClose={() => setShowPriceCatalogModal(false)}
+    />
+  </div>
+  );
+}
+
+function AdminNegotiationModal({ order, onClose, onSuccess }) {
+  const [inspection, setInspection] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [submitting, setSubmitting] = useState(false);
+  const [agreedPenalty, setAgreedPenalty] = useState(0);
+  const [refundMethod, setRefundMethod] = useState('bank_transfer'); // 'cash' | 'bank_transfer'
+  const [bankName, setBankName] = useState('Vietcombank');
+  const [accountNumber, setAccountNumber] = useState('');
+  const [accountHolder, setAccountHolder] = useState(order.customerName || '');
+  const [negotiationNotes, setNegotiationNotes] = useState('');
+  const [previewPhoto, setPreviewPhoto] = useState(null);
+  const [copiedPhone, setCopiedPhone] = useState(false);
+
+  useEffect(() => {
+    let active = true;
+    getReturnInspection(order._id)
+      .then((res) => {
+        if (!active) return;
+        const insp = res?.data || res;
+        setInspection(insp);
+        if (insp) {
+          const initPenalty = insp.agreedPenaltyFee ?? insp.totalDeduction ?? 0;
+          setAgreedPenalty(initPenalty);
+          if (insp.refundBankDetails?.bankName) setBankName(insp.refundBankDetails.bankName);
+          if (insp.refundBankDetails?.accountNumber) setAccountNumber(insp.refundBankDetails.accountNumber);
+          if (insp.refundBankDetails?.accountHolder) setAccountHolder(insp.refundBankDetails.accountHolder);
+          if (insp.adminNegotiationNotes) setNegotiationNotes(insp.adminNegotiationNotes);
+        }
+      })
+      .catch(() => { })
+      .finally(() => {
+        if (active) setLoading(false);
+      });
+    return () => {
+      active = false;
+    };
+  }, [order._id]);
+
+  const totalDeposit = Number(order.totalDeposit || 0);
+  const staffInitialDeduction = inspection?.totalDeduction ?? 0;
+  const finalRefund = Math.max(0, totalDeposit - agreedPenalty);
+  const phone = order.customerPhone || order.phone || order.customer?.phone || '';
+
+  const handleCopyPhone = () => {
+    if (!phone) return;
+    navigator.clipboard.writeText(phone);
+    setCopiedPhone(true);
+    message.success('Đã sao chép số điện thoại khách hàng!');
+    setTimeout(() => setCopiedPhone(false), 2000);
+  };
+
+  const handleSubmitAdminSettle = async () => {
+    if (agreedPenalty > totalDeposit) {
+      message.error(`Mức phạt không được vượt quá số tiền cọc (${fmtVnd(totalDeposit)})!`);
+      return;
+    }
+    if (refundMethod === 'bank_transfer' && finalRefund > 0 && !accountNumber.trim()) {
+      message.error('Vui lòng nhập số tài khoản ngân hàng để chuyển khoản hoàn tiền cho khách!');
+      return;
+    }
+
+    setSubmitting(true);
+    try {
+      await settleInspectionAdmin(order._id, {
+        agreedPenaltyFee: agreedPenalty,
+        refundMethod,
+        bankName,
+        accountNumber,
+        accountHolder: accountHolder || order.customerName,
+        negotiationNotes,
+        refundBankDetails: refundMethod === 'cash' ? {
+          bankName: 'Tiền mặt tại quầy',
+          accountNumber: 'TIỀN MẶT',
+          accountHolder: order.customerName,
+          notes: negotiationNotes || 'Admin đã đàm phán và hoàn tiền mặt trực tiếp cho khách',
+        } : {
+          bankName,
+          accountNumber,
+          accountHolder,
+          notes: negotiationNotes || 'Admin đã đàm phán và chuyển khoản hoàn tiền cho khách',
+        },
+      });
+
+      message.success(`Admin đã xác nhận đàm phán thành công! Đơn hàng đã chuyển sang Hoàn tất và gửi email kèm biên lai hoàn cọc.`);
+      onSuccess();
+    } catch (err) {
+      message.error(err?.response?.data?.message || err.message || 'Xác nhận đàm phán thất bại. Vui lòng thử lại.');
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white rounded-2xl max-w-2xl w-full max-h-[94vh] overflow-y-auto shadow-2xl border border-[#EFE5E1]">
+        {/* Header */}
+        <div className="flex items-center justify-between py-2.5 px-4 border-b border-red-200 bg-red-50/70 rounded-t-2xl">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 rounded-full bg-red-100 flex items-center justify-center text-red-700">
+              <PhoneCall size={16} />
+            </div>
+            <div>
+              <h3 className="font-playfair text-[15px] font-bold text-red-950 m-0">
+                Admin Đàm Phán Mức Phạt & Hoàn Tất Đơn
+              </h3>
+              <p className="text-[10.5px] text-red-700 m-0 font-medium">
+                Đơn #{order.orderCode} • Trạng thái: Tạm giữ - Chờ Admin đàm phán
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-7 h-7 rounded-full bg-white text-stone-600 hover:text-red-900 flex items-center justify-center transition-colors cursor-pointer border border-red-100"
+          >
+            <X size={14} />
+          </button>
+        </div>
+
+        <div className="p-4 space-y-3.5 text-xs font-jakarta">
+          {/* Thông tin liên hệ khách hàng & Khiếu nại */}
+          <div className="p-3 rounded-xl bg-amber-50/80 border border-amber-200 space-y-2">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="font-bold text-[13px] text-stone-900">{order.customerName}</span>
+                {phone && (
+                  <span className="inline-flex items-center gap-1 font-mono font-bold text-red-700 bg-white px-2 py-0.5 rounded border border-red-200">
+                    <PhoneCall size={11} /> {phone}
+                  </span>
+                )}
+              </div>
+              {phone && (
+                <div className="flex items-center gap-1.5">
+                  <a
+                    href={`tel:${phone}`}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-emerald-600 text-white font-bold text-[11px] hover:bg-emerald-700 transition-colors no-underline"
+                  >
+                    <PhoneCall size={12} />
+                    <span>Gọi Khách</span>
+                  </a>
+                  <button
+                    type="button"
+                    onClick={handleCopyPhone}
+                    className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-white border border-stone-200 text-stone-700 font-bold text-[11px] hover:bg-stone-50 transition-colors cursor-pointer"
+                  >
+                    {copiedPhone ? <CheckCheck size={12} className="text-emerald-600" /> : <Copy size={12} />}
+                    <span>{copiedPhone ? 'Đã sao chép' : 'Sao chép SĐT'}</span>
+                  </button>
+                </div>
+              )}
+            </div>
+            <div className="text-[11.5px] text-stone-800">
+              <span className="font-bold text-red-800">Lý do khách khiếu nại / Ghi chú từ Staff: </span>
+              <span className="italic">"{inspection?.disputeReason || 'Khách không đồng ý với biên bản kiểm định hoặc mức phạt do Staff đề xuất tại chỗ.'}"</span>
+            </div>
+          </div>
+
+          {/* BƯỚC 3: Admin xem ảnh lỗi Staff chụp & Đánh giá hiện trạng */}
+          <div className="p-3.5 rounded-xl border border-[#EFE5E1] bg-white space-y-2.5">
+            <div className="flex items-center justify-between flex-wrap gap-2">
+              <div className="flex items-center gap-2">
+                <span className="w-5 h-5 rounded-full bg-stone-800 text-white flex items-center justify-center text-[10.5px] font-bold">3</span>
+                <span className="font-bold text-[12.5px] text-[#5F2B36]">
+                  Admin Xem Ảnh Lỗi Staff Đã Chụp & Đánh Giá
+                </span>
+              </div>
+              <span className="text-[11px] text-stone-600">
+                Mức phạt Staff đề xuất: <strong className="text-red-700">{fmtVnd(staffInitialDeduction)}</strong>
+              </span>
+            </div>
+
+            {/* Chi tiết từng váy */}
+            <div className="space-y-1.5">
+              {(inspection?.itemsCondition || order.items || []).map((it, idx) => (
+                <div key={idx} className="p-2 rounded-lg bg-[#FAF5F2] border border-[#F0E6E2] flex items-center justify-between text-[11.5px] flex-wrap gap-1">
+                  <div>
+                    <strong className="text-stone-900">{it.name || order.items?.[idx]?.name || `Váy ${idx + 1}`}</strong>
+                    <span className="text-stone-500 ml-1.5 font-medium">({it.condition || 'Tình trạng ghi nhận'})</span>
+                    {it.note && <span className="text-red-700 ml-1.5 italic">• {it.note}</span>}
+                  </div>
+                  <div className="text-right">
+                    <span className="text-stone-600">Phí Staff ghi: </span>
+                    <strong className="text-red-700">{fmtVnd(it.repairFee || it.compensation || 0)}</strong>
+                  </div>
+                </div>
+              ))}
+            </div>
+
+            {/* Bộ sưu tập ảnh lỗi Staff chụp */}
+            <div>
+              <div className="flex items-center justify-between mb-1">
+                <span className="text-[11px] font-bold text-stone-700 flex items-center gap-1">
+                  <Camera size={13} className="text-red-600" />
+                  <span>Ảnh bằng chứng lỗi ({inspection?.evidencePhotos?.length || 0} ảnh) - Nhấn ảnh để phóng to:</span>
+                </span>
+              </div>
+              {inspection?.evidencePhotos && inspection.evidencePhotos.length > 0 ? (
+                <div className="flex flex-wrap gap-2 pt-1">
+                  {inspection.evidencePhotos.map((photo, pIdx) => (
+                    <div
+                      key={pIdx}
+                      onClick={() => setPreviewPhoto(photo)}
+                      className="w-16 h-16 rounded-lg overflow-hidden border-2 border-red-200 hover:border-red-500 cursor-pointer transition-all shadow-xs group relative"
+                    >
+                      <img src={photo} alt={`Lỗi ${pIdx + 1}`} className="w-full h-full object-cover group-hover:scale-105 transition-transform" />
+                      <div className="absolute inset-0 bg-black/20 opacity-0 group-hover:opacity-100 flex items-center justify-center text-white text-[10px] font-bold transition-opacity">
+                        <Eye size={12} />
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              ) : (
+                <div className="p-2 rounded-lg bg-stone-50 border border-stone-200 text-stone-500 italic text-[11px] text-center">
+                  Không tìm thấy ảnh lỗi lưu kèm đơn hàng.
+                </div>
+              )}
+            </div>
+          </div>
+
+          {/* BƯỚC 4: Admin duyệt hoàn tất đơn & Chốt mức phạt đàm phán */}
+          <div className="p-3.5 rounded-xl border-2 border-[#1E8347]/30 bg-[#F6FAF7] space-y-3">
+            <div className="flex items-center gap-2">
+              <span className="w-5 h-5 rounded-full bg-[#1E8347] text-white flex items-center justify-center text-[10.5px] font-bold">4</span>
+              <span className="font-bold text-[12.5px] text-[#166534]">
+                Admin Duyệt Hoàn Tất Đơn & Chốt Mức Phạt Thống Nhất
+              </span>
+            </div>
+
+            <p className="text-[11px] text-[#2F6B42] m-0 leading-relaxed">
+              💡 <strong>Hướng dẫn:</strong> Admin trực tiếp trao đổi với khách, thống nhất "Mức phạt chung hợp lý" cả 2 bên cùng đồng thuận, sau đó nhập vào ô bên dưới.
+            </p>
+
+            {/* Nhập mức phạt */}
+            <div className="bg-white p-3 rounded-xl border border-[#D5E8D8] space-y-2">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="font-bold text-[11.5px] text-stone-900">
+                  Mức Phạt Thống Nhất Sau Đàm Phán (VND):
+                </span>
+                <div className="flex items-center gap-1.5 flex-wrap">
+                  <button
+                    type="button"
+                    onClick={() => setAgreedPenalty(0)}
+                    className="px-2 py-0.5 rounded text-[10.5px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200 hover:bg-emerald-100 cursor-pointer"
+                  >
+                    Miễn phạt (0đ)
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAgreedPenalty(Math.round(staffInitialDeduction * 0.5))}
+                    className="px-2 py-0.5 rounded text-[10.5px] font-bold bg-amber-50 text-amber-800 border border-amber-200 hover:bg-amber-100 cursor-pointer"
+                  >
+                    Giảm 50% phạt ({fmtVnd(Math.round(staffInitialDeduction * 0.5))})
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setAgreedPenalty(staffInitialDeduction)}
+                    className="px-2 py-0.5 rounded text-[10.5px] font-bold bg-stone-100 text-stone-800 border border-stone-200 hover:bg-stone-200 cursor-pointer"
+                  >
+                    Giữ nguyên ({fmtVnd(staffInitialDeduction)})
+                  </button>
+                </div>
+              </div>
+
+              <Input
+                size="large"
+                placeholder="Nhập mức phạt đã thống nhất..."
+                value={agreedPenalty ? String(agreedPenalty).replace(/\B(?=(\d{3})+(?!\d))/g, '.') : ''}
+                onChange={(e) => {
+                  const rawDigits = e.target.value.replace(/\D/g, '');
+                  const num = rawDigits ? parseInt(rawDigits, 10) : 0;
+                  setAgreedPenalty(Math.min(totalDeposit, Math.max(0, num)));
+                }}
+                suffix={<span className="text-stone-500 font-bold text-xs">VND</span>}
+                className="text-sm font-bold text-red-700"
+              />
+
+              {/* Bảng tổng kết tiền hoàn cọc */}
+              <div className="p-2.5 rounded-lg bg-[#FAF5F2] border border-[#F0E6E2] flex items-center justify-between text-[11.5px] flex-wrap gap-2">
+                <div className="space-x-2 text-stone-600">
+                  <span>Tiền cọc: <strong className="text-stone-900">{fmtVnd(totalDeposit)}</strong></span>
+                  <span>• Mức phạt chốt: <strong className="text-red-700">-{fmtVnd(agreedPenalty)}</strong></span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="font-bold text-stone-800">Hoàn lại cho khách:</span>
+                  <span className="text-[16px] font-bold text-[#1E8347]">{fmtVnd(finalRefund)}</span>
+                </div>
+              </div>
+            </div>
+
+            {/* Chuyển khoản ngân hàng (STK) duy nhất */}
+            <div className="bg-white p-3 rounded-xl border border-[#D5E8D8] space-y-2 text-[11.5px]">
+              <div className="flex items-center justify-between flex-wrap gap-2">
+                <span className="text-stone-800 font-bold flex items-center gap-1.5 text-xs">
+                  <CreditCard size={14} className="text-[#1E8347]" />
+                  <span>Hình thức hoàn tiền: <strong className="text-[#1E8347]">Chuyển khoản (STK)</strong></span>
+                </span>
+                <span className="text-[10px] text-emerald-800 font-semibold bg-emerald-100/80 px-2 py-0.5 rounded border border-emerald-200">
+                  Chính sách duy nhất: CK ngân hàng
+                </span>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
+                <div>
+                  <span className="text-[10.5px] text-stone-600 block mb-0.5 font-medium">Ngân hàng <span className="text-red-600">*</span></span>
+                  <Input
+                    size="small"
+                    placeholder="VD: Vietcombank, MB..."
+                    value={bankName}
+                    onChange={(e) => setBankName(e.target.value)}
+                    className="text-xs"
+                  />
+                </div>
+                <div>
+                  <span className="text-[10.5px] text-stone-600 block mb-0.5 font-medium">Số tài khoản <span className="text-red-600">*</span></span>
+                  <Input
+                    size="small"
+                    placeholder="Nhập STK nhận tiền..."
+                    value={accountNumber}
+                    onChange={(e) => setAccountNumber(e.target.value)}
+                    className="text-xs font-mono font-bold text-[#1E8347]"
+                  />
+                </div>
+                <div>
+                  <span className="text-[10.5px] text-stone-600 block mb-0.5 font-medium">Chủ tài khoản <span className="text-red-600">*</span></span>
+                  <Input
+                    size="small"
+                    placeholder="TÊN CHỦ TÀI KHOẢN"
+                    value={accountHolder}
+                    onChange={(e) => setAccountHolder(e.target.value.toUpperCase())}
+                    className="text-xs font-semibold"
+                  />
+                </div>
+              </div>
+            </div>
+
+          {/* Ghi chú kết quả đàm phán */}
+          <div className="bg-white p-3 rounded-xl border border-[#D5E8D8]">
+            <span className="text-[11px] font-bold text-stone-800 block mb-1">
+              Ghi chú nội dung đàm phán & đồng thuận:
+            </span>
+            <Input.TextArea
+              rows={2}
+              placeholder="VD: Admin đã gọi trao đổi với khách, thống nhất mức hỗ trợ phục chế 50% (300.000đ). Khách đã đồng thuận và nhận hoàn tiền cọc."
+              value={negotiationNotes}
+              onChange={(e) => setNegotiationNotes(e.target.value)}
+              className="text-xs"
+            />
+          </div>
+        </div>
+
+        {/* Actions */}
+        <div className="flex gap-2.5 pt-1">
+          <button
+            type="button"
+            onClick={onClose}
+            className="w-28 py-2.5 rounded-xl border border-[#EFE5E1] text-[12px] font-bold text-stone-700 hover:bg-[#FAF5F2] transition-colors bg-transparent cursor-pointer"
+          >
+            Đóng
+          </button>
+          <button
+            type="button"
+            disabled={submitting}
+            onClick={handleSubmitAdminSettle}
+            className="flex-1 py-2.5 rounded-xl bg-[#1E8347] hover:bg-[#166534] text-white text-[12.5px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 shadow-xs"
+          >
+            {submitting ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={15} />}
+            <span>XÁC NHẬN ĐÀM PHÁN & HOÀN TIỀN ({fmtVnd(finalRefund)})</span>
+          </button>
+        </div>
+      </div>
+    </div>
+
+      {/* Lightbox xem ảnh lỗi phóng to */ }
+  {
+    previewPhoto && (
+      <div
+        onClick={() => setPreviewPhoto(null)}
+        className="fixed inset-0 z-[60] bg-black/80 flex items-center justify-center p-4 cursor-zoom-out animate-fadeIn"
+      >
+        <div className="max-w-2xl max-h-[85vh] bg-white rounded-2xl overflow-hidden shadow-2xl p-2">
+          <img src={previewPhoto} alt="Bằng chứng lỗi chi tiết" className="w-full h-full object-contain max-h-[80vh] rounded-xl" />
+        </div>
+      </div>
+    )
+  }
+    </div >
   );
 }
 
 function RefundModal({ order, onClose, onSuccess }) {
   const [submitting, setSubmitting] = useState(false);
-  const [refundMethod, setRefundMethod] = useState('bank_transfer');
   const [refundNote, setRefundNote] = useState('');
   const [inspectionData, setInspectionData] = useState(null);
 
@@ -931,17 +1791,28 @@ function RefundModal({ order, onClose, onSuccess }) {
   }, [order._id]);
 
   const lateDays = inspectionData?.lateDays ?? calcLate(order.rentalEndDate);
-  const lateFee = inspectionData?.latePenaltyFee ?? 0;
+  const totalDeposit = Number(order.totalDeposit || 0);
+  const totalRentPrice = Number(order.totalRentPrice || 0);
+  let lateFee = inspectionData?.latePenaltyFee;
+  if (lateFee === undefined) {
+    if (lateDays > 5) {
+      lateFee = totalDeposit;
+    } else if (lateDays > 0) {
+      lateFee = Math.min(totalDeposit, lateDays * Math.round(totalRentPrice * 0.5));
+    } else {
+      lateFee = 0;
+    }
+  }
   const compensation = inspectionData?.itemsCondition?.reduce((sum, item) => sum + (item.repairFee || 0), 0) ?? 0;
-  const totalDeduction = inspectionData?.totalDeduction ?? (lateFee + compensation);
-  const finalRefund = inspectionData?.finalRefundAmount ?? Math.max(0, (order.totalDeposit ?? 0) - totalDeduction);
+  const totalDeduction = inspectionData?.totalDeduction ?? Math.min(totalDeposit, lateFee + compensation);
+  const finalRefund = inspectionData?.finalRefundAmount ?? Math.max(0, totalDeposit - totalDeduction);
 
   const handleConfirmRefund = async () => {
     setSubmitting(true);
     try {
       await updateOrderStatus(order._id, 'completed');
       recordCompletedOrderMaintenance(order);
-      message.success(`Đã hoàn tất quyết toán cọc ${fmtVnd(finalRefund)} cho khách hàng! Đơn hàng đã chuyển vào Hồ Sơ Lưu Trữ.`);
+      message.success(`Hoàn cọc thành công ${fmtVnd(finalRefund)}! Đơn hàng đã chuyển sang trạng thái Hoàn Tất.`);
       onSuccess();
     } catch {
       message.error('Quyết toán hoàn cọc thất bại. Vui lòng thử lại.');
@@ -1037,38 +1908,41 @@ function RefundModal({ order, onClose, onSuccess }) {
             </div>
           </div>
 
-          {/* Lựa chọn phương thức hoàn tiền */}
-          <div className="p-3.5 rounded-xl border border-[#EFE5E1] bg-white space-y-3">
-            <label className="font-bold text-[#2C2523] block">
-              Phương thức hoàn trả tiền cọc cho khách:
-            </label>
-            <Radio.Group
-              value={refundMethod}
-              onChange={(e) => setRefundMethod(e.target.value)}
-              className="flex flex-col gap-2"
-            >
-              <Radio value="bank_transfer">
-                <span className="font-medium text-[#2C2523]">Chuyển khoản trực tuyến (Internet Banking)</span>
-              </Radio>
-              <Radio value="cash">
-                <span className="font-medium text-[#2C2523]">Tiền mặt trực tiếp tại quầy Showroom</span>
-              </Radio>
-              <Radio value="card">
-                <span className="font-medium text-[#2C2523]">Hoàn trả vào thẻ ngân hàng / Cổng thanh toán</span>
-              </Radio>
-            </Radio.Group>
-
-            <div>
-              <label className="text-[11.5px] text-[#8C7D7E] block mb-1">
-                Ghi chú đối soát / Mã giao dịch ngân hàng (Tùy chọn):
-              </label>
-              <Input
-                placeholder="VD: Đã chuyển khoản qua STK Vietcombank lúc 15:30, mã GD: FT26001..."
-                value={refundNote}
-                onChange={(e) => setRefundNote(e.target.value)}
-                className="text-[12px] rounded-lg"
-              />
+          {/* Thông tin tài khoản ngân hàng thụ hưởng của khách */}
+          {inspectionData?.refundBankDetails && (
+            <div className="p-3.5 rounded-xl bg-[#F0FDF4] border border-[#BBF7D0] space-y-1.5">
+              <div className="font-bold text-[#166534] text-[12px] flex items-center gap-1.5">
+                <CreditCard size={14} />
+                <span>Tài khoản ngân hàng nhận hoàn cọc của khách:</span>
+              </div>
+              <div className="grid grid-cols-2 gap-2 text-[12px] text-[#2C2523] pt-1">
+                <div>
+                  <span className="text-[#6E8276] block text-[11px]">Ngân hàng:</span>
+                  <strong>{inspectionData.refundBankDetails.bankName || 'Ngân hàng nội địa'}</strong>
+                </div>
+                <div>
+                  <span className="text-[#6E8276] block text-[11px]">Số tài khoản (STK):</span>
+                  <strong className="font-mono text-[#166534] text-[13px]">{inspectionData.refundBankDetails.accountNumber}</strong>
+                </div>
+                <div className="col-span-2">
+                  <span className="text-[#6E8276] block text-[11px]">Chủ tài khoản:</span>
+                  <strong className="uppercase">{inspectionData.refundBankDetails.accountHolder}</strong>
+                </div>
+              </div>
             </div>
+          )}
+
+          {/* Ghi chú đối soát */}
+          <div className="p-3 rounded-xl border border-[#EFE5E1] bg-white">
+            <label className="text-[11.5px] text-[#8C7D7E] block mb-1">
+              Ghi chú đối soát / Mã giao dịch ngân hàng (Tùy chọn):
+            </label>
+            <Input
+              placeholder="VD: Đã chuyển khoản qua STK Vietcombank lúc 15:30, mã GD: FT26001..."
+              value={refundNote}
+              onChange={(e) => setRefundNote(e.target.value)}
+              className="text-[12px] rounded-lg"
+            />
           </div>
 
           {/* Buttons */}
@@ -1084,14 +1958,14 @@ function RefundModal({ order, onClose, onSuccess }) {
               type="button"
               disabled={submitting}
               onClick={handleConfirmRefund}
-              className="flex-1 py-2.5 rounded-xl bg-[#1E8347] text-[12px] font-bold text-white hover:bg-[#166534] transition-colors border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 shadow-xs"
+              className="flex-1 py-2.5 rounded-xl bg-[#1E8347] text-[12.5px] font-bold text-white hover:bg-[#166534] transition-colors border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 shadow-xs"
             >
               {submitting ? (
                 <RefreshCw size={14} className="animate-spin" />
               ) : (
                 <CheckCircle2 size={15} />
               )}
-              <span>Xác Nhận Đã Hoàn Cọc và Đóng Đơn</span>
+              <span>Xác Nhận Đã Hoàn Cọc</span>
             </button>
           </div>
         </div>
@@ -1136,9 +2010,11 @@ export default function OrderRentalManagement() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
   const [viewMode, setViewMode] = useState('active'); // 'active' (Đơn Đang Xử Lý) | 'archived' (Kho Lưu Trữ)
+  const [sortOrder, setSortOrder] = useState('desc'); // 'desc': mới nhất -> cũ nhất, 'asc': cũ nhất -> mới nhất
 
-  const [inspectionOrder, setInspectionOrder] = useState(null); // for inspection modal (bước 1)
-  const [refundOrder, setRefundOrder] = useState(null); // for refund modal (bước 2)
+  const [inspectionOrder, setInspectionOrder] = useState(null); // for inspection modal (bước 1 & 2)
+  const [negotiationOrder, setNegotiationOrder] = useState(null); // for Admin Negotiation Modal (bước 3 & 4)
+  const [refundOrder, setRefundOrder] = useState(null); // for refund modal (bước 2 cũ)
   const [detailOrder, setDetailOrder] = useState(null); // for detail modal (chi tiết đơn thuê)
   const [statusMenuId, setStatusMenuId] = useState(null); // row dropdown open id
 
@@ -1274,7 +2150,7 @@ export default function OrderRentalManagement() {
             return () => clearTimeout(timer);
           }
         })
-        .catch(() => {});
+        .catch(() => { });
     }
   }, [queryOrderCode, queryAction, orders, loading]);
 
@@ -1372,8 +2248,10 @@ export default function OrderRentalManagement() {
         statusFilter === 'all'
           ? true
           : statusFilter === 'disputed'
-          ? isDisputed
-          : o.status === statusFilter;
+            ? isDisputed
+            : (statusFilter === 'waiting_refund' || statusFilter === 'returned')
+              ? (o.status === 'waiting_refund' || o.status === 'returned')
+              : o.status === statusFilter;
 
       // Khi người dùng đang tìm kiếm cụ thể: Hiển thị ngay kết quả kể cả đơn nằm ở Kho Lưu Trữ
       if (cleanQ) {
@@ -1391,7 +2269,19 @@ export default function OrderRentalManagement() {
 
       return matchSearch && matchStatus;
     });
-  }, [orders, searchTerm, statusFilter, viewMode]);
+
+    // Tự động sắp xếp đơn mới nhất lên đầu danh sách (ưu tiên ngày tạo/cập nhật mới nhất)
+    return [...list].sort((a, b) => {
+      const timeA = new Date(a.createdAt || a.updatedAt || 0).getTime();
+      const timeB = new Date(b.createdAt || b.updatedAt || 0).getTime();
+      if (timeB !== timeA) {
+        return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+      }
+      return sortOrder === 'desc'
+        ? String(b.orderCode || b._id || '').localeCompare(String(a.orderCode || a._id || ''), undefined, { numeric: true })
+        : String(a.orderCode || a._id || '').localeCompare(String(b.orderCode || b._id || ''), undefined, { numeric: true });
+    });
+  }, [orders, searchTerm, statusFilter, viewMode, sortOrder]);
 
   const selectedFilterLabel =
     FILTER_OPTIONS.find((opt) => opt.value === statusFilter)?.label ?? 'Tất Cả Trạng Thái';
@@ -1495,11 +2385,11 @@ export default function OrderRentalManagement() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setInspectionOrder(ord)}
+                  onClick={() => setNegotiationOrder(ord)}
                   className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-bold text-xs shrink-0 cursor-pointer shadow-xs transition-all flex items-center justify-center gap-1.5 border-0"
                 >
-                  <AlertCircle size={14} />
-                  <span>Xem và Xử Lý Khiếu Nại Ngay</span>
+                  <PhoneCall size={14} />
+                  <span>Admin Đàm Phán & Xử Lý Ngay</span>
                 </button>
               </div>
             ))}
@@ -1628,18 +2518,16 @@ export default function OrderRentalManagement() {
           <button
             type="button"
             onClick={() => { setViewMode('active'); setStatusFilter('all'); setActivePage(1); }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer border-0 ${
-              viewMode === 'active'
-                ? 'bg-[#733F49] text-white shadow-xs'
-                : 'bg-[#FCF7F4] text-[#7A6B6C] hover:bg-[#FAF0EC] hover:text-[#733F49]'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer border-0 ${viewMode === 'active'
+              ? 'bg-[#733F49] text-white shadow-xs'
+              : 'bg-[#FCF7F4] text-[#7A6B6C] hover:bg-[#FAF0EC] hover:text-[#733F49]'
+              }`}
           >
             <SlidersHorizontal size={14} />
             <span>Đơn Đang Xử Lý</span>
             <span
-              className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${
-                viewMode === 'active' ? 'bg-white/20 text-white' : 'bg-[#FAF0EC] text-[#733F49]'
-              }`}
+              className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${viewMode === 'active' ? 'bg-white/20 text-white' : 'bg-[#FAF0EC] text-[#733F49]'
+                }`}
             >
               {activeOrdersCount}
             </span>
@@ -1648,18 +2536,16 @@ export default function OrderRentalManagement() {
           <button
             type="button"
             onClick={() => { setViewMode('archived'); setStatusFilter('all'); setActivePage(1); }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer border-0 ${
-              viewMode === 'archived'
-                ? 'bg-[#1E8347] text-white shadow-xs'
-                : 'bg-[#FCF7F4] text-[#7A6B6C] hover:bg-[#FAF0EC] hover:text-[#733F49]'
-            }`}
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer border-0 ${viewMode === 'archived'
+              ? 'bg-[#1E8347] text-white shadow-xs'
+              : 'bg-[#FCF7F4] text-[#7A6B6C] hover:bg-[#FAF0EC] hover:text-[#733F49]'
+              }`}
           >
             <Archive size={14} />
             <span>Kho Lưu Trữ Đơn Hoàn Tất</span>
             <span
-              className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${
-                viewMode === 'archived' ? 'bg-white/20 text-white' : 'bg-[#EAF7EE] text-[#1E8347]'
-              }`}
+              className={`px-2 py-0.5 rounded-full text-[10.5px] font-bold ${viewMode === 'archived' ? 'bg-white/20 text-white' : 'bg-[#EAF7EE] text-[#1E8347]'
+                }`}
             >
               {archivedOrdersCount}
             </span>
@@ -1673,8 +2559,17 @@ export default function OrderRentalManagement() {
           <table className="w-full text-left border-collapse min-w-[960px]">
             <thead>
               <tr className="border-b border-[#F2E5E0] bg-[#FFF6F3]">
-                <th className="py-4 px-5 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase">
-                  MÃ ĐƠN
+                <th
+                  onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
+                  className="py-4 px-5 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase cursor-pointer hover:text-[#733F49] transition-colors select-none"
+                  title="Nhấp để chuyển đổi sắp xếp: Mới nhất / Cũ nhất"
+                >
+                  <div className="flex items-center gap-1.5">
+                    <span>MÃ ĐƠN</span>
+                    <span className="text-[#B8737D] text-[10px] font-bold bg-[#FAF0EC] px-1.5 py-0.5 rounded border border-[#F2D8D4]">
+                      {sortOrder === 'desc' ? '↓ Mới nhất' : '↑ Cũ nhất'}
+                    </span>
+                  </div>
                 </th>
                 <th className="py-4 px-4 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase text-center">
                   KHÁCH HÀNG
@@ -1737,13 +2632,12 @@ export default function OrderRentalManagement() {
                     <tr
                       id={`order-row-${order.orderCode || order._id}`}
                       key={order._id || order.orderCode}
-                      className={`transition-all duration-300 ${
-                        isHighlighted
-                          ? 'bg-amber-100/80 border-l-4 border-l-amber-500 ring-2 ring-amber-400 ring-inset shadow-md'
-                          : isDisputed
+                      className={`transition-all duration-300 ${isHighlighted
+                        ? 'bg-amber-100/80 border-l-4 border-l-amber-500 ring-2 ring-amber-400 ring-inset shadow-md'
+                        : isDisputed
                           ? 'bg-red-50/40 hover:bg-red-50/70 border-l-4 border-l-red-500'
                           : 'hover:bg-[#FCF9F7]'
-                      }`}
+                        }`}
                     >
                       {/* Mã đơn */}
                       <td className="py-4 px-5">
@@ -1771,7 +2665,7 @@ export default function OrderRentalManagement() {
                             {order.customerName || '—'}
                           </span>
                           {(order.hasAccount || order.customerId) && (
-                            <Crown size={14} className="text-[#D4AF37] fill-[#FDF3D6] shrink-0" title="Khách hàng thành viên" />
+                            <CircleUser size={15} className="text-[#733F49] shrink-0" title="Khách hàng thành viên" />
                           )}
                         </div>
                       </td>
@@ -1846,29 +2740,37 @@ export default function OrderRentalManagement() {
                               <ShieldCheck size={13} />
                               <span>Kiểm Định Trả Váy</span>
                             </button>
-                          ) : order.status === 'returned' || isDisputed ? (
+                          ) : (order.status === 'disputed' || isDisputed) ? (
                             <button
                               type="button"
-                              onClick={() => setInspectionOrder(order)}
-                              title={isDisputed ? 'Khách đã gửi khiếu nại — Nhấn để xem và đối soát xử lý' : 'Xem biên bản kiểm định hiện trạng'}
-                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold transition-all cursor-pointer border ${
-                                isDisputed
-                                  ? 'bg-red-600 text-white hover:bg-red-700 border-red-600 shadow-xs'
-                                  : 'bg-[#FAF0EB] text-[#733F49] hover:bg-[#F3E2DB] border-[#ECD9D3]'
-                              }`}
+                              onClick={() => setNegotiationOrder(order)}
+                              title="Admin trực tiếp gọi điện đàm phán mức phạt & hoàn tất đơn"
+                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 border border-red-600 shadow-xs text-[12px] font-bold transition-all cursor-pointer"
                             >
-                              {isDisputed ? (
-                                <>
-                                  <AlertTriangle size={13} />
-                                  <span>Xử Lý Khiếu Nại</span>
-                                </>
-                              ) : (
-                                <>
-                                  <Eye size={13} />
-                                  <span>Xem Kiểm Định</span>
-                                </>
-                              )}
+                              <PhoneCall size={13} />
+                              <span>Đàm Phán & Xử Lý</span>
                             </button>
+                          ) : (order.status === 'returned' || order.status === 'waiting_refund') ? (
+                            <div className="inline-flex items-center gap-1.5">
+                              <button
+                                type="button"
+                                onClick={() => setRefundOrder(order)}
+                                title="Bước 2: Hoàn tiền cọc qua chuyển khoản và chuyển đơn sang Hoàn Tất"
+                                className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1E8347] hover:bg-[#166534] text-white text-[12px] font-bold shadow-xs transition-all cursor-pointer"
+                              >
+                                <Banknote size={14} />
+                                <span>Hoàn Cọc</span>
+                              </button>
+                              <button
+                                type="button"
+                                onClick={() => setInspectionOrder(order)}
+                                title="Xem biên bản kiểm định hiện trạng"
+                                className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#FAF0EB] text-[#733F49] hover:bg-[#F3E2DB] border border-[#ECD9D3] text-[12px] font-semibold transition-all cursor-pointer"
+                              >
+                                <Eye size={13} />
+                                <span>Biên Bản</span>
+                              </button>
+                            </div>
                           ) : (
                             <UpdateStatusDropdown
                               order={order}
@@ -1949,7 +2851,7 @@ export default function OrderRentalManagement() {
         </div>
       </div>
 
-      {/* Bước 1: Inspection Modal (Biên bản kiểm định trả váy) */}
+      {/* Bước 1 & 2: Inspection Modal (Biên bản kiểm định trả váy) */}
       {inspectionOrder && (
         <InspectionModal
           order={inspectionOrder}
@@ -1958,7 +2860,27 @@ export default function OrderRentalManagement() {
             const updatedId = inspectionOrder._id;
             setInspectionOrder(null);
             setOrders((prev) => {
-              const next = prev.map((o) => (o._id === updatedId ? { ...o, status: 'returned' } : o));
+              const next = prev.map((o) => (o._id === updatedId ? { ...o, status: 'waiting_refund' } : o));
+              try {
+                localStorage.setItem('unibridal_orders_local', JSON.stringify(next));
+              } catch { }
+              return next;
+            });
+            loadOrders();
+          }}
+        />
+      )}
+
+      {/* Bước 3 & 4: Admin Negotiation Modal (Admin trực tiếp đàm phán mức phạt & hoàn tất đơn) */}
+      {negotiationOrder && (
+        <AdminNegotiationModal
+          order={negotiationOrder}
+          onClose={() => setNegotiationOrder(null)}
+          onSuccess={() => {
+            const updatedId = negotiationOrder._id;
+            setNegotiationOrder(null);
+            setOrders((prev) => {
+              const next = prev.map((o) => (o._id === updatedId ? { ...o, status: 'completed' } : o));
               try {
                 localStorage.setItem('unibridal_orders_local', JSON.stringify(next));
               } catch { }

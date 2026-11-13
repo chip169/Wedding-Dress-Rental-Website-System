@@ -12,7 +12,7 @@ import { Calendar,
   Phone,
   Mail,
   Heart,
-  QrCode,
+  Sparkles,
   Download,
   CalendarCheck,
   ChevronRight,
@@ -271,22 +271,34 @@ export default function AppointmentPage() {
     }
   };
 
+  // Validate helpers
+  const validateFullNameInput = (val) => {
+    const trimmed = (val || '').trim();
+    if (!trimmed) return 'Vui lòng nhập họ và tên cô dâu';
+    if (/\d/.test(trimmed)) return 'Họ và tên không được chứa chữ số';
+    return null;
+  };
+
+  const validatePhoneInput = (val) => {
+    const clean = (val || '').replace(/[\s.-]/g, '');
+    if (!clean) return 'Vui lòng nhập số điện thoại liên hệ';
+    if (!/^\d+$/.test(clean)) return 'Số điện thoại chỉ được chứa chữ số';
+    if (clean.length !== 10) return `Số điện thoại phải có đúng 10 số (hiện có ${clean.length} số)`;
+    if (!/^(0[2|3|5|7|8|9])[0-9]{8}$/.test(clean)) {
+      return 'Số điện thoại không hợp lệ (phải bắt đầu bằng các đầu số 03, 05, 07, 08, 09, 02)';
+    }
+    return null;
+  };
+
   // Validate form
   const validateForm = () => {
     const errs = {};
-    if (!fullName.trim()) {
-      errs.fullName = 'Vui lòng nhập họ và tên cô dâu';
-    } else if (/\d/.test(fullName.trim())) {
-      errs.fullName = 'Họ và tên không được chứa chữ số';
-    }
-    if (!phone.trim()) {
-      errs.phone = 'Vui lòng nhập số điện thoại liên hệ';
-    } else {
-      const cleanPhone = phone.replace(/[\s.-]/g, '');
-      if (!/^[0-9]{9,11}$/.test(cleanPhone)) {
-        errs.phone = 'Số điện thoại không hợp lệ (từ 9 đến 11 số)';
-      }
-    }
+    const nameErr = validateFullNameInput(fullName);
+    if (nameErr) errs.fullName = nameErr;
+
+    const phoneErr = validatePhoneInput(phone);
+    if (phoneErr) errs.phone = phoneErr;
+
     if (!email.trim()) {
       errs.email = 'Vui lòng nhập email nhận thư xác nhận';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
@@ -347,11 +359,16 @@ export default function AppointmentPage() {
 
     try {
       const res = await createAppointmentApi(appointmentData);
-      const apiData = res?.data || {};
+      const raw = res?.data || res || {};
+      const apiData = raw?.appointmentCode ? raw : (raw?.data || raw);
+      const generatedCode = `APT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+      const appointmentCode = apiData?.appointmentCode || apiData?.id || raw?.appointmentCode || raw?.data?.appointmentCode || appointmentData.id || generatedCode;
+
       const result = {
         ...appointmentData,
-        ...apiData,
-        id: apiData.appointmentCode || apiData.id || appointmentData.id || `APT-2026-${Math.floor(1000 + Math.random() * 9000)}`,
+        ...(typeof apiData === 'object' ? apiData : {}),
+        id: appointmentCode,
+        appointmentCode: appointmentCode,
         branchId: selectedBranch.id,
         branch: selectedBranch.id,
         branchName: selectedBranch.name,
@@ -367,9 +384,13 @@ export default function AppointmentPage() {
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       const localResult = createAppointment(appointmentData);
+      const generatedCode = `APT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+      const appointmentCode = localResult?.appointmentCode || localResult?.id || generatedCode;
       setConfirmedBooking({
         ...appointmentData,
-        ...localResult,
+        ...(typeof localResult === 'object' ? localResult : {}),
+        id: appointmentCode,
+        appointmentCode: appointmentCode,
         branchId: selectedBranch.id,
         branch: selectedBranch.id,
         branchName: selectedBranch.name,
@@ -436,7 +457,7 @@ export default function AppointmentPage() {
               </p>
               <div className="mt-3.5 inline-flex items-center gap-2 bg-[#F0FDF4] text-[#166534] border border-[#BBF7D0] px-4 py-2 rounded-xl text-[13px] font-medium shadow-xs">
                 <Mail className="w-4 h-4 text-[#16a34a] shrink-0" />
-                <span>Toàn bộ thông tin lịch hẹn và mã check-in đã được gửi tới email <strong>{confirmedBooking.email}</strong></span>
+                <span>Toàn bộ thông tin lịch hẹn đã được gửi tới email <strong>{confirmedBooking.email}</strong></span>
               </div>
             </div>
 
@@ -451,7 +472,7 @@ export default function AppointmentPage() {
               <div className="p-6 sm:p-10 space-y-7">
 
                 {/* Invitation Card Header */}
-                <div className="flex flex-col sm:flex-row items-center justify-between pb-6 border-b border-[#F0E5DC] text-center sm:text-left gap-4">
+                <div className="pb-6 border-b border-[#F0E5DC] text-center sm:text-left">
                   <div className="space-y-1">
                     <div className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-[2px] uppercase text-[#D4AF37]">
                       <Crown className="w-3.5 h-3.5 text-[#D4AF37]" />
@@ -464,14 +485,6 @@ export default function AppointmentPage() {
                     <p className="text-[12px] text-[#847374] m-0">
                       Hệ thống phòng thử váy cô dâu tiêu chuẩn Haute Couture độc bản
                     </p>
-                  </div>
-                  <div className="text-center sm:text-right shrink-0">
-                    <span className="text-[10.5px] uppercase font-bold text-[#847374] block tracking-wider mb-1">
-                      MÃ CHECK-IN TẠI QUẦY
-                    </span>
-                    <span className="font-mono text-[17px] font-extrabold text-[#733F49] bg-[#FAF0EC] px-3.5 py-1.5 rounded-xl border border-[#F2D8D4] shadow-xs inline-block">
-                      {confirmedBooking.id}
-                    </span>
                   </div>
                 </div>
 
@@ -639,18 +652,23 @@ export default function AppointmentPage() {
                   </div>
                 )}
 
-                {/* QR Code Check-in Pass Strip */}
+                {/* Check-in Pass Strip (Đã xóa ô QR, hiển thị mã đơn rõ ràng) */}
                 <div className="p-4 sm:p-5 rounded-2xl bg-[#FCF9F6] border border-[#EEDECF] flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-4 text-center sm:text-left">
-                    <div className="w-16 h-16 bg-white p-1.5 rounded-2xl border border-[#EEDECF] flex items-center justify-center shrink-0 shadow-sm">
-                      <QrCode className="w-12 h-12 text-[#2C2523]" />
+                  <div className="flex items-center gap-3.5 text-center sm:text-left">
+                    <div className="w-11 h-11 bg-white rounded-xl border border-[#EEDECF] flex items-center justify-center shrink-0 shadow-xs text-[#733F49]">
+                      <Sparkles className="w-5 h-5 text-[#D4AF37]" />
                     </div>
                     <div>
-                      <div className="font-bold text-[13.5px] text-[#2C2523]">
-                        Mã QR Thẻ Khách Hàng Danh Dự
+                      <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                        <span className="font-bold text-[13.5px] text-[#2C2523]">
+                          Mã Đơn Lịch Hẹn:
+                        </span>
+                        <span className="font-mono text-[16px] font-extrabold text-[#733F49] bg-white px-3 py-0.5 rounded-lg border border-[#F2D8D4] shadow-2xs">
+                          {confirmedBooking.appointmentCode || confirmedBooking.id || 'APT-2026-8888'}
+                        </span>
                       </div>
-                      <div className="text-[11.5px] text-[#847374] leading-relaxed max-w-[380px]">
-                        Xuất trình mã này tại quầy tiếp tân để chuyên viên hướng dẫn nàng bước thẳng vào Private Suite.
+                      <div className="text-[12px] text-[#847374] leading-relaxed mt-1 max-w-[420px]">
+                        Quý cô chỉ cần đọc mã này tại quầy tiếp tân để chuyên viên hướng dẫn nàng bước thẳng vào Private Suite.
                       </div>
                     </div>
                   </div>
@@ -694,19 +712,9 @@ export default function AppointmentPage() {
                 </Link>
 
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setConfirmedBooking(null);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-white border border-[#EEDECF] text-[#2C2523] text-[13px] font-bold hover:bg-[#FAF0EC] transition-colors cursor-pointer shadow-2xs"
-                  >
-                    Đặt Thêm Lịch Mới
-                  </button>
                   <Link
                     to="/"
-                    className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white text-[13px] font-bold transition-all text-center no-underline shadow-xs"
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white text-[13px] font-bold transition-all text-center no-underline shadow-xs"
                   >
                     Về Trang Chủ
                   </Link>
@@ -1232,12 +1240,23 @@ export default function AppointmentPage() {
                           required
                           value={fullName}
                           onChange={(e) => {
-                            setFullName(e.target.value);
-                            if (errors.fullName) setErrors({ ...errors, fullName: null });
+                            const val = e.target.value;
+                            setFullName(val);
+                            if (/\d/.test(val)) {
+                              setErrors((prev) => ({ ...prev, fullName: 'Họ và tên không được chứa chữ số' }));
+                            } else if (errors.fullName) {
+                              setErrors((prev) => ({ ...prev, fullName: null }));
+                            }
+                          }}
+                          onBlur={() => {
+                            const err = validateFullNameInput(fullName);
+                            if (err) {
+                              setErrors((prev) => ({ ...prev, fullName: err }));
+                            }
                           }}
                           className={`w-full bg-[#FCF9F6] border rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:bg-white ${errors.fullName ? 'border-red-500' : 'border-[#EEDECF] focus:border-[#733F49]'
                             }`}
-                          placeholder="Nhập họ tên cô dâu"
+                          placeholder="Nhập họ tên cô dâu (không chứa số)"
                         />
                         {errors.fullName && (
                           <span className="text-[11px] text-red-600 mt-1 block">{errors.fullName}</span>
@@ -1249,16 +1268,31 @@ export default function AppointmentPage() {
                           SỐ ĐIỆN THOẠI *
                         </label>
                         <input
-                          type="text"
+                          type="tel"
                           required
+                          maxLength={10}
                           value={phone}
                           onChange={(e) => {
-                            setPhone(e.target.value);
-                            if (errors.phone) setErrors({ ...errors, phone: null });
+                            const rawVal = e.target.value;
+                            const cleanVal = rawVal.replace(/[^\d]/g, '').slice(0, 10);
+                            setPhone(cleanVal);
+                            if (errors.phone) {
+                              if (cleanVal.length === 10 && /^(0[2|3|5|7|8|9])[0-9]{8}$/.test(cleanVal)) {
+                                setErrors((prev) => ({ ...prev, phone: null }));
+                              }
+                            }
+                          }}
+                          onBlur={() => {
+                            const err = validatePhoneInput(phone);
+                            if (err) {
+                              setErrors((prev) => ({ ...prev, phone: err }));
+                            } else if (errors.phone) {
+                              setErrors((prev) => ({ ...prev, phone: null }));
+                            }
                           }}
                           className={`w-full bg-[#FCF9F6] border rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:bg-white ${errors.phone ? 'border-red-500' : 'border-[#EEDECF] focus:border-[#733F49]'
                             }`}
-                          placeholder="Nhập số điện thoại liên hệ"
+                          placeholder="Nhập số điện thoại liên hệ (10 số)"
                         />
                         {errors.phone && (
                           <span className="text-[11px] text-red-600 mt-1 block">{errors.phone}</span>

@@ -35,12 +35,12 @@ export async function sendVerificationEmail(to, otp, fullName = 'Quý khách') {
   const html = `
     <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #FDFBF7; border: 1px solid #E6DAC8; border-radius: 12px; overflow: hidden; color: #2C2523;">
       <div style="background: linear-gradient(135deg, #2C2523 0%, #453735 100%); padding: 32px 24px; text-align: center; color: #FFFFFF;">
-        <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: 26px; margin: 0; letter-spacing: 2px; color: #FDFBF7;">UNIBRIDAL</h1>
+        <h1 style="font-family: 'Times New Roman', Times, serif; font-size: 26px; margin: 0; letter-spacing: 2px; color: #FDFBF7;">UNIBRIDAL</h1>
         <p style="font-size: 11px; letter-spacing: 3px; color: #B8737D; margin-top: 6px; text-transform: uppercase;">Haute Couture Bridal Atelier</p>
       </div>
 
       <div style="padding: 36px 32px;">
-        <h2 style="font-family: 'Playfair Display', Georgia, serif; font-size: 20px; color: #2C2523; margin-top: 0;">Xác Thực Tài Khoản Đăng Ký</h2>
+        <h2 style="font-family: 'Times New Roman', Times, serif; font-size: 20px; color: #2C2523; margin-top: 0;">Xác Thực Tài Khoản Đăng Ký</h2>
         <p style="font-size: 14px; line-height: 1.6; color: #514344;">
           Xin chào <strong>${fullName}</strong>,<br>
           Cảm ơn bạn đã lựa chọn UniBridal. Để kích hoạt tài khoản thành viên và bắt đầu trải nghiệm dịch vụ thuê váy cưới cao cấp, vui lòng sử dụng mã xác thực OTP dưới đây:
@@ -94,12 +94,12 @@ export async function sendResetPasswordEmail(to, otp, fullName = 'Quý khách') 
   const html = `
     <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #FDFBF7; border: 1px solid #E6DAC8; border-radius: 12px; overflow: hidden; color: #2C2523;">
       <div style="background: linear-gradient(135deg, #2C2523 0%, #453735 100%); padding: 32px 24px; text-align: center; color: #FFFFFF;">
-        <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: 26px; margin: 0; letter-spacing: 2px; color: #FDFBF7;">UNIBRIDAL</h1>
+        <h1 style="font-family: 'Times New Roman', Times, serif; font-size: 26px; margin: 0; letter-spacing: 2px; color: #FDFBF7;">UNIBRIDAL</h1>
         <p style="font-size: 11px; letter-spacing: 3px; color: #B8737D; margin-top: 6px; text-transform: uppercase;">Haute Couture Bridal Atelier</p>
       </div>
 
       <div style="padding: 36px 32px;">
-        <h2 style="font-family: 'Playfair Display', Georgia, serif; font-size: 20px; color: #2C2523; margin-top: 0;">Yêu Cầu Đặt Lại Mật Khẩu</h2>
+        <h2 style="font-family: 'Times New Roman', Times, serif; font-size: 20px; color: #2C2523; margin-top: 0;">Yêu Cầu Đặt Lại Mật Khẩu</h2>
         <p style="font-size: 14px; line-height: 1.6; color: #514344;">
           Xin chào <strong>${fullName}</strong>,<br>
           Chúng tôi nhận được yêu cầu khôi phục mật khẩu cho tài khoản UniBridal của bạn. Vui lòng nhập mã OTP sau để tiến hành thiết lập mật khẩu mới:
@@ -158,6 +158,7 @@ export async function sendInspectionNotificationEmail({
   finalRefundAmount = 0,
   inspectionItems = [],
   inspectionDate,
+  bankDetails = null,
   returnUrl = 'http://localhost:3000/profile/orders',
 }) {
   const transporter = createTransporter();
@@ -171,6 +172,17 @@ export async function sendInspectionNotificationEmail({
       return dateStr;
     }
   };
+
+  const bankHtml = bankDetails?.accountNumber
+    ? `
+      <div style="background: #F8F5F2; border: 1px dashed #D5C2B9; border-radius: 10px; padding: 12px 16px; margin: 18px 0; font-size: 13px; line-height: 1.6;">
+        <strong style="color: #733F49; display: block; margin-bottom: 4px;">✦ Thông tin tài khoản nhận tiền hoàn cọc của nàng:</strong>
+        <div>• Ngân hàng: <strong>${bankDetails.bankName || 'Ngân hàng nội địa'}</strong></div>
+        <div>• Số tài khoản (STK): <strong style="color: #1E8347; font-size: 14px; letter-spacing: 1px;">${bankDetails.accountNumber}</strong></div>
+        <div>• Chủ tài khoản: <strong style="text-transform: uppercase;">${bankDetails.accountHolder || fullName}</strong></div>
+      </div>
+    `
+    : '';
 
   const checklistHtml = (inspectionItems && inspectionItems.length > 0)
     ? `
@@ -203,13 +215,13 @@ export async function sendInspectionNotificationEmail({
         <div style="display: inline-block; padding: 4px 14px; border-radius: 20px; background: rgba(212, 175, 55, 0.2); border: 1px solid #D4AF37; color: #D4AF37; font-size: 10px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 8px;">
           ✦ HAUTE COUTURE INSPECTION REPORT ✦
         </div>
-        <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: 26px; margin: 0; color: #FFFFFF;">BIÊN BẢN KIỂM ĐỊNH LỄ PHỤC</h1>
+        <h1 style="font-family: 'Times New Roman', Times, serif; font-size: 26px; margin: 0; color: #FFFFFF; letter-spacing: 0.5px;">BIÊN BẢN KIỂM ĐỊNH LỄ PHỤC</h1>
         <p style="font-size: 12px; letter-spacing: 2px; color: #F0D5CD; margin-top: 6px; text-transform: uppercase;">Quyết Toán và Hoàn Trả Quỹ Cọc Bảo Lãnh</p>
       </div>
 
       <div style="padding: 30px 28px; background: #FFFFFF;">
         <div style="background: #FFF5F2; border: 1px solid #F5DED7; border-radius: 12px; padding: 16px 20px; margin-bottom: 22px; text-align: center;">
-          <h2 style="font-family: 'Playfair Display', Georgia, serif; font-size: 19px; color: #733F49; margin: 0 0 6px 0;">
+          <h2 style="font-family: 'Times New Roman', Times, serif; font-size: 19px; color: #733F49; margin: 0 0 6px 0;">
             ✦ Showroom Đã Lập Biên Bản Kiểm Định Trả Váy
           </h2>
           <p style="font-size: 13.5px; color: #514344; margin: 0; line-height: 1.6;">
@@ -225,8 +237,11 @@ export async function sendInspectionNotificationEmail({
         ${checklistHtml}
 
         <div style="background: #FFF8F6; border-left: 4px solid #B8737D; padding: 12px 16px; margin: 20px 0; border-radius: 0 10px 10px 0;">
-          <p style="font-size: 13.5px; line-height: 1.6; color: #733F49; margin: 0; font-weight: 600;">
-            Nàng vui lòng xem bảng quyết toán dưới đây. Khi nàng bấm xác nhận đồng ý, hệ thống sẽ giải ngân tiền cọc hoàn lại ngay lập tức về tài khoản ngân hàng của nàng.
+          <p style="font-size: 13px; line-height: 1.6; color: #733F49; margin: 0 0 6px 0; font-weight: 600;">
+            ✦ Đối chiếu Hợp đồng: Toàn bộ chi phí phục chế được áp dụng theo mức cố định niêm yết tại <strong>Điều 5 & Phụ lục Hợp đồng thuê váy</strong> đã ký kết, đảm bảo tính minh bạch tuyệt đối.
+          </p>
+          <p style="font-size: 13px; line-height: 1.6; color: #514344; margin: 0;">
+            Nàng vui lòng xem bảng quyết toán dưới đây. Khi nàng xác nhận đồng ý, hệ thống sẽ tiến hành giải ngân hoàn cọc về tài khoản ngân hàng của nàng.
           </p>
         </div>
 
@@ -249,6 +264,8 @@ export async function sendInspectionNotificationEmail({
             </tr>
           </table>
         </div>
+
+        ${bankHtml}
 
         <!-- Nút hành động nổi bật -->
         <div style="text-align: center; margin: 32px 0 16px 0;">
@@ -298,6 +315,7 @@ export async function sendRefundConfirmationEmail({
   orderCode,
   finalRefundAmount = 0,
   bankDetails = null,
+  negotiationNote = '',
 }) {
   const transporter = createTransporter();
   const formatMoney = (amount) => Number(amount || 0).toLocaleString('vi-VN') + ' đ';
@@ -305,11 +323,19 @@ export async function sendRefundConfirmationEmail({
   const bankHtml = bankDetails?.accountNumber
     ? `
       <div style="background: #F8F5F2; border: 1px dashed #D5C2B9; border-radius: 10px; padding: 14px 18px; margin: 18px 0; font-size: 13px; line-height: 1.6;">
-        <strong style="color: #5F2B36; display: block; margin-bottom: 6px; font-size: 13.5px;">Thông tin tài khoản nhận hoàn cọc:</strong>
-        <div>• Ngân hàng thụ hưởng: <strong>${bankDetails.bankName || 'Ngân hàng nội địa'}</strong></div>
-        <div>• Số tài khoản (STK): <strong style="letter-spacing: 1px;">${bankDetails.accountNumber}</strong></div>
-        <div>• Chủ tài khoản: <strong>${bankDetails.accountHolder || fullName}</strong></div>
+        <strong style="color: #5F2B36; display: block; margin-bottom: 6px; font-size: 13.5px;">Thông tin hoàn trả tiền cọc:</strong>
+        <div>• Phương thức: <strong>${bankDetails.bankName === 'Tiền mặt tại quầy' ? 'Tiền mặt trực tiếp tại quầy Showroom' : 'Chuyển khoản qua tài khoản ngân hàng'}</strong></div>
+        ${bankDetails.accountNumber && bankDetails.accountNumber !== 'TIỀN MẶT' ? `<div>• Ngân hàng thụ hưởng: <strong>${bankDetails.bankName || 'Ngân hàng nội địa'}</strong></div><div>• Số tài khoản (STK): <strong style="letter-spacing: 1px;">${bankDetails.accountNumber}</strong></div><div>• Chủ tài khoản: <strong>${bankDetails.accountHolder || fullName}</strong></div>` : ''}
         ${bankDetails.notes ? `<div>• Ghi chú: <em>${bankDetails.notes}</em></div>` : ''}
+      </div>
+    `
+    : '';
+
+  const negotiationHtml = negotiationNote
+    ? `
+      <div style="background: #FFFBEB; border-left: 3px solid #D97706; border-radius: 6px; padding: 12px 16px; margin: 18px 0; font-size: 13px; color: #78350F; line-height: 1.6;">
+        <strong style="display: block; margin-bottom: 4px;">✦ Biên bản đối soát thống nhất cùng Quản lý Showroom:</strong>
+        ${negotiationNote}
       </div>
     `
     : '';
@@ -317,14 +343,14 @@ export async function sendRefundConfirmationEmail({
   const html = `
     <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; max-width: 600px; margin: 0 auto; background: #FDFBF7; border: 1px solid #E6DAC8; border-radius: 16px; overflow: hidden; color: #2C2523;">
       <div style="background: linear-gradient(135deg, #2C2523 0%, #453735 100%); padding: 32px 24px; text-align: center; color: #FFFFFF;">
-        <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: 26px; margin: 0; letter-spacing: 2px; color: #FDFBF7;">UNIBRIDAL</h1>
+        <h1 style="font-family: 'Times New Roman', Times, serif; font-size: 26px; margin: 0; letter-spacing: 2px; color: #FDFBF7;">UNIBRIDAL</h1>
         <p style="font-size: 11px; letter-spacing: 3px; color: #B8737D; margin-top: 6px; text-transform: uppercase;">Haute Couture Bridal Atelier</p>
       </div>
 
       <div style="padding: 32px 28px;">
         <div style="background: #EDFBF2; border: 1px solid #C6F0D3; border-radius: 12px; padding: 18px; margin-bottom: 24px; text-align: center;">
-          <h2 style="font-family: 'Playfair Display', Georgia, serif; font-size: 19px; color: #1E8347; margin: 0 0 8px 0;">
-            ✓ Xác Nhận Hoàn Cọc Thành Công
+          <h2 style="font-family: 'Times New Roman', Times, serif; font-size: 19px; color: #1E8347; margin: 0 0 8px 0;">
+            ✓ Xác Nhận Quyết Toán & Hoàn Cọc Thành Công
           </h2>
           <p style="font-size: 13.5px; color: #514344; margin: 0; line-height: 1.6;">
             Đơn thuê lễ phục mã: <strong style="color: #1E8347;">#${orderCode}</strong>
@@ -333,9 +359,10 @@ export async function sendRefundConfirmationEmail({
 
         <p style="font-size: 14px; line-height: 1.7; color: #514344;">
           Kính chào <strong>${fullName}</strong>,<br>
-          Cảm ơn nàng đã xác nhận biên bản kiểm định. Hệ thống UniBridal đã tiến hành quyết toán và hoàn trả khoản tiền cọc <strong>${formatMoney(finalRefundAmount)}</strong> theo đúng quy chuẩn hợp đồng thuê váy.
+          Hệ thống UniBridal xác nhận đã hoàn tất quy trình kiểm định thu hồi lễ phục cưới và quyết toán hoàn trả khoản tiền cọc bảo lãnh: <strong style="font-size: 17px; color: #1E8347;">${formatMoney(finalRefundAmount)}</strong>.
         </p>
 
+        ${negotiationHtml}
         ${bankHtml}
 
         <p style="font-size: 13.5px; line-height: 1.7; color: #514344;">
@@ -405,14 +432,14 @@ export async function sendDepositSuccessEmail({
 
   const itemsHtml = (items || []).map((item, idx) => `
     <tr style="border-bottom: 1px solid #F5EBE8;">
-      <td style="padding: 12px 8px; vertical-align: top; width: 60px;">
-        ${item.image ? `<img src="${item.image}" alt="${item.name}" style="width: 52px; height: 68px; object-fit: cover; border-radius: 8px; border: 1px solid #EEDECF;" />` : `<div style="width: 52px; height: 68px; background: #FAF0EC; border-radius: 8px; text-align: center; line-height: 68px; font-size: 20px;">👗</div>`}
+      <td style="padding: 12px 8px; vertical-align: middle; width: 36px; text-align: center; font-size: 20px;">
+        👗
       </td>
-      <td style="padding: 12px 10px; vertical-align: top;">
+      <td style="padding: 12px 10px; vertical-align: middle;">
         <div style="font-weight: 700; color: #2C2523; font-size: 14px;">${item.name || 'Váy cưới Haute Couture'}</div>
         <div style="font-size: 12px; color: #847374; margin-top: 3px;">Kích cỡ: <strong style="color: #733F49;">${item.size || 'S'}</strong></div>
       </td>
-      <td style="padding: 12px 8px; vertical-align: top; text-align: right; white-space: nowrap;">
+      <td style="padding: 12px 8px; vertical-align: middle; text-align: right; white-space: nowrap;">
         <div style="font-weight: 600; color: #733F49; font-size: 13.5px;">${formatMoney(item.rentPrice || 0)} / ngày</div>
         <div style="font-size: 11.5px; color: #847374; margin-top: 3px;">Cọc: ${formatMoney(item.depositAmount || 0)}</div>
       </td>
@@ -420,20 +447,20 @@ export async function sendDepositSuccessEmail({
   `).join('');
 
   const html = `
-    <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; max-width: 620px; margin: 0 auto; background: #FAF5F3; border: 1px solid #EEDECF; border-radius: 16px; overflow: hidden; color: #2C2523;">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 620px; margin: 0 auto; background: #FAF5F3; border: 1px solid #EEDECF; border-radius: 16px; overflow: hidden; color: #2C2523;">
       <!-- Header thương hiệu cao cấp -->
       <div style="background: linear-gradient(135deg, #733F49 0%, #4D262F 100%); padding: 36px 24px 28px 24px; text-align: center; color: #FFFFFF;">
         <div style="display: inline-block; padding: 4px 14px; border-radius: 20px; background: rgba(212, 175, 55, 0.2); border: 1px solid #D4AF37; color: #D4AF37; font-size: 10px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 10px;">
           ✦ HAUTE COUTURE BRIDAL ATELIER ✦
         </div>
-        <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: 28px; margin: 0; letter-spacing: 2px; color: #FFFFFF;">UNIBRIDAL</h1>
+        <h1 style="font-family: 'Times New Roman', Times, serif; font-size: 28px; margin: 0; letter-spacing: 2px; color: #FFFFFF;">UNIBRIDAL</h1>
         <p style="font-size: 12px; letter-spacing: 3px; color: #F0D5CD; margin-top: 6px; text-transform: uppercase;">Xác Nhận Giữ Váy và Đặt Cọc Thành Công</p>
       </div>
 
       <div style="padding: 32px 28px; background: #FFFFFF;">
         <!-- Banner lời chúc mừng -->
         <div style="background: #FFF5F2; border: 1px solid #F5DED7; border-radius: 12px; padding: 18px 20px; text-align: center; margin-bottom: 24px;">
-          <h2 style="font-family: 'Playfair Display', Georgia, serif; font-size: 20px; color: #733F49; margin: 0 0 6px 0;">
+          <h2 style="font-family: 'Times New Roman', Times, serif; font-size: 20px; color: #733F49; margin: 0 0 6px 0;">
             Chúc Mừng Nàng Đã Khóa Lịch Giữ Váy Cưới Thành Công!
           </h2>
           <p style="font-size: 13.5px; color: #514344; margin: 0; line-height: 1.6;">
@@ -592,17 +619,25 @@ export async function sendAppointmentSuccessEmail({
   };
 
   const dressesHtml = (interestedDresses || []).map((dress, idx) => `
-    <div style="display: flex; align-items: center; padding: 10px; background: #FFFFFF; border-radius: 10px; border: 1px solid #EEDECF; margin-bottom: 8px;">
-      ${dress.image ? `<img src="${dress.image}" alt="${dress.name}" style="width: 44px; height: 58px; object-fit: cover; border-radius: 6px; margin-right: 12px; border: 1px solid #F2D8D4;" />` : ''}
-      <div>
-        <div style="font-weight: 700; color: #2C2523; font-size: 13.5px;">${dress.name || 'Mẫu váy cưới cao cấp'}</div>
-        <div style="font-size: 11.5px; color: #733F49; margin-top: 2px;">Mã: <strong>${dress.code || dress.id || 'VIP'}</strong> ${dress.silhouette ? `• Phom dáng: ${dress.silhouette}` : ''}</div>
-      </div>
-    </div>
+    <table style="width: 100%; border-collapse: collapse; background: #FFFFFF; border: 1px solid #EEDECF; border-radius: 10px; margin-bottom: 8px;">
+      <tr>
+        <td style="width: 38px; text-align: center; vertical-align: middle; padding: 12px 6px 12px 14px; font-size: 20px;">
+          👗
+        </td>
+        <td style="padding: 12px 14px 12px 4px; vertical-align: middle;">
+          <div style="font-weight: 700; color: #2C2523; font-size: 14px; line-height: 1.4;">
+            ${dress.name || 'Mẫu váy cưới cao cấp'}
+          </div>
+          <div style="font-size: 12px; color: #733F49; margin-top: 3px;">
+            Mã: <strong>${dress.code || dress.id || 'VIP'}</strong>${dress.silhouette ? ` • Phom dáng: <strong>${dress.silhouette}</strong>` : ''}
+          </div>
+        </td>
+      </tr>
+    </table>
   `).join('');
 
   const html = `
-    <div style="font-family: 'Plus Jakarta Sans', Arial, sans-serif; max-width: 620px; margin: 0 auto; background: #FAF5F3; border: 1.5px solid #D4AF37; border-radius: 16px; overflow: hidden; color: #2C2523; box-shadow: 0 8px 30px rgba(115, 63, 73, 0.08);">
+    <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 620px; margin: 0 auto; background: #FAF5F3; border: 1.5px solid #D4AF37; border-radius: 16px; overflow: hidden; color: #2C2523; box-shadow: 0 8px 30px rgba(115, 63, 73, 0.08);">
       <!-- Dải ruy băng mạ vàng phong cách thiệp mời danh dự -->
       <div style="height: 6px; background: linear-gradient(90deg, #733F49 0%, #D4AF37 50%, #B8737D 100%);"></div>
 
@@ -611,7 +646,7 @@ export async function sendAppointmentSuccessEmail({
         <div style="display: inline-block; padding: 4px 14px; border-radius: 20px; background: rgba(212, 175, 55, 0.2); border: 1px solid #D4AF37; color: #D4AF37; font-size: 10px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 8px;">
           ✦ VIP PRIVATE ATELIER INVITATION ✦
         </div>
-        <h1 style="font-family: 'Playfair Display', Georgia, serif; font-size: 26px; margin: 0; color: #FFFFFF;">GIẤY MỜI DANH DỰ THỬ ÁO CƯỚI</h1>
+        <h1 style="font-family: 'Times New Roman', Times, serif; font-size: 24px; font-weight: 700; margin: 0; color: #FFFFFF; letter-spacing: normal;">GIẤY MỜI DANH DỰ THỬ ÁO CƯỚI</h1>
         <p style="font-size: 12px; letter-spacing: 2px; color: #F0D5CD; margin-top: 6px; text-transform: uppercase;">Trải Nghiệm Phòng Thử Độc Bản 1:1 Cùng NTK</p>
       </div>
 

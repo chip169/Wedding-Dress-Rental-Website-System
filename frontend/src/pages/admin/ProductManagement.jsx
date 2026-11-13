@@ -226,6 +226,11 @@ export default function ProductManagement() {
   // Delete product
   const handleDeleteProduct = (id) => {
     const itemToDelete = products.find((p) => p.id === id);
+    if (itemToDelete?.status === 'renting') {
+      showToast(`Không thể xóa mẫu váy "${itemToDelete?.name}" vì đang có đơn thuê!`);
+      setActiveMenuId(null);
+      return;
+    }
     if (window.confirm(`Bạn có chắc chắn muốn xóa mẫu váy "${itemToDelete?.name}"?`)) {
       setProducts((prev) => prev.filter((p) => p.id !== id));
       showToast(`Đã xóa thành công mẫu váy ${itemToDelete?.code}`);
@@ -727,8 +732,14 @@ export default function ProductManagement() {
 
                                 <button
                                   type="button"
-                                  onClick={() => handleDeleteProduct(item.id)}
-                                  className="w-full px-3.5 py-2 text-[12.5px] text-[#C93B3B] hover:bg-[#FDECEE] flex items-center gap-2 font-medium"
+                                  disabled={item.status === 'renting'}
+                                  onClick={() => item.status !== 'renting' && handleDeleteProduct(item.id)}
+                                  title={item.status === 'renting' ? `Mẫu váy "${item.name}" đang có đơn thuê, không thể xóa` : 'Xóa mẫu váy'}
+                                  className={`w-full px-3.5 py-2 text-[12.5px] flex items-center gap-2 font-medium transition-colors ${
+                                    item.status === 'renting'
+                                      ? 'opacity-35 cursor-not-allowed bg-gray-50 text-gray-400 select-none'
+                                      : 'text-[#C93B3B] hover:bg-[#FDECEE] cursor-pointer'
+                                  }`}
                                 >
                                   <Trash2 size={14} />
                                   <span>Xóa mẫu váy</span>

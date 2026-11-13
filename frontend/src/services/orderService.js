@@ -10,7 +10,9 @@ const STATUS = {
   preparing: ['active', 'Đang chuẩn bị bàn giao'],
   delivered: ['active', 'Đã bàn giao'],
   renting: ['active', 'Đang thuê'],
-  returned: ['active', 'Đang kiểm định'],
+  returned: ['active', 'Chờ hoàn cọc'],
+  waiting_refund: ['active', 'Chờ hoàn cọc'],
+  disputed: ['active', 'Tạm giữ - Chờ đàm phán'],
   completed: ['complete', 'Hoàn tất'],
   complete: ['complete', 'Hoàn tất'],
   cancelled: ['cancelled', 'Đã hủy'],
@@ -23,9 +25,10 @@ export function mapOrder(order) {
   if (!order) return null;
   const item = order.items?.[0] || {};
   let currentRawStatus = order.status;
-  const isApproved = order.inspection?.customerStatus === 'approved' || order.inspection?.customerConfirmed;
-  if (isApproved && currentRawStatus !== 'cancelled') {
+  if (['completed', 'complete'].includes(currentRawStatus)) {
     currentRawStatus = 'completed';
+  } else if (['returned', 'waiting_refund'].includes(currentRawStatus)) {
+    currentRawStatus = 'waiting_refund';
   }
   const [status, statusLabel] = STATUS[currentRawStatus] || ['active', order.statusLabel || currentRawStatus || 'Đang xử lý'];
   return {
@@ -148,7 +151,21 @@ export async function submitReturnInspection(orderId, inspectionData) {
   try {
     return await axiosClient.post(`/orders/${orderId}/inspection`, inspectionData);
   } catch (error) {
-    return { success: true, message: 'Lập biên bản hoàn trả thành công (Offline Demo)' };
+    throw error;
+  }
+}
+
+/**
+ * Admin duyệt đàm phán mức phạt và hoàn tất đơn (Trường hợp 2)
+ * @param {string} orderId
+ * @param {Object} data - { agreedPenaltyFee, refundMethod, refundBankDetails, negotiationNotes }
+ */
+export async function settleInspectionAdmin(orderId, data) {
+  try {
+    const res = await axiosClient.post(`/orders/${orderId}/inspection/admin-settle`, data);
+    return res.data;
+  } catch (error) {
+    throw error;
   }
 }
 

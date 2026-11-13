@@ -59,7 +59,7 @@ export default function ChangePasswordPage() {
   return (
     <AccountLayout hideBreadcrumb={true} breadcrumb={[]}>
       <section className="profile-card rounded-lg bg-white px-5 py-7 sm:px-7" aria-labelledby="password-title">
-        <p className="account-overline text-[#874e57]">Bảo mật tài khoản và sự riêng tư</p>
+
         <h1 id="password-title" className="mt-1 font-playfair text-[25px]">
           Đổi Mật Khẩu
         </h1>

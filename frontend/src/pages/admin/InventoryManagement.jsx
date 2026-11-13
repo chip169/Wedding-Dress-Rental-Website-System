@@ -1271,17 +1271,41 @@ export default function InventoryManagement() {
     }
   };
 
+  // Kiểm tra mẫu váy có đang trong đơn thuê hoạt động hay không
+  const isDressInActiveRental = (item) => {
+    if (!item) return false;
+    const hasRentedUnits = Number(item.rentedCount || 0) > 0;
+    const hasActiveOrders = (item.matchedOrders || []).some(
+      (o) => !['completed', 'complete', 'cancelled'].includes((o.rawStatus || o.status || '').toLowerCase())
+    );
+    const isStatusRenting =
+      item.statusType === 'renting' ||
+      item.status === 'renting' ||
+      item.rawDress?.status === 'renting';
+
+    return hasRentedUnits || hasActiveOrders || isStatusRenting;
+  };
+
   // Quản lý xóa mẫu váy khỏi kho
   const [deletingItem, setDeletingItem] = useState(null);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   const handleConfirmDeleteItem = (item) => {
+    if (isDressInActiveRental(item)) {
+      showToast(`Không thể xóa mẫu váy "${item.name}" vì đang có đơn hàng thuê chưa hoàn tất!`);
+      return;
+    }
     setActionMenuOpenId(null);
     setDeletingItem(item);
   };
 
   const handleExecuteDelete = async () => {
     if (!deletingItem) return;
+    if (isDressInActiveRental(deletingItem)) {
+      showToast(`Không thể xóa mẫu váy "${deletingItem.name}" vì đang có đơn hàng thuê chưa hoàn tất!`);
+      setDeletingItem(null);
+      return;
+    }
     setDeleteLoading(true);
     try {
       // 1. Gọi API Backend nếu là mẫu váy có ID trong database
@@ -1289,7 +1313,10 @@ export default function InventoryManagement() {
         try {
           await deleteDress(deletingItem.id);
         } catch (apiErr) {
-          console.warn('API delete dress warning:', apiErr);
+          const errMsg = apiErr?.response?.data?.message || apiErr?.message || 'Có lỗi xảy ra khi xóa mẫu váy khỏi kho.';
+          showToast(errMsg);
+          setDeleteLoading(false);
+          return;
         }
       }
 
@@ -1964,15 +1991,29 @@ export default function InventoryManagement() {
                           </button>
 
                           {/* Nút Xóa hàng ở kho */}
-                          <button
-                            type="button"
-                            onClick={() => handleConfirmDeleteItem(item)}
-                            title="Xóa mẫu váy khỏi kho"
-                            className="px-2.5 py-1.5 rounded-xl bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 transition-colors cursor-pointer flex items-center gap-1 text-[11.5px] font-bold border border-red-200 shadow-2xs"
-                          >
-                            <Trash2 size={13} />
-                            <span>Xóa</span>
-                          </button>
+                          {(() => {
+                            const isRented = isDressInActiveRental(item);
+                            return (
+                              <button
+                                type="button"
+                                disabled={isRented}
+                                onClick={() => !isRented && handleConfirmDeleteItem(item)}
+                                title={
+                                  isRented
+                                    ? `Mẫu váy "${item.name}" đang có đơn thuê chưa hoàn tất, không thể xóa`
+                                    : 'Xóa mẫu váy khỏi kho'
+                                }
+                                className={`px-2.5 py-1.5 rounded-xl transition-all flex items-center gap-1 text-[11.5px] font-bold border shadow-2xs ${
+                                  isRented
+                                    ? 'opacity-30 cursor-not-allowed bg-gray-100 text-gray-400 border-gray-200 hover:bg-gray-100 hover:text-gray-400 select-none'
+                                    : 'bg-red-50 text-red-700 hover:bg-red-100 hover:text-red-800 cursor-pointer border-red-200'
+                                }`}
+                              >
+                                <Trash2 size={13} />
+                                <span>Xóa</span>
+                              </button>
+                            );
+                          })()}
 
                           {/* Dropdown 3 chấm chuyển nhanh trạng thái */}
                           <button

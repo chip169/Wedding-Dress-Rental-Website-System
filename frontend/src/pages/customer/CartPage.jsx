@@ -1154,7 +1154,7 @@ export default function CartPage() {
     showMessage(result.isAdded ? `Đã lưu ${dress.name} vào danh sách yêu thích.` : `Đã bỏ ${dress.name} khỏi danh sách yêu thích.`);
   };
   const isWishlisted = (id) => {
-    const dress = catalog.find((item) => String(item.id) === String(id)) || items.find((item) => String(item.id) === String(id)) || {id};
+    const dress = catalog.find((item) => String(item.id) === String(id)) || items.find((item) => String(item.id) === String(id)) || { id };
     return wishlistIds.some((value) => String(value) === String(wishlistKey(dress)));
   };
   // One order uses a single rental window; selected days must agree across items.
@@ -1180,7 +1180,7 @@ export default function CartPage() {
         {mismatchedDays && <p role="alert" className="mb-4 text-sm text-amber-800">Các váy trong cùng đơn cần chọn cùng số ngày thuê. Vui lòng điều chỉnh trước khi đặt thuê.</p>}
         <div className="cart-content">
           <section className="cart-saved" aria-labelledby="cart-saved-title">
-            <div className="cart-section-bar"><div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}><h2 id="cart-saved-title">Tác phẩm trong giỏ thuê {items.length > 0 ? `(${items.length})` : ""}</h2>{items.length > 0 && (<button type="button" onClick={handleClearCart} style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 12px", borderRadius: "999px", backgroundColor: "#fff", border: "1px solid #e0bcbc", color: "#b84f58", fontSize: "11.5px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#fff0f0"; e.currentTarget.style.color = "#963740"; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#fff"; e.currentTarget.style.color = "#b84f58"; }} title="Xóa tất cả sản phẩm khỏi giỏ thuê"><Trash2 size={13} /><span>Xóa tất cả</span></button>)}</div><span><LockKeyhole size={13} /> Lịch thuê được xác nhận sau khi tư vấn</span></div>
+            <div className="cart-section-bar"><div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}><h2 id="cart-saved-title">Tác phẩm trong giỏ thuê {items.length > 0 ? `(${items.length})` : ""}</h2>{items.length > 0 && (<button type="button" onClick={handleClearCart} style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 12px", borderRadius: "999px", backgroundColor: "#fff", border: "1px solid #e0bcbc", color: "#b84f58", fontSize: "11.5px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#fff0f0"; e.currentTarget.style.color = "#963740"; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#fff"; e.currentTarget.style.color = "#b84f58"; }} title="Xóa tất cả sản phẩm khỏi giỏ thuê"><Trash2 size={13} /><span>Xóa tất cả</span></button>)}</div></div>
             {items.length ? <div className="cart-items">{items.map((item) => <CartItem key={item.id} item={item} onUpdate={updateCartDays} onRemove={removeFromCart} onWishlist={handleWishlist} isWishlisted={isWishlisted(item.id)} />)}</div> : <div className="cart-empty"><ShoppingBag size={38} strokeWidth={1.3} /><h3>Giỏ thuê của nàng đang trống</h3><p>Khám phá những tuyệt tác được tuyển chọn dành riêng cho ngày trọng đại.</p><Link to="/collection">Khám phá bộ sưu tập <ArrowRight size={16} /></Link></div>}
           </section>
 

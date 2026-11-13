@@ -925,10 +925,12 @@ export default function CheckoutPage() {
         return;
       }
     } else {
-      if (!contractSignature || !contractSignature.trim()) {
+      const typedSig = (contractSignature && !contractSignature.startsWith('data:image') ? contractSignature : brideName).trim();
+      if (!typedSig) {
         message.warning('Vui lòng nhập họ tên xác nhận chữ ký điện tử.');
         return;
       }
+      setContractSignature(typedSig);
     }
     setIsContractSigned(true);
     message.success('Ký hợp đồng thuê điện tử thành công!');
@@ -2833,7 +2835,11 @@ export default function CheckoutPage() {
                               </button>
                               <button
                                 type="button"
-                                onClick={() => setSignatureMode('type')}
+                                onClick={() => {
+                                  setSignatureMode('type');
+                                  const existing = contractSignature && !contractSignature.startsWith('data:image') ? contractSignature : brideName;
+                                  if (existing) setContractSignature(existing);
+                                }}
                                 className={`px-2.5 py-1 rounded-md transition-colors border-0 cursor-pointer ${signatureMode === 'type'
                                   ? 'bg-[#733F49] text-white shadow-2xs'
                                   : 'bg-transparent text-[#733F49] hover:bg-white/60'
@@ -2888,7 +2894,7 @@ export default function CheckoutPage() {
                               </div>
                               <input
                                 type="text"
-                                value={contractSignature && !contractSignature.startsWith('data:image') ? contractSignature : ''}
+                                value={contractSignature && !contractSignature.startsWith('data:image') ? contractSignature : (brideName || '')}
                                 onChange={(e) => setContractSignature(e.target.value)}
                                 placeholder="Nhập họ tên cô dâu xác thực chữ ký"
                                 className="w-full text-center bg-white border border-[#D4AF37]/40 rounded-lg px-2.5 py-1 text-[12px] font-semibold text-[#733F49] focus:outline-none focus:border-[#733F49]"
@@ -3439,96 +3445,113 @@ export default function CheckoutPage() {
       {/* ================= SUCCESS MODAL (HOÀN TẤT ĐẶT THUÊ VÀ HỢP ĐỒNG ĐÃ KÝ) ================= */}
       {isSuccessModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-[620px] bg-white rounded-3xl shadow-2xl border border-[#EEDECF] overflow-hidden p-6 sm:p-8 text-center space-y-5">
+          <div className="relative w-full max-w-[620px] max-h-[92vh] overflow-y-auto bg-white rounded-3xl shadow-2xl border border-[#EEDECF] p-6 sm:p-7 text-center space-y-4.5">
 
-            <div className="w-16 h-16 rounded-full bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center mx-auto shadow-md">
-              <CheckCircle2 className="w-10 h-10" />
+            <div className="w-14 h-14 rounded-full bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center mx-auto shadow-md">
+              <CheckCircle2 className="w-9 h-9" />
             </div>
 
             <div>
               <span className="text-[11px] font-bold uppercase tracking-[2px] text-[#D4AF37] block mb-1">
                 ★ HỢP ĐỒNG SỐ #HĐ-UB-2026/8992 ĐÃ KÍCH HOẠT ★
               </span>
-              <h2 className="font-playfair text-[24px] sm:text-[30px] font-bold text-[#2C2523] m-0 mb-2">
+              <h2 className="font-playfair text-[22px] sm:text-[28px] font-bold text-[#2C2523] m-0 mb-1.5">
                 Khóa Lịch Đặt Thuê Thành Công!
               </h2>
-              <p className="text-[13.5px] text-[#6B5C5D] leading-relaxed max-w-[500px] mx-auto m-0">
+              <p className="text-[13px] text-[#6B5C5D] leading-relaxed max-w-[500px] mx-auto m-0">
                 Chúc mừng cô dâu <strong>{brideName}</strong>. Hợp đồng cho thuê <strong>{orderItems && orderItems.length > 1 ? `${orderItems.length} tác phẩm lễ phục cưới` : `tác phẩm ${activeDress?.name}`}</strong> đã được ký kết điện tử thành công và lịch độc quyền đã được khóa cho hôn lễ của nàng.
               </p>
             </div>
 
             {/* Contract Ticket Voucher */}
-            <div className="bg-[#FAF4EE] p-4.5 rounded-2xl border border-[#EEDECF] text-left text-[12.5px] space-y-2">
-              <div className="flex items-center justify-between pb-2 border-b border-[#EEDECF]">
-                <span className="text-[#847374]">Mã Đơn / Hợp Đồng:</span>
+            <div className="bg-[#FAF4EE] p-5 rounded-2xl border border-[#EEDECF] text-left text-[12.5px] space-y-3">
+              <div className="flex items-center justify-between pb-2.5 border-b border-[#EEDECF]">
+                <span className="text-[#847374] font-medium">Mã Đơn / Hợp Đồng:</span>
                 <strong className="font-mono text-[#733F49] text-[14px]">{createdOrder?.contractCode || createdOrder?.orderCode || 'HĐ-UB-2026/8992'}</strong>
               </div>
-              <div className="flex items-start justify-between">
-                <span className="text-[#847374] shrink-0">Trang phục:</span>
-                <div className="text-right">
-                  {orderItems && orderItems.length > 1 ? (
-                    <div className="space-y-1">
-                      {orderItems.map((item, idx) => (
-                        <div key={item.id || idx} className="text-[#2C2523] font-semibold text-[12px]">
-                          {idx + 1}. {item.name} <span className="text-[#733F49] font-normal">(Size {item.size || selectedSize})</span>
-                        </div>
-                      ))}
-                    </div>
-                  ) : (
-                    <strong className="text-[#2C2523]">{activeDress?.name} (Size {selectedSize})</strong>
-                  )}
+
+              {/* Dress Details with Visual Thumbnail */}
+              <div className="flex items-center gap-3.5 py-1">
+                <div className="w-13 h-17 rounded-xl overflow-hidden border border-[#EEDECF] shrink-0 bg-white shadow-2xs">
+                  <img
+                    src={activeDress?.images?.[0] || activeDress?.image || orderItems?.[0]?.images?.[0] || orderItems?.[0]?.image}
+                    alt={activeDress?.name || 'Váy cưới'}
+                    className="w-full h-full object-cover"
+                  />
+                </div>
+                <div className="flex-1 min-w-0">
+                  <div className="text-[#847374] text-[11px] font-bold uppercase tracking-wider mb-0.5">
+                    Trang phục đặt thuê:
+                  </div>
+                  <div className="text-[#2C2523] font-bold text-[13.5px] truncate">
+                    {orderItems && orderItems.length > 1
+                      ? `${orderItems.length} tác phẩm váy cưới Haute Couture`
+                      : activeDress?.name}
+                  </div>
+                  <div className="text-[12px] text-[#733F49] font-medium mt-0.5">
+                    {orderItems && orderItems.length > 1 ? (
+                      <span className="text-[#847374] text-[11.5px]">
+                        {orderItems.map((i) => `${i.name} (Size ${i.size || selectedSize})`).join(' • ')}
+                      </span>
+                    ) : (
+                      <span>Kích cỡ: <strong>{selectedSize || 'M'}</strong> • Lịch độc quyền VIP</span>
+                    )}
+                  </div>
                 </div>
               </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#847374]">Thời gian nhận:</span>
-                <strong className="text-[#2C2523]">{rentalSchedule.startDate} — {rentalSchedule.endDate}</strong>
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#847374]">Chữ ký số bên B:</span>
-                {contractSignature && contractSignature.startsWith('data:image') ? (
-                  <div className="flex items-center gap-2">
-                    <img src={contractSignature} alt="Chữ ký cô dâu" className="h-8 object-contain bg-white px-2 rounded border border-[#EEDECF]" />
-                    <span className="text-[#2E7D32] text-[11px] font-bold">✓ Ký tay hợp lệ</span>
-                  </div>
-                ) : (
-                  <strong className="text-[#2E7D32]">✓ Đã ký bởi {brideName}</strong>
-                )}
-              </div>
-              <div className="flex items-center justify-between">
-                <span className="text-[#847374]">Đại diện Bên A:</span>
-                <strong className="text-[#2C2523]">Ông Kim Xuân Hiếu (Tổng Giám Đốc)</strong>
-              </div>
-              <div className="flex items-center justify-between pt-1 border-t border-[#EEDECF]/60">
-                <span className="text-[#847374]">Phương thức thanh toán:</span>
-                <span className="inline-flex items-center gap-1 font-bold text-[#2E7D32] text-[11.5px] bg-[#E8F5E9] px-2.5 py-0.5 rounded-md border border-[#C8E6C9]">
-                  <CheckCircle2 className="w-3.5 h-3.5 text-[#2E7D32]" />
-                  Chuyển khoản VietQR 24/7 Techcombank (Đã đối soát)
-                </span>
+
+              <div className="space-y-2 pt-1 border-t border-[#EEDECF]/60">
+                <div className="flex items-center justify-between">
+                  <span className="text-[#847374]">Thời gian nhận:</span>
+                  <strong className="text-[#2C2523]">{rentalSchedule.startDate} — {rentalSchedule.endDate}</strong>
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[#847374]">Chữ ký số bên B:</span>
+                  {contractSignature && contractSignature.startsWith('data:image') ? (
+                    <div className="flex items-center gap-2">
+                      <img src={contractSignature} alt="Chữ ký cô dâu" className="h-8 object-contain bg-white px-2 rounded border border-[#EEDECF]" />
+                      <span className="text-[#2E7D32] text-[11px] font-bold">✓ Ký tay hợp lệ</span>
+                    </div>
+                  ) : (
+                    <strong className="text-[#2E7D32]">✓ Đã ký bởi {brideName}</strong>
+                  )}
+                </div>
+                <div className="flex items-center justify-between">
+                  <span className="text-[#847374]">Đại diện Bên A:</span>
+                  <strong className="text-[#2C2523]">Ông Kim Xuân Hiếu (Tổng Giám Đốc)</strong>
+                </div>
+                <div className="flex items-center justify-between pt-1 border-t border-[#EEDECF]/60">
+                  <span className="text-[#847374]">Phương thức thanh toán:</span>
+                  <span className="inline-flex items-center gap-1 font-bold text-[#2E7D32] text-[11.5px] bg-[#E8F5E9] px-2.5 py-1 rounded-md border border-[#C8E6C9]">
+                    <CheckCircle2 className="w-3.5 h-3.5 text-[#2E7D32]" />
+                    Chuyển khoản VietQR 24/7 Techcombank (Đã đối soát)
+                  </span>
+                </div>
               </div>
             </div>
 
             {/* LỘ TRÌNH CHĂM SÓC LỄ PHỤC (POST-BOOKING JOURNEY TIMELINE) */}
-            <div className="bg-[#FCF9F6] p-4.5 rounded-2xl border border-[#EEDECF] text-left">
+            <div className="bg-[#FCF9F6] p-5 rounded-2xl border border-[#EEDECF] text-left">
               <span className="text-[11px] font-bold text-[#733F49] uppercase tracking-wider block mb-3">
                 ✦ LỘ TRÌNH CHĂM SÓC LỄ PHỤC CỦA NÀNG (4 GIAI ĐOẠN)
               </span>
               <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-[11.5px]">
-                <div className="bg-white p-2.5 rounded-xl border border-[#E8F5E9] shadow-2xs">
+                <div className="bg-white p-3 rounded-xl border border-[#E8F5E9] shadow-2xs">
                   <span className="text-[10px] font-bold text-[#2E7D32] block mb-1">GIAI ĐOẠN 1: HÔM NAY</span>
                   <strong className="text-[#2C2523] block mb-0.5">Khóa Lịch Độc Quyền</strong>
                   <span className="text-[#847374] block leading-tight">Hợp đồng điện tử đã ký có hiệu lực pháp lý</span>
                 </div>
-                <div className="bg-white p-2.5 rounded-xl border border-[#F2D8D4] shadow-2xs">
+                <div className="bg-white p-3 rounded-xl border border-[#F2D8D4] shadow-2xs">
                   <span className="text-[10px] font-bold text-[#733F49] block mb-1">TRƯỚC CƯỚI 7 NGÀY</span>
                   <strong className="text-[#2C2523] block mb-0.5">Thử Vừa Lần Cuối</strong>
                   <span className="text-[#847374] block leading-tight">Chuyên viên ủi sấy sinh học và chỉnh eo</span>
                 </div>
-                <div className="bg-white p-2.5 rounded-xl border border-[#EEDECF] shadow-2xs">
+                <div className="bg-white p-3 rounded-xl border border-[#EEDECF] shadow-2xs">
                   <span className="text-[10px] font-bold text-[#847374] block mb-1">{rentalSchedule.startDate}</span>
                   <strong className="text-[#2C2523] block mb-0.5">Bàn Giao Vali VIP</strong>
                   <span className="text-[#847374] block leading-tight">Nguyên seal chống ẩm và quà tặng găng tay</span>
                 </div>
-                <div className="bg-white p-2.5 rounded-xl border border-[#EEDECF] shadow-2xs">
+                <div className="bg-white p-3 rounded-xl border border-[#EEDECF] shadow-2xs">
                   <span className="text-[10px] font-bold text-[#847374] block mb-1">{rentalSchedule.endDate}</span>
                   <strong className="text-[#2C2523] block mb-0.5">Hoàn Trả và Giải Ngân</strong>
                   <span className="text-[#847374] block leading-tight">Hoàn cọc 100% qua tài khoản trong 2h</span>
@@ -3537,7 +3560,7 @@ export default function CheckoutPage() {
             </div>
 
             {/* Modal Actions */}
-            <div className="flex flex-col sm:flex-row items-center justify-center gap-3 pt-2">
+            <div className="flex flex-col sm:flex-row items-center justify-center gap-2.5 pt-2">
               <button
                 type="button"
                 onClick={() => {
@@ -3553,15 +3576,15 @@ export default function CheckoutPage() {
                     message.success('Đã sao chép tin nhắn gửi Chú Rể vào bộ nhớ tạm!');
                   }
                 }}
-                className="w-full sm:w-auto px-4 py-3 rounded-xl bg-[#FAF0EC] border border-[#F2D8D4] hover:bg-[#F2DDD9] text-[#733F49] text-[13px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className="w-full sm:w-auto p-3 rounded-xl bg-[#FAF0EC] border border-[#F2D8D4] hover:bg-[#F2DDD9] text-[#733F49] text-[13px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                title="Chia sẻ tin vui cho Chú Rể"
               >
                 <Share2 className="w-4 h-4" />
-
               </button>
               <button
                 type="button"
                 onClick={handleOpenPdfContract}
-                className="w-full sm:w-auto px-5 py-3 rounded-xl bg-white border border-[#EEDECF] hover:bg-[#FAF0EC] text-[#733F49] text-[13px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer"
+                className="w-full sm:w-auto px-4.5 py-3 rounded-xl bg-white border border-[#EEDECF] hover:bg-[#FAF0EC] text-[#733F49] text-[13px] font-bold flex items-center justify-center gap-1.5 transition-colors cursor-pointer shadow-2xs"
               >
                 <Download className="w-4 h-4" />
                 <span>Mở File Hợp Đồng (PDF)</span>

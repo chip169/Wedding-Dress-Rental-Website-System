@@ -85,6 +85,14 @@ export const createAppointment = async (appointmentData, currentUser = null) => 
     throw new Error('Họ và tên khách hàng không được chứa chữ số.');
   }
 
+  const cleanPhone = resolvedPhone.replace(/[\s.-]/g, '');
+  if (!/^\d{10}$/.test(cleanPhone)) {
+    throw new Error('Số điện thoại liên hệ phải gồm đúng 10 chữ số.');
+  }
+  if (!/^(0[2|3|5|7|8|9])[0-9]{8}$/.test(cleanPhone)) {
+    throw new Error('Số điện thoại không hợp lệ (phải bắt đầu bằng các đầu số 03, 05, 07, 08, 09, 02).');
+  }
+
   const parsedAppointmentDate = parseDateSafe(resolvedDate, new Date());
   const todayStart = new Date();
   todayStart.setHours(0, 0, 0, 0);
@@ -99,7 +107,7 @@ export const createAppointment = async (appointmentData, currentUser = null) => 
     appointmentCode: randomCode,
     customerId: currentUser?._id || null,
     customerName: resolvedName.trim(),
-    customerPhone: resolvedPhone.trim(),
+    customerPhone: cleanPhone,
     customerEmail: (customerEmail || email || '').trim(),
     branch: branch || branchId || 'hcm-q1',
     appointmentDate: parsedAppointmentDate,

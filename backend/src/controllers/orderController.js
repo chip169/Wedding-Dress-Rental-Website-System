@@ -150,3 +150,16 @@ export const disputeReturnInspection = async (req, res, next) => {
   }
 };
 
+export const settleInspectionAdmin = async (req, res, next) => {
+  try {
+    const result = await orderService.settleInspectionAdmin(req.params.id, req.body, req.user);
+    res.status(200).json({
+      success: true,
+      message: 'Admin đã xác nhận đàm phán mức phạt và hoàn tiền thành công! Đơn hàng đã chuyển sang Hoàn tất.',
+      data: result,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+

@@ -40,49 +40,33 @@ import { Link } from 'react-router-dom';
 import SignedContractModal from '../../components/common/SignedContractModal';
 import { getContractTemplates } from '../../services/contractService';
 import { HIEU_SIGNATURE_BASE64 } from '../../assets/images/signatureHieuBase64';
+import { DRESS_CATALOG } from '../../data/dressCatalog';
 
-const DRESS_OPTIONS = [
-  {
-    code: 'BGW-2026',
-    name: 'Elysian Rose Ballgown',
-    price: 5200000,
-    deposit: 15000000,
-    image: 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?auto=format&fit=crop&w=600&q=80',
-    sizes: ['XS (Eo 58-62cm)', 'Size S (Eo 62-66cm)', 'Size M (Eo 66-70cm)', 'Size L (Eo 70-74cm)']
-  },
-  {
-    code: 'BESPOKE-2026',
-    name: 'Bespoke Atelier Tailoring Gown',
-    price: 18500000,
-    deposit: 30000000,
-    image: 'https://images.unsplash.com/photo-1546804784-896d0dca3800?auto=format&fit=crop&w=600&q=80',
-    sizes: ['May đo cá nhân hóa 1:1']
-  },
-  {
-    code: 'MER-2026',
-    name: 'Celeste Royal Mermaid',
-    price: 6500000,
-    deposit: 18000000,
-    image: 'https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&w=600&q=80',
-    sizes: ['Size S (Eo 62-66cm)', 'Size M (Eo 68-72cm)']
-  },
-  {
-    code: 'ALINE-2026',
-    name: 'Lumière Minimalist Silk A-Line',
-    price: 3800000,
-    deposit: 10000000,
-    image: 'https://images.unsplash.com/photo-1595777457583-95e059d581b8?auto=format&fit=crop&w=600&q=80',
-    sizes: ['Size XS (Eo 60-64cm)', 'Size S (Eo 64-68cm)', 'Size M (Eo 68-72cm)']
-  },
-  {
-    code: 'MONET-2026',
-    name: 'Monet 3D Floral Couture Gown',
-    price: 7200000,
-    deposit: 20000000,
-    image: 'https://images.unsplash.com/photo-1549416878-b9ca35c2d47b?auto=format&fit=crop&w=600&q=80',
-    sizes: ['Size S (Eo 64-68cm)', 'Size M (Eo 68-72cm)', 'Size L (Eo 74-78cm)']
-  }
-];
+const DRESS_OPTIONS = Array.isArray(DRESS_CATALOG) && DRESS_CATALOG.length > 0
+  ? DRESS_CATALOG.map((d) => ({
+      id: d.id,
+      code: d.code,
+      name: d.name,
+      price: d.priceNumber || 5000000,
+      deposit: typeof d.depositAmount === 'string'
+        ? parseInt(d.depositAmount.replace(/\D/g, ''), 10) || 15000000
+        : (d.depositAmount || 15000000),
+      image: d.image || d.images?.[0] || 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?auto=format&fit=crop&w=600&q=80',
+      sizes: (d.sizes && d.sizes.length > 0)
+        ? d.sizes.map((s) => (String(s).startsWith('Size') ? s : `Size ${s}`))
+        : ['Size S', 'Size M', 'Size L']
+    }))
+  : [
+      {
+        id: '6aeb1d4f4880130a58dcff21',
+        code: 'UB-001',
+        name: 'Elysian Rose Ballgown',
+        price: 5200000,
+        deposit: 15000000,
+        image: 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?auto=format&fit=crop&w=600&q=80',
+        sizes: ['Size XS', 'Size S', 'Size M', 'Size L']
+      }
+    ];
 
 const fmtVnd = (num) => formatCurrencyVND(num);
 const PAGE_SIZE = 5;
@@ -160,8 +144,8 @@ export default function ContractManagement() {
         content: '4.1. Tiền đặt cọc bảo lãnh trách nhiệm được Bên B nộp để đảm bảo giữ gìn trang phục cưới nguyên trạng.\n4.2. Số tiền cọc sẽ được hoàn trả 100% cho Bên B trong vòng 02 giờ làm việc qua hình thức chuyển khoản trực tiếp sau khi hoàn tất Biên bản kiểm định thu hồi hiện trạng không phát sinh hư hỏng cấu trúc.\n4.3. Trường hợp phát sinh vết bẩn nhẹ thông thường tẩy được bằng giặt hấp sinh học, Bên A cam kết MIỄN PHÍ và không trừ tiền cọc.'
       },
       {
-        title: 'ĐIỀU 5: TRÁCH NHIỆM BẢO QUẢN VÀ BỒI THƯỜNG HƯ TỔN',
-        content: '5.1. Bên B cam kết giữ gìn trang phục cẩn trọng, không tự ý cắt may, ủi nhiệt độ cao hoặc tẩy hóa chất.\n5.2. Trường hợp làm rách ren thủng lớn, cháy vải hoặc đứt gãy gọng siết eo corsetry, Bên B đồng ý chịu chi phí phục chế nguyên trạng theo bảng giá niêm yết tại Atelier hoặc trừ trực tiếp vào quỹ cọc bảo lãnh.'
+        title: 'ĐIỀU 5: TRÁCH NHIỆM BẢO QUẢN VÀ BẢNG GIÁ ĐỀN BÙ THIỆT HẠI NIÊM YẾT',
+        content: '5.1. Bên B cam kết giữ gìn trang phục cẩn trọng, không tự ý cắt may, ủi nhiệt độ cao hoặc tẩy hóa chất.\n5.2. Hai bên thống nhất áp dụng Bảng giá đền bù thiệt hại cố định niêm yết (Phụ lục 1) để đối chiếu khi hoàn trả lễ phục, không phụ thuộc ý chí chủ quan của nhân viên:\n   • Nhóm 1 (Hao mòn tự nhiên): 0 VNĐ (Miễn phí trong gói giặt);\n   • Nhóm 2 (Vết bẩn nhẹ - son môi, phấn trang điểm): 250.000 VNĐ;\n   • Nhóm 3 (Sút chỉ / Tuột cúc - đứt chỉ viền, bung cườm): 200.000 VNĐ;\n   • Nhóm 4 (Vết bẩn cứng đầu - rượu vang, dầu mỡ sậm màu): 500.000 VNĐ;\n   • Nhóm 5 (Rách gấu ren nhỏ < 5cm do giẫm gót): 500.000 VNĐ;\n   • Nhóm 6 (Hỏng khóa lưng - zipper): 300.000 VNĐ;\n   • Nhóm 7 (Rách tùng voan lớn > 10cm, rách vải chính): 1.500.000 VNĐ;\n   • Nhóm 8 (Mất phụ kiện đi kèm): 500.000 VNĐ / món;\n   • Nhóm 9 (Hỏng hoàn toàn - cháy vải, rách nát không thể phục hồi): Tịch thu 100% tiền cọc bảo lãnh.\n5.3. Chi phí đền bù (nếu có) được khấu trừ trực tiếp vào quỹ cọc bảo lãnh. Số tiền cọc còn lại được Bên A hoàn trả đầy đủ vào STK ngân hàng của Bên B.'
       },
       {
         title: 'ĐIỀU 6: HIỆU LỰC HỢP ĐỒNG ĐIỆN TỬ',
@@ -213,6 +197,8 @@ export default function ContractManagement() {
   });
   const [newNote, setNewNote] = useState('');
   const [newTemplate, setNewTemplate] = useState('Hợp đồng Thuê Váy Cưới Haute Couture Tiêu Chuẩn');
+  const [newInitialStatus, setNewInitialStatus] = useState('deposit_paid');
+  const [creating, setCreating] = useState(false);
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -464,7 +450,7 @@ export default function ContractManagement() {
     showToast(labels[newStatus] || 'Đã cập nhật trạng thái hợp đồng thành công!');
   };
 
-  // Xử lý tạo hợp đồng mới tại showroom
+  // Xử lý tạo hợp đồng mới tại showroom -> BẮT BUỘC tạo đơn thuê đi kèm trong hệ thống
   const handleCreateSubmit = async (e) => {
     e.preventDefault();
     if (!newCustomerName.trim() || !newPhone.trim()) {
@@ -472,66 +458,64 @@ export default function ContractManagement() {
       return;
     }
 
-    const dress = DRESS_OPTIONS.find((d) => d.code === selectedDressCode) || DRESS_OPTIONS[0];
-    const newCode = `HD-UB-2026-${String(Math.floor(100 + Math.random() * 900))}`;
-    const orderCode = `UB-2026-${String(Math.floor(1000 + Math.random() * 9000))}`;
-
-    const newContractObj = {
-      id: newCode,
-      orderCode,
-      customerName: newCustomerName.trim(),
-      phone: newPhone.trim(),
-      idCard: newIdCard.trim() || '00119900' + Math.floor(1000 + Math.random() * 9000),
-      dressName: dress.name,
-      dressCode: dress.code,
-      dressSize: selectedDressSize,
-      dressImage: dress.image,
-      templateName: newTemplate,
-      startDate: newStartDate,
-      endDate: newEndDate,
-      rentalPrice: dress.price,
-      depositAmount: dress.deposit,
-      totalValue: dress.price + dress.deposit,
-      status: 'active',
-      signedAt: formatSignedDateTime(new Date()),
-      signedMethod: 'Ký trực tiếp tại Showroom',
-      staffInCharge: 'Chuyên Viên Atelier',
-      packageType: 'Gói Thuê Lễ Phục Tiêu Chuẩn',
-      note: newNote || 'Lập hợp đồng trực tiếp tại quầy tiếp đón.'
-    };
-
-    // Thử gửi tạo đơn qua API
+    setCreating(true);
     try {
-      await createOrder({
-        customerName: newContractObj.customerName,
-        customerPhone: newContractObj.phone,
-        rentalStartDate: newContractObj.startDate,
-        rentalEndDate: newContractObj.endDate,
-        items: [{
-          name: dress.name,
-          dressCode: dress.code,
-          size: selectedDressSize,
-          rentPrice: dress.price,
-          depositPrice: dress.deposit
-        }],
+      const dress = DRESS_OPTIONS.find((d) => d.code === selectedDressCode) || DRESS_OPTIONS[0];
+      const newCode = `HD-UB-2026-${String(Math.floor(100 + Math.random() * 900))}`;
+
+      // BẮT BUỘC: Khi tạo hợp đồng mới phải tạo Đơn Thuê mới tương ứng đi kèm trong hệ thống
+      const orderPayload = {
+        customerName: newCustomerName.trim(),
+        brideName: newCustomerName.trim(),
+        customerPhone: newPhone.trim(),
+        phone: newPhone.trim(),
+        customerCccd: newIdCard.trim() || undefined,
+        cccd: newIdCard.trim() || undefined,
+        rentalStartDate: newStartDate,
+        rentalEndDate: newEndDate,
+        rentalDays: getRentalDays(newStartDate, newEndDate),
+        items: [
+          {
+            dressId: dress.id,
+            code: dress.code,
+            name: dress.name,
+            size: selectedDressSize.replace(/^Size\s*/i, ''),
+            rentPrice: dress.price,
+            depositAmount: dress.deposit,
+            image: dress.image,
+          },
+        ],
         totalRentPrice: dress.price,
         totalDeposit: dress.deposit,
+        totalPayment: dress.price + dress.deposit,
         contractCode: newCode,
-        contractSignature: newContractObj.customerName,
-        status: 'active'
-      });
-    } catch { }
+        contractSignature: newCustomerName.trim(),
+        deliveryMethod: 'showroom',
+        shippingAddress: 'Showroom UniBridal (Lập hợp đồng và bàn giao trực tiếp tại quầy)',
+        status: newInitialStatus || 'deposit_paid',
+        notes: newNote ? `Hợp đồng Showroom: ${newNote}` : 'Lập hợp đồng và tạo đơn thuê trực tiếp tại quầy tiếp đón.',
+      };
 
-    const updatedList = [newContractObj, ...contracts];
-    setContracts(updatedList);
-    try { localStorage.setItem('unibridal_contracts_local', JSON.stringify(updatedList)); } catch { }
+      const result = await createOrder(orderPayload);
+      const createdOrder = result?.data || result;
+      const orderCode = createdOrder?.orderCode || `UB-2026-${String(Math.floor(1000 + Math.random() * 9000))}`;
+      const finalContractCode = createdOrder?.contractCode || newCode;
 
-    setIsCreateOpen(false);
-    setNewCustomerName('');
-    setNewPhone('');
-    setNewIdCard('');
-    setNewNote('');
-    showToast(`Đã lập thành công hợp đồng ${newCode} cho cô dâu ${newContractObj.customerName}!`);
+      // Nạp lại danh sách hợp đồng thực tế từ đơn hàng hệ thống
+      await loadContractsFromOrders();
+
+      setIsCreateOpen(false);
+      setNewCustomerName('');
+      setNewPhone('');
+      setNewIdCard('');
+      setNewNote('');
+      showToast(`Đã lập thành công Hợp Đồng ${finalContractCode} và tự động tạo Đơn Thuê #${orderCode} cho cô dâu ${newCustomerName.trim()}!`);
+    } catch (err) {
+      console.error('Lỗi khi lập hợp đồng và đơn thuê:', err);
+      showToast(err.message || 'Không thể tạo đơn và hợp đồng. Vui lòng thử lại!');
+    } finally {
+      setCreating(false);
+    }
   };
 
   return (
@@ -935,10 +919,10 @@ export default function ContractManagement() {
                   </div>
                   <div>
                     <h3 className="text-base font-bold text-[#302626]">
-                      Lập Hợp Đồng Thuê Váy Cưới Tại Showroom
+                      Lập Hợp Đồng & Khởi Tạo Đơn Thuê Tại Showroom
                     </h3>
                     <p className="text-xs text-[#7A6A6B]">
-                      Dành cho khách hàng thử váy và đặt thuê trực tiếp tại Atelier Suite.
+                      Hệ thống tự động lập hợp đồng số và tạo mã đơn thuê đi kèm để showroom quản lý bàn giao.
                     </p>
                   </div>
                 </div>
@@ -952,6 +936,15 @@ export default function ContractManagement() {
               </div>
 
               <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
+                {/* Banner giải thích đồng bộ đơn hàng */}
+                <div className="p-3.5 rounded-xl bg-[#FAF5F2] border border-[#EEDECF] flex items-start gap-2.5">
+                  <div className="w-5 h-5 rounded-full bg-[#733F49] text-white flex items-center justify-center shrink-0 mt-0.5 text-[11px] font-bold">
+                    ✓
+                  </div>
+                  <div className="text-[12px] text-[#594B49] leading-relaxed">
+                    <strong className="text-[#733F49]">Đồng bộ tự động:</strong> Khi lập hợp đồng tại Showroom, hệ thống sẽ lập tức tạo <strong>01 Đơn Thuê mới tương ứng</strong> trong danh sách <em>Quản Lý Đơn Thuê</em>, đảm bảo kiểm soát xuyên suốt từ thử váy, đặt cọc đến bàn giao và kiểm định hoàn cọc.
+                  </div>
+                </div>
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-[#594B49] uppercase mb-1">
@@ -1075,6 +1068,34 @@ export default function ContractManagement() {
                   </div>
                 </div>
 
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                  <div>
+                    <label className="block text-xs font-bold text-[#594B49] uppercase mb-1">
+                      Trạng thái đơn thuê ban đầu *
+                    </label>
+                    <select
+                      value={newInitialStatus}
+                      onChange={(e) => setNewInitialStatus(e.target.value)}
+                      className="w-full px-3.5 py-2 rounded-lg border border-[#EFE5E1] text-sm text-[#302626] focus:outline-none focus:ring-2 focus:ring-[#B8737D]/30 bg-white"
+                    >
+                      <option value="deposit_paid">Đã Đặt Cọc (Đơn đang xử lý chờ ngày bàn giao)</option>
+                      <option value="renting">Đang Thuê (Khách nhận váy trực tiếp tại Showroom)</option>
+                    </select>
+                  </div>
+
+                  <div>
+                    <label className="block text-xs font-bold text-[#594B49] uppercase mb-1">
+                      Phương thức nhận lễ phục
+                    </label>
+                    <input
+                      type="text"
+                      readOnly
+                      value="Nhận trực tiếp tại quầy Showroom UniBridal"
+                      className="w-full px-3.5 py-2 rounded-lg border border-[#EFE5E1] text-xs font-semibold text-[#5F2B36] bg-[#FAF2EE] outline-none cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
                 <div>
                   <label className="block text-xs font-bold text-[#594B49] uppercase mb-1">
                     Ghi chú điều khoản bổ sung / Phụ lục fitting
@@ -1101,15 +1122,18 @@ export default function ContractManagement() {
                   <button
                     type="button"
                     onClick={() => setIsCreateOpen(false)}
-                    className="px-4 py-2.5 rounded-xl border border-[#D9C4BD] text-xs font-semibold text-[#733F49] hover:bg-[#FDF9F8] cursor-pointer"
+                    disabled={creating}
+                    className="px-4 py-2.5 rounded-xl border border-[#D9C4BD] text-xs font-semibold text-[#733F49] hover:bg-[#FDF9F8] cursor-pointer disabled:opacity-50"
                   >
                     Hủy bỏ
                   </button>
                   <button
                     type="submit"
-                    className="px-5 py-2.5 rounded-xl bg-[#733F49] hover:bg-[#5C323A] text-white text-xs font-bold shadow-sm cursor-pointer"
+                    disabled={creating}
+                    className="px-5 py-2.5 rounded-xl bg-[#733F49] hover:bg-[#5C323A] text-white text-xs font-bold shadow-sm cursor-pointer disabled:opacity-60 flex items-center gap-2"
                   >
-                    Ký và Kích Hoạt Hợp Đồng Ngay
+                    {creating && <RefreshCw size={14} className="animate-spin" />}
+                    <span>{creating ? 'Đang Khởi Tạo Đơn & Hợp Đồng...' : 'Ký và Kích Hoạt Hợp Đồng & Tạo Đơn'}</span>
                   </button>
                 </div>
               </form>

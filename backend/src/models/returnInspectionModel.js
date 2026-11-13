@@ -7,14 +7,30 @@ const itemConditionSchema = new mongoose.Schema({
   },
   condition: {
     type: String,
-    enum: ['good', 'minor_stain', 'heavy_damage', 'torn_lace'],
     default: 'good',
+  },
+  damageName: {
+    type: String,
+    default: '',
+  },
+  feeLabel: {
+    type: String,
+    default: '',
   },
   note: {
     type: String,
     default: '',
   },
+  damageNotes: {
+    type: String,
+    default: '',
+  },
   repairFee: {
+    type: Number,
+    default: 0,
+    min: 0,
+  },
+  compensation: {
     type: Number,
     default: 0,
     min: 0,
@@ -93,6 +109,31 @@ const returnInspectionSchema = new mongoose.Schema(
       default: '',
     },
     disputeCreatedAt: {
+      type: Date,
+      default: null,
+    },
+    negotiatedByAdmin: {
+      type: Boolean,
+      default: false,
+    },
+    adminNegotiatorId: {
+      type: mongoose.Schema.Types.ObjectId,
+      ref: 'User',
+      default: null,
+    },
+    adminNegotiatorName: {
+      type: String,
+      default: '',
+    },
+    adminNegotiationNotes: {
+      type: String,
+      default: '',
+    },
+    agreedPenaltyFee: {
+      type: Number,
+      default: 0,
+    },
+    adminSettledAt: {
       type: Date,
       default: null,
     },

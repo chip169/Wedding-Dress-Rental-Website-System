@@ -18,7 +18,7 @@ import { APPOINTMENT_EVENT } from '../../services/appointmentService';
 import { getStaffAppointments, updateStaffAppointmentStatus } from '../../services/staffDashboardService';
 import { calculateInventoryMaintenanceSummary } from '../../utils/maintenanceStorage';
 
-const PERIODS = { week: '7 ngày qua', month: 'Tháng này', quarter: 'Quý này' };
+const PERIODS = { today: 'Hôm nay', week: '7 ngày qua', month: 'Tháng này' };
 const STATUS_LABELS = { confirmed: 'Đã xác nhận', completed: 'Hoàn tất', cancelled: 'Đã hủy' };
 
 export default function StaffDashboardPage() {
@@ -129,7 +129,6 @@ export default function StaffDashboardPage() {
       labels: values.map((item) => item.label),
       primary,
       secondary,
-      trend: primary,
       max: actualMax,
       ticks: [0, step, step * 2, step * 3, actualMax],
     };
@@ -172,12 +171,6 @@ export default function StaffDashboardPage() {
         </div>
       )}
       {loading && <p role="status" className="mb-4 text-sm text-stone-500">Đang tải thống kê...</p>}
-      {data?.ordersMissingDepositTransaction > 0 && (
-        <p role="alert" className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          Có {data.ordersMissingDepositTransaction} đơn đã chuyển sang trạng thái đặt cọc nhưng chưa có giao dịch cọc thành công. Vui lòng đối soát với bộ phận thu ngân.
-        </p>
-      )}
-
       <section
         className="ub-dashboard-metrics grid grid-cols-3 gap-[23px] max-[1120px]:gap-3 max-[650px]:grid-cols-1"
         aria-label="Chỉ số vận hành"
@@ -236,7 +229,6 @@ export default function StaffDashboardPage() {
             {...chart}
             primaryLabel="Đơn thuê"
             secondaryLabel="Hoàn tất"
-            trendLabel="Xu hướng đơn"
             unit=" đơn"
           />
         )}

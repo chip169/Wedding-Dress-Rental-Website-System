@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
 import { LayoutDashboard,
   Crown,
@@ -14,11 +14,58 @@ import { LayoutDashboard,
   Layers,
   FileSignature,
   Users,
-  Tag } from 'lucide-react';
+  Tag,
+  CreditCard,
+  ChevronLeft,
+  ChevronRight,
+  Clock,
+  ArrowRight,
+  ExternalLink,
+  Truck,
+  RotateCcw } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import heroBride from '../../assets/hero_bride.jpg';
 import adminAvatarImg from '../../assets/admin_avatar.jpg';
 import { useAuth } from '../../contexts/AuthContext';
+import { getAllOrdersAdmin } from '../../services/orderService';
+import { getAppointmentsApi, getAppointments, APPOINTMENT_EVENT } from '../../services/appointmentService';
+import { formatCurrencyVND } from '../../utils/formatCurrency';
+
+const READ_NOTIFS_STORAGE_KEY = 'unibridal_read_notif_ids';
+
+/**
+ * Kiểm tra xem một mốc thời gian có rơi vào đúng ngày hôm nay (theo múi giờ Việt Nam) hay không
+ */
+function isSameDayVietnam(dateInput) {
+  if (!dateInput) return false;
+  try {
+    const d = new Date(dateInput);
+    if (isNaN(d.getTime())) return false;
+    const vnOptions = { timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit' };
+    const dateStr = d.toLocaleDateString('vi-VN', vnOptions);
+    const todayStr = new Date().toLocaleDateString('vi-VN', vnOptions);
+    return dateStr === todayStr;
+  } catch {
+    const d = new Date(dateInput);
+    const now = new Date();
+    return d.toDateString() === now.toDateString();
+  }
+}
+
+function timeAgo(dateInput) {
+  if (!dateInput) return 'Vừa xong';
+  const date = new Date(dateInput);
+  if (isNaN(date.getTime())) return 'Gần đây';
+  const seconds = Math.floor((new Date() - date) / 1000);
+  if (seconds < 60) return 'Vừa xong';
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes} phút trước`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours} giờ trước`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days} ngày trước`;
+  return date.toLocaleDateString('vi-VN');
+}
 
 export default function AdminLayout({
   children,
@@ -34,9 +81,173 @@ export default function AdminLayout({
   const { user, logout } = useAuth();
   const [sidebarOpen, setSidebarOpen] = useState(false);
 
+  // Live Notifications State for New Deposits & Appointments
+  const [liveNotifications, setLiveNotifications] = useState([]);
+  const [currentTickerIdx, setCurrentTickerIdx] = useState(0);
+  const [isTickerPaused, setIsTickerPaused] = useState(false);
+
+  const [readNotifIds, setReadNotifIds] = useState(() => {
+    try {
+      const saved = localStorage.getItem(READ_NOTIFS_STORAGE_KEY);
+      return saved ? JSON.parse(saved) : [];
+    } catch {
+      return [];
+    }
+  });
+
+  const markIdAsRead = (id) => {
+    setReadNotifIds((prev) => {
+      if (prev.includes(id)) return prev;
+      const updated = [id, ...prev].slice(0, 100);
+      try {
+        localStorage.setItem(READ_NOTIFS_STORAGE_KEY, JSON.stringify(updated));
+      } catch {}
+      return updated;
+    });
+  };
+
   // Tự động nhận diện menu đang active nếu không truyền chủ động
   const currentPath = location.pathname;
   const isStaff = role === 'staff' || user?.role === 'staff' || currentPath.startsWith('/staff');
+
+  // Fetch Live Notifications: Chỉ hiển thị các sự kiện phát sinh trong ngày hôm nay:
+  // 1. Đơn vừa đặt / vừa cọc hôm nay (createdAt là hôm nay)
+  // 2. Lịch ship váy / giao váy cho khách hôm nay (rentalStartDate là hôm nay)
+  // 3. Lịch khách hẹn trả váy hôm nay (rentalEndDate là hôm nay)
+  // 4. Lịch hẹn thử váy hôm nay (appointmentDate là hôm nay)
+  const fetchLiveNotifications = async () => {
+    try {
+      const notifs = [];
+
+      // 1. Fetch Orders (Lọc đơn vừa đặt, lịch ship váy và lịch trả váy trong ngày hôm nay)
+      try {
+        const ordersRes = await getAllOrdersAdmin({ limit: 100 });
+        const orders = ordersRes?.orders || [];
+        orders.forEach((o) => {
+          const rawSt = (o.rawStatus || o.status || '').toLowerCase();
+          if (rawSt === 'cancelled') return;
+
+          const orderIdStr = o._id || o.orderCode || Math.random();
+          const customerName = o.customerName || 'Khách Hàng';
+          const dressName = o.items?.[0]?.name || o.dress || 'Lễ phục cưới';
+
+          // A. Đơn vừa đặt / vừa cọc trong ngày hôm nay
+          if (isSameDayVietnam(o.createdAt)) {
+            const hasDeposit = (o.totalDeposit > 0 || o.depositAmount > 0);
+            notifs.push({
+              id: `order-created-${orderIdStr}`,
+              type: 'deposit',
+              orderCode: o.orderCode,
+              customerName,
+              amount: o.totalDeposit || o.depositAmount || 0,
+              time: o.createdAt,
+              url: `${isStaff ? '/staff' : '/admin'}/don-thue?search=${encodeURIComponent(o.orderCode || '')}`,
+              badge: hasDeposit ? 'ĐƠN CỌC MỚI' : 'ĐƠN VỪA ĐẶT',
+            });
+          }
+
+          // B. Lịch ship váy / giao váy cho khách trong ngày hôm nay
+          if (isSameDayVietnam(o.rentalStartDate) && !['completed', 'complete'].includes(rawSt)) {
+            notifs.push({
+              id: `order-ship-${orderIdStr}`,
+              type: 'ship',
+              orderCode: o.orderCode,
+              customerName,
+              dressName,
+              time: o.rentalStartDate || new Date(),
+              url: `${isStaff ? '/staff' : '/admin'}/don-thue?search=${encodeURIComponent(o.orderCode || '')}`,
+              badge: 'LỊCH SHIP VÁY',
+            });
+          }
+
+          // C. Lịch khách hẹn trả váy trong ngày hôm nay
+          if (isSameDayVietnam(o.rentalEndDate) && !['completed', 'complete'].includes(rawSt)) {
+            notifs.push({
+              id: `order-return-${orderIdStr}`,
+              type: 'return',
+              orderCode: o.orderCode,
+              customerName,
+              dressName,
+              time: o.rentalEndDate || new Date(),
+              url: `${isStaff ? '/staff' : '/admin'}/don-thue?search=${encodeURIComponent(o.orderCode || '')}`,
+              badge: 'LỊCH TRẢ VÁY',
+            });
+          }
+        });
+      } catch (err) {
+        console.warn('Orders notification fetch error:', err);
+      }
+
+      // 2. Fetch Appointments (Lịch hẹn thử váy trong ngày hôm nay)
+      try {
+        const aptsRes = await getAppointmentsApi({ limit: 100 });
+        const apts = Array.isArray(aptsRes?.data) ? aptsRes.data : (Array.isArray(aptsRes) ? aptsRes : getAppointments());
+        if (Array.isArray(apts)) {
+          apts.forEach((a) => {
+            const aptDateStr = a.appointmentDate || a.date;
+            if (a.status === 'cancelled') return;
+
+            // Chỉ hiển thị lịch thử váy có ngày hẹn đúng hôm nay hoặc vừa đặt hôm nay
+            const isForToday = isSameDayVietnam(aptDateStr);
+            const isCreatedToday = isSameDayVietnam(a.createdAt);
+
+            if (isForToday || isCreatedToday) {
+              const timeSlotStr = a.timeSlot || '09:00 — 10:30';
+              notifs.push({
+                id: `apt-${a._id || a.id || a.appointmentCode || Math.random()}`,
+                type: 'appointment',
+                orderCode: a.appointmentCode || a.id || 'LỊCH HẸN',
+                customerName: a.customerName || a.fullName || 'Cô Dâu / Chú Rể',
+                timeSlot: timeSlotStr,
+                date: aptDateStr,
+                branchName: a.branchName || 'Showroom UniBridal',
+                time: a.createdAt || a.appointmentDate || new Date(),
+                url: `${isStaff ? '/staff' : '/admin'}/lich-tong-quan`,
+                badge: isForToday ? 'LỊCH THỬ HÔM NAY' : 'LỊCH THỬ MỚI',
+              });
+            }
+          });
+        }
+      } catch (err) {
+        console.warn('Appointments notification fetch error:', err);
+      }
+
+      // Sắp xếp thời gian mới nhất lên đầu
+      notifs.sort((a, b) => new Date(b.time || 0) - new Date(a.time || 0));
+      setLiveNotifications(notifs);
+    } catch (err) {
+      console.error('Error fetching live notifications:', err);
+    }
+  };
+
+  useEffect(() => {
+    fetchLiveNotifications();
+    const timer = setInterval(fetchLiveNotifications, 20000); // 20s polling
+    const handleUpdate = () => fetchLiveNotifications();
+    window.addEventListener(APPOINTMENT_EVENT, handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    return () => {
+      clearInterval(timer);
+      window.removeEventListener(APPOINTMENT_EVENT, handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
+  }, [isStaff]);
+
+  // Ticker Auto-rotation every 4.5s
+  useEffect(() => {
+    if (isTickerPaused || liveNotifications.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentTickerIdx((prev) => (prev + 1) % liveNotifications.length);
+    }, 4500);
+    return () => clearInterval(interval);
+  }, [isTickerPaused, liveNotifications.length]);
+
+  const handleSelectNotification = (item) => {
+    markIdAsRead(item.id);
+    navigate(item.url);
+  };
+
+  const currentNotif = liveNotifications[currentTickerIdx % Math.max(liveNotifications.length, 1)];
 
   const getActiveKey = () => {
     if (activeMenu) {
@@ -241,8 +452,9 @@ export default function AdminLayout({
       {/* Main Content Area */}
       <div className="flex-1 flex flex-col min-w-0 bg-[#FAF5F2]">
         {/* Top Header Bar */}
-        <header className="h-16 px-6 lg:px-8 bg-white border-b border-[#F0E6E2] flex items-center justify-between sticky top-0 z-20">
-          <div className="flex items-center gap-3">
+        <header className="h-16 px-4 sm:px-6 lg:px-8 bg-white border-b border-[#F0E6E2] flex items-center justify-between sticky top-0 z-30">
+          {/* Left: Sidebar toggle + Title */}
+          <div className="flex items-center gap-3 shrink-0">
             <button
               type="button"
               onClick={() => setSidebarOpen(true)}
@@ -254,16 +466,108 @@ export default function AdminLayout({
             <div className="flex items-center gap-2.5">
               <Crown size={20} className="text-[#8A797A] shrink-0" />
               {(headerTitle || (activeMenu === 'customer-care' ? 'Chăm Sóc Khách Hàng' : null)) && (
-                <span className="font-playfair text-[20px] sm:text-[22px] font-bold text-[#5F2B36] tracking-tight leading-none m-0 p-0 select-none">
+                <span className="font-playfair text-[18px] sm:text-[21px] font-bold text-[#5F2B36] tracking-tight leading-none m-0 p-0 select-none hidden sm:inline">
                   {headerTitle || 'Chăm Sóc Khách Hàng'}
                 </span>
               )}
             </div>
           </div>
 
-          {/* User Profile Widget */}
+          {/* Center: Live Notification Ticker Pill (Đơn mới cọc & Lịch thử váy mới) */}
+          <div
+            className="hidden md:flex items-center justify-center flex-1 max-w-xl lg:max-w-2xl mx-3"
+            onMouseEnter={() => setIsTickerPaused(true)}
+            onMouseLeave={() => setIsTickerPaused(false)}
+          >
+            {liveNotifications.length > 0 && currentNotif ? (
+              <div className="w-full flex items-center justify-between gap-2 bg-gradient-to-r from-[#FFFBF9] via-[#FAF3F0] to-[#FFFBF9] border border-[#F2DFD8] hover:border-[#D6A498] rounded-full py-1.5 px-3.5 shadow-xs transition-all duration-300">
+                <div
+                  onClick={() => handleSelectNotification(currentNotif)}
+                  className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group"
+                  title="Nhấn để xem chi tiết ngay"
+                >
+                  {currentNotif.type === 'deposit' ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#EBF6EE] text-[#1E8347] border border-[#CDEBCE] shrink-0 tracking-wider">
+                      <CreditCard size={11} className="shrink-0" />
+                      <span>{currentNotif.badge}</span>
+                    </span>
+                  ) : currentNotif.type === 'ship' ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FFF7ED] text-[#C2410C] border border-[#FFEDD5] shrink-0 tracking-wider">
+                      <Truck size={11} className="shrink-0" />
+                      <span>{currentNotif.badge}</span>
+                    </span>
+                  ) : currentNotif.type === 'return' ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A] shrink-0 tracking-wider">
+                      <RotateCcw size={11} className="shrink-0" />
+                      <span>{currentNotif.badge}</span>
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FDECEE] text-[#BE4B5E] border border-[#F9CFD7] shrink-0 tracking-wider">
+                      <CalendarCheck size={11} className="shrink-0" />
+                      <span>{currentNotif.badge}</span>
+                    </span>
+                  )}
+
+                  <span className="text-[12.5px] font-medium text-[#4A3B32] truncate group-hover:text-[#733F49] transition-colors">
+                    <strong className="font-bold text-[#2C2523]">{currentNotif.customerName}</strong>
+                    {currentNotif.type === 'deposit' ? (
+                      <> • Cọc <span className="font-bold text-[#1E8347]">{formatCurrencyVND(currentNotif.amount)}</span> • Đơn <span className="font-mono font-medium text-[#733F49]">#{currentNotif.orderCode}</span></>
+                    ) : currentNotif.type === 'ship' ? (
+                      <> • Ship váy hôm nay: <span className="font-semibold text-[#C2410C]">{currentNotif.dressName}</span> • Đơn <span className="font-mono font-medium text-[#733F49]">#{currentNotif.orderCode}</span></>
+                    ) : currentNotif.type === 'return' ? (
+                      <> • Hạn trả váy hôm nay • Đơn <span className="font-mono font-medium text-[#733F49]">#{currentNotif.orderCode}</span></>
+                    ) : (
+                      <> • {currentNotif.timeSlot} • Lịch hẹn #{currentNotif.orderCode}</>
+                    )}
+                  </span>
+
+                  <span className="text-[11px] text-[#A89899] shrink-0 hidden lg:inline flex items-center gap-1 font-mono">
+                    <Clock size={11} />
+                    {timeAgo(currentNotif.time)}
+                  </span>
+                </div>
+
+                <div className="flex items-center gap-0.5 shrink-0 pl-1.5 border-l border-[#EFE2DC]">
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentTickerIdx((prev) => (prev - 1 + liveNotifications.length) % liveNotifications.length);
+                    }}
+                    className="p-1 rounded-full text-[#8A797A] hover:bg-white hover:text-[#5F2B36] transition-colors cursor-pointer"
+                    title="Thông báo trước"
+                  >
+                    <ChevronLeft size={13} />
+                  </button>
+                  <span className="text-[10px] text-[#A89899] font-mono px-1">
+                    {currentTickerIdx + 1}/{liveNotifications.length}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentTickerIdx((prev) => (prev + 1) % liveNotifications.length);
+                    }}
+                    className="p-1 rounded-full text-[#8A797A] hover:bg-white hover:text-[#5F2B36] transition-colors cursor-pointer"
+                    title="Thông báo kế tiếp"
+                  >
+                    <ChevronRight size={13} />
+                  </button>
+                </div>
+              </div>
+            ) : (
+              <div className="flex items-center gap-2 py-1.5 px-4 rounded-full bg-[#FAF5F2] border border-[#EFE5E0] text-[12px] text-[#8A797A]">
+                <span className="relative flex h-2 w-2">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                </span>
+                <span>Hôm nay chưa có đơn mới hoặc lịch ship/trả váy trong ngày</span>
+              </div>
+            )}
+          </div>
+
+          {/* Right Section: User Profile Widget */}
           <div className="flex items-center">
-            <div className="h-8 w-px bg-[#EFE5E1] mr-5 hidden sm:block" />
             <div className="flex items-center gap-3">
               <div className="text-right">
                 <div className="text-[13.5px] font-bold text-[#2C2523] leading-tight">

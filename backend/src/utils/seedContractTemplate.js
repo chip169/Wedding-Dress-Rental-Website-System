@@ -45,11 +45,20 @@ const HAUTE_COUTURE_CLAUSES = [
   },
   {
     id: 6,
-    title: 'ĐIỀU 6: QUY ĐỊNH BỒI HOÀN KHI HƯ HỎNG, TRỄ HẠN HOẶC MẤT MÁT',
+    title: 'ĐIỀU 6: QUY ĐỊNH BỒI HOÀN KHI HƯ HỎNG, TRỄ HẠN VÀ BẢNG GIÁ NIÊM YẾT',
     content:
       '6.1. Bàn giao hoàn trả trễ hạn: Nếu Bên B hoàn trả sau 20:00 ngày kết thúc thuê mà không có thỏa thuận gia hạn trước bằng văn bản, Bên B chịu phí lưu dụng là 800.000 VNĐ/ngày để bù đắp chi phí gián đoạn lịch của cô dâu tiếp theo.\n' +
-      '6.2. Hư hỏng có thể khắc phục (rách ren nhỏ, đứt chỉ đính hạt): Bên B bồi hoàn chi phí công phục dựng thủ công của nghệ nhân theo hóa đơn thực tế, tối đa không vượt quá 15% tiền cọc bảo lãnh.\n' +
-      '6.3. Hư hỏng nặng không thể phục hồi (cháy rách mảng lớn, loang màu hóa chất không tẩy được, hoặc mất mát): Bên B chịu trách nhiệm bồi thường theo giá trị niêm yết xuất kho của tác phẩm sau khi khấu trừ 20% hao mòn tự nhiên.',
+      '6.2. Hai bên thống nhất áp dụng cố định Bảng giá đền bù thiệt hại niêm yết công khai tại Atelier để đối chiếu khi hoàn trả lễ phục, không phụ thuộc ý chí chủ quan của nhân viên:\n' +
+      '   • Nhóm 1 (Hao mòn tự nhiên): 0 VNĐ (Miễn phí trong gói giặt);\n' +
+      '   • Nhóm 2 (Vết bẩn nhẹ - son môi, phấn trang điểm): 250.000 VNĐ;\n' +
+      '   • Nhóm 3 (Sút chỉ / Tuột cúc - đứt chỉ viền, bung cườm): 200.000 VNĐ;\n' +
+      '   • Nhóm 4 (Vết bẩn cứng đầu - rượu vang, dầu mỡ sậm màu): 500.000 VNĐ;\n' +
+      '   • Nhóm 5 (Rách gấu ren nhỏ < 5cm do giẫm gót): 500.000 VNĐ;\n' +
+      '   • Nhóm 6 (Hỏng khóa lưng - zipper): 300.000 VNĐ;\n' +
+      '   • Nhóm 7 (Rách tùng voan lớn > 10cm, rách vải chính): 1.500.000 VNĐ;\n' +
+      '   • Nhóm 8 (Mất phụ kiện đi kèm): 500.000 VNĐ / món;\n' +
+      '   • Nhóm 9 (Hỏng hoàn toàn - cháy vải do tàn thuốc/nến, rách nát toàn bộ): Tịch thu 100% tiền cọc bảo lãnh.\n' +
+      '6.3. Chi phí phục chế đền bù (nếu có) được khấu trừ trực tiếp vào quỹ cọc bảo lãnh. Số tiền cọc còn lại được Bên A hoàn trả đầy đủ vào STK ngân hàng của Bên B.',
   },
   {
     id: 7,

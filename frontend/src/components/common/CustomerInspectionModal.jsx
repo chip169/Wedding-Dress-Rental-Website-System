@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { message, Modal } from 'antd';
-import { CheckCircle2, AlertTriangle, Camera, ShieldCheck, Clock, X, Send, MessageSquare, Building2, CreditCard, ArrowLeft, Crown } from 'lucide-react';
+import { CheckCircle2, AlertTriangle, Camera, ShieldCheck, Clock, X, Send, MessageSquare, Building2, CreditCard, ArrowLeft, Crown, FileSpreadsheet, Lock } from 'lucide-react';
 import { formatVnd } from '../../services/orderService';
 import { getReturnInspection, approveReturnInspection, disputeReturnInspection } from '../../services/customerOrderService';
+import { DAMAGE_PRICE_CATALOG, getDamageCatalogItem } from '../../data/damagePriceCatalog';
 
 const POPULAR_BANKS = [
   'Vietcombank (VCB)',
@@ -27,6 +28,7 @@ const POPULAR_BANKS = [
  * Modal Biên Bản Kiểm Định và Quyết Toán Hoàn Cọc (Khách Hàng)
  */
 export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
+  const [showPriceCatalog, setShowPriceCatalog] = useState(false);
   const [inspection, setInspection] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -153,18 +155,25 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
   };
 
   const getConditionLabel = (cond) => {
-    switch (cond) {
-      case 'good':
-        return { label: 'Tốt (100% nguyên vẹn)', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
-      case 'minor_stain':
-        return { label: 'Vết bẩn nhỏ', color: 'text-amber-700 bg-amber-50 border-amber-200' };
-      case 'heavy_damage':
-        return { label: 'Hư hỏng nặng', color: 'text-rose-700 bg-rose-50 border-rose-200' };
-      case 'torn_lace':
-        return { label: 'Rách ren / đính kết', color: 'text-rose-700 bg-rose-50 border-rose-200' };
-      default:
-        return { label: 'Đạt chuẩn', color: 'text-emerald-700 bg-emerald-50 border-emerald-200' };
+    const cat = getDamageCatalogItem(cond);
+    if (cat.id === 'normal_wear' || cat.id === 'good') {
+      return {
+        label: '1. Hao mòn tự nhiên (Miễn phí)',
+        color: 'text-emerald-700 bg-emerald-50 border-emerald-200',
+        name: cat.name,
+        desc: cat.description,
+        feeLabel: cat.feeLabel,
+      };
     }
+    return {
+      label: cat.name,
+      color: cat.isAdminOnly
+        ? 'text-rose-700 bg-rose-50 border-rose-200'
+        : 'text-amber-800 bg-amber-50 border-amber-200',
+      name: cat.name,
+      desc: cat.description,
+      feeLabel: cat.feeLabel,
+    };
   };
 
   if (loading) return <Modal open title="Biên bản kiểm định" onCancel={onClose} footer={null}><p role="status">Đang tải biên bản kiểm định...</p></Modal>;
@@ -199,14 +208,25 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
               </p>
             </div>
           </div>
-          <button
-            type="button"
-            onClick={handleRequestClose}
-            className="w-7 h-7 rounded-full bg-[#FAF2EE] text-[#7A6B6C] hover:text-[#5F2B36] flex items-center justify-center transition-colors cursor-pointer border-0"
-            title="Đóng tạm thời"
-          >
-            <X size={15} />
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setShowPriceCatalog(true)}
+              className="px-2.5 py-1 rounded-xl bg-white border border-[#E0D0CA] text-[#733F49] hover:bg-[#FAF0EC] text-[11px] font-bold flex items-center gap-1.5 cursor-pointer shadow-2xs transition-colors"
+              title="Xem bảng giá niêm yết đền bù thiệt hại"
+            >
+              <FileSpreadsheet size={13} className="text-[#B8737D]" />
+              <span className="hidden sm:inline">Bảng Giá Niêm Yết</span>
+            </button>
+            <button
+              type="button"
+              onClick={handleRequestClose}
+              className="w-7 h-7 rounded-full bg-[#FAF2EE] text-[#7A6B6C] hover:text-[#5F2B36] flex items-center justify-center transition-colors cursor-pointer border-0"
+              title="Đóng tạm thời"
+            >
+              <X size={15} />
+            </button>
+          </div>
         </div>
 
         {/* Nội dung Modal */}
@@ -479,8 +499,8 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
                         <span className="font-semibold text-[#2C2523]">{formatVnd(initialDeposit)}</span>
                       </div>
                       {lateDays > 0 && (
-                        <div className="flex justify-between text-[#92400E]">
-                          <span>Phí trễ hạn ({lateDays} ngày):</span>
+                        <div className={`flex justify-between ${lateDays > 5 ? 'text-rose-700 font-bold' : 'text-[#92400E]'}`}>
+                          <span>Phí trễ hạn ({lateDays} ngày{lateDays > 5 ? ' - Quá 5 ngày: Tịch thu cọc' : ' - 50%/ngày'}):</span>
                           <span className="font-semibold">-{formatVnd(lateFee)}</span>
                         </div>
                       )}
@@ -578,6 +598,81 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
           )}
         </div>
       </div>
+
+      {/* Modal Bảng Giá Niêm Yết Đền Bù Thiệt Hại */}
+      {showPriceCatalog && (
+        <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-5 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="bg-white rounded-3xl max-w-3xl w-full max-h-[90vh] flex flex-col shadow-2xl border border-[#EFE5E1] overflow-hidden">
+            <div className="flex items-center justify-between px-5 py-4 border-b border-[#F0E6E2] bg-gradient-to-r from-[#FFF8F6] via-[#FCF4F0] to-[#FFF8F6]">
+              <div className="flex items-center gap-2.5">
+                <div className="w-8 h-8 rounded-xl bg-[#FAF0EC] flex items-center justify-center text-[#733F49] border border-[#ECD9D3]">
+                  <FileSpreadsheet size={16} />
+                </div>
+                <div>
+                  <h3 className="font-playfair text-[16px] font-bold text-[#5F2B36] m-0">
+                    Bảng Giá Đền Bù Thiệt Hại Niêm Yết
+                  </h3>
+                  <p className="text-[10.5px] text-[#8C7D7E] m-0">
+                    Quy chuẩn Atelier Haute Couture minh bạch • Áp dụng thống nhất
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setShowPriceCatalog(false)}
+                className="w-8 h-8 rounded-full bg-white text-[#7A6B6C] hover:text-[#733F49] flex items-center justify-center border border-[#EFE5E1] cursor-pointer"
+              >
+                <X size={15} />
+              </button>
+            </div>
+            <div className="p-4 sm:p-5 overflow-y-auto">
+              <div className="overflow-x-auto rounded-2xl border border-[#EFE5E1]">
+                <table className="w-full text-left text-xs border-collapse">
+                  <thead>
+                    <tr className="bg-[#FAF5F2] text-[#5F2B36] border-b border-[#EFE5E1] text-[11.5px] font-bold">
+                      <th className="py-2.5 px-3 whitespace-nowrap">Nhóm Lỗi Hư Hại</th>
+                      <th className="py-2.5 px-3">Hiện Trạng Thực Tế</th>
+                      <th className="py-2.5 px-3 whitespace-nowrap">Mức Phí Đền Bù Niêm Yết</th>
+                      <th className="py-2.5 px-3 whitespace-nowrap">Thẩm Quyền Xử Lý</th>
+                    </tr>
+                  </thead>
+                  <tbody className="divide-y divide-[#F2E5E0] text-[11.5px]">
+                    {DAMAGE_PRICE_CATALOG.map((row) => (
+                      <tr key={row.id} className="hover:bg-[#FFF9F6]">
+                        <td className="py-2.5 px-3 font-bold text-[#2C2523] whitespace-nowrap">{row.name}</td>
+                        <td className="py-2.5 px-3 text-[#5C4D4D]">{row.description}</td>
+                        <td className="py-2.5 px-3 font-bold whitespace-nowrap" style={{ color: row.color }}>{row.feeLabel}</td>
+                        <td className="py-2.5 px-3 whitespace-nowrap">
+                          <span className={`inline-flex items-center px-2 py-0.5 rounded text-[10px] font-bold border ${
+                            row.authority === 'admin_only'
+                              ? 'bg-rose-100 text-rose-800 border-rose-300'
+                              : row.authority === 'admin'
+                              ? 'bg-red-50 text-red-700 border-red-200'
+                              : row.authority === 'both'
+                              ? 'bg-purple-50 text-purple-700 border-purple-200'
+                              : 'bg-emerald-50 text-emerald-700 border-emerald-200'
+                          }`}>
+                            {row.authorityLabel}
+                          </span>
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+            <div className="px-5 py-3 border-t border-[#F0E6E2] bg-[#FAF5F2] flex justify-end">
+              <button
+                type="button"
+                onClick={() => setShowPriceCatalog(false)}
+                className="px-4 py-1.5 rounded-xl bg-[#733F49] text-white text-xs font-bold hover:bg-[#5C3038] cursor-pointer"
+              >
+                Đã Hiểu & Đóng
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

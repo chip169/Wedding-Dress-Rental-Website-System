@@ -1,5 +1,19 @@
 import mongoose from 'mongoose';
 
+const contractItemSchema = new mongoose.Schema({
+  dressId: {
+    type: mongoose.Schema.Types.Mixed,
+    default: null,
+  },
+  name: { type: String, default: '' },
+  code: { type: String, default: '' },
+  size: { type: String, default: '' },
+  color: { type: String, default: 'Trắng Sữa' },
+  rentPrice: { type: Number, default: 0 },
+  depositAmount: { type: Number, default: 0 },
+  image: { type: String, default: '' },
+});
+
 const contractSchema = new mongoose.Schema(
   {
     contractCode: {
@@ -42,13 +56,16 @@ const contractSchema = new mongoose.Schema(
       default: '',
       trim: true, // Số Căn cước công dân gắn chip để xác thực pháp lý
     },
+    // Danh sách toàn bộ các lễ phục thuê trong hợp đồng
+    items: [contractItemSchema],
+    // Váy chính / tương thích ngược
     dressInfo: {
       dressId: {
-        type: mongoose.Schema.Types.ObjectId,
-        ref: 'Dress',
+        type: mongoose.Schema.Types.Mixed,
+        default: null,
       },
-      name: { type: String, required: true },
-      code: { type: String, required: true },
+      name: { type: String, default: 'Váy Cưới Haute Couture' },
+      code: { type: String, default: '' },
       size: { type: String, default: '' },
       image: { type: String, default: '' },
     },
@@ -81,7 +98,7 @@ const contractSchema = new mongoose.Schema(
     },
     status: {
       type: String,
-      enum: ['pending_signature', 'active', 'completed', 'disputed', 'cancelled'],
+      enum: ['pending_signature', 'active', 'waiting_refund', 'completed', 'disputed', 'cancelled'],
       default: 'pending_signature',
       index: true,
     },
@@ -103,6 +120,10 @@ const contractSchema = new mongoose.Schema(
       default: 'Gói 3 Ngày Tiêu Chuẩn',
     },
     note: {
+      type: String,
+      default: '',
+    },
+    contractSignature: {
       type: String,
       default: '',
     },
