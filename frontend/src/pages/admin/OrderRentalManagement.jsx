@@ -811,13 +811,13 @@ function InspectionModal({ order, onClose, onSuccess }) {
                   : isCustomerApproved
                     ? 'Biên Bản Giám Định Lễ Phục (Khách Đã Duyệt)'
                     : isReturnedOrder
-                      ? 'Biên Bản Giám Định Lễ Phục (Đã Hoàn Tất Kiểm Tra - Chờ Hoàn Cọc)'
+                      ? 'Biên Bản Giám Định Lễ Phục '
                       : 'Biên Bản Giám Định Hiện Trạng & Quyết Toán Cọc'}
               </h3>
               <p className="text-[11px] text-[#8C7D7E] m-0 flex items-center gap-1.5 mt-0.5">
-                <span>Mã hồ sơ: <strong className="font-mono text-[#5F2B36]">#{order.orderCode}</strong></span>
-                <span>•</span>
-                <span>Atelier UniBridal Standard</span>
+                <span>Mã đơn: <strong className="font-mono text-[#5F2B36]">#{order.orderCode}</strong></span>
+
+
               </p>
             </div>
           </div>
@@ -875,28 +875,6 @@ function InspectionModal({ order, onClose, onSuccess }) {
                   {refundBankDetails.notes && <div>• Ghi chú: <em>{refundBankDetails.notes}</em></div>}
                 </div>
               )}
-            </div>
-          )}
-
-          {customerStatus === 'pending' && isReturnedOrder && (
-            <div className="p-2.5 px-3 rounded-2xl bg-amber-50 border border-amber-200 text-[11.5px] text-amber-800 flex items-center justify-between flex-wrap gap-2">
-              <div className="flex items-center gap-1.5">
-                <Clock size={14} className="text-amber-600 shrink-0" />
-                <span>
-                  <strong>Đang chờ xác nhận từ khách:</strong> {isGuestOrder ? 'Khách trải nghiệm tại Showroom.' : 'Khách xác nhận trực tuyến hệ thống sẽ đối soát hoàn cọc ngay.'}
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => {
-                  setIsEditing(true);
-                  setCustomerDecision('agreed');
-                }}
-                className="px-3 py-1 rounded-lg bg-[#1E8347] text-white font-bold text-[11px] cursor-pointer hover:bg-[#166534] transition-colors border-0 flex items-center gap-1 shrink-0 shadow-2xs"
-              >
-                <CheckCircle2 size={13} />
-                <span>Xác nhận tại quầy ngay</span>
-              </button>
             </div>
           )}
 
@@ -971,7 +949,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
                       )}
                     </div>
                     <span className="text-[11px] text-[#8C7D7E]">
-                      Giá trị bảo lãnh: <strong className="text-[#5F2B36]">{fmtVnd(maxLimit)}</strong>
+                      Tiền cọc: <strong className="text-[#5F2B36]">{fmtVnd(maxLimit)}</strong>
                     </span>
                   </div>
 
