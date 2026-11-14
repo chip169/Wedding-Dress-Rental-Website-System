@@ -467,34 +467,34 @@ export async function sendDepositSuccessEmail({
   const html = `
     <div style="font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; max-width: 620px; margin: 0 auto; background: #FAF5F3; border: 1px solid #EEDECF; border-radius: 16px; overflow: hidden; color: #2C2523;">
       <!-- Header thương hiệu cao cấp -->
-      <div style="background: linear-gradient(135deg, #733F49 0%, #4D262F 100%); padding: 36px 24px 28px 24px; text-align: center; color: #FFFFFF;">
-        <div style="display: inline-block; padding: 4px 14px; border-radius: 20px; background: rgba(212, 175, 55, 0.2); border: 1px solid #D4AF37; color: #D4AF37; font-size: 10px; font-weight: 700; letter-spacing: 2.5px; text-transform: uppercase; margin-bottom: 10px;">
+      <div style="background: linear-gradient(135deg, #733F49 0%, #4D262F 100%); padding: 32px 24px 24px 24px; text-align: center; color: #FFFFFF;">
+        <div style="display: inline-block; padding: 4px 14px; border-radius: 20px; background: rgba(212, 175, 55, 0.2); border: 1px solid #D4AF37; color: #D4AF37; font-size: 10px; font-weight: 700; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 8px;">
           ✦ HAUTE COUTURE BRIDAL ATELIER ✦
         </div>
-        <h1 style="font-family: 'Times New Roman', Times, serif; font-size: 28px; margin: 0; letter-spacing: 2px; color: #FFFFFF;">UNIBRIDAL</h1>
-        <p style="font-size: 12px; letter-spacing: 3px; color: #F0D5CD; margin-top: 6px; text-transform: uppercase;">Xác Nhận Chuyển Khoản Đặt Cọc 100% Thành Công</p>
+        <h1 style="font-family: 'Times New Roman', Times, serif; font-size: 26px; margin: 0; letter-spacing: 2px; color: #FFFFFF;">UNIBRIDAL</h1>
+        <p style="font-size: 13px; letter-spacing: 2.5px; color: #F0D5CD; margin-top: 6px; text-transform: uppercase; font-weight: 600;">Đặt Cọc Thành Công</p>
       </div>
 
-      <div style="padding: 32px 28px; background: #FFFFFF;">
-        <!-- Banner lời chúc mừng -->
-        <div style="background: #FFF5F2; border: 1px solid #F5DED7; border-radius: 12px; padding: 18px 20px; text-align: center; margin-bottom: 24px;">
+      <div style="padding: 28px 24px; background: #FFFFFF;">
+        <!-- Tiêu đề 2 -->
+        <div style="background: #FFF5F2; border: 1px solid #F5DED7; border-radius: 12px; padding: 16px 20px; text-align: center; margin-bottom: 20px;">
           <h2 style="font-family: 'Times New Roman', Times, serif; font-size: 20px; color: #733F49; margin: 0 0 6px 0;">
-            Chúc Mừng Nàng Đã Khóa Lịch & Chuyển Khoản Cọc 100% Thành Công!
+            Đặt Cọc Thành Công!
           </h2>
-          <p style="font-size: 13.5px; color: #514344; margin: 0; line-height: 1.6;">
-            Mã đơn hàng: <strong style="color: #733F49; font-size: 15px;">#${orderCode}</strong>
+          <p style="font-size: 13.5px; color: #514344; margin: 0;">
+            Mã đơn hàng: <strong style="color: #733F49; font-size: 14.5px;">#${orderCode}</strong>
           </p>
         </div>
 
-        <p style="font-size: 14px; line-height: 1.7; color: #514344;">
+        <p style="font-size: 13.5px; line-height: 1.6; color: #514344; margin: 0 0 18px 0;">
           Kính chào <strong>${fullName}</strong>,<br>
-          UniBridal xin chân thành cảm ơn nàng đã tin tưởng trao gửi niềm tin cho chúng tôi trong ngày trọng đại nhất cuộc đời. Giao dịch đặt cọc bảo lãnh của nàng đã được hệ thống ghi nhận thành công và thiết kế cưới độc bản đã chính thức được khóa kín lịch theo yêu cầu.
+          UniBridal xin thông báo giao dịch đặt cọc cho đơn hàng <strong>#${orderCode}</strong> đã thành công. Thiết kế lễ phục cưới của bạn đã được hệ thống ghi nhận và giữ lịch độc quyền.
         </p>
 
         <!-- Lịch trình ngày cưới và thời gian bàn giao -->
-        <div style="background: #FAF5F3; border-radius: 12px; border: 1px solid #EEDECF; padding: 18px 20px; margin: 22px 0;">
-          <div style="font-size: 11px; font-weight: 700; color: #733F49; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 12px;">
-            📅 LỊCH TRÌNH THUÊ VÁY CƯỚI CỦA NÀNG
+        <div style="background: #FAF5F3; border-radius: 12px; border: 1px solid #EEDECF; padding: 16px 18px; margin: 18px 0;">
+          <div style="font-size: 11px; font-weight: 700; color: #733F49; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 10px;">
+            📅 LỊCH TRÌNH THUÊ TRANG PHỤC CƯỚI
           </div>
           <table style="width: 100%; border-collapse: collapse; font-size: 13px;">
             <tr>
@@ -507,11 +507,11 @@ export async function sendDepositSuccessEmail({
               <td style="padding: 5px 0; text-align: right; font-weight: 700; color: #733F49;">${formatDate(weddingDate)}</td>
             </tr>` : ''}
             <tr>
-              <td style="padding: 5px 0; color: #7A6B6C;">• Hạn trả váy (trước 20:00):</td>
+              <td style="padding: 5px 0; color: #7A6B6C;">• Hạn trả váy:</td>
               <td style="padding: 5px 0; text-align: right; font-weight: 700; color: #B45309;">${formatDate(rentalEndDate)}</td>
             </tr>
             <tr>
-              <td style="padding: 5px 0; color: #7A6B6C;">• Tổng số ngày phục vụ:</td>
+              <td style="padding: 5px 0; color: #7A6B6C;">• Tổng thời gian thuê:</td>
               <td style="padding: 5px 0; text-align: right; font-weight: 700; color: #2C2523;">${rentalDays} ngày</td>
             </tr>
             <tr>
@@ -522,7 +522,7 @@ export async function sendDepositSuccessEmail({
         </div>
 
         <!-- Bảng danh sách lễ phục đã giữ lịch -->
-        <div style="margin: 24px 0;">
+        <div style="margin: 20px 0;">
           <div style="font-size: 11px; font-weight: 700; color: #733F49; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 8px;">
             👗 CHI TIẾT THIẾT KẾ ĐÃ ĐẶT THUÊ
           </div>
@@ -534,41 +534,41 @@ export async function sendDepositSuccessEmail({
         </div>
 
         <!-- Bảng thanh toán và Cọc bảo lãnh -->
-        <div style="background: #FAF5F3; border: 1.5px solid #EEDECF; border-radius: 12px; padding: 20px; margin: 24px 0;">
+        <div style="background: #FAF5F3; border: 1.5px solid #EEDECF; border-radius: 12px; padding: 18px; margin: 20px 0;">
           <table style="width: 100%; border-collapse: collapse; font-size: 13.5px;">
             <tr>
-              <td style="padding: 6px 0; color: #7A6B6C;">Tổng tiền thuê lễ phục:</td>
-              <td style="padding: 6px 0; text-align: right; font-weight: 600; color: #2C2523;">${formatMoney(totalRentPrice)}</td>
+              <td style="padding: 5px 0; color: #7A6B6C;">Tổng tiền thuê lễ phục:</td>
+              <td style="padding: 5px 0; text-align: right; font-weight: 600; color: #2C2523;">${formatMoney(totalRentPrice)}</td>
             </tr>
             <tr>
-              <td style="padding: 6px 0; color: #7A6B6C;">Tiền cọc bảo lãnh (Hoàn 100% khi trả):</td>
-              <td style="padding: 6px 0; text-align: right; font-weight: 600; color: #733F49;">${formatMoney(totalDeposit)}</td>
+              <td style="padding: 5px 0; color: #7A6B6C;">Tiền cọc bảo lãnh (Hoàn lại khi trả váy):</td>
+              <td style="padding: 5px 0; text-align: right; font-weight: 600; color: #733F49;">${formatMoney(totalDeposit)}</td>
             </tr>
             <tr style="border-top: 1.5px solid #EEDECF;">
-              <td style="padding: 12px 0 4px 0; font-weight: bold; color: #166534; font-size: 14.5px;">Số tiền chuyển khoản cọc (100%):</td>
-              <td style="padding: 12px 0 4px 0; text-align: right; font-weight: 800; color: #166534; font-size: 18px;">${formatMoney(depositPaidAmount || (totalRentPrice + totalDeposit))}</td>
+              <td style="padding: 10px 0 4px 0; font-weight: bold; color: #166534; font-size: 14px;">Số tiền đã cọc:</td>
+              <td style="padding: 10px 0 4px 0; text-align: right; font-weight: 800; color: #166534; font-size: 17px;">${formatMoney(depositPaidAmount || (totalRentPrice + totalDeposit))}</td>
             </tr>
             <tr>
-              <td style="padding: 4px 0; color: #166534; font-size: 12px; font-weight: 600;">Trạng thái thanh toán:</td>
-              <td style="padding: 4px 0; text-align: right; font-weight: 700; color: #166534; font-size: 12.5px;">✓ Đã thanh toán 100% qua Chuyển Khoản</td>
+              <td style="padding: 4px 0; color: #166534; font-size: 12px; font-weight: 600;">Trạng thái:</td>
+              <td style="padding: 4px 0; text-align: right; font-weight: 700; color: #166534; font-size: 12.5px;">✓ Đặt cọc thành công</td>
             </tr>
           </table>
         </div>
 
-        <!-- Đặc quyền và Lời nhắc nhở -->
-        <div style="background: #F0FDF4; border-left: 4px solid #16A34A; padding: 14px 16px; border-radius: 0 10px 10px 0; margin: 22px 0;">
-          <div style="font-weight: 700; color: #166534; font-size: 13px; margin-bottom: 4px;">✦ ĐẶC QUYỀN HỖ TRỢ MIỄN PHÍ DÀNH CHO NÀNG:</div>
-          <p style="font-size: 12.5px; line-height: 1.6; color: #14532D; margin: 0;">
-            1. Váy được giặt hấp sấy chuyên sâu tiệt trùng và ủi phẳng phom dáng trước 24 giờ nhận.<br>
-            2. Miễn phí chỉnh sửa bóp/nới eo theo số đo mới nhất của cô dâu trước ngày cưới.<br>
-            3. Đóng gói bảo quản bằng Vali và Túi chống bụi cao cấp chuyên dụng cho cô dâu.
+        <!-- Lời nhắc nhở ngắn gọn -->
+        <div style="background: #F0FDF4; border-left: 4px solid #16A34A; padding: 12px 14px; border-radius: 0 8px 8px 0; margin: 18px 0;">
+          <div style="font-weight: 700; color: #166534; font-size: 12.5px; margin-bottom: 3px;">✦ LƯU Ý DÀNH CHO BẠN:</div>
+          <p style="font-size: 12px; line-height: 1.6; color: #14532D; margin: 0;">
+            • Váy cưới sẽ được giặt sấy cao cấp và bảo quản bằng vali chuyên dụng trước ngày nhận.<br>
+            • Hỗ trợ may đo căn chỉnh eo miễn phí theo số đo của cô dâu trước ngày cưới.<br>
+            • Quý khách vui lòng mang theo CCCD/VNeID khi nhận váy tại Showroom.
           </p>
         </div>
 
         <!-- Nút CTA xem hợp đồng điện tử -->
-        <div style="text-align: center; margin: 34px 0 20px 0;">
-          <a href="${orderDetailUrl}" style="display: inline-block; background: linear-gradient(135deg, #733F49 0%, #54222B 100%); color: #FFFFFF; text-decoration: none; padding: 14px 36px; border-radius: 50px; font-weight: 700; font-size: 14px; box-shadow: 0 6px 18px rgba(115, 63, 73, 0.28); letter-spacing: 0.5px;">
-            ✦ Xem Hợp Đồng Số và Chi Tiết Đơn Hàng
+        <div style="text-align: center; margin: 28px 0 16px 0;">
+          <a href="${orderDetailUrl}" style="display: inline-block; background: linear-gradient(135deg, #733F49 0%, #54222B 100%); color: #FFFFFF; text-decoration: none; padding: 12px 32px; border-radius: 50px; font-weight: 700; font-size: 13.5px; box-shadow: 0 4px 14px rgba(115, 63, 73, 0.25); letter-spacing: 0.5px;">
+            ✦ Xem Chi Tiết Đơn Hàng & Hợp Đồng
           </a>
         </div>
       </div>
@@ -588,7 +588,7 @@ export async function sendDepositSuccessEmail({
       const info = await transporter.sendMail({
         from: `"${senderName}" <${process.env.EMAIL_USER}>`,
         to,
-        subject: `[UniBridal] Xác nhận chuyển khoản cọc 100% thành công - Đơn hàng #${orderCode}`,
+        subject: `[UniBridal] Xác nhận đặt cọc thành công - Đơn hàng #${orderCode}`,
         html,
       });
       console.log(`[EMAIL DEPOSIT SUCCESS] Đã gửi xác nhận cọc đơn #${orderCode} tới ${to}! MessageId: ${info.messageId}`);

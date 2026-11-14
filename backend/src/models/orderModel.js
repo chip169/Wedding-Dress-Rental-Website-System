@@ -120,6 +120,10 @@ const orderSchema = new mongoose.Schema(
       type: Number,
       default: 0,
     },
+    depositEmailSent: {
+      type: Boolean,
+      default: false,
+    },
     shippingFee: {
       type: Number,
       default: 0,

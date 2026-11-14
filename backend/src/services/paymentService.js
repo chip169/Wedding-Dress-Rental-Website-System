@@ -68,36 +68,43 @@ export const simulateVietQRPayment = async (data = {}) => {
   });
   await payment.save();
 
-  // Cập nhật trạng thái đơn hàng sang deposit_paid (đã chuyển khoản cọc 100%)
+  // Cập nhật trạng thái đơn hàng sang deposit_paid (đã chuyển khoản cọc)
   order.status = 'deposit_paid';
   order.depositPaidAmount = order.totalPayment || payment.amount;
-  await order.save();
 
-  // Tự động kích hoạt gửi email thông báo chuyển khoản cọc 100% thành công
-  try {
-    const targetEmail = order.customerEmail || order.email;
-    if (targetEmail) {
-      const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-      sendDepositSuccessEmail({
-        to: targetEmail,
-        fullName: order.customerName || senderName || 'Quý cô dâu',
-        orderCode: order.orderCode,
-        contractCode: order.contractCode,
-        items: order.items,
-        rentalStartDate: order.rentalStartDate,
-        rentalEndDate: order.rentalEndDate,
-        rentalDays: order.rentalDays,
-        totalRentPrice: order.totalRentPrice,
-        totalDeposit: order.totalDeposit,
-        depositPaidAmount: order.depositPaidAmount,
-        remainingAmount: 0,
-        deliveryMethod: order.deliveryMethod,
-        shippingAddress: order.shippingAddress,
-        orderDetailUrl: `${clientUrl}/profile/orders`,
-      }).catch((err) => console.error('[EMAIL VIETQR DEPOSIT SEND ERROR]', err.message));
+  // Kiểm tra nếu chưa từng gửi email đặt cọc thành công thì mới gửi (chống trùng lặp email)
+  if (!order.depositEmailSent) {
+    order.depositEmailSent = true;
+    await order.save();
+
+    try {
+      const targetEmail = order.customerEmail || order.email;
+      if (targetEmail) {
+        const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+        sendDepositSuccessEmail({
+          to: targetEmail,
+          fullName: order.customerName || senderName || 'Quý khách',
+          orderCode: order.orderCode,
+          contractCode: order.contractCode,
+          items: order.items,
+          rentalStartDate: order.rentalStartDate,
+          rentalEndDate: order.rentalEndDate,
+          rentalDays: order.rentalDays,
+          totalRentPrice: order.totalRentPrice,
+          totalDeposit: order.totalDeposit,
+          depositPaidAmount: order.depositPaidAmount,
+          remainingAmount: 0,
+          deliveryMethod: order.deliveryMethod,
+          shippingAddress: order.shippingAddress,
+          orderDetailUrl: `${clientUrl}/profile/orders`,
+        }).catch((err) => console.error('[EMAIL VIETQR DEPOSIT SEND ERROR]', err.message));
+      }
+    } catch (err) {
+      console.error('[SIMULATE PAYMENT EMAIL ERROR]', err.message);
     }
-  } catch (err) {
-    console.error('[SIMULATE PAYMENT EMAIL ERROR]', err.message);
+  } else {
+    await order.save();
+    console.log(`[PAYMENT SIMULATION] Đơn hàng #${order.orderCode} đã gửi email đặt cọc trước đó, bỏ qua gửi lặp.`);
   }
 
   return {

@@ -288,10 +288,13 @@ export const createOrder = async (orderData, currentUser = null) => {
     console.error('[AUTO CREATE CONTRACT ERROR]:', contractErr.message);
   }
 
-  // Tự động gửi email xác nhận đặt cọc thành công
+  // Tự động gửi email xác nhận đặt cọc thành công (chỉ gửi 1 lần duy nhất)
   try {
     const targetEmail = newOrder.customerEmail || currentUser?.email;
-    if (targetEmail) {
+    if (targetEmail && newOrder.status === 'deposit_paid' && !newOrder.depositEmailSent) {
+      newOrder.depositEmailSent = true;
+      await newOrder.save();
+
       const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
       sendDepositSuccessEmail({
         to: targetEmail,
@@ -305,7 +308,7 @@ export const createOrder = async (orderData, currentUser = null) => {
         rentalDays: newOrder.rentalDays,
         totalRentPrice: newOrder.totalRentPrice,
         totalDeposit: newOrder.totalDeposit,
-        depositPaidAmount: newOrder.totalPayment,
+        depositPaidAmount: newOrder.depositPaidAmount || newOrder.totalPayment,
         remainingAmount: 0,
         deliveryMethod: newOrder.deliveryMethod,
         shippingAddress: newOrder.shippingAddress,
