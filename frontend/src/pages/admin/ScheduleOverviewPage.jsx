@@ -277,11 +277,12 @@ function CalendarDateCellEvents({
       <div
         ref={scrollRef}
         onScroll={checkScroll}
-        className={`space-y-1 mt-0.5 px-0.5 ${
+        className={`space-y-1 mt-0.5 px-0.5 w-full ${
           isScrollable
-            ? 'max-h-[76px] overflow-y-auto custom-mini-scrollbar pr-0.5'
+            ? 'max-h-[68px] overflow-y-auto no-scrollbar scroll-smooth'
             : 'overflow-hidden'
         }`}
+        style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
       >
         {items.map((item, idx) => {
           if (item.eventCategory === 'apt') {
@@ -312,11 +313,11 @@ function CalendarDateCellEvents({
                     e.stopPropagation();
                     onSelectEvent?.(item);
                   }}
-                  className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[10.5px] font-medium border shadow-2xs transition-all hover:scale-[1.01] cursor-pointer ${badgeBg}`}
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-semibold border shadow-2xs transition-all hover:scale-[1.01] cursor-pointer w-full max-w-full overflow-hidden ${badgeBg}`}
                 >
                   <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotBg}`} />
-                  <span className="font-mono text-[9.5px] font-bold text-gray-900 shrink-0">
-                    {startTime}
+                  <span className="font-sans text-[8.5px] font-bold text-gray-900 truncate tracking-tight min-w-0 flex-1">
+                    {startTime} {displayName ? `• ${displayName}` : ''}
                   </span>
                 </div>
               </Tooltip>
@@ -376,14 +377,14 @@ function CalendarDateCellEvents({
                     e.stopPropagation();
                     onSelectOrderHighlight?.(item);
                   }}
-                  className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10.5px] font-medium border shadow-2xs transition-all cursor-pointer ${
+                  className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-semibold border shadow-2xs transition-all cursor-pointer w-full max-w-full overflow-hidden ${
                     isHighlight
                       ? isDone
                         ? 'bg-emerald-600 text-white border-emerald-500 font-bold shadow-xs'
                         : isFutureOrToday
                         ? 'bg-amber-600 text-white border-amber-500 font-bold shadow-xs'
                         : 'bg-rose-600 text-white border-rose-500 font-bold shadow-xs'
-                      : `${deliveryBadgeBg} hover:scale-[1.02]`
+                      : `${deliveryBadgeBg} hover:scale-[1.01]`
                   }`}
                 >
                   <span
@@ -392,8 +393,8 @@ function CalendarDateCellEvents({
                     }`}
                   />
                   <span
-                    className={`font-mono text-[9px] shrink-0 uppercase tracking-tight flex items-center gap-0.5 ${
-                      isHighlight ? 'font-extrabold text-white' : deliveryTextColor
+                    className={`font-sans text-[8.5px] font-bold truncate uppercase tracking-tight min-w-0 flex-1 ${
+                      isHighlight ? 'text-white' : deliveryTextColor
                     }`}
                   >
                     {isExpress ? 'NV SHIP' : 'KHÁCH LẤY'}
@@ -451,14 +452,14 @@ function CalendarDateCellEvents({
                   e.stopPropagation();
                   onSelectOrderHighlight?.(item);
                 }}
-                className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10.5px] font-medium border shadow-2xs transition-all cursor-pointer ${
+                className={`flex items-center gap-1 px-1.5 py-0.5 rounded-md text-[9px] font-semibold border shadow-2xs transition-all cursor-pointer w-full max-w-full overflow-hidden ${
                   isHighlight
                     ? isDone
                       ? 'bg-emerald-600 text-white border-emerald-500 font-bold shadow-xs'
                       : isFutureOrToday
                       ? 'bg-amber-600 text-white border-amber-500 font-bold shadow-xs'
                       : 'bg-rose-600 text-white border-rose-500 font-bold shadow-xs'
-                    : `${returnBadgeBg} hover:scale-[1.02]`
+                    : `${returnBadgeBg} hover:scale-[1.01]`
                 }`}
               >
                 <span
@@ -467,8 +468,8 @@ function CalendarDateCellEvents({
                   }`}
                 />
                 <span
-                  className={`font-mono text-[9px] shrink-0 uppercase tracking-tight flex items-center gap-0.5 ${
-                    isHighlight ? 'font-extrabold text-white' : returnTextColor
+                  className={`font-sans text-[8.5px] font-bold truncate uppercase tracking-tight min-w-0 flex-1 ${
+                    isHighlight ? 'text-white' : returnTextColor
                   }`}
                 >
                   {isExpress ? 'NV LẤY' : 'KHÁCH TRẢ'}
@@ -481,20 +482,21 @@ function CalendarDateCellEvents({
 
       {/* Dấu mũi tên lướt xuống để báo hiệu còn nhiều lịch chưa hiện lên */}
       {isScrollable && (
-        <div className="pt-0.5 mt-0.5">
+        <div className="pt-0.5 mt-0.5 w-full">
           {canScrollDown ? (
             <button
               type="button"
               onClick={(e) => {
                 e.stopPropagation();
                 if (scrollRef.current) {
-                  scrollRef.current.scrollBy({ top: 32, behavior: 'smooth' });
+                  scrollRef.current.scrollBy({ top: 48, behavior: 'smooth' });
                 }
               }}
-              className="w-full h-3.5 bg-[#FFF2EE] hover:bg-[#FDE2D9] text-[#733F49] border border-[#F5CDC3] rounded-md flex items-center justify-center transition-all cursor-pointer select-none group shadow-2xs"
-              title="Còn lịch hẹn khác bên dưới — Bấm hoặc cuộn chuột để xem"
+              className="w-full h-3.5 bg-[#FFF2EE] hover:bg-[#FDE2D9] text-[#733F49] border border-[#F5CDC3] rounded-md flex items-center justify-center gap-1 transition-all cursor-pointer select-none group shadow-2xs"
+              title={`Còn ${total - 3} lịch khác — Bấm để xem`}
             >
-              <ChevronDown size={12} className="stroke-[2.2] text-[#733F49] animate-bounce group-hover:translate-y-0.5 transition-transform" />
+              <span className="text-[8px] font-bold leading-none tracking-tight">+{total - 3}</span>
+              <ChevronDown size={10} className="stroke-[2.5] text-[#733F49] group-hover:translate-y-0.5 transition-transform" />
             </button>
           ) : canScrollUp ? (
             <button
@@ -505,10 +507,11 @@ function CalendarDateCellEvents({
                   scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
                 }
               }}
-              className="w-full h-3.5 bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200 rounded-md flex items-center justify-center transition-all cursor-pointer select-none group shadow-2xs"
-              title="Đã xem hết — Bấm để cuộn lên đầu ô"
+              className="w-full h-3.5 bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200 rounded-md flex items-center justify-center gap-1 transition-all cursor-pointer select-none group shadow-2xs"
+              title="Đã xem hết — Bấm để cuộn lên đầu"
             >
-              <ChevronUp size={12} className="stroke-[2.2] group-hover:-translate-y-0.5 transition-transform" />
+              <span className="text-[8px] font-bold leading-none">Đầu</span>
+              <ChevronUp size={10} className="stroke-[2.5] group-hover:-translate-y-0.5 transition-transform" />
             </button>
           ) : null}
         </div>
@@ -1457,20 +1460,17 @@ export default function ScheduleOverviewPage({ defaultTab }) {
           overflow: visible !important;
           padding: 0 2px 2px 2px !important;
         }
-        /* Custom scrollbar siêu nhỏ cho ô lịch */
+        /* Ẩn hoàn toàn scrollbar xấu xí bên trong ô ngày để không bị cắt chữ hoặc đè lên thẻ */
+        .no-scrollbar::-webkit-scrollbar,
         .custom-mini-scrollbar::-webkit-scrollbar {
-          width: 3.5px;
+          display: none !important;
+          width: 0 !important;
+          height: 0 !important;
         }
-        .custom-mini-scrollbar::-webkit-scrollbar-track {
-          background: #FAF3F0;
-          border-radius: 4px;
-        }
-        .custom-mini-scrollbar::-webkit-scrollbar-thumb {
-          background: #D8B7AE;
-          border-radius: 4px;
-        }
-        .custom-mini-scrollbar::-webkit-scrollbar-thumb:hover {
-          background: #733F49;
+        .no-scrollbar,
+        .custom-mini-scrollbar {
+          -ms-overflow-style: none !important;
+          scrollbar-width: none !important;
         }
         /* Ô ĐƯỢC CHỌN (SELECTED CELL): KHÔNG BỊ XÁM ĐEN MÙ MỊT NỮA */
         .unibridal-luxury-calendar .ant-picker-cell-selected .ant-picker-calendar-date {

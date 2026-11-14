@@ -798,60 +798,67 @@ export const submitReturnInspection = async (orderId, data = {}, staffUser) => {
   const currentOrder = inspectionStatus === 'approved' && inspection.finalRefundAmount === 0
     ? await completeReturnedOrder(returnedOrder) : returnedOrder;
 
-  // Tự động gửi email biên bản kiểm định lễ phục tới khách hàng ngay khi hoàn tất kiểm tra
-  try {
-    let customerEmail = order.customerEmail || order.email || data.customerEmail;
-    let customerName = order.customerName || order.brideName || 'Quý khách';
+  // Tự động gửi email biên bản kiểm định lễ phục tới khách hàng ngay khi hoàn tất kiểm tra tại quầy.
+  // QUY TẮC: Khi staff tạm giữ đơn / chuyển Admin thẩm định (disputed hoặc holdForAdmin),
+  // TUYỆT ĐỐI KHÔNG gửi mail cho khách lúc này. Chờ Admin trực tiếp đàm phán và chốt xong biên bản mới gửi mail.
+  const isHeldForAdmin = inspectionStatus === 'disputed' || Boolean(data.holdForAdmin) || inspection.customerStatus === 'disputed';
+  if (!isHeldForAdmin) {
+    try {
+      let customerEmail = order.customerEmail || order.email || data.customerEmail;
+      let customerName = order.customerName || order.brideName || 'Quý khách';
 
-    if (!customerEmail && order.customerId) {
-      const customer = await User.findById(order.customerId).lean();
-      if (customer) {
-        customerEmail = customer.email;
-        customerName = customer.fullName || customerName;
+      if (!customerEmail && order.customerId) {
+        const customer = await User.findById(order.customerId).lean();
+        if (customer) {
+          customerEmail = customer.email;
+          customerName = customer.fullName || customerName;
+        }
       }
-    }
 
-    if (!customerEmail) {
-      const contract = await Contract.findOne({
-        $or: [{ orderId: order._id }, { contractCode: order.contractCode }],
-      }).lean();
-      if (contract?.customerInfo?.email) {
-        customerEmail = contract.customerInfo.email;
-        customerName = contract.customerInfo.fullName || customerName;
+      if (!customerEmail) {
+        const contract = await Contract.findOne({
+          $or: [{ orderId: order._id }, { contractCode: order.contractCode }],
+        }).lean();
+        if (contract?.customerInfo?.email) {
+          customerEmail = contract.customerInfo.email;
+          customerName = contract.customerInfo.fullName || customerName;
+        }
       }
+
+      if (customerEmail) {
+        const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+        const hasAccount = Boolean(order.customerId && String(order.customerId).trim() !== '');
+        const isGuest = !hasAccount;
+
+        const inspectionItems = (inspection.itemsCondition || []).map((it) => ({
+          name: `${it.damageName || 'Váy cưới'} (${it.note || it.condition || 'Hiện trạng'})`,
+          status: it.repairFee > 0 ? `Khấu trừ ${it.repairFee.toLocaleString('vi-VN')} đ` : '✓ Nguyên vẹn',
+          passed: !(it.repairFee > 0),
+        }));
+
+        sendInspectionNotificationEmail({
+          to: customerEmail,
+          fullName: customerName,
+          orderCode: order.orderCode,
+          inspectorName: staffUser?.fullName || 'Chuyên Viên Atelier UniBridal',
+          inspectionDate: inspection.returnedAt,
+          totalDeposit: order.totalDeposit,
+          totalDeduction: inspection.totalDeduction,
+          finalRefundAmount: inspection.finalRefundAmount,
+          inspectionItems,
+          bankDetails: inspection.refundBankDetails,
+          returnUrl: isGuest ? null : `${clientUrl}/profile/orders`,
+          isGuest,
+          customerStatus: inspection.customerStatus,
+        }).catch((err) => console.error('[EMAIL INSPECTION SEND ERROR]', err.message));
+
+        console.log(`[INSPECTION EMAIL SENT] Đã gửi biên bản kiểm định đơn #${order.orderCode} tới email: ${customerEmail}`);
+      }
+    } catch (err) {
+      console.error('[EMAIL NOTIFICATION ERROR]', err.message);
     }
-
-    if (customerEmail) {
-      const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
-      const hasAccount = Boolean(order.customerId && String(order.customerId).trim() !== '');
-      const isGuest = !hasAccount;
-
-      const inspectionItems = (inspection.itemsCondition || []).map((it) => ({
-        name: `${it.damageName || 'Váy cưới'} (${it.note || it.condition || 'Hiện trạng'})`,
-        status: it.repairFee > 0 ? `Khấu trừ ${it.repairFee.toLocaleString('vi-VN')} đ` : '✓ Nguyên vẹn',
-        passed: !(it.repairFee > 0),
-      }));
-
-      sendInspectionNotificationEmail({
-        to: customerEmail,
-        fullName: customerName,
-        orderCode: order.orderCode,
-        inspectorName: staffUser?.fullName || 'Chuyên Viên Atelier UniBridal',
-        inspectionDate: inspection.returnedAt,
-        totalDeposit: order.totalDeposit,
-        totalDeduction: inspection.totalDeduction,
-        finalRefundAmount: inspection.finalRefundAmount,
-        inspectionItems,
-        bankDetails: inspection.refundBankDetails,
-        returnUrl: isGuest ? null : `${clientUrl}/profile/orders`,
-        isGuest,
-        customerStatus: inspection.customerStatus,
-      }).catch((err) => console.error('[EMAIL INSPECTION SEND ERROR]', err.message));
-
-      console.log(`[INSPECTION EMAIL SENT] Đã gửi biên bản kiểm định đơn #${order.orderCode} tới email: ${customerEmail}`);
-    }
-  } catch (err) {
-    console.error('[EMAIL NOTIFICATION ERROR]', err.message);
+  } else {
+    console.log(`[INSPECTION EMAIL SKIPPED] Đơn #${order.orderCode} được tạm giữ chuyển Admin xử lý, chưa gửi email cho khách.`);
   }
 
   const payments = (await getDepositPayments([order._id])).get(String(order._id));

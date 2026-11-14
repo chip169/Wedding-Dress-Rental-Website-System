@@ -21,7 +21,8 @@ import { LayoutDashboard,
   ArrowRight,
   ExternalLink,
   Truck,
-  RotateCcw } from 'lucide-react';
+  RotateCcw,
+  AlertTriangle } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import heroBride from '../../assets/hero_bride.jpg';
 import adminAvatarImg from '../../assets/admin_avatar.jpg';
@@ -195,6 +196,23 @@ export default function AdminLayout({
                 badge: 'LỊCH TRẢ VÁY',
               });
             }
+
+            // D. Đơn khiếu nại / Biên bản tạm giữ chuyển Admin thẩm định
+            const isDisputed = rawSt === 'disputed' || o.inspection?.customerStatus === 'disputed';
+            if (isDisputed) {
+              notifs.push({
+                id: `order-dispute-${orderIdStr}`,
+                type: 'dispute',
+                orderCode: o.orderCode,
+                customerName,
+                dressName,
+                disputeReason: o.inspection?.disputeReason || 'Cần Admin thẩm định đàm phán',
+                time: o.inspection?.disputeCreatedAt || o.updatedAt || o.createdAt || new Date(),
+                url: `${isStaff ? '/staff' : '/admin'}/don-thue?search=${encodeURIComponent(o.orderCode || '')}&action=negotiate`,
+                badge: 'KHIẾU NẠI CẦN XỬ LÝ',
+                isUrgent: true,
+              });
+            }
           });
         } catch (err) {
           console.warn('Orders notification fetch error:', err);
@@ -234,8 +252,12 @@ export default function AdminLayout({
           console.warn('Appointments notification fetch error:', err);
         }
 
-        // Sắp xếp thời gian mới nhất lên đầu
-        notifs.sort((a, b) => new Date(b.time || 0) - new Date(a.time || 0));
+        // Sắp xếp: Ưu tiên đơn khiếu nại lên đầu tiên để xử lý, sau đó theo thời gian mới nhất
+        notifs.sort((a, b) => {
+          if (a.type === 'dispute' && b.type !== 'dispute') return -1;
+          if (b.type === 'dispute' && a.type !== 'dispute') return 1;
+          return new Date(b.time || 0) - new Date(a.time || 0);
+        });
         cachedLiveNotifications = notifs;
         lastLiveNotificationsFetch = Date.now();
         return notifs;
@@ -519,13 +541,18 @@ export default function AdminLayout({
                 <span className="w-48 h-3 bg-[#EFE5E0] rounded inline-block"></span>
               </div>
             ) : liveNotifications.length > 0 && currentNotif ? (
-              <div className="w-full flex items-center justify-between gap-2 bg-gradient-to-r from-[#FFFBF9] via-[#FAF3F0] to-[#FFFBF9] border border-[#F2DFD8] hover:border-[#D6A498] rounded-full py-1.5 px-3.5 shadow-xs transition-all duration-300">
+              <div className={`w-full flex items-center justify-between gap-2 bg-gradient-to-r ${currentNotif.type === 'dispute' ? 'from-[#FFF5F5] via-[#FEF2F2] to-[#FFF5F5] border-red-200 hover:border-red-400' : 'from-[#FFFBF9] via-[#FAF3F0] to-[#FFFBF9] border-[#F2DFD8] hover:border-[#D6A498]'} border rounded-full py-1.5 px-3.5 shadow-xs transition-all duration-300`}>
                 <div
                   onClick={() => handleSelectNotification(currentNotif)}
                   className="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer group"
                   title="Nhấn để xem chi tiết ngay"
                 >
-                  {currentNotif.type === 'deposit' ? (
+                  {currentNotif.type === 'dispute' ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#FEF2F2] text-[#991B1B] border border-[#FECACA] shrink-0 tracking-wider">
+                      <AlertTriangle size={11} className="shrink-0 text-red-600 animate-pulse" />
+                      <span>{currentNotif.badge}</span>
+                    </span>
+                  ) : currentNotif.type === 'deposit' ? (
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#EBF6EE] text-[#1E8347] border border-[#CDEBCE] shrink-0 tracking-wider">
                       <CreditCard size={11} className="shrink-0" />
                       <span>{currentNotif.badge}</span>
@@ -549,7 +576,9 @@ export default function AdminLayout({
 
                   <span className="text-[12.5px] font-medium text-[#4A3B32] truncate group-hover:text-[#733F49] transition-colors">
                     <strong className="font-bold text-[#2C2523]">{currentNotif.customerName}</strong>
-                    {currentNotif.type === 'deposit' ? (
+                    {currentNotif.type === 'dispute' ? (
+                      <> • Cần thẩm định đàm phán • Đơn <span className="font-mono font-bold text-red-700">#{currentNotif.orderCode}</span></>
+                    ) : currentNotif.type === 'deposit' ? (
                       <> • Cọc <span className="font-bold text-[#1E8347]">{formatCurrencyVND(currentNotif.amount)}</span> • Đơn <span className="font-mono font-medium text-[#733F49]">#{currentNotif.orderCode}</span></>
                     ) : currentNotif.type === 'ship' ? (
                       <> • Ship váy hôm nay: <span className="font-semibold text-[#C2410C]">{currentNotif.dressName}</span> • Đơn <span className="font-mono font-medium text-[#733F49]">#{currentNotif.orderCode}</span></>

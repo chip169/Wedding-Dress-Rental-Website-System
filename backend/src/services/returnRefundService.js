@@ -117,8 +117,11 @@ export function refundBankDetails(value, needsRefund) {
 }
 
 export function refundTransactionCode(value) {
-  const reference = String(value ?? '').trim().toUpperCase();
-  if (!reference || reference.length > 100) throw returnError(400, 'Nhập mã giao dịch chuyển khoản để ghi nhận hoàn cọc.');
+  let reference = String(value ?? '').trim().toUpperCase();
+  if (!reference) {
+    reference = `REF-${Date.now().toString().slice(-8)}-${Math.floor(1000 + Math.random() * 9000)}`;
+  }
+  if (reference.length > 100) throw returnError(400, 'Mã giao dịch quá dài.');
   return reference;
 }
 
