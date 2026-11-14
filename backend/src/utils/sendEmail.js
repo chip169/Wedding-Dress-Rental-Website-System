@@ -706,10 +706,6 @@ export async function sendAppointmentSuccessEmail({
               </td>
             </tr>
             <tr>
-              <td style="padding: 7px 0; color: #7A6B6C;">👥 Số người đồng hành:</td>
-              <td style="padding: 7px 0; font-weight: 600; color: #2C2523;">${guestsCount} khách (Cô dâu)</td>
-            </tr>
-            <tr>
               <td style="padding: 7px 0; color: #7A6B6C;">👩‍💼 Stylist phụ trách:</td>
               <td style="padding: 7px 0; font-weight: 600; color: #733F49;">${stylistName} (Hotline hỗ trợ: ${branchPhone})</td>
             </tr>
