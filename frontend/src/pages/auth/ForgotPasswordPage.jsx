@@ -99,29 +99,6 @@ export default function ForgotPasswordPage() {
     return `${name.slice(0, 2)}***${name.slice(-1)}@${domain}`;
   };
 
-  // Password strength logic
-  const getStrength = (pass) => {
-    if (!pass) return { score: 0, text: 'Chưa nhập', color: 'bg-neutral-200', textCol: 'text-neutral-400' };
-    let score = 0;
-    if (pass.length >= 8) score += 1;
-    if (/[A-Z]/.test(pass)) score += 1;
-    if (/[0-9]/.test(pass)) score += 1;
-    if (/[^A-Za-z0-9]/.test(pass)) score += 1;
-
-    switch (score) {
-      case 1:
-        return { score: 1, text: 'Yếu', color: 'bg-amber-400', textCol: 'text-amber-600' };
-      case 2:
-        return { score: 2, text: 'Trung bình', color: 'bg-amber-500', textCol: 'text-amber-600' };
-      case 3:
-        return { score: 3, text: 'Tốt', color: 'bg-[#B8737D]', textCol: 'text-[#B8737D]' };
-      case 4:
-      default:
-        return { score: 4, text: 'Rất an toàn', color: 'bg-emerald-600', textCol: 'text-emerald-600' };
-    }
-  };
-
-  const strength = getStrength(newPassword);
 
   // STEP 1: Handle Send OTP via Gmail
   const handleRequestOtp = async (e) => {
@@ -685,25 +662,7 @@ export default function ForgotPasswordPage() {
                   </div>
                 </div>
 
-                {/* Password Strength Meter */}
-                <div className="space-y-1.5 pt-1">
-                  <div className="flex gap-1.5 h-1.5 w-full">
-                    {[1, 2, 3, 4].map((bar) => (
-                      <div
-                        key={bar}
-                        className={`flex-1 rounded-full transition-all duration-300 ${
-                          bar <= strength.score ? strength.color : 'bg-neutral-200'
-                        }`}
-                      />
-                    ))}
-                  </div>
-                  <div className="flex justify-between items-center text-[11px] text-[#7A6663]">
-                    <span>
-                      Độ an toàn: <span className={`font-semibold ${strength.textCol}`}>{strength.text}</span>
-                    </span>
-                    <span>Tối thiểu 8 ký tự, có số và chữ</span>
-                  </div>
-                </div>
+
 
                 {/* Field 2: Confirm password */}
                 <div>
