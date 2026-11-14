@@ -454,17 +454,17 @@ export async function sendDepositSuccessEmail({
           ✦ HAUTE COUTURE BRIDAL ATELIER ✦
         </div>
         <h1 style="font-family: 'Times New Roman', Times, serif; font-size: 28px; margin: 0; letter-spacing: 2px; color: #FFFFFF;">UNIBRIDAL</h1>
-        <p style="font-size: 12px; letter-spacing: 3px; color: #F0D5CD; margin-top: 6px; text-transform: uppercase;">Xác Nhận Giữ Váy và Đặt Cọc Thành Công</p>
+        <p style="font-size: 12px; letter-spacing: 3px; color: #F0D5CD; margin-top: 6px; text-transform: uppercase;">Xác Nhận Chuyển Khoản Đặt Cọc 100% Thành Công</p>
       </div>
 
       <div style="padding: 32px 28px; background: #FFFFFF;">
         <!-- Banner lời chúc mừng -->
         <div style="background: #FFF5F2; border: 1px solid #F5DED7; border-radius: 12px; padding: 18px 20px; text-align: center; margin-bottom: 24px;">
           <h2 style="font-family: 'Times New Roman', Times, serif; font-size: 20px; color: #733F49; margin: 0 0 6px 0;">
-            Chúc Mừng Nàng Đã Khóa Lịch Giữ Váy Cưới Thành Công!
+            Chúc Mừng Nàng Đã Khóa Lịch & Chuyển Khoản Cọc 100% Thành Công!
           </h2>
           <p style="font-size: 13.5px; color: #514344; margin: 0; line-height: 1.6;">
-            Mã đơn hàng: <strong style="color: #733F49; font-size: 15px;">#${orderCode}</strong> • Mã hợp đồng: <strong style="color: #2C2523;">${contractCode || 'HĐ-' + orderCode}</strong>
+            Mã đơn hàng: <strong style="color: #733F49; font-size: 15px;">#${orderCode}</strong>
           </p>
         </div>
 
@@ -526,15 +526,14 @@ export async function sendDepositSuccessEmail({
               <td style="padding: 6px 0; color: #7A6B6C;">Tiền cọc bảo lãnh (Hoàn 100% khi trả):</td>
               <td style="padding: 6px 0; text-align: right; font-weight: 600; color: #733F49;">${formatMoney(totalDeposit)}</td>
             </tr>
-            <tr style="border-top: 1px dashed #D8C3BE;">
-              <td style="padding: 10px 0 4px 0; font-weight: bold; color: #166534; font-size: 14.5px;">Số tiền cọc đã thanh toán thành công:</td>
-              <td style="padding: 10px 0 4px 0; text-align: right; font-weight: 800; color: #166534; font-size: 17px;">${formatMoney(depositPaidAmount)}</td>
+            <tr style="border-top: 1.5px solid #EEDECF;">
+              <td style="padding: 12px 0 4px 0; font-weight: bold; color: #166534; font-size: 14.5px;">Số tiền chuyển khoản cọc (100%):</td>
+              <td style="padding: 12px 0 4px 0; text-align: right; font-weight: 800; color: #166534; font-size: 18px;">${formatMoney(depositPaidAmount || (totalRentPrice + totalDeposit))}</td>
             </tr>
-            ${remainingAmount > 0 ? `
             <tr>
-              <td style="padding: 4px 0; color: #9A3412; font-size: 12.5px;">Số tiền còn lại thanh toán khi nhận váy:</td>
-              <td style="padding: 4px 0; text-align: right; font-weight: 700; color: #9A3412; font-size: 13.5px;">${formatMoney(remainingAmount)}</td>
-            </tr>` : ''}
+              <td style="padding: 4px 0; color: #166534; font-size: 12px; font-weight: 600;">Trạng thái thanh toán:</td>
+              <td style="padding: 4px 0; text-align: right; font-weight: 700; color: #166534; font-size: 12.5px;">✓ Đã thanh toán 100% qua Chuyển Khoản</td>
+            </tr>
           </table>
         </div>
 
@@ -571,7 +570,7 @@ export async function sendDepositSuccessEmail({
       const info = await transporter.sendMail({
         from: `"${senderName}" <${process.env.EMAIL_USER}>`,
         to,
-        subject: `[UniBridal] Xác nhận đặt cọc thành công và Hợp đồng thuê váy #${orderCode}`,
+        subject: `[UniBridal] Xác nhận chuyển khoản cọc 100% thành công - Đơn hàng #${orderCode}`,
         html,
       });
       console.log(`[EMAIL DEPOSIT SUCCESS] Đã gửi xác nhận cọc đơn #${orderCode} tới ${to}! MessageId: ${info.messageId}`);

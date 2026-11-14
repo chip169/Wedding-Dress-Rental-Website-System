@@ -113,10 +113,9 @@ export const createOrder = async (orderData, currentUser = null) => {
   const shippingFee = Number(orderData.shippingFee || 0);
   const discountAmount = Number(orderData.discountAmount || 0);
 
-  // Số tiền cọc cần thanh toán ban đầu (50% hoặc 100%)
-  const is50Percent = depositOption === 'deposit30'; // deposit30 đại diện cho cọc 50%
-  const depositPaidAmount = is50Percent ? Math.round(totalRentPrice * 0.5) : totalRentPrice;
+  // Đặt cọc chuyển khoản 100% toàn bộ tiền thuê và tiền cọc bảo lãnh
   const totalPayment = totalRentPrice + totalDeposit + shippingFee - discountAmount;
+  const depositPaidAmount = totalPayment;
 
   // Tạo mã đơn ngẫu nhiên chuẩn UniBridal
   const randomSuffix = Math.floor(100 + Math.random() * 900);
@@ -262,8 +261,8 @@ export const createOrder = async (orderData, currentUser = null) => {
         rentalDays: newOrder.rentalDays,
         totalRentPrice: newOrder.totalRentPrice,
         totalDeposit: newOrder.totalDeposit,
-        depositPaidAmount: newOrder.depositPaidAmount,
-        remainingAmount: Math.max(0, newOrder.totalPayment - newOrder.depositPaidAmount),
+        depositPaidAmount: newOrder.totalPayment,
+        remainingAmount: 0,
         deliveryMethod: newOrder.deliveryMethod,
         shippingAddress: newOrder.shippingAddress,
         orderDetailUrl: `${clientUrl}/profile/orders`,

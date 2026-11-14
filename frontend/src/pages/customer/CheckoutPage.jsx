@@ -774,8 +774,8 @@ export default function CheckoutPage() {
   const [hasAgreedContractTerms, setHasAgreedContractTerms] = useState(true);
   const [isContractSigned, setIsContractSigned] = useState(false);
 
-  // Step 3: Deposit option: 'deposit30' | 'full100'
-  const [depositOption, setDepositOption] = useState('deposit30');
+  // Step 3: Deposit option: 'full100' (Chuyển khoản cọc 100%)
+  const [depositOption, setDepositOption] = useState('full100');
 
   // Payment gateway: 'vietqr' | 'card' | 'offline'
   const [paymentGateway, setPaymentGateway] = useState('vietqr');

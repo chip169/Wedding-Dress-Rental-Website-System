@@ -68,12 +68,12 @@ export const simulateVietQRPayment = async (data = {}) => {
   });
   await payment.save();
 
-  // Cập nhật trạng thái đơn hàng sang deposit_paid
+  // Cập nhật trạng thái đơn hàng sang deposit_paid (đã chuyển khoản cọc 100%)
   order.status = 'deposit_paid';
-  order.depositPaidAmount = payment.amount;
+  order.depositPaidAmount = order.totalPayment || payment.amount;
   await order.save();
 
-  // Tự động kích hoạt gửi email thông báo đặt cọc thành công
+  // Tự động kích hoạt gửi email thông báo chuyển khoản cọc 100% thành công
   try {
     const targetEmail = order.customerEmail || order.email;
     if (targetEmail) {
@@ -90,7 +90,7 @@ export const simulateVietQRPayment = async (data = {}) => {
         totalRentPrice: order.totalRentPrice,
         totalDeposit: order.totalDeposit,
         depositPaidAmount: order.depositPaidAmount,
-        remainingAmount: Math.max(0, order.totalPayment - order.depositPaidAmount),
+        remainingAmount: 0,
         deliveryMethod: order.deliveryMethod,
         shippingAddress: order.shippingAddress,
         orderDetailUrl: `${clientUrl}/profile/orders`,
