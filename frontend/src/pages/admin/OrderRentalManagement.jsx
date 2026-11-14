@@ -40,7 +40,6 @@ import {
   BookOpen,
   FileEdit,
   FileCheck,
-  ArrowUpDown,
   ArrowUp,
   ArrowDown,
 } from 'lucide-react';
@@ -2620,17 +2619,15 @@ export default function OrderRentalManagement() {
                 >
                   <div className="flex items-center gap-1.5">
                     <span>MÃ ĐƠN</span>
-                    <span className="inline-flex items-center">
-                      {sortField === 'orderCode' ? (
-                        sortOrder === 'desc' ? (
+                    {sortField === 'orderCode' && (
+                      <span className="inline-flex items-center">
+                        {sortOrder === 'desc' ? (
                           <ArrowDown size={13} className="text-[#733F49]" />
                         ) : (
                           <ArrowUp size={13} className="text-[#733F49]" />
-                        )
-                      ) : (
-                        <ArrowUpDown size={13} className="opacity-35 group-hover:opacity-75" />
-                      )}
-                    </span>
+                        )}
+                      </span>
+                    )}
                   </div>
                 </th>
                 <th
@@ -2640,17 +2637,15 @@ export default function OrderRentalManagement() {
                 >
                   <div className="flex items-center justify-center gap-1.5">
                     <span>KHÁCH HÀNG</span>
-                    <span className="inline-flex items-center">
-                      {sortField === 'customer' ? (
-                        sortOrder === 'desc' ? (
+                    {sortField === 'customer' && (
+                      <span className="inline-flex items-center">
+                        {sortOrder === 'desc' ? (
                           <ArrowDown size={13} className="text-[#733F49]" />
                         ) : (
                           <ArrowUp size={13} className="text-[#733F49]" />
-                        )
-                      ) : (
-                        <ArrowUpDown size={13} className="opacity-35 group-hover:opacity-75" />
-                      )}
-                    </span>
+                        )}
+                      </span>
+                    )}
                   </div>
                 </th>
                 <th className="py-4 px-4 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase text-center">
@@ -2663,17 +2658,15 @@ export default function OrderRentalManagement() {
                 >
                   <div className="flex items-center justify-center gap-1.5">
                     <span>NGÀY THUÊ</span>
-                    <span className="inline-flex items-center">
-                      {sortField === 'rentalDate' ? (
-                        sortOrder === 'desc' ? (
+                    {sortField === 'rentalDate' && (
+                      <span className="inline-flex items-center">
+                        {sortOrder === 'desc' ? (
                           <ArrowDown size={13} className="text-[#733F49]" />
                         ) : (
                           <ArrowUp size={13} className="text-[#733F49]" />
-                        )
-                      ) : (
-                        <ArrowUpDown size={13} className="opacity-35 group-hover:opacity-75" />
-                      )}
-                    </span>
+                        )}
+                      </span>
+                    )}
                   </div>
                 </th>
                 <th
@@ -2683,17 +2676,15 @@ export default function OrderRentalManagement() {
                 >
                   <div className="flex items-center justify-center gap-1.5">
                     <span>TIỀN CỌC</span>
-                    <span className="inline-flex items-center">
-                      {sortField === 'deposit' ? (
-                        sortOrder === 'desc' ? (
+                    {sortField === 'deposit' && (
+                      <span className="inline-flex items-center">
+                        {sortOrder === 'desc' ? (
                           <ArrowDown size={13} className="text-[#733F49]" />
                         ) : (
                           <ArrowUp size={13} className="text-[#733F49]" />
-                        )
-                      ) : (
-                        <ArrowUpDown size={13} className="opacity-35 group-hover:opacity-75" />
-                      )}
-                    </span>
+                        )}
+                      </span>
+                    )}
                   </div>
                 </th>
                 <th
@@ -2703,17 +2694,15 @@ export default function OrderRentalManagement() {
                 >
                   <div className="flex items-center justify-center gap-1.5">
                     <span>TRẠNG THÁI</span>
-                    <span className="inline-flex items-center">
-                      {sortField === 'status' ? (
-                        sortOrder === 'desc' ? (
+                    {sortField === 'status' && (
+                      <span className="inline-flex items-center">
+                        {sortOrder === 'desc' ? (
                           <ArrowDown size={13} className="text-[#733F49]" />
                         ) : (
                           <ArrowUp size={13} className="text-[#733F49]" />
-                        )
-                      ) : (
-                        <ArrowUpDown size={13} className="opacity-35 group-hover:opacity-75" />
-                      )}
-                    </span>
+                        )}
+                      </span>
+                    )}
                   </div>
                 </th>
                 <th className="py-4 px-5 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase text-center">
