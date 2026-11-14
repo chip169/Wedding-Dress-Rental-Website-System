@@ -229,12 +229,17 @@ export const createOrder = async (orderData, currentUser = null) => {
       // ignore
     }
 
+    // Mỗi đơn sau khi trả váy cần 1 ngày bảo trì & khử trùng phục chế
+    // Do đó ngày nhận đơn mới không được trùng vào ngày bảo trì (rentalEndDate + 1 >= resolvedStartDate)
+    const resolvedStartDateMinus1Day = new Date(resolvedStartDate);
+    resolvedStartDateMinus1Day.setDate(resolvedStartDateMinus1Day.getDate() - 1);
+
     const itemSizeClean = String(item.size || '').replace(/^size\s*/i, '').trim().toUpperCase();
     const overlappingOrders = await Order.find({
       status: { $in: bookedStatuses },
       $or: dressConditions,
       rentalStartDate: { $lte: resolvedEndDate },
-      rentalEndDate: { $gte: resolvedStartDate },
+      rentalEndDate: { $gte: resolvedStartDateMinus1Day },
     }).lean();
 
     // Lọc các đơn trùng lịch có cùng Size với sản phẩm đang đặt
@@ -268,9 +273,17 @@ export const createOrder = async (orderData, currentUser = null) => {
     if (overlappingSameSize.length >= sizeCapacity) {
       const firstConflict = overlappingSameSize[0];
       const s = firstConflict.rentalStartDate ? new Date(firstConflict.rentalStartDate).toLocaleDateString('vi-VN') : '';
-      const e = firstConflict.rentalEndDate ? new Date(firstConflict.rentalEndDate).toLocaleDateString('vi-VN') : '';
+      const rawE = firstConflict.rentalEndDate ? new Date(firstConflict.rentalEndDate) : null;
+      let e = '';
+      let mStr = '';
+      if (rawE) {
+        const maintDate = new Date(rawE);
+        maintDate.setDate(maintDate.getDate() + 1);
+        e = maintDate.toLocaleDateString('vi-VN');
+        mStr = ` (Khách trả váy ngày ${rawE.toLocaleDateString('vi-VN')} + 1 ngày bảo trì & khử trùng vào ngày ${e})`;
+      }
       throw new Error(
-        `Váy "${item.name}" (Size ${itemSizeClean || 'này'}) đã có nàng dâu khác cọc thuê kín lịch trong khoảng từ ${s} đến ${e}. Vui lòng chọn khoảng ngày khác!`
+        `Váy "${item.name}" (Size ${itemSizeClean || 'này'}) đã kín lịch từ ${s} đến ${e}${mStr}. Vui lòng chọn ngày nhận sau ngày bảo trì!`
       );
     }
   }
@@ -695,11 +708,28 @@ export const getDressBookedDates = async (dressId) => {
         return str.includes('T') ? str.split('T')[0] : str.slice(0, 10);
       };
 
+      const addOneDayYMD = (d) => {
+        if (!d) return null;
+        const base = d instanceof Date ? new Date(d) : new Date(String(d));
+        if (isNaN(base.getTime())) return formatYMD(d);
+        base.setDate(base.getDate() + 1);
+        const y = base.getFullYear();
+        const m = String(base.getMonth() + 1).padStart(2, '0');
+        const day = String(base.getDate()).padStart(2, '0');
+        return `${y}-${m}-${day}`;
+      };
+
       const itemSizes = (o.items || []).map((it) => it.size).filter(Boolean);
+      const actualEndStr = formatYMD(o.rentalEndDate);
+      const lockedEndStr = addOneDayYMD(o.rentalEndDate);
+
       return {
         orderCode: o.orderCode,
         startDate: formatYMD(o.rentalStartDate),
-        endDate: formatYMD(o.rentalEndDate),
+        endDate: lockedEndStr, // Ngày kết thúc khóa lịch (bao gồm 1 ngày bảo trì tiếp theo ngày trả)
+        actualEndDate: actualEndStr, // Ngày trả váy thực tế
+        maintenanceDate: lockedEndStr, // Ngày tiếp theo của ngày trả là ngày bảo trì
+        hasMaintenanceDay: true,
         bride: o.customerName || 'Nàng dâu UniBridal',
         status: o.status,
         size: itemSizes[0] || '',

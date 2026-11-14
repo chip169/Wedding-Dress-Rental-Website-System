@@ -700,14 +700,36 @@ export default function CheckoutPage() {
         if (!isMounted) return;
 
         const formatted = allBooked
-          .map((item) => ({
-            startDate: toIsoDateString(item.startDate),
-            endDate: toIsoDateString(item.endDate),
-            orderCode: item.orderCode,
-            bride: item.bride || 'Kín lịch',
-            size: item.size || '',
-            sizes: item.sizes || (item.size ? [item.size] : []),
-          }))
+          .map((item) => {
+            const start = toIsoDateString(item.startDate);
+            let end = toIsoDateString(item.endDate);
+            let actualEnd = toIsoDateString(item.actualEndDate);
+            if (!actualEnd) {
+              actualEnd = end;
+            }
+            // Đảm bảo khóa thêm 1 ngày tiếp theo của ngày trả váy (bảo trì & khử trùng)
+            if (end === actualEnd && end) {
+              const p = end.split('-').map(Number);
+              if (p.length === 3) {
+                const nextDay = new Date(p[0], p[1] - 1, p[2] + 1);
+                const y = nextDay.getFullYear();
+                const m = String(nextDay.getMonth() + 1).padStart(2, '0');
+                const d = String(nextDay.getDate()).padStart(2, '0');
+                end = `${y}-${m}-${d}`;
+              }
+            }
+            return {
+              startDate: start,
+              endDate: end, // Ngày kết thúc khóa lịch (đã bao gồm ngày bảo trì)
+              actualEndDate: actualEnd, // Ngày trả váy thực tế theo đơn
+              maintenanceDate: end, // Ngày bảo trì
+              orderCode: item.orderCode,
+              bride: item.bride || 'Kín lịch',
+              size: item.size || '',
+              sizes: item.sizes || (item.size ? [item.size] : []),
+              hasMaintenanceDay: true,
+            };
+          })
           .filter((item) => item.startDate && item.endDate);
 
         // Loại bỏ các khoảng ngày trùng lặp (xét cùng size)
@@ -901,9 +923,15 @@ export default function CheckoutPage() {
     }
     const booked = getBookedInfoForDate(dateStr);
     if (booked) {
-      message.warning(
-        `Váy cưới đã kín lịch từ ${toDisplayDateString(booked.startDate)} đến ${toDisplayDateString(booked.endDate)}. Nàng vui lòng chọn ngày khác trên lịch nhé!`
-      );
+      if (booked.actualEndDate && dateStr > booked.actualEndDate) {
+        message.warning(
+          `Ngày ${toDisplayDateString(dateStr)} là ngày bảo trì & khử trùng lễ phục sau khi khách trả váy. Nàng vui lòng chọn ngày nhận sau ngày bảo trì nhé!`
+        );
+      } else {
+        message.warning(
+          `Váy cưới đã kín lịch từ ${toDisplayDateString(booked.startDate)} đến ${toDisplayDateString(booked.endDate)} (bao gồm 1 ngày bảo trì sau thuê). Nàng vui lòng chọn ngày khác trên lịch nhé!`
+        );
+      }
       return;
     }
 
@@ -2435,17 +2463,26 @@ export default function CheckoutPage() {
                         }
 
                         if (isBooked) {
+                          const isMaintenance = bookedInfo?.actualEndDate && dateStr > bookedInfo.actualEndDate;
                           cells.push(
                             <button
                               key={dateStr}
                               type="button"
                               onClick={() => handleCalendarCellClick(dateStr)}
-                              title={`Ngày đã có cô dâu đặt thuê: ${bookedInfo.bride || 'Kín lịch'}`}
-                              className="relative h-10 sm:h-12 rounded-xl flex flex-col items-center justify-center text-[12px] sm:text-[13px] font-bold transition-all border border-[#F8D7DA] bg-[#FDF2F0] text-[#B91C1C] cursor-not-allowed opacity-85 hover:opacity-100"
+                              title={
+                                isMaintenance
+                                  ? `Ngày bảo trì & khử trùng lễ phục (${toDisplayDateString(dateStr)}) sau khi cô dâu trả váy`
+                                  : `Ngày đã có cô dâu đặt thuê: ${bookedInfo.bride || 'Kín lịch'}`
+                              }
+                              className={`relative h-10 sm:h-12 rounded-xl flex flex-col items-center justify-center text-[12px] sm:text-[13px] font-bold transition-all border cursor-not-allowed opacity-90 hover:opacity-100 ${
+                                isMaintenance
+                                  ? 'border-[#FDE68A] bg-[#FFFBEB] text-[#B45309]'
+                                  : 'border-[#F8D7DA] bg-[#FDF2F0] text-[#B91C1C]'
+                              }`}
                             >
-                              <span className="line-through decoration-[#B91C1C]/60">{d}</span>
-                              <span className="text-[7.5px] font-extrabold leading-none text-[#B91C1C] tracking-tight uppercase">
-                                KÍN LỊCH
+                              <span className={`line-through ${isMaintenance ? 'decoration-[#B45309]/60' : 'decoration-[#B91C1C]/60'}`}>{d}</span>
+                              <span className={`text-[7px] font-extrabold leading-none tracking-tight uppercase ${isMaintenance ? 'text-[#B45309]' : 'text-[#B91C1C]'}`}>
+                                {isMaintenance ? 'BẢO TRÌ' : 'KÍN LỊCH'}
                               </span>
                             </button>
                           );
@@ -2498,6 +2535,30 @@ export default function CheckoutPage() {
                             ))}
                           </div>
                           <div className="grid grid-cols-7 gap-1 sm:gap-1.5">{cells}</div>
+
+                          {/* Chú thích màu sắc trực quan trên lịch thuê */}
+                          <div className="flex flex-wrap items-center justify-center gap-2.5 sm:gap-4 mt-3 pt-3 border-t border-[#EEDECF]/70 text-[10.5px] sm:text-[11px] text-[#6B5C5D]">
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-3 h-3 rounded-md bg-[#2E7D32]" />
+                              <span>Ngày nhận</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-3 h-3 rounded-md bg-[#733F49]" />
+                              <span>Ngày cưới</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-3 h-3 rounded-md bg-[#847374]" />
+                              <span>Ngày trả</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-3 h-3 rounded-md bg-[#FDF2F0] border border-[#F8D7DA]" />
+                              <span className="text-[#B91C1C] font-semibold">Kín lịch</span>
+                            </div>
+                            <div className="flex items-center gap-1.5">
+                              <span className="w-3 h-3 rounded-md bg-[#FFFBEB] border border-[#FDE68A]" />
+                              <span className="text-[#B45309] font-semibold">Bảo trì (1 ngày sau trả)</span>
+                            </div>
+                          </div>
                         </div>
                       );
                     })()}
