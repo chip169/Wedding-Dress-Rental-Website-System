@@ -708,19 +708,15 @@ function InspectionModal({ order, onClose, onSuccess }) {
       ? 'total_damage'
       : (sanitized.find((c) => c !== 'normal_wear') || 'normal_wear');
 
-    const defaultNotes = formatMultipleDamageDescriptions(sanitized);
-
     setItemsCondition((prev) => {
       const next = [...prev];
-      const prevNotes = next[idx]?.damageNotes || '';
-      const shouldUpdateNotes = !prevNotes || prevNotes === formatMultipleDamageDescriptions(oldConditions);
-
       next[idx] = {
         ...next[idx],
         condition: primaryCond,
         conditions: sanitized,
         compensation: comp,
-        damageNotes: shouldUpdateNotes ? defaultNotes : prevNotes,
+        // Không tự chèn text ví dụ, để người dùng tự nhập mô tả thực tế
+        damageNotes: next[idx]?.damageNotes || '',
       };
       return next;
     });
@@ -1131,8 +1127,8 @@ function InspectionModal({ order, onClose, onSuccess }) {
                         <Input.TextArea
                           rows={3}
                           disabled={isReadOnly}
-                          placeholder="Mô tả hiện trạng thực tế, vị trí vết bẩn hoặc lỗi hư hại trên váy..."
-                          value={ic.damageNotes !== undefined && ic.damageNotes !== '' ? ic.damageNotes : formatMultipleDamageDescriptions(ic.conditions || [ic.condition])}
+                          placeholder="Nhập mô tả hiện trạng thực tế, vị trí vết bẩn hoặc lỗi hư hại trên váy..."
+                          value={ic.damageNotes || ''}
                           onChange={(e) => updateNotes(idx, e.target.value)}
                           className="text-xs rounded-xl border-[#E5D7D0] focus:border-[#733F49]"
                         />
