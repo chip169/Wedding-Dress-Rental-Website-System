@@ -499,58 +499,63 @@ export default function CheckoutPage() {
       const parts = initialIso.split('-').map(Number);
       return new Date(parts[0], parts[1] - 1, 1);
     }
-    return new Date(2026, 10, 1);
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
   });
   const [showFullCalendar, setShowFullCalendar] = useState(true);
 
-  // Danh sách các khoảng ngày đã kín lịch của chiếc váy này
-  const [bookedIntervals, setBookedIntervals] = useState([
-    { startDate: '2026-11-05', endDate: '2026-11-08', bride: 'Cô dâu Khánh Linh' },
-    { startDate: '2026-11-25', endDate: '2026-11-28', bride: 'Cô dâu Mai Anh' },
-  ]);
+  // Danh sách các khoảng ngày đã kín lịch của chiếc váy theo đúng đơn thuê thực tế trong cơ sở dữ liệu (Không fake data)
+  const [bookedIntervals, setBookedIntervals] = useState([]);
+  const [isLoadingBookedDates, setIsLoadingBookedDates] = useState(false);
 
-  // Tự động tải lịch đã đặt từ Backend API khi danh sách lễ phục thay đổi
+  // Tự động tải lịch đã đặt từ Backend API theo đúng đơn hàng thực tế của chiếc váy
   React.useEffect(() => {
     let isMounted = true;
     const fetchBooked = async () => {
       try {
         const items = orderItems && orderItems.length > 0 ? orderItems : (activeDress ? [activeDress] : []);
-        if (items.length === 0) return;
+        if (items.length === 0) {
+          if (isMounted) setBookedIntervals([]);
+          return;
+        }
+        setIsLoadingBookedDates(true);
         const allBooked = [];
         for (const it of items) {
-          const dressId = it.id || it._id;
+          const dressId = it.id || it._id || it.code;
           if (!dressId) continue;
           try {
             const apiDates = await getDressBookedDates(dressId);
             if (Array.isArray(apiDates)) {
               allBooked.push(...apiDates);
             }
-          } catch (e) {
-            // ignore single dress error
+          } catch {
+            // bỏ qua lỗi từng váy
           }
         }
-        if (isMounted && allBooked.length > 0) {
-          const formatted = allBooked
-            .map((item) => ({
-              startDate: toIsoDateString(item.startDate),
-              endDate: toIsoDateString(item.endDate),
-              orderCode: item.orderCode,
-            }))
-            .filter((item) => item.startDate && item.endDate);
-          if (formatted.length > 0) {
-            setBookedIntervals((prev) => {
-              const combined = [...formatted];
-              prev.forEach((p) => {
-                if (!combined.some((c) => c.startDate === p.startDate)) {
-                  combined.push(p);
-                }
-              });
-              return combined;
-            });
+        if (!isMounted) return;
+
+        const formatted = allBooked
+          .map((item) => ({
+            startDate: toIsoDateString(item.startDate),
+            endDate: toIsoDateString(item.endDate),
+            orderCode: item.orderCode,
+            bride: item.bride || 'Kín lịch',
+          }))
+          .filter((item) => item.startDate && item.endDate);
+
+        // Loại bỏ các khoảng ngày trùng lặp
+        const uniqueIntervals = [];
+        formatted.forEach((item) => {
+          if (!uniqueIntervals.some((u) => u.startDate === item.startDate && u.endDate === item.endDate)) {
+            uniqueIntervals.push(item);
           }
-        }
-      } catch (err) {
-        console.warn('Lấy lịch kín từ API lỗi, dùng lịch mẫu:', err);
+        });
+
+        setBookedIntervals(uniqueIntervals);
+      } catch {
+        if (isMounted) setBookedIntervals([]);
+      } finally {
+        if (isMounted) setIsLoadingBookedDates(false);
       }
     };
     fetchBooked();
@@ -2050,9 +2055,23 @@ export default function CheckoutPage() {
                           <h4 className="font-playfair text-[15.5px] font-bold text-[#2C2523] m-0 leading-tight">
                             Bảng Lịch Thuê Váy
                           </h4>
-                          <span className="text-[12px] font-jakarta font-bold text-[#733F49] block mt-0.5">
-                            Tháng {calendarViewDate.getMonth() + 1}/{calendarViewDate.getFullYear()}
-                          </span>
+                          <div className="flex items-center gap-2 mt-0.5">
+                            <span className="text-[12px] font-jakarta font-bold text-[#733F49]">
+                              Tháng {calendarViewDate.getMonth() + 1}/{calendarViewDate.getFullYear()}
+                            </span>
+                            <span className="text-[10px] font-semibold text-[#2E7D32] bg-[#E8F5E9] px-2 py-0.5 rounded-full border border-[#C8E6C9]">
+                              ✓ Cập nhật theo đơn thực tế
+                            </span>
+                          </div>
+                          {bookedIntervals.length > 0 ? (
+                            <span className="text-[11px] text-[#B91C1C] font-medium block mt-1">
+                              ⚠ Đang có {bookedIntervals.length} đợt thuê đã khóa lịch cho mẫu váy này
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-[#2E7D32] font-medium block mt-1">
+                              ✦ Toàn bộ các ngày trong tháng đang trống lịch sẵn sàng cho nàng đặt thuê
+                            </span>
+                          )}
                         </div>
                       </div>
 

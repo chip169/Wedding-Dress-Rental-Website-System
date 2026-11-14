@@ -10,6 +10,7 @@ import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useAuth } from '../../contexts/AuthContext';
 import { getDressById, getRelatedDresses, formatCurrencyVND } from '../../services/dressService';
+import { getDressBookedDates } from '../../services/orderService';
 import { addToCart } from '../../services/cartService';
 import { isWishlisted as checkWishlisted, toggleWishlist, WISHLIST_EVENT } from '../../services/wishlistService';
 import { formatShortDate } from '../../utils/formatDate';
@@ -126,6 +127,16 @@ export default function DressDetailPage() {
   const [isBookingOpen, setIsBookingOpen] = useState(false);
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
   const [rentNotification, setRentNotification] = useState('');
+
+  // Lịch thuê thực tế theo đơn hàng từ cơ sở dữ liệu
+  const [isAvailabilityModalOpen, setIsAvailabilityModalOpen] = useState(false);
+  const [bookedDates, setBookedDates] = useState([]);
+  const [isLoadingBookedDates, setIsLoadingBookedDates] = useState(false);
+  const [calendarMonth, setCalendarMonth] = useState(() => {
+    const d = new Date();
+    return new Date(d.getFullYear(), d.getMonth(), 1);
+  });
+  const [previewStartDate, setPreviewStartDate] = useState('');
 
   // Feedback pagination state
   const [showAllFeedbacks, setShowAllFeedbacks] = useState(false);
@@ -245,6 +256,37 @@ export default function DressDetailPage() {
     const startIndex = (feedbackPage - 1) * feedbacksPerPage;
     return allFeedbacks.slice(startIndex, startIndex + feedbacksPerPage);
   }, [allFeedbacks, showAllFeedbacks, feedbackPage, feedbacksPerPage]);
+
+  // Đồng bộ lịch kín thực tế theo các đơn hàng của váy từ MongoDB
+  useEffect(() => {
+    const targetDressId = dress?._id || dress?.id;
+    if (!targetDressId) return;
+    let isMounted = true;
+    setIsLoadingBookedDates(true);
+    getDressBookedDates(targetDressId)
+      .then((dates) => {
+        if (!isMounted) return;
+        setBookedDates(Array.isArray(dates) ? dates : []);
+      })
+      .catch(() => {
+        if (isMounted) setBookedDates([]);
+      })
+      .finally(() => {
+        if (isMounted) setIsLoadingBookedDates(false);
+      });
+    return () => {
+      isMounted = false;
+    };
+  }, [dress?._id, dress?.id]);
+
+  const isDateBooked = (dateStr) => {
+    if (!dateStr || !bookedDates.length) return false;
+    return bookedDates.some((b) => {
+      const s = String(b.startDate).split('T')[0];
+      const e = String(b.endDate).split('T')[0];
+      return dateStr >= s && dateStr <= e;
+    });
+  };
 
   const handleDirectRent = () => {
     addToCart({
@@ -628,6 +670,29 @@ export default function DressDetailPage() {
                   (Đã bao gồm tiền cọc bảo lãnh {formatCurrencyVND(pricing.deposit)} sẽ hoàn trả 100% khi nhận lại váy nguyên vẹn)
                 </p>
               </div>
+            </div>
+
+            {/* Trạng thái lịch thuê thực tế theo đơn hàng */}
+            <div className="flex items-center justify-between p-3.5 bg-[#FAF4EE] border border-[#E8DDD4] rounded-xl text-[12.5px] transition-all">
+              <div className="flex items-center gap-2">
+                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+                <span className="font-medium text-[#4A3B3D]">
+                  {bookedDates.length > 0
+                    ? `Đang có ${bookedDates.length} đợt thuê đã khóa lịch`
+                    : 'Toàn bộ lịch thuê đang còn trống'}
+                </span>
+                <span className="hidden sm:inline-block text-[10px] text-[#2E7D32] bg-[#E8F5E9] border border-[#C8E6C9] px-2 py-0.5 rounded-full font-semibold">
+                  ✓ Đồng bộ đơn thực tế
+                </span>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAvailabilityModalOpen(true)}
+                className="text-[12px] font-bold text-[#B26B74] hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0"
+              >
+                <Calendar className="w-3.5 h-3.5" />
+                Kiểm tra lịch trống
+              </button>
             </div>
 
             {/* Action Buttons - Khớp 100% với Hình 2 */}
@@ -1051,6 +1116,228 @@ export default function DressDetailPage() {
                 <span>
                   Nếu nàng chưa chắc chắn về số đo, chuyên viên UniBridal sẽ hỗ trợ đo trực tiếp và điều chỉnh váy vừa in trong buổi thử váy tại Showroom.
                 </span>
+              </div>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* 5. Real-Time Dress Rental Availability Modal (Không fake data) */}
+      {isAvailabilityModalOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
+          <div className="relative w-full max-w-[620px] bg-white rounded-2xl shadow-2xl border border-[#E6DAC8] overflow-hidden flex flex-col max-h-[90vh]">
+            {/* Header */}
+            <div className="px-6 py-4 bg-[#FAF7F5] border-b border-[#EAE0DC] flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Calendar className="w-5 h-5 text-[#B26B74]" />
+                <div>
+                  <h3 className="font-playfair text-[18px] font-semibold text-[#231A19] m-0">
+                    Lịch Thuê Trống Tác Phẩm
+                  </h3>
+                  <span className="text-[12px] text-[#7A6B6A] block">
+                    {dress.name} {dress.code ? `• Mã: ${dress.code}` : ''}
+                  </span>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsAvailabilityModalOpen(false)}
+                className="w-8 h-8 rounded-full flex items-center justify-center text-[#7A6B6A] hover:bg-[#F2DDD9] transition-colors border-0 bg-transparent cursor-pointer"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            {/* Body */}
+            <div className="p-6 overflow-y-auto flex-1">
+              {/* Trust Badge */}
+              <div className="mb-4 p-3 bg-[#F0FDF4] border border-[#DCFCE7] rounded-xl flex items-center justify-between text-[12px]">
+                <div className="flex items-center gap-2 text-[#15803D]">
+                  <CheckCircle2 className="w-4 h-4 shrink-0" />
+                  <span>Dữ liệu thời gian thực đồng bộ trực tiếp từ các đơn đặt thuê của chiếc váy này</span>
+                </div>
+              </div>
+
+              {/* Month Controller */}
+              <div className="flex items-center justify-between mb-4">
+                <button
+                  type="button"
+                  onClick={() => {
+                    const prev = new Date(calendarMonth);
+                    prev.setMonth(prev.getMonth() - 1);
+                    setCalendarMonth(prev);
+                  }}
+                  className="px-3 py-1.5 rounded-lg border border-[#EAE0DC] text-[#70484E] text-[12px] font-medium hover:bg-[#FAF7F5] cursor-pointer flex items-center gap-1"
+                >
+                  <ChevronLeft className="w-4 h-4" /> Tháng trước
+                </button>
+                <span className="font-playfair font-bold text-[16px] text-[#231A19]">
+                  Tháng {calendarMonth.getMonth() + 1}/{calendarMonth.getFullYear()}
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const next = new Date(calendarMonth);
+                    next.setMonth(next.getMonth() + 1);
+                    setCalendarMonth(next);
+                  }}
+                  className="px-3 py-1.5 rounded-lg border border-[#EAE0DC] text-[#70484E] text-[12px] font-medium hover:bg-[#FAF7F5] cursor-pointer flex items-center gap-1"
+                >
+                  Tháng sau <ChevronRight className="w-4 h-4" />
+                </button>
+              </div>
+
+              {/* Legend */}
+              <div className="flex flex-wrap items-center gap-4 mb-3 text-[11.5px] text-[#5A4848] bg-[#FAF7F5] p-2.5 rounded-lg">
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded bg-white border border-[#EAE0DC]"></span>
+                  <span>Ngày còn trống</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded bg-[#FDF2F0] border border-[#F8D7DA]"></span>
+                  <span className="text-[#B91C1C] font-semibold">Đã kín lịch</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <span className="w-3 h-3 rounded bg-[#70484E]"></span>
+                  <span className="text-[#70484E] font-semibold">Đang chọn</span>
+                </div>
+              </div>
+
+              {/* Calendar Grid */}
+              <div className="grid grid-cols-7 gap-1.5 text-center mb-4">
+                {['T2', 'T3', 'T4', 'T5', 'T6', 'T7', 'CN'].map((d) => (
+                  <div key={d} className="text-[11px] font-bold text-[#8A7978] py-1">
+                    {d}
+                  </div>
+                ))}
+
+                {(() => {
+                  const y = calendarMonth.getFullYear();
+                  const m = calendarMonth.getMonth();
+                  const firstDay = new Date(y, m, 1).getDay();
+                  const startOffset = firstDay === 0 ? 6 : firstDay - 1;
+                  const totalDays = new Date(y, m + 1, 0).getDate();
+                  const todayStr = new Date().toISOString().split('T')[0];
+
+                  const grid = [];
+                  for (let i = 0; i < startOffset; i++) {
+                    grid.push(<div key={`blank-${i}`} className="h-10" />);
+                  }
+
+                  for (let d = 1; d <= totalDays; d++) {
+                    const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
+                    const isPast = dateStr < todayStr;
+                    const booked = isDateBooked(dateStr);
+                    const isSelected = previewStartDate === dateStr;
+
+                    if (isPast) {
+                      grid.push(
+                        <div
+                          key={dateStr}
+                          className="h-10 rounded-lg flex flex-col items-center justify-center text-[12px] bg-[#F8F5F2] text-[#C2B5B3] opacity-40 cursor-not-allowed"
+                        >
+                          <span className="line-through">{d}</span>
+                        </div>
+                      );
+                      continue;
+                    }
+
+                    if (booked) {
+                      grid.push(
+                        <div
+                          key={dateStr}
+                          title="Ngày đã có cô dâu đặt thuê theo đơn thực tế"
+                          className="h-10 rounded-lg flex flex-col items-center justify-center text-[12px] bg-[#FDF2F0] border border-[#F8D7DA] text-[#B91C1C] cursor-not-allowed font-bold"
+                        >
+                          <span className="line-through decoration-[#B91C1C]/60">{d}</span>
+                          <span className="text-[7.5px] leading-none uppercase font-extrabold">KÍN</span>
+                        </div>
+                      );
+                      continue;
+                    }
+
+                    grid.push(
+                      <button
+                        key={dateStr}
+                        type="button"
+                        onClick={() => setPreviewStartDate(dateStr)}
+                        className={`h-10 rounded-lg flex flex-col items-center justify-center text-[12px] font-semibold transition-all cursor-pointer border ${
+                          isSelected
+                            ? 'bg-[#70484E] text-white border-[#70484E] shadow-sm'
+                            : 'bg-white border-[#EAE0DC] text-[#231A19] hover:border-[#70484E] hover:bg-[#FAF4EE]'
+                        }`}
+                      >
+                        <span>{d}</span>
+                      </button>
+                    );
+                  }
+
+                  return grid;
+                })()}
+              </div>
+
+              {/* Booked periods summary */}
+              {bookedDates.length > 0 ? (
+                <div className="p-3 bg-[#FAF7F5] rounded-xl border border-[#EAE0DC] text-[12px]">
+                  <span className="font-semibold text-[#70484E] block mb-1.5">
+                    Các khoảng ngày đã khóa lịch của tác phẩm:
+                  </span>
+                  <div className="space-y-1">
+                    {bookedDates.map((b, idx) => (
+                      <div key={idx} className="flex items-center justify-between text-[#5A4848]">
+                        <span>• Đợt {idx + 1}: {formatShortDate(b.startDate)} – {formatShortDate(b.endDate)}</span>
+                        <span className="text-[10.5px] font-bold text-[#B91C1C] bg-[#FDF2F0] px-2 py-0.5 rounded-full">Đã đặt</span>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+              ) : (
+                <div className="p-3 bg-[#F0FDF4] rounded-xl border border-[#DCFCE7] text-[12px] text-[#15803D]">
+                  ✦ Toàn bộ các ngày trong tháng hiện đang trống lịch sẵn sàng cho nàng đặt thuê!
+                </div>
+              )}
+            </div>
+
+            {/* Footer */}
+            <div className="px-6 py-3.5 bg-[#FAF7F5] border-t border-[#EAE0DC] flex items-center justify-between gap-3">
+              <div className="text-[12px]">
+                {previewStartDate ? (
+                  <span className="text-[#231A19]">
+                    Ngày nhận chọn: <strong className="text-[#70484E]">{formatShortDate(previewStartDate)}</strong>
+                  </span>
+                ) : (
+                  <span className="text-[#7A6B6A]">Chọn một ngày còn trống để tiến hành đặt thuê</span>
+                )}
+              </div>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setIsAvailabilityModalOpen(false)}
+                  className="px-4 py-2 rounded-lg border border-[#EAE0DC] text-[12px] font-semibold text-[#5A4848] hover:bg-white cursor-pointer bg-transparent"
+                >
+                  Đóng
+                </button>
+                <button
+                  type="button"
+                  disabled={!previewStartDate}
+                  onClick={() => {
+                    setIsAvailabilityModalOpen(false);
+                    addToCart({
+                      ...dress,
+                      selectedSize,
+                      size: selectedSize,
+                      selectedColor,
+                      color: selectedColor?.name,
+                      rentalDays: 4,
+                    });
+                    const colorQuery = selectedColor?.name ? `&color=${encodeURIComponent(selectedColor.name)}` : '';
+                    navigate(`/checkout?dressId=${dress.id}&size=${selectedSize}&startDate=${previewStartDate}${colorQuery}`);
+                  }}
+                  className="px-5 py-2 rounded-lg bg-[#70484E] hover:bg-[#5D3B40] text-white text-[12px] font-semibold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border-0 flex items-center gap-1.5 transition-all"
+                >
+                  <Sparkles className="w-3.5 h-3.5" />
+                  Tiến hành thuê ngày này
+                </button>
               </div>
             </div>
           </div>

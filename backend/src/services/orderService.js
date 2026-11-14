@@ -137,17 +137,61 @@ export const createOrder = async (orderData, currentUser = null) => {
   }
 
   // Kiểm tra trùng lịch thuê váy (Overlap conflict check)
-  const bookedStatuses = ['deposit_paid', 'active', 'confirmed', 'preparing', 'delivered', 'renting'];
+  const bookedStatuses = [
+    'pending_payment',
+    'deposit_paid',
+    'active',
+    'confirmed',
+    'preparing',
+    'delivered',
+    'renting',
+    'returned',
+    'waiting_refund',
+    'completed',
+    'complete',
+  ];
   for (const item of resolvedItems) {
     if (!item.dressId) continue;
-    const dressIdStr = String(item.dressId);
-    const dressConditions = [{ 'items.dressId': dressIdStr }];
+    const dressIdStr = String(item.dressId).trim();
+    const dressConditions = [
+      { 'items.dressId': dressIdStr },
+      { 'items.code': dressIdStr },
+    ];
     if (mongoose.Types.ObjectId.isValid(dressIdStr)) {
       dressConditions.push({ 'items.dressId': new mongoose.Types.ObjectId(dressIdStr) });
     }
     const num = Number(dressIdStr);
     if (!isNaN(num)) {
       dressConditions.push({ 'items.dressId': num });
+    }
+    if (item.code) {
+      dressConditions.push({ 'items.code': item.code });
+    }
+    if (item.name) {
+      dressConditions.push({ 'items.name': item.name });
+    }
+
+    try {
+      const dressDoc = await Dress.findOne({
+        $or: [
+          ...(mongoose.Types.ObjectId.isValid(dressIdStr) ? [{ _id: dressIdStr }] : []),
+          { code: dressIdStr },
+          { name: item.name || dressIdStr },
+        ],
+      });
+      if (dressDoc) {
+        dressConditions.push({ 'items.dressId': dressDoc._id });
+        dressConditions.push({ 'items.dressId': String(dressDoc._id) });
+        if (dressDoc.code) {
+          dressConditions.push({ 'items.code': dressDoc.code });
+          dressConditions.push({ 'items.dressId': dressDoc.code });
+        }
+        if (dressDoc.name) {
+          dressConditions.push({ 'items.name': dressDoc.name });
+        }
+      }
+    } catch {
+      // ignore
     }
 
     const overlappingOrder = await Order.findOne({
@@ -546,15 +590,30 @@ export const updateOrderStatus = async (idOrCode, status) => {
 };
 
 export const getDressBookedDates = async (dressId) => {
-  // Quét toàn bộ các đơn thuê của chiếc váy đang ở các trạng thái đã cọc/đang chuẩn bị/đang thuê
-  const bookedStatuses = ['deposit_paid', 'active', 'confirmed', 'preparing', 'delivered', 'renting'];
+  // Quét toàn bộ các đơn thuê của chiếc váy đang ở các trạng thái hợp lệ (chỉ trừ đơn đã hủy 'cancelled')
+  const bookedStatuses = [
+    'pending_payment',
+    'deposit_paid',
+    'active',
+    'confirmed',
+    'preparing',
+    'delivered',
+    'renting',
+    'returned',
+    'waiting_refund',
+    'completed',
+    'complete',
+  ];
   const query = {
     status: { $in: bookedStatuses },
   };
 
   if (dressId) {
-    const dressIdStr = String(dressId);
-    const conditions = [{ 'items.dressId': dressIdStr }];
+    const dressIdStr = String(dressId).trim();
+    const conditions = [
+      { 'items.dressId': dressIdStr },
+      { 'items.code': dressIdStr },
+    ];
     if (mongoose.Types.ObjectId.isValid(dressIdStr)) {
       conditions.push({ 'items.dressId': new mongoose.Types.ObjectId(dressIdStr) });
     }
@@ -562,16 +621,54 @@ export const getDressBookedDates = async (dressId) => {
     if (!isNaN(num)) {
       conditions.push({ 'items.dressId': num });
     }
+
+    try {
+      const dressDoc = await Dress.findOne({
+        $or: [
+          ...(mongoose.Types.ObjectId.isValid(dressIdStr) ? [{ _id: dressIdStr }] : []),
+          { code: dressIdStr },
+          { name: dressIdStr },
+        ],
+      });
+      if (dressDoc) {
+        conditions.push({ 'items.dressId': dressDoc._id });
+        conditions.push({ 'items.dressId': String(dressDoc._id) });
+        if (dressDoc.code) {
+          conditions.push({ 'items.code': dressDoc.code });
+          conditions.push({ 'items.dressId': dressDoc.code });
+        }
+        if (dressDoc.name) {
+          conditions.push({ 'items.name': dressDoc.name });
+        }
+      }
+    } catch {
+      // ignore
+    }
+
     query.$or = conditions;
   }
 
-  const orders = await Order.find(query).select('orderCode rentalStartDate rentalEndDate customerName');
-  return orders.map((o) => ({
-    orderCode: o.orderCode,
-    startDate: o.rentalStartDate,
-    endDate: o.rentalEndDate,
-    bride: o.customerName || 'Nàng dâu UniBridal',
-  }));
+  const orders = await Order.find(query).select('orderCode rentalStartDate rentalEndDate customerName items status');
+  return orders
+    .filter((o) => o.rentalStartDate && o.rentalEndDate)
+    .map((o) => {
+      const formatYMD = (d) => {
+        if (!d) return null;
+        if (d instanceof Date) {
+          return d.toISOString().split('T')[0];
+        }
+        const str = String(d).trim();
+        return str.includes('T') ? str.split('T')[0] : str.slice(0, 10);
+      };
+
+      return {
+        orderCode: o.orderCode,
+        startDate: formatYMD(o.rentalStartDate),
+        endDate: formatYMD(o.rentalEndDate),
+        bride: o.customerName || 'Nàng dâu UniBridal',
+        status: o.status,
+      };
+    });
 };
 
 /**

@@ -227,13 +227,15 @@ export async function getDressBookedDates(dressId) {
   if (!dressId) return [];
   try {
     const res = await axiosClient.get(`/orders/dress/${dressId}/booked-dates`);
-    return Array.isArray(res.data) ? res.data : (res.data?.data || res || []);
+    const data = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+    return data;
   } catch (error) {
     try {
       const res = await axiosClient.get('/orders/booked-dates', {
         params: { dressId },
       });
-      return Array.isArray(res.data) ? res.data : (res.data?.data || res || []);
+      const data = Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+      return data;
     } catch {
       return [];
     }
