@@ -40,7 +40,7 @@ import {
   createAppointmentApi,
   getSlotAvailabilityApi,
 } from '../../services/appointmentService';
-import { getAllDresses } from '../../services/dressService';
+import { getAllDresses, isDressOutOfStock } from '../../services/dressService';
 
 export default function AppointmentPage() {
   const navigate = useNavigate();
@@ -162,7 +162,11 @@ export default function AppointmentPage() {
               Number(d.id) === Number(initialDressId)
           );
           if (matched) {
-            setSelectedDressIds([matched.id]);
+            if (isDressOutOfStock(matched)) {
+              message.warning(`Mẫu váy "${matched.name}" hiện đang hết hàng trong kho nên không thể chọn thử. Quý khách vui lòng chọn mẫu váy khác.`);
+            } else {
+              setSelectedDressIds([matched.id]);
+            }
           }
         }
       }
@@ -208,6 +212,11 @@ export default function AppointmentPage() {
 
   // Chọn / Bỏ chọn mẫu váy thứ 2 từ danh sách đề xuất (Tối đa 2 mẫu thử)
   const handleToggleSecondaryDress = (dressId) => {
+    const targetDress = availableDresses.find((d) => String(d.id) === String(dressId) || String(d._id) === String(dressId));
+    if (targetDress && isDressOutOfStock(targetDress)) {
+      message.warning(`Mẫu váy "${targetDress.name}" hiện đang hết hàng trong kho, không thể chọn thử.`);
+      return;
+    }
     if (selectedDressIds.length === 0) {
       setSelectedDressIds([dressId]);
       message.success('Đã chọn mẫu váy cưới chính.');
@@ -235,6 +244,11 @@ export default function AppointmentPage() {
 
   // Đổi mẫu váy chính
   const handleSelectPrimaryDress = (dressId) => {
+    const targetDress = availableDresses.find((d) => String(d.id) === String(dressId) || String(d._id) === String(dressId));
+    if (targetDress && isDressOutOfStock(targetDress)) {
+      message.warning(`Mẫu váy "${targetDress.name}" hiện đang hết hàng trong kho, không thể chọn thử.`);
+      return;
+    }
     const secondary = selectedDressIds.slice(1);
     setSelectedDressIds([dressId, ...secondary]);
     setIsChangingPrimary(false);
@@ -952,38 +966,56 @@ export default function AppointmentPage() {
                         </div>
                       ) : (
                         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
-                          {availableDresses.map((dress) => (
-                            <div
-                              key={dress.id}
-                              onClick={() => handleSelectPrimaryDress(dress.id)}
-                              className="rounded-xl border border-[#EEDECF] bg-white p-2.5 cursor-pointer hover:border-[#733F49] hover:shadow-xs transition-all flex flex-col justify-between group"
-                            >
-                              <div className="aspect-[3/4] w-full rounded-lg overflow-hidden relative mb-2">
-                                <img
-                                  src={dress.images?.[0] || dress.image}
-                                  alt={dress.name}
-                                  className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
-                                />
-                                <span className="absolute bottom-1.5 left-1.5 text-[8.5px] font-bold px-1.5 py-0.5 rounded-md bg-black/60 text-white backdrop-blur-xs">
-                                  {dress.silhouette}
-                                </span>
-                              </div>
-                              <div>
-                                <h4 className="font-jakarta text-[12.5px] font-bold text-[#2C2523] truncate m-0 leading-tight">
-                                  {dress.name}
-                                </h4>
-                                <div className="text-[11px] font-bold text-[#733F49] mt-1">
-                                  {formatCurrencyVND(dress.price || dress.rentPrice)}
-                                </div>
-                              </div>
-                              <button
-                                type="button"
-                                className="mt-2.5 w-full py-1.5 rounded-lg bg-[#FAF0EC] text-[#733F49] text-[11px] font-bold group-hover:bg-[#733F49] group-hover:text-white transition-colors cursor-pointer border border-[#F2D8D4]"
+                          {availableDresses.map((dress) => {
+                            const isOutOfStock = isDressOutOfStock(dress);
+                            return (
+                              <div
+                                key={dress.id}
+                                onClick={() => handleSelectPrimaryDress(dress.id)}
+                                className={`rounded-xl border p-2.5 flex flex-col justify-between group transition-all ${
+                                  isOutOfStock
+                                    ? 'border-stone-200 bg-stone-50 opacity-60 cursor-not-allowed'
+                                    : 'border-[#EEDECF] bg-white cursor-pointer hover:border-[#733F49] hover:shadow-xs'
+                                }`}
                               >
-                                + Chọn thử mẫu này
-                              </button>
-                            </div>
-                          ))}
+                                <div className="aspect-[3/4] w-full rounded-lg overflow-hidden relative mb-2">
+                                  <img
+                                    src={dress.images?.[0] || dress.image}
+                                    alt={dress.name}
+                                    className={`w-full h-full object-cover ${isOutOfStock ? 'grayscale-[30%]' : 'group-hover:scale-105 transition-transform duration-300'}`}
+                                  />
+                                  {isOutOfStock ? (
+                                    <span className="absolute top-1.5 left-1.5 text-[8.5px] font-bold px-1.5 py-0.5 rounded-md bg-red-600 text-white shadow-xs uppercase">
+                                      Hết hàng
+                                    </span>
+                                  ) : (
+                                    <span className="absolute bottom-1.5 left-1.5 text-[8.5px] font-bold px-1.5 py-0.5 rounded-md bg-black/60 text-white backdrop-blur-xs">
+                                      {dress.silhouette}
+                                    </span>
+                                  )}
+                                </div>
+                                <div>
+                                  <h4 className="font-jakarta text-[12.5px] font-bold text-[#2C2523] truncate m-0 leading-tight">
+                                    {dress.name}
+                                  </h4>
+                                  <div className="text-[11px] font-bold text-[#733F49] mt-1">
+                                    {formatCurrencyVND(dress.price || dress.rentPrice)}
+                                  </div>
+                                </div>
+                                <button
+                                  type="button"
+                                  disabled={isOutOfStock}
+                                  className={`mt-2.5 w-full py-1.5 rounded-lg text-[11px] font-bold transition-colors border ${
+                                    isOutOfStock
+                                      ? 'bg-stone-200 text-stone-500 border-stone-300 cursor-not-allowed'
+                                      : 'bg-[#FAF0EC] text-[#733F49] group-hover:bg-[#733F49] group-hover:text-white cursor-pointer border-[#F2D8D4]'
+                                  }`}
+                                >
+                                  {isOutOfStock ? 'Hết hàng trong kho' : '+ Chọn thử mẫu này'}
+                                </button>
+                              </div>
+                            );
+                          })}
                         </div>
                       )}
                     </div>
@@ -1070,23 +1102,36 @@ export default function AppointmentPage() {
                           <p className="text-[12px] text-[#6B5C5D] mb-3 m-0">Click vào một mẫu váy dưới đây để đặt làm mẫu chính:</p>
                           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
                             {availableDresses.map((dress) => {
+                              const isOutOfStock = isDressOutOfStock(dress);
                               const isSelected = String(primaryDress?.id) === String(dress.id);
                               return (
                                 <div
                                   key={dress.id}
                                   onClick={() => handleSelectPrimaryDress(dress.id)}
-                                  className={`rounded-xl border p-2 cursor-pointer transition-all flex flex-col justify-between ${isSelected ? 'border-[#733F49] ring-2 ring-[#733F49]/30 bg-white' : 'border-[#EEDECF] bg-white hover:border-[#B8737D]'}`}
+                                  className={`rounded-xl border p-2 transition-all flex flex-col justify-between ${
+                                    isOutOfStock
+                                      ? 'border-stone-200 bg-stone-50 opacity-60 cursor-not-allowed'
+                                      : isSelected
+                                      ? 'border-[#733F49] ring-2 ring-[#733F49]/30 bg-white cursor-pointer'
+                                      : 'border-[#EEDECF] bg-white hover:border-[#B8737D] cursor-pointer'
+                                  }`}
                                 >
                                   <div className="aspect-[3/4] w-full rounded-lg overflow-hidden relative mb-1.5">
-                                    <img src={dress.images?.[0] || dress.image} alt={dress.name} className="w-full h-full object-cover" />
-                                    {isSelected && (
+                                    <img src={dress.images?.[0] || dress.image} alt={dress.name} className={`w-full h-full object-cover ${isOutOfStock ? 'grayscale-[30%]' : ''}`} />
+                                    {isOutOfStock ? (
+                                      <span className="absolute top-1 left-1 text-[8px] font-bold px-1 py-0.5 rounded bg-red-600 text-white uppercase">
+                                        Hết
+                                      </span>
+                                    ) : isSelected ? (
                                       <div className="absolute top-1.5 right-1.5 w-5 h-5 rounded-full bg-[#733F49] text-white flex items-center justify-center">
                                         <Check className="w-3 h-3" />
                                       </div>
-                                    )}
+                                    ) : null}
                                   </div>
                                   <h4 className="font-jakarta text-[12px] font-bold text-[#2C2523] truncate m-0">{dress.name}</h4>
-                                  <span className="text-[10.5px] text-[#733F49] font-bold">{formatCurrencyVND(dress.price || dress.rentPrice)}</span>
+                                  <span className="text-[10.5px] text-[#733F49] font-bold">
+                                    {isOutOfStock ? 'Tạm hết hàng' : formatCurrencyVND(dress.price || dress.rentPrice)}
+                                  </span>
                                 </div>
                               );
                             })}
@@ -1113,6 +1158,7 @@ export default function AppointmentPage() {
 
                       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3.5">
                         {recommendedDresses.map((dress) => {
+                          const isOutOfStock = isDressOutOfStock(dress);
                           const isChosenAsSecondary = selectedDressIds.slice(1).some(
                             (id) => String(id) === String(dress.id) || String(id) === String(dress._id)
                           );
@@ -1120,21 +1166,30 @@ export default function AppointmentPage() {
                             <div
                               key={dress.id}
                               onClick={() => handleToggleSecondaryDress(dress.id)}
-                              className={`rounded-xl border overflow-hidden cursor-pointer transition-all flex flex-col justify-between relative group ${isChosenAsSecondary
-                                ? 'border-[#733F49] ring-2 ring-[#733F49]/30 bg-[#FAF4EE] shadow-sm'
-                                : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white hover:border-[#D8C7B8]'
-                                }`}
+                              className={`rounded-xl border overflow-hidden transition-all flex flex-col justify-between relative group ${
+                                isOutOfStock
+                                  ? 'border-stone-200 bg-stone-50 opacity-60 cursor-not-allowed'
+                                  : isChosenAsSecondary
+                                  ? 'border-[#733F49] ring-2 ring-[#733F49]/30 bg-[#FAF4EE] shadow-sm cursor-pointer'
+                                  : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white hover:border-[#D8C7B8] cursor-pointer'
+                              }`}
                             >
                               <div className="aspect-[3/4] w-full overflow-hidden relative">
                                 <img
                                   src={dress.images?.[0] || dress.image}
                                   alt={dress.name}
-                                  className="w-full h-full object-cover transition-transform duration-300 group-hover:scale-105"
+                                  className={`w-full h-full object-cover transition-transform duration-300 ${isOutOfStock ? 'grayscale-[30%]' : 'group-hover:scale-105'}`}
                                 />
 
-                                <span className="absolute bottom-1.5 left-1.5 text-[8.5px] font-bold px-1.5 py-0.5 rounded-md bg-black/60 text-white backdrop-blur-xs">
-                                  {dress.silhouette}
-                                </span>
+                                {isOutOfStock ? (
+                                  <span className="absolute top-1.5 left-1.5 text-[8.5px] font-bold px-1.5 py-0.5 rounded-md bg-red-600 text-white uppercase">
+                                    Hết hàng
+                                  </span>
+                                ) : (
+                                  <span className="absolute bottom-1.5 left-1.5 text-[8.5px] font-bold px-1.5 py-0.5 rounded-md bg-black/60 text-white backdrop-blur-xs">
+                                    {dress.silhouette}
+                                  </span>
+                                )}
                               </div>
 
                               <div className="p-2.5 flex-1 flex flex-col justify-between">
@@ -1143,18 +1198,22 @@ export default function AppointmentPage() {
                                     {dress.name}
                                   </h4>
                                   <div className="text-[11px] font-bold text-[#733F49] mb-2">
-                                    {formatCurrencyVND(dress.price || dress.rentPrice)}
+                                    {isOutOfStock ? 'Tạm hết hàng' : formatCurrencyVND(dress.price || dress.rentPrice)}
                                   </div>
                                 </div>
 
                                 <button
                                   type="button"
-                                  className={`w-full py-1 text-[10.5px] font-bold rounded-lg border transition-colors cursor-pointer ${isChosenAsSecondary
-                                    ? 'bg-[#733F49] text-white border-[#733F49]'
-                                    : 'bg-white text-[#733F49] border-[#EEDECF] hover:bg-[#FAF0EC]'
-                                    }`}
+                                  disabled={isOutOfStock}
+                                  className={`w-full py-1 text-[10.5px] font-bold rounded-lg border transition-colors ${
+                                    isOutOfStock
+                                      ? 'bg-stone-200 text-stone-500 border-stone-300 cursor-not-allowed'
+                                      : isChosenAsSecondary
+                                      ? 'bg-[#733F49] text-white border-[#733F49] cursor-pointer'
+                                      : 'bg-white text-[#733F49] border-[#EEDECF] hover:bg-[#FAF0EC] cursor-pointer'
+                                  }`}
                                 >
-                                  {isChosenAsSecondary ? '✓ Đang chọn thử kèm' : '+ Thử mẫu này'}
+                                  {isOutOfStock ? 'Hết hàng trong kho' : isChosenAsSecondary ? '✓ Đang chọn thử kèm' : '+ Thử mẫu này'}
                                 </button>
                               </div>
                             </div>

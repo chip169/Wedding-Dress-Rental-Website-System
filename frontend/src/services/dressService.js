@@ -422,3 +422,58 @@ export async function updateDress(id, data) {
 export async function deleteDress(id) {
   return await axiosClient.delete(`/dresses/${id}`);
 }
+
+/**
+ * Kiểm tra xem một mẫu váy cưới có bị HẾT HÀNG TRONG KHO hay không
+ * @param {Object} dress
+ * @returns {boolean} true nếu sản phẩm hết hàng trong kho
+ */
+export function isDressOutOfStock(dress) {
+  if (!dress) return false;
+
+  // 1. Kiểm tra trạng thái trực tiếp từ cơ sở dữ liệu
+  const status = String(dress.status || dress.statusType || '').toLowerCase();
+  if (status === 'out_of_stock' || status === 'retired' || status === 'unavailable') {
+    return true;
+  }
+
+  // 2. Kiểm tra ghi đè trạng thái từ Quản lý kho (Inventory Management)
+  try {
+    const rawOverrides = localStorage.getItem('unibridal_inventory_overrides');
+    if (rawOverrides) {
+      const overrides = JSON.parse(rawOverrides);
+      const dressId = String(dress._id || dress.id || '');
+      const dressCode = String(dress.code || '').toUpperCase();
+
+      const ov =
+        overrides[dressId] ||
+        overrides[dressCode] ||
+        Object.values(overrides).find(
+          (o) =>
+            (o?.code && o.code.toUpperCase() === dressCode) ||
+            (o?.id && String(o.id) === dressId)
+        );
+
+      if (ov?.statusType === 'out_of_stock') {
+        return true;
+      }
+    }
+  } catch {
+    // ignore json error
+  }
+
+  // 3. Kiểm tra số lượng tồn kho (sizes hoặc totalStock/quantity)
+  if (Array.isArray(dress.sizes) && dress.sizes.length > 0) {
+    const totalQty = dress.sizes.reduce((sum, s) => {
+      const q = typeof s === 'object' && s?.quantity !== undefined ? Number(s.quantity) : 1;
+      return sum + (isNaN(q) ? 0 : q);
+    }, 0);
+    if (totalQty === 0) return true;
+  } else if (dress.quantity !== undefined && Number(dress.quantity) === 0) {
+    return true;
+  } else if (dress.totalStock !== undefined && Number(dress.totalStock) === 0) {
+    return true;
+  }
+
+  return false;
+}

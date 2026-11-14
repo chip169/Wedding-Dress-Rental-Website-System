@@ -107,6 +107,27 @@ export const createOrder = async (orderData, currentUser = null) => {
     throw new Error('Đơn thuê cần ít nhất 1 sản phẩm váy cưới.');
   }
 
+  // Kiểm tra tình trạng tồn kho của từng sản phẩm trong đơn thuê
+  for (const item of resolvedItems) {
+    let dressDoc = null;
+    if (mongoose.Types.ObjectId.isValid(item.dressId)) {
+      dressDoc = await Dress.findById(item.dressId);
+    } else if (item.code) {
+      dressDoc = await Dress.findOne({ code: String(item.code).toUpperCase() });
+    }
+    if (dressDoc) {
+      const isOutOfStock =
+        dressDoc.status === 'out_of_stock' ||
+        dressDoc.status === 'retired' ||
+        dressDoc.status === 'unavailable' ||
+        (Array.isArray(dressDoc.sizes) &&
+          dressDoc.sizes.reduce((s, sz) => s + (sz.quantity || 0), 0) === 0);
+      if (isOutOfStock) {
+        throw new Error(`Sản phẩm "${dressDoc.name}" hiện đã hết hàng trong kho, không thể đặt lịch thuê.`);
+      }
+    }
+  }
+
   // Tính toán chi phí
   const totalRentPrice = resolvedItems.reduce((sum, item) => sum + item.rentPrice, 0);
   const totalDeposit = resolvedItems.reduce((sum, item) => sum + item.depositAmount, 0);

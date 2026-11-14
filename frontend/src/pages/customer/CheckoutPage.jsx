@@ -46,7 +46,7 @@ import { message } from 'antd';
 import { useAuth } from '../../contexts/AuthContext';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
-import { getDressById } from '../../services/dressService';
+import { getDressById, isDressOutOfStock } from '../../services/dressService';
 import { getCart, resolveCartItem, clearCart } from '../../services/cartService';
 import { getDressBookedDates, createOrder } from '../../services/orderService';
 import { simulateVietQRPaymentApi } from '../../services/paymentService';
@@ -910,9 +910,24 @@ export default function CheckoutPage() {
     return Object.keys(errors).length === 0;
   };
 
+  // Kiểm tra sản phẩm trong đơn thuê có bị hết hàng trong kho không
+  const hasOutOfStockItem = useMemo(() => {
+    if (orderItems && orderItems.length > 0) {
+      return orderItems.some(isDressOutOfStock);
+    }
+    if (activeDress) {
+      return isDressOutOfStock(activeDress);
+    }
+    return false;
+  }, [orderItems, activeDress]);
+
   // Validation Step 1
   const handleProceedToContract = (e) => {
     e?.preventDefault();
+    if (hasOutOfStockItem) {
+      message.error('Sản phẩm trong đơn thuê hiện đã hết hàng trong kho. Vui lòng chọn mẫu váy khác!');
+      return;
+    }
     if (!rentalSchedule.startDate || !rentalSchedule.weddingDate || !rentalSchedule.endDate) {
       message.warning('Nàng vui lòng chọn ngày cưới và thời gian thuê trên bảng lịch trước khi tiếp tục!');
       return;
@@ -1803,6 +1818,19 @@ export default function CheckoutPage() {
             {currentStep === 1 && (
               <div className="space-y-8 animate-fade-in">
 
+                {/* Banner cảnh báo hết hàng trong kho */}
+                {hasOutOfStockItem && (
+                  <div className="bg-[#FEF2F2] border border-[#FCA5A5] text-[#991B1B] p-5 rounded-2xl flex items-start gap-3 shadow-xs">
+                    <AlertCircle className="w-5 h-5 text-[#DC2626] shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-[14px] font-bold">Sản phẩm trong đơn thuê hiện đang TẠM HẾT HÀNG trong kho</div>
+                      <div className="text-[12.5px] text-[#7F1D1D] mt-1 leading-relaxed">
+                        Thiết kế bạn đang chọn hiện tại đã hết số lượng khả dụng trong kho hoặc đang được phục vụ kín lịch. Bạn không thể tiếp tục đặt cọc và ký hợp đồng thuê mẫu này. Vui lòng quay lại bộ sưu tập để chọn tác phẩm lễ phục khác.
+                      </div>
+                    </div>
+                  </div>
+                )}
+
                 {/* 1. THÔNG TIN NGƯỜI THUÊ */}
                 <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
                   <div className="flex items-center justify-between pb-5 border-b border-[#F5EDE8] mb-6">
@@ -2634,13 +2662,19 @@ export default function CheckoutPage() {
                   <button
                     type="button"
                     onClick={handleProceedToContract}
-                    disabled={Boolean(scheduleConflict)}
-                    className={`w-full py-4 rounded-xl font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-2 border-0 ${scheduleConflict
-                      ? 'bg-stone-300 text-stone-500 cursor-not-allowed shadow-none'
-                      : 'bg-[#733F49] hover:bg-[#5F323B] text-white shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer active:scale-[0.99]'
+                    disabled={Boolean(scheduleConflict) || hasOutOfStockItem}
+                    className={`w-full py-4 rounded-xl font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-2 border-0 ${
+                      scheduleConflict || hasOutOfStockItem
+                        ? 'bg-stone-300 text-stone-500 cursor-not-allowed shadow-none'
+                        : 'bg-[#733F49] hover:bg-[#5F323B] text-white shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer active:scale-[0.99]'
                       }`}
                   >
-                    {scheduleConflict ? (
+                    {hasOutOfStockItem ? (
+                      <>
+                        <AlertCircle className="w-4 h-4 text-stone-500" />
+                        <span>SẢN PHẨM HẾT HÀNG TRONG KHO — KHÔNG THỂ THUÊ</span>
+                      </>
+                    ) : scheduleConflict ? (
                       <>
                         <AlertCircle className="w-4 h-4 text-stone-500" />
                         <span>LỊCH BỊ TRÙNG — VUI LÒNG ĐỔI NGÀY TRÊN BẢNG LỊCH</span>
@@ -3491,11 +3525,16 @@ export default function CheckoutPage() {
             {currentStep === 1 && (
               <button
                 type="button"
+                disabled={hasOutOfStockItem}
                 onClick={handleProceedToContract}
-                className="px-5 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white text-[12.5px] sm:text-[13.5px] font-bold flex items-center gap-2 shadow-md transition-all cursor-pointer border-0 active:scale-[0.98]"
+                className={`px-5 sm:px-7 py-2.5 sm:py-3 rounded-xl text-white text-[12.5px] sm:text-[13.5px] font-bold flex items-center gap-2 shadow-md transition-all border-0 ${
+                  hasOutOfStockItem
+                    ? 'bg-stone-300 text-stone-500 cursor-not-allowed'
+                    : 'bg-[#733F49] hover:bg-[#5F323B] cursor-pointer active:scale-[0.98]'
+                }`}
               >
-                <span>Xem Trước và Ký Hợp Đồng</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>{hasOutOfStockItem ? 'Hết Hàng Trong Kho' : 'Xem Trước và Ký Hợp Đồng'}</span>
+                {!hasOutOfStockItem && <ArrowRight className="w-4 h-4" />}
               </button>
             )}
             {currentStep === 2 && (

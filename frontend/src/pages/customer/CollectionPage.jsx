@@ -10,7 +10,7 @@ import Footer from '../../components/layout/Footer';
 import { useAuth } from '../../contexts/AuthContext';
 import { addToCart } from '../../services/cartService';
 import { getWishlistIds, toggleWishlist, WISHLIST_EVENT } from '../../services/wishlistService';
-import { getAllDresses, getCategories, formatCurrencyVND } from '../../services/dressService';
+import { getAllDresses, getCategories, formatCurrencyVND, isDressOutOfStock } from '../../services/dressService';
 import RentSelectionModal from '../../components/common/RentSelectionModal';
 
 import logoEmblemImg from '../../assets/logo_emblem.png';
@@ -221,18 +221,30 @@ export default function CollectionPage() {
 
   // Thêm vào giỏ thuê
   const handleAddToCart = (dress) => {
+    if (isDressOutOfStock(dress)) {
+      showToast(`Mẫu váy "${dress.name}" hiện đã hết hàng trong kho, không thể thêm vào giỏ.`);
+      return;
+    }
     const added = addToCart(dress);
     showToast(added ? `Đã thêm "${dress.name}" vào giỏ thuê váy!` : `"${dress.name}" đã có trong giỏ thuê váy.`);
   };
 
   // Thuê Ngay: Mở Popup chọn màu sắc & kích thước chuẩn Ảnh 3
   const handleRentNow = (dress) => {
+    if (isDressOutOfStock(dress)) {
+      showToast(`Mẫu váy "${dress.name}" hiện đã hết hàng trong kho, không thể đặt lịch thuê!`);
+      return;
+    }
     setSelectedDressForRent(dress);
     setIsRentModalOpen(true);
   };
 
   // Đặt Lịch Thử Váy Riêng Tư
   const handleOpenFitting = (dress) => {
+    if (isDressOutOfStock(dress)) {
+      showToast(`Mẫu váy "${dress.name}" hiện đã hết hàng trong kho, không thể đặt lịch thử!`);
+      return;
+    }
     navigate(dress?.id ? `/dat-lich?dressId=${dress.id}` : '/dat-lich');
   };
 
@@ -759,6 +771,7 @@ export default function CollectionPage() {
               ) : (
                 <div className={`grid grid-cols-1 ${gridCols === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-2 xl:grid-cols-3'} gap-6`}>
                   {paginatedProducts.map((dress) => {
+                    const isOutOfStock = isDressOutOfStock(dress);
                     const isWishlisted = Boolean(
                       Array.isArray(wishlistIds) &&
                       wishlistIds.some((w) => {
@@ -778,11 +791,16 @@ export default function CollectionPage() {
                           <img
                             src={dress.image}
                             alt={dress.name}
-                            className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                            className={`w-full h-full object-cover object-top transition-transform duration-500 ${isOutOfStock ? 'opacity-80 grayscale-[25%]' : 'group-hover:scale-105'}`}
                           />
 
                           {/* Left Badges */}
                           <div className="absolute top-3.5 left-3.5 flex flex-col gap-1.5 z-10">
+                            {isOutOfStock && (
+                              <span className="px-2.5 py-1 rounded-[6px] bg-[#DC2626] text-white font-jakarta font-bold text-[9px] tracking-[0.8px] shadow-sm uppercase">
+                                Hết hàng trong kho
+                              </span>
+                            )}
                             <span className="px-2.5 py-1 rounded-[6px] bg-white text-[#2C2523] font-jakarta font-bold text-[9px] tracking-[0.8px] shadow-xs">
                               {dress.badgeMain}
                             </span>
@@ -823,19 +841,21 @@ export default function CollectionPage() {
                           </div>
 
                           {/* Quick Fitting Button on Hover (nằm ở lớp trước z-20 đè lên trên logo) */}
-                          <div className="absolute inset-x-4 bottom-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex justify-center pointer-events-none group-hover:pointer-events-auto">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenFitting(dress);
-                              }}
-                              className="px-4 py-2 rounded-xl bg-white hover:bg-[#FAF7F5] text-[#733F49] font-jakarta text-[12px] font-bold tracking-wide shadow-[0px_4px_16px_rgba(0,0,0,0.18)] border border-[#EEDECF] flex items-center gap-1.5 cursor-pointer transition-all"
-                            >
-                              <Calendar className="w-3.5 h-3.5 text-[#B8737D]" />
-                              <span>Đặt lịch thử tại Showroom</span>
-                            </button>
-                          </div>
+                          {!isOutOfStock && (
+                            <div className="absolute inset-x-4 bottom-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex justify-center pointer-events-none group-hover:pointer-events-auto">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenFitting(dress);
+                                }}
+                                className="px-4 py-2 rounded-xl bg-white hover:bg-[#FAF7F5] text-[#733F49] font-jakarta text-[12px] font-bold tracking-wide shadow-[0px_4px_16px_rgba(0,0,0,0.18)] border border-[#EEDECF] flex items-center gap-1.5 cursor-pointer transition-all"
+                              >
+                                <Calendar className="w-3.5 h-3.5 text-[#B8737D]" />
+                                <span>Đặt lịch thử tại Showroom</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
 
                         {/* Thông Tin Chi Tiết Thẻ */}
@@ -867,7 +887,11 @@ export default function CollectionPage() {
 
                           {/* Nút Bấm: Thêm Vào Giỏ và Thuê Ngay (Đẩy sát đáy card với mt-auto) */}
                           <div className="mt-auto pt-1">
-                            {isLoggedIn ? (
+                            {isOutOfStock ? (
+                              <div className="w-full py-2.5 rounded-[10px] bg-stone-100 text-stone-500 font-jakarta text-[12px] font-semibold tracking-wide text-center border border-stone-200 cursor-not-allowed select-none">
+                                Tạm Hết Hàng Trong Kho
+                              </div>
+                            ) : isLoggedIn ? (
                               <div className="grid grid-cols-2 gap-2.5">
                                 <button
                                   type="button"
