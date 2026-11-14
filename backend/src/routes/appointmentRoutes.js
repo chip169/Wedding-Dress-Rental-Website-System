@@ -4,6 +4,9 @@ import { authenticate, authorize, optionalAuthenticate } from '../middlewares/au
 
 const router = Router();
 
+// 0. Lấy số chỗ trống khả dụng theo ngày và chi nhánh (công khai cho khách hàng)
+router.get('/availability', appointmentController.getSlotAvailability);
+
 // 1. Khách hàng (cả Guest lẫn Đã đăng nhập) gửi yêu cầu đặt lịch
 router.post('/', optionalAuthenticate, appointmentController.createAppointment);
 

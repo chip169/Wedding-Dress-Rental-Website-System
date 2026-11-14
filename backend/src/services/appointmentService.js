@@ -101,6 +101,29 @@ export const createAppointment = async (appointmentData, currentUser = null) => 
     throw new Error('Ngày hẹn thử váy không thể là ngày trong quá khứ.');
   }
 
+  // Kiểm tra sức chứa thực tế của ca thử váy (tối đa 3 khách / ca 90 phút tại mỗi showroom)
+  const branchKey = (branch || branchId || 'hcm-q1').trim();
+  const branchFilter = branchKey.includes('hn') ? ['hn-hoankiem', 'hn-hk', 'hn'] : ['hcm-q1', 'hcm'];
+
+  const startOfDay = new Date(parsedAppointmentDate);
+  startOfDay.setHours(0, 0, 0, 0);
+  const endOfDay = new Date(parsedAppointmentDate);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const normalizeSlot = (str) => (str || '').replace(/\s+/g, '').replace(/[—–-]/g, '-');
+  const targetSlotNorm = normalizeSlot(timeSlot);
+
+  const existingInSlot = await Appointment.find({
+    branch: { $in: branchFilter },
+    appointmentDate: { $gte: startOfDay, $lte: endOfDay },
+    status: { $nin: ['cancelled'] },
+  }).lean();
+
+  const bookedCountInSlot = existingInSlot.filter((a) => normalizeSlot(a.timeSlot) === targetSlotNorm).length;
+  if (bookedCountInSlot >= 3) {
+    throw new Error(`Khung giờ "${timeSlot}" vào ngày này đã kín lịch (tối đa 3 khách/ca). Vui lòng chọn khung giờ khác.`);
+  }
+
   const randomCode = `APT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
   const newAppointment = new Appointment({
@@ -147,12 +170,12 @@ export const createAppointment = async (appointmentData, currentUser = null) => 
     console.error('[TRIGGER APPOINTMENT EMAIL ERROR]', err.message);
   }
 
-  const branchKey = newAppointment.branch || 'hcm-q1';
-  const branchInfo = BRANCH_DETAILS[branchKey] || (String(branchKey).includes('hn') ? BRANCH_DETAILS['hn-hoankiem'] : BRANCH_DETAILS['hcm-q1']);
+  const finalBranchKey = newAppointment.branch || 'hcm-q1';
+  const branchInfo = BRANCH_DETAILS[finalBranchKey] || (String(finalBranchKey).includes('hn') ? BRANCH_DETAILS['hn-hoankiem'] : BRANCH_DETAILS['hcm-q1']);
 
   const responseObj = newAppointment.toObject();
   responseObj.id = newAppointment.appointmentCode;
-  responseObj.branch = branchKey;
+  responseObj.branch = finalBranchKey;
   responseObj.branchName = branchInfo.name;
   responseObj.branchAddress = branchInfo.address;
   responseObj.branchPhone = branchInfo.phone;
@@ -216,5 +239,64 @@ export const updateAppointmentStatus = async (id, status, staffId = null) => {
   await appointment.save();
 
   return appointment;
+};
+
+/**
+ * Tính số chỗ trống khả dụng thực tế của từng ca thử váy theo ngày và chi nhánh
+ * Dựa trên số lượng lịch hẹn thực tế trong database (Sức chứa chuẩn 3 Private Suite/ca)
+ */
+export const getSlotAvailability = async ({ date, branch }) => {
+  const branchKey = (branch || 'hcm-q1').trim();
+  const targetDate = parseDateSafe(date, new Date());
+
+  const startOfDay = new Date(targetDate);
+  startOfDay.setHours(0, 0, 0, 0);
+
+  const endOfDay = new Date(targetDate);
+  endOfDay.setHours(23, 59, 59, 999);
+
+  const branchFilter = branchKey.includes('hn')
+    ? ['hn-hoankiem', 'hn-hk', 'hn']
+    : ['hcm-q1', 'hcm'];
+
+  const appointments = await Appointment.find({
+    branch: { $in: branchFilter },
+    appointmentDate: { $gte: startOfDay, $lte: endOfDay },
+    status: { $nin: ['cancelled'] },
+  }).lean();
+
+  const normalizeSlot = (str) =>
+    (str || '')
+      .replace(/\s+/g, '')
+      .replace(/[—–-]/g, '-');
+
+  const bookedCounts = {};
+  for (const appt of appointments) {
+    const key = normalizeSlot(appt.timeSlot);
+    bookedCounts[key] = (bookedCounts[key] || 0) + 1;
+  }
+
+  const standardSlots = [
+    { id: 't1', time: '09:00 — 10:30', period: 'Sáng', capacity: 3, label: 'Thanh bình và Ánh sáng tự nhiên' },
+    { id: 't2', time: '10:30 — 12:00', period: 'Sáng', capacity: 3, label: 'Thích hợp thử kỹ phom dáng' },
+    { id: 't3', time: '13:30 — 15:00', period: 'Chiều', capacity: 3, label: 'Khung giờ vàng tư vấn NTK' },
+    { id: 't4', time: '15:00 — 16:30', period: 'Chiều', capacity: 3, label: 'Thư thái cùng tiệc trà chiều' },
+    { id: 't5', time: '16:30 — 18:00', period: 'Chiều', capacity: 3, label: 'Khung giờ đón hoàng hôn' },
+    { id: 't6', time: '18:30 — 20:00', period: 'Tối', capacity: 3, label: 'Trải nghiệm ánh sáng tiệc cưới' },
+    { id: 't7', time: '20:00 — 21:30', period: 'Tối', capacity: 3, label: 'Buổi thử riêng tư cuối ngày' },
+  ];
+
+  return standardSlots.map((slot) => {
+    const key = normalizeSlot(slot.time);
+    const booked = bookedCounts[key] || 0;
+    const available = Math.max(0, slot.capacity - booked);
+    return {
+      ...slot,
+      booked,
+      available,
+      disabled: available === 0,
+      label: available === 0 ? 'Đã kín lịch' : slot.label,
+    };
+  });
 };
 

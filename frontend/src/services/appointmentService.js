@@ -33,13 +33,13 @@ export const SHOWROOM_BRANCHES = [
 ];
 
 export const TIME_SLOTS = [
-  { id: 't1', time: '09:00 — 10:30', period: 'Sáng', available: 2, label: 'Thanh bình và Ánh sáng tự nhiên' },
-  { id: 't2', time: '10:30 — 12:00', period: 'Sáng', available: 1, label: 'Thích hợp thử kỹ phom dáng' },
-  { id: 't3', time: '13:30 — 15:00', period: 'Chiều', available: 3, label: 'Khung giờ vàng tư vấn NTK' },
-  { id: 't4', time: '15:00 — 16:30', period: 'Chiều', available: 2, label: 'Thư thái cùng tiệc trà chiều' },
-  { id: 't5', time: '16:30 — 18:00', period: 'Chiều', available: 0, label: 'Đã kín lịch', disabled: true },
-  { id: 't6', time: '18:30 — 20:00', period: 'Tối', available: 2, label: 'Trải nghiệm ánh sáng tiệc cưới' },
-  { id: 't7', time: '20:00 — 21:30', period: 'Tối', available: 1, label: 'Buổi thử riêng tư cuối ngày' },
+  { id: 't1', time: '09:00 — 10:30', period: 'Sáng', capacity: 3, available: 3, label: 'Thanh bình và Ánh sáng tự nhiên' },
+  { id: 't2', time: '10:30 — 12:00', period: 'Sáng', capacity: 3, available: 3, label: 'Thích hợp thử kỹ phom dáng' },
+  { id: 't3', time: '13:30 — 15:00', period: 'Chiều', capacity: 3, available: 3, label: 'Khung giờ vàng tư vấn NTK' },
+  { id: 't4', time: '15:00 — 16:30', period: 'Chiều', capacity: 3, available: 3, label: 'Thư thái cùng tiệc trà chiều' },
+  { id: 't5', time: '16:30 — 18:00', period: 'Chiều', capacity: 3, available: 3, label: 'Khung giờ đón hoàng hôn' },
+  { id: 't6', time: '18:30 — 20:00', period: 'Tối', capacity: 3, available: 3, label: 'Trải nghiệm ánh sáng tiệc cưới' },
+  { id: 't7', time: '20:00 — 21:30', period: 'Tối', capacity: 3, available: 3, label: 'Buổi thử riêng tư cuối ngày' },
 ];
 
 export const VIP_SERVICES = [
@@ -176,5 +176,57 @@ export async function updateAppointmentStatusApi(id, status) {
     return await axiosClient.patch(`/appointments/${id}/status`, { status });
   } catch (error) {
     return { success: true, message: 'Cập nhật trạng thái lịch hẹn thành công (Offline Demo)' };
+  }
+}
+
+/**
+ * Gọi API lấy số chỗ trống khả dụng thực tế của từng ca thử váy theo ngày và chi nhánh
+ * @param {string} date - 'YYYY-MM-DD'
+ * @param {string} branch - 'hcm-q1' | 'hn-hoankiem'
+ */
+export async function getSlotAvailabilityApi(date, branch) {
+  try {
+    const res = await axiosClient.get('/appointments/availability', {
+      params: { date, branch },
+    });
+    return res?.data || res;
+  } catch (error) {
+    // Fallback: tính toán trực tiếp từ danh sách appointments trong localStorage
+    const localAppointments = getAppointments();
+    const normalizeSlot = (str) =>
+      (str || '')
+        .replace(/\s+/g, '')
+        .replace(/[—–-]/g, '-');
+
+    const dateStr = (date || '').split('T')[0];
+    const branchKey = (branch || 'hcm-q1').trim();
+
+    const dayBookings = localAppointments.filter((a) => {
+      const aDate = (a.date || a.appointmentDate || '').split('T')[0];
+      const aBranch = (a.branch || a.branchId || 'hcm-q1').trim();
+      const matchBranch = branchKey.includes('hn')
+        ? aBranch.includes('hn')
+        : aBranch.includes('hcm');
+      return aDate === dateStr && matchBranch && a.status !== 'cancelled';
+    });
+
+    const bookedCounts = {};
+    dayBookings.forEach((b) => {
+      const key = normalizeSlot(b.timeSlot);
+      bookedCounts[key] = (bookedCounts[key] || 0) + 1;
+    });
+
+    return TIME_SLOTS.map((slot) => {
+      const key = normalizeSlot(slot.time);
+      const booked = bookedCounts[key] || 0;
+      const available = Math.max(0, slot.capacity - booked);
+      return {
+        ...slot,
+        booked,
+        available,
+        disabled: available === 0,
+        label: available === 0 ? 'Đã kín lịch' : slot.label,
+      };
+    });
   }
 }

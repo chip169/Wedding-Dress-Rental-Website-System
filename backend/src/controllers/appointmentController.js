@@ -1,5 +1,19 @@
 import * as appointmentService from '../services/appointmentService.js';
 
+export const getSlotAvailability = async (req, res, next) => {
+  try {
+    const { date, branch } = req.query;
+    const slots = await appointmentService.getSlotAvailability({ date, branch });
+    res.status(200).json({
+      success: true,
+      message: 'Lấy số chỗ trống khả dụng theo khung giờ thành công',
+      data: slots,
+    });
+  } catch (error) {
+    next(error);
+  }
+};
+
 export const createAppointment = async (req, res, next) => {
   try {
     const appointment = await appointmentService.createAppointment(req.body, req.user);

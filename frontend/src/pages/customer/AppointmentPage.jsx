@@ -38,32 +38,9 @@ import {
   VIP_SERVICES,
   createAppointment,
   createAppointmentApi,
+  getSlotAvailabilityApi,
 } from '../../services/appointmentService';
 import { getAllDresses } from '../../services/dressService';
-
-// Helper: Build Google Calendar event URL
-function buildGoogleCalendarUrl(booking) {
-  if (!booking) return '#';
-  try {
-    const title = encodeURIComponent('Lịch Thử Váy Cưới Private Suite — UniBridal Atelier');
-    const dateClean = (booking.date || '').split('T')[0].replace(/-/g, '');
-    let startTime = '133000';
-    let endTime = '150000';
-    if (booking.timeSlot && booking.timeSlot.includes('—')) {
-      const [start, end] = booking.timeSlot.split('—').map((s) => s.trim().replace(':', ''));
-      if (start) startTime = `${start}00`;
-      if (end) endTime = `${end}00`;
-    }
-    const dates = `${dateClean}T${startTime}/${dateClean}T${endTime}`;
-    const location = encodeURIComponent(`${booking.branchName || ''} - ${booking.branchAddress || ''}`);
-    const details = encodeURIComponent(
-      `Mã Check-in: ${booking.id}\nCô dâu vinh dự: ${booking.fullName}\nSĐT: ${booking.phone}\nĐịa chỉ: ${booking.branchAddress || ''}\nTrân trọng đón tiếp nàng!`
-    );
-    return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&location=${location}&details=${details}`;
-  } catch {
-    return 'https://calendar.google.com';
-  }
-}
 
 export default function AppointmentPage() {
   const navigate = useNavigate();
@@ -84,8 +61,36 @@ export default function AppointmentPage() {
   }, []);
 
   const [selectedDate, setSelectedDate] = useState(tomorrowStr);
-  const [selectedTimeSlotId, setSelectedTimeSlotId] = useState('t3');
+  const [selectedTimeSlotId, setSelectedTimeSlotId] = useState('t1');
   const [periodFilter, setPeriodFilter] = useState('all');
+  const [slotsAvailability, setSlotsAvailability] = useState(TIME_SLOTS);
+
+  // Tải danh sách số chỗ trống khả dụng thực tế theo ngày và chi nhánh từ Database
+  useEffect(() => {
+    if (!selectedDate || !selectedBranchId) return;
+    let isCancelled = false;
+
+    getSlotAvailabilityApi(selectedDate, selectedBranchId)
+      .then((res) => {
+        if (isCancelled) return;
+        const slots = res?.data || res;
+        if (Array.isArray(slots) && slots.length > 0) {
+          setSlotsAvailability(slots);
+          const current = slots.find((s) => s.id === selectedTimeSlotId);
+          if (current && current.available === 0) {
+            const firstOpen = slots.find((s) => s.available > 0);
+            if (firstOpen) {
+              setSelectedTimeSlotId(firstOpen.id);
+            }
+          }
+        }
+      })
+      .catch(() => {});
+
+    return () => {
+      isCancelled = true;
+    };
+  }, [selectedDate, selectedBranchId]);
 
   // Step 3: Selected Dresses (Tối đa 2 mẫu: 1 mẫu chính + tối đa 1 mẫu đề xuất thêm)
   const [selectedDressIds, setSelectedDressIds] = useState(() => {
@@ -133,10 +138,10 @@ export default function AppointmentPage() {
   );
 
   // Active Time Slot
-  const selectedTimeSlot = useMemo(
-    () => TIME_SLOTS.find((t) => t.id === selectedTimeSlotId) || TIME_SLOTS[2],
-    [selectedTimeSlotId]
-  );
+  const selectedTimeSlot = useMemo(() => {
+    const list = slotsAvailability && slotsAvailability.length > 0 ? slotsAvailability : TIME_SLOTS;
+    return list.find((t) => t.id === selectedTimeSlotId) || list.find((s) => s.available > 0) || list[0] || TIME_SLOTS[0];
+  }, [selectedTimeSlotId, slotsAvailability]);
 
   // Selected Dress Objects
   const [availableDresses, setAvailableDresses] = useState([]);
@@ -241,9 +246,10 @@ export default function AppointmentPage() {
 
   // Filtered Time Slots
   const filteredTimeSlots = useMemo(() => {
-    if (periodFilter === 'all') return TIME_SLOTS;
-    return TIME_SLOTS.filter((slot) => slot.period.toLowerCase() === periodFilter.toLowerCase());
-  }, [periodFilter]);
+    const list = slotsAvailability && slotsAvailability.length > 0 ? slotsAvailability : TIME_SLOTS;
+    if (periodFilter === 'all') return list;
+    return list.filter((slot) => slot.period.toLowerCase() === periodFilter.toLowerCase());
+  }, [periodFilter, slotsAvailability]);
 
   // Toggle dress selection
   const handleToggleDress = (dressId) => {
@@ -402,13 +408,11 @@ export default function AppointmentPage() {
         stylistName: 'NTK. Hoàng Yến (Lead Haute Couture Stylist)',
       });
       message.success('Đặt lịch hẹn Private Suite thành công!');
+      getSlotAvailabilityApi(selectedDate, selectedBranch.id).then((res) => {
+        if (Array.isArray(res?.data || res)) setSlotsAvailability(res?.data || res);
+      }).catch(() => {});
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
-  };
-
-  // Print invitation handler
-  const handlePrintInvitation = () => {
-    window.print();
   };
 
   // Thông tin chi nhánh chính xác hiển thị trên Giấy mời
@@ -440,16 +444,7 @@ export default function AppointmentPage() {
 
             {/* Top Status Header */}
             <div className="text-center mb-8 print:hidden">
-              <div className="w-16 h-16 rounded-full bg-gradient-to-tr from-[#E8F5E9] to-[#C8E6C9] text-[#2E7D32] flex items-center justify-center mx-auto mb-3 shadow-[0_4px_16px_rgba(46,125,50,0.15)] ring-4 ring-white">
-                <CheckCircle2 className="w-9 h-9" />
-              </div>
-              <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF0EC] text-[#B8737D] text-[11.5px] font-bold tracking-[1.5px] uppercase border border-[#F2D8D4] mb-2">
-                <Crown className="w-3.5 h-3.5 text-[#D4AF37]" />
-                XÁC NHẬN ĐẶT LỊCH HẸN PRIVATE SUITE THÀNH CÔNG
-              </span>
-              <h1 className="font-jakarta text-[26px] sm:text-[34px] font-extrabold text-[#2C2523] mt-2 mb-2 leading-tight tracking-tight">
-                Hẹn Gặp Nàng Tại UniBridal Private Suite
-              </h1>
+
 
               <div className="mt-3.5 inline-flex items-center gap-2 bg-[#F0FDF4] text-[#166534] border border-[#BBF7D0] px-4 py-2 rounded-xl text-[13px] font-medium shadow-xs">
                 <Mail className="w-4 h-4 text-[#16a34a] shrink-0" />
@@ -572,9 +567,7 @@ export default function AppointmentPage() {
                           <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-[#733F49] bg-[#F2DDD7] px-2.5 py-0.5 rounded-md border border-[#E7C7BE]">
                             {bookingBranch.id.includes('hn') ? '✦ CHI NHÁNH HOÀN KIẾM — HÀ NỘI' : '✦ CHI NHÁNH QUẬN 1 — TP. HỒ CHÍ MINH'}
                           </span>
-                          <span className="text-[11.5px] text-[#847374] font-medium">
-                            Giờ tiếp đón: {bookingBranch.hours}
-                          </span>
+
                         </div>
                         <div className="font-jakarta font-bold text-[17px] text-[#2C2523] leading-snug">
                           {bookingBranch.name}
@@ -863,17 +856,17 @@ export default function AppointmentPage() {
                     </label>
                     <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3">
                       {filteredTimeSlots.map((slot) => {
-                        const isSelected = selectedTimeSlotId === slot.id;
+                        const isSelected = selectedTimeSlotId === slot.id || selectedTimeSlot?.time === slot.time;
                         const isDisabled = slot.disabled || slot.available === 0;
                         return (
                           <div
                             key={slot.id}
                             onClick={() => !isDisabled && setSelectedTimeSlotId(slot.id)}
                             className={`rounded-xl p-3 border transition-all text-left ${isDisabled
-                              ? 'bg-gray-100 border-gray-200 opacity-50 cursor-not-allowed'
+                              ? 'bg-stone-100 border-stone-200 opacity-50 cursor-not-allowed'
                               : isSelected
                                 ? 'border-[#733F49] bg-[#FAF3F0] ring-1 ring-[#733F49] shadow-2xs cursor-pointer'
-                                : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white cursor-pointer'
+                                : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white cursor-pointer shadow-2xs'
                               }`}
                           >
                             <div className="flex items-center justify-between mb-1">
@@ -882,7 +875,7 @@ export default function AppointmentPage() {
                               </span>
                               <span
                                 className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${isDisabled
-                                  ? 'bg-gray-200 text-gray-500'
+                                  ? 'bg-stone-200 text-stone-500'
                                   : slot.available === 1
                                     ? 'bg-[#FFEBEE] text-[#C62828]'
                                     : 'bg-[#E8F5E9] text-[#2E7D32]'
