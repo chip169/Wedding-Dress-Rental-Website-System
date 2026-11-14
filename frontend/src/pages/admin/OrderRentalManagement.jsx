@@ -40,6 +40,9 @@ import {
   BookOpen,
   FileEdit,
   FileCheck,
+  ArrowUpDown,
+  ArrowUp,
+  ArrowDown,
 } from 'lucide-react';
 import HangerIcon from '../../components/common/HangerIcon';
 import {
@@ -1845,7 +1848,17 @@ export default function OrderRentalManagement() {
   const [statusFilter, setStatusFilter] = useState('all');
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
   const [viewMode, setViewMode] = useState('active'); // 'active' (Đơn Đang Xử Lý) | 'archived' (Kho Lưu Trữ)
+  const [sortField, setSortField] = useState('orderCode'); // 'orderCode' | 'customer' | 'rentalDate' | 'deposit' | 'status'
   const [sortOrder, setSortOrder] = useState('desc'); // 'desc': mới nhất -> cũ nhất, 'asc': cũ nhất -> mới nhất
+
+  const handleSort = (field) => {
+    if (sortField === field) {
+      setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'));
+    } else {
+      setSortField(field);
+      setSortOrder(field === 'orderCode' || field === 'rentalDate' || field === 'deposit' ? 'desc' : 'asc');
+    }
+  };
 
   const [inspectionOrder, setInspectionOrder] = useState(null); // for inspection modal (bước 1 & 2)
   const [negotiationOrder, setNegotiationOrder] = useState(null); // for Admin Negotiation Modal (bước 3 & 4)
@@ -2108,18 +2121,48 @@ export default function OrderRentalManagement() {
       return matchSearch && matchStatus;
     });
 
-    // Tự động sắp xếp đơn mới nhất lên đầu danh sách (ưu tiên ngày tạo/cập nhật mới nhất)
+    // Tự động sắp xếp linh hoạt theo cột được chọn
     return [...list].sort((a, b) => {
-      const timeA = new Date(a.createdAt || a.updatedAt || 0).getTime();
-      const timeB = new Date(b.createdAt || b.updatedAt || 0).getTime();
-      if (timeB !== timeA) {
-        return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+      if (sortField === 'orderCode') {
+        const timeA = new Date(a.createdAt || a.updatedAt || 0).getTime();
+        const timeB = new Date(b.createdAt || b.updatedAt || 0).getTime();
+        if (timeB !== timeA) {
+          return sortOrder === 'desc' ? timeB - timeA : timeA - timeB;
+        }
+        return sortOrder === 'desc'
+          ? String(b.orderCode || b._id || '').localeCompare(String(a.orderCode || a._id || ''), undefined, { numeric: true })
+          : String(a.orderCode || a._id || '').localeCompare(String(b.orderCode || b._id || ''), undefined, { numeric: true });
       }
-      return sortOrder === 'desc'
-        ? String(b.orderCode || b._id || '').localeCompare(String(a.orderCode || a._id || ''), undefined, { numeric: true })
-        : String(a.orderCode || a._id || '').localeCompare(String(b.orderCode || b._id || ''), undefined, { numeric: true });
+
+      if (sortField === 'customer') {
+        const nameA = String(a.shippingAddress?.fullName || a.userId?.fullName || a.customerName || '');
+        const nameB = String(b.shippingAddress?.fullName || b.userId?.fullName || b.customerName || '');
+        return sortOrder === 'desc'
+          ? nameB.localeCompare(nameA, 'vi')
+          : nameA.localeCompare(nameB, 'vi');
+      }
+
+      if (sortField === 'rentalDate') {
+        const dateA = new Date(a.rentalStartDate || a.rentalDates?.start || 0).getTime();
+        const dateB = new Date(b.rentalStartDate || b.rentalDates?.start || 0).getTime();
+        return sortOrder === 'desc' ? dateB - dateA : dateA - dateB;
+      }
+
+      if (sortField === 'deposit') {
+        const depA = Number(a.depositAmount ?? a.pricing?.deposit ?? 0);
+        const depB = Number(b.depositAmount ?? b.pricing?.deposit ?? 0);
+        return sortOrder === 'desc' ? depB - depA : depA - depB;
+      }
+
+      if (sortField === 'status') {
+        const stA = String(a.orderStatus || a.status || '');
+        const stB = String(b.orderStatus || b.status || '');
+        return sortOrder === 'desc' ? stB.localeCompare(stA) : stA.localeCompare(stB);
+      }
+
+      return 0;
     });
-  }, [orders, searchTerm, statusFilter, viewMode, sortOrder]);
+  }, [orders, searchTerm, statusFilter, viewMode, sortField, sortOrder]);
 
   const selectedFilterLabel =
     FILTER_OPTIONS.find((opt) => opt.value === statusFilter)?.label ?? 'Tất Cả Trạng Thái';
@@ -2410,31 +2453,107 @@ export default function OrderRentalManagement() {
             <thead>
               <tr className="border-b border-[#F2E5E0] bg-[#FFF6F3]">
                 <th
-                  onClick={() => setSortOrder((prev) => (prev === 'desc' ? 'asc' : 'desc'))}
-                  className="py-4 px-5 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase cursor-pointer hover:text-[#733F49] transition-colors select-none"
-                  title="Nhấp để chuyển đổi sắp xếp: Mới nhất / Cũ nhất"
+                  onClick={() => handleSort('orderCode')}
+                  className="py-4 px-5 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase cursor-pointer hover:text-[#733F49] transition-colors select-none group"
+                  title="Nhấp để sắp xếp theo Mã đơn (Mới nhất / Cũ nhất)"
                 >
                   <div className="flex items-center gap-1.5">
                     <span>MÃ ĐƠN</span>
-                    <span className="text-[#B8737D] text-[10px] font-bold bg-[#FAF0EC] px-1.5 py-0.5 rounded border border-[#F2D8D4]">
-                      {sortOrder === 'desc' ? '↓ Mới nhất' : '↑ Cũ nhất'}
+                    <span className="inline-flex items-center">
+                      {sortField === 'orderCode' ? (
+                        sortOrder === 'desc' ? (
+                          <ArrowDown size={13} className="text-[#733F49]" />
+                        ) : (
+                          <ArrowUp size={13} className="text-[#733F49]" />
+                        )
+                      ) : (
+                        <ArrowUpDown size={13} className="opacity-35 group-hover:opacity-75" />
+                      )}
+                    </span>
+                  </div>
+                </th>
+                <th
+                  onClick={() => handleSort('customer')}
+                  className="py-4 px-4 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase cursor-pointer hover:text-[#733F49] transition-colors select-none group text-center"
+                  title="Nhấp để sắp xếp theo Tên khách hàng"
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span>KHÁCH HÀNG</span>
+                    <span className="inline-flex items-center">
+                      {sortField === 'customer' ? (
+                        sortOrder === 'desc' ? (
+                          <ArrowDown size={13} className="text-[#733F49]" />
+                        ) : (
+                          <ArrowUp size={13} className="text-[#733F49]" />
+                        )
+                      ) : (
+                        <ArrowUpDown size={13} className="opacity-35 group-hover:opacity-75" />
+                      )}
                     </span>
                   </div>
                 </th>
                 <th className="py-4 px-4 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase text-center">
-                  KHÁCH HÀNG
-                </th>
-                <th className="py-4 px-4 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase text-center">
                   VÁY THUÊ
                 </th>
-                <th className="py-4 px-4 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase text-center">
-                  NGÀY THUÊ
+                <th
+                  onClick={() => handleSort('rentalDate')}
+                  className="py-4 px-4 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase cursor-pointer hover:text-[#733F49] transition-colors select-none group text-center"
+                  title="Nhấp để sắp xếp theo Thời gian thuê"
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span>NGÀY THUÊ</span>
+                    <span className="inline-flex items-center">
+                      {sortField === 'rentalDate' ? (
+                        sortOrder === 'desc' ? (
+                          <ArrowDown size={13} className="text-[#733F49]" />
+                        ) : (
+                          <ArrowUp size={13} className="text-[#733F49]" />
+                        )
+                      ) : (
+                        <ArrowUpDown size={13} className="opacity-35 group-hover:opacity-75" />
+                      )}
+                    </span>
+                  </div>
                 </th>
-                <th className="py-4 px-4 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase text-center">
-                  TIỀN CỌC
+                <th
+                  onClick={() => handleSort('deposit')}
+                  className="py-4 px-4 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase cursor-pointer hover:text-[#733F49] transition-colors select-none group text-center"
+                  title="Nhấp để sắp xếp theo Tiền cọc"
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span>TIỀN CỌC</span>
+                    <span className="inline-flex items-center">
+                      {sortField === 'deposit' ? (
+                        sortOrder === 'desc' ? (
+                          <ArrowDown size={13} className="text-[#733F49]" />
+                        ) : (
+                          <ArrowUp size={13} className="text-[#733F49]" />
+                        )
+                      ) : (
+                        <ArrowUpDown size={13} className="opacity-35 group-hover:opacity-75" />
+                      )}
+                    </span>
+                  </div>
                 </th>
-                <th className="py-4 px-4 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase text-center">
-                  TRẠNG THÁI
+                <th
+                  onClick={() => handleSort('status')}
+                  className="py-4 px-4 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase cursor-pointer hover:text-[#733F49] transition-colors select-none group text-center"
+                  title="Nhấp để sắp xếp theo Trạng thái đơn"
+                >
+                  <div className="flex items-center justify-center gap-1.5">
+                    <span>TRẠNG THÁI</span>
+                    <span className="inline-flex items-center">
+                      {sortField === 'status' ? (
+                        sortOrder === 'desc' ? (
+                          <ArrowDown size={13} className="text-[#733F49]" />
+                        ) : (
+                          <ArrowUp size={13} className="text-[#733F49]" />
+                        )
+                      ) : (
+                        <ArrowUpDown size={13} className="opacity-35 group-hover:opacity-75" />
+                      )}
+                    </span>
+                  </div>
                 </th>
                 <th className="py-4 px-5 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase text-center">
                   THAO TÁC
