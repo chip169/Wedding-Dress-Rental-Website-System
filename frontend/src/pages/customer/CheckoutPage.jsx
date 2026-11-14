@@ -3981,7 +3981,10 @@ export default function CheckoutPage() {
       {/* ================= SUCCESS MODAL (HOÀN TẤT ĐẶT THUÊ VÀ HỢP ĐỒNG ĐÃ KÝ) ================= */}
       {isSuccessModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fade-in">
-          <div className="relative w-full max-w-[620px] max-h-[92vh] overflow-y-auto bg-white rounded-3xl shadow-2xl border border-[#EEDECF] p-6 sm:p-7 text-center space-y-4.5">
+          <div
+            className="relative w-full max-w-[620px] max-h-[92vh] overflow-y-auto no-scrollbar [&::-webkit-scrollbar]:hidden bg-white rounded-3xl shadow-2xl border border-[#EEDECF] p-6 sm:p-7 text-center space-y-4.5"
+            style={{ scrollbarWidth: 'none', msOverflowStyle: 'none' }}
+          >
 
             <div className="w-14 h-14 rounded-full bg-[#E8F5E9] text-[#2E7D32] flex items-center justify-center mx-auto shadow-md">
               <CheckCircle2 className="w-9 h-9" />
