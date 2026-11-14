@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Alert, ConfigProvider, Form, Input, InputNumber } from 'antd';
-import { Ruler, IdCard, Crown, Lock, CheckCircle2 } from 'lucide-react';
+import { Ruler, IdCard, Crown, Lock } from 'lucide-react';
 import AccountLayout from '../../components/layout/AccountLayout';
 import { getProfile, saveProfile } from '../../services/profileService';
 import { useAuth } from '../../contexts/AuthContext';
@@ -145,7 +145,7 @@ export default function ProfilePage() {
       ...saved,
       ...values,
       name: values.name?.trim(),
-      email: saved?.email || values.email?.trim(), // Luôn bảo toàn email cố định
+      email: saved?.email || values.email?.trim(),
       phone: values.phone?.trim(),
       address: values.address?.trim(),
       idCard: values.idCard?.trim(),
@@ -272,9 +272,16 @@ export default function ProfilePage() {
                 <Form.Item
                   label={<span className="font-semibold uppercase tracking-wider text-[11px]">Số điện thoại</span>}
                   name="phone"
-                  rules={[{ required: true, whitespace: true, message: 'Vui lòng nhập số điện thoại liên lạc.' }]}
+                  rules={[
+                    { required: true, whitespace: true, message: 'Vui lòng nhập số điện thoại liên lạc.' },
+                    {
+                      validator: (_, value) => !value || /^0[35789]\d{8}$/.test(value.trim().replace(/[\s.-]/g, ''))
+                        ? Promise.resolve()
+                        : Promise.reject(new Error('Nhập 10 chữ số, bắt đầu bằng 03, 05, 07, 08 hoặc 09.')),
+                    },
+                  ]}
                 >
-                  <Input placeholder="Nhập số điện thoại liên hệ" size="large" />
+                  <Input placeholder="Nhập số điện thoại liên hệ" inputMode="tel" maxLength={20} size="large" />
                 </Form.Item>
               </div>
 
@@ -372,11 +379,6 @@ export default function ProfilePage() {
                 {measurementFields.slice(4).map(([name, label]) => <MeasurementField key={name} name={name} label={label} />)}
               </div>
             </div>
-
-            <p className="text-xs text-emerald-700 font-medium flex items-center gap-1.5 mt-4">
-              <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Toàn bộ thông tin hồ sơ và số đo vóc dáng được lưu trữ trực tiếp và đồng bộ trên cơ sở dữ liệu hệ thống.</span>
-            </p>
 
             {/* Submit / Reset Actions */}
             <div className="mt-8 flex flex-wrap justify-end gap-3 border-t border-[#eee2df] pt-6">
