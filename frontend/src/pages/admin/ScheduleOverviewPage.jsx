@@ -1568,7 +1568,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                 }`}
               >
                 <History className="w-4 h-4" />
-                <span>Lịch thử váy</span>
+                <span>Lịch sử thử váy</span>
               </button>
             </div>
 
