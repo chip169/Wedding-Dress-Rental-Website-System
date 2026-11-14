@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { X, Ruler, ArrowRight, Sparkles } from 'lucide-react';
+import { message } from 'antd';
 import { addToCart } from '../../services/cartService';
 
 // Bảng quy chuẩn Size chuẩn Haute Couture
@@ -18,6 +19,88 @@ function formatPriceVND(amount) {
   const num = typeof amount === 'number' ? amount : Number(String(amount).replace(/[^0-9]/g, ''));
   if (isNaN(num)) return '0 ₫';
   return Math.round(num).toString().replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ' ₫';
+}
+
+// Kiểm tra một size cụ thể của váy có bị hết hàng hay không
+function checkIsSizeOutOfStock(sz, dress) {
+  if (!dress) return false;
+  const sClean = String(typeof sz === 'string' ? sz : sz?.size || sz?.label || sz?.id || '')
+    .replace(/^size\s*/i, '')
+    .trim()
+    .toUpperCase();
+
+  // 1. Kiểm tra trạng thái chung của váy
+  const status = String(dress.status || dress.statusType || '').toLowerCase();
+  if (['out_of_stock', 'retired', 'unavailable'].includes(status)) {
+    return true;
+  }
+
+  // 2. Kiểm tra trong kho override (localStorage)
+  try {
+    const rawOverrides = localStorage.getItem('unibridal_inventory_overrides');
+    if (rawOverrides) {
+      const overrides = JSON.parse(rawOverrides);
+      const dressId = String(dress._id || dress.id || '');
+      const dressCode = String(dress.code || '').toUpperCase();
+      const ov =
+        overrides[dressId] ||
+        overrides[dressCode] ||
+        Object.values(overrides).find(
+          (o) =>
+            (o?.code && o.code.toUpperCase() === dressCode) ||
+            (o?.id && String(o.id) === dressId)
+        );
+
+      if (ov?.statusType === 'out_of_stock') {
+        return true;
+      }
+
+      if (Array.isArray(ov?.sizes)) {
+        const matchOv = ov.sizes.find((s) => {
+          const val = String(typeof s === 'string' ? s : s?.size || s?.label || s?.id || '')
+            .replace(/^size\s*/i, '')
+            .trim()
+            .toUpperCase();
+          return val === sClean;
+        });
+        if (matchOv && typeof matchOv === 'object' && matchOv?.quantity !== undefined) {
+          const q = Number(matchOv.quantity);
+          if (!isNaN(q) && q <= 0) return true;
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  // 3. Kiểm tra trực tiếp trên đối tượng sz
+  if (typeof sz === 'object' && sz !== null) {
+    if (sz.available !== undefined && Number(sz.available) <= 0) return true;
+    if (sz.quantity !== undefined) {
+      const q = Number(sz.quantity);
+      if (!isNaN(q) && q <= 0) return true;
+    }
+  }
+
+  // 4. Kiểm tra trong dress.sizes
+  if (Array.isArray(dress.sizes)) {
+    const matchDress = dress.sizes.find((s) => {
+      const val = String(typeof s === 'string' ? s : s?.size || s?.label || s?.id || '')
+        .replace(/^size\s*/i, '')
+        .trim()
+        .toUpperCase();
+      return val === sClean;
+    });
+    if (matchDress && typeof matchDress === 'object') {
+      if (matchDress.available !== undefined && Number(matchDress.available) <= 0) return true;
+      if (matchDress.quantity !== undefined) {
+        const q = Number(matchDress.quantity);
+        if (!isNaN(q) && q <= 0) return true;
+      }
+    }
+  }
+
+  return false;
 }
 
 /**
@@ -43,17 +126,23 @@ export default function RentSelectionModal({
         const clean = String(rawKey).replace(/^size\s*/i, '').trim().toUpperCase();
         const mapKey = clean === 'FREESIZE' ? 'FreeSize' : clean;
         const matched = SIZE_MAP[mapKey];
+        const sQty = typeof s === 'object' && s?.available !== undefined
+          ? Number(s.available)
+          : (typeof s === 'object' && s?.quantity !== undefined ? Number(s.quantity) : 1);
+
         if (matched) {
           return {
             ...matched,
-            quantity: typeof s === 'object' && s?.quantity !== undefined ? s.quantity : 1,
+            quantity: sQty,
+            available: sQty,
           };
         }
         return {
           id: mapKey || 'S',
           label: mapKey || 'S',
           note: s?.note || 'Chuẩn dáng UniBridal',
-          quantity: typeof s === 'object' && s?.quantity !== undefined ? s.quantity : 1,
+          quantity: sQty,
+          available: sQty,
         };
       });
     }
@@ -82,7 +171,8 @@ export default function RentSelectionModal({
   useEffect(() => {
     if (isOpen && dress) {
       if (availableSizes && availableSizes.length > 0) {
-        setSelectedSize(availableSizes[0].id);
+        const firstAvailable = availableSizes.find((sz) => !checkIsSizeOutOfStock(sz, dress));
+        setSelectedSize(firstAvailable ? firstAvailable.id : availableSizes[0].id);
       }
       setIsSizeGuideOpen(false);
     }
@@ -103,6 +193,11 @@ export default function RentSelectionModal({
 
   // Xác nhận thuê ngay -> Thêm vào giỏ và chuyển đến Checkout
   const handleConfirmRent = () => {
+    if (checkIsSizeOutOfStock(selectedSize, dress)) {
+      message.error(`Size ${selectedSize} hiện đã hết hàng trong kho. Vui lòng chọn size khác!`);
+      return;
+    }
+
     const payload = {
       ...dress,
       selectedSize,
@@ -203,24 +298,36 @@ export default function RentSelectionModal({
             >
               {availableSizes.map((sz) => {
                 const isSizeActive = selectedSize === sz.id;
+                const isOutOfStock = checkIsSizeOutOfStock(sz, dress);
+
                 return (
                   <button
                     key={sz.id}
                     type="button"
-                    onClick={() => setSelectedSize(sz.id)}
-                    className={`py-2.5 px-3 rounded-[12px] border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${
-                      isSizeActive
-                        ? 'border-[#B26B74] bg-[#B26B74] text-white shadow-xs'
-                        : 'border-[#EAE0DC] bg-white text-[#231A19] hover:border-[#B26B74]'
+                    disabled={isOutOfStock}
+                    onClick={() => {
+                      if (!isOutOfStock) setSelectedSize(sz.id);
+                    }}
+                    title={isOutOfStock ? `Size ${sz.label} hiện đã hết hàng trong kho` : undefined}
+                    className={`py-2.5 px-3 rounded-[12px] border text-center transition-all flex flex-col items-center justify-center ${
+                      isOutOfStock
+                        ? 'border-stone-200 bg-stone-100 text-stone-400 cursor-not-allowed opacity-40 line-through decoration-stone-400 select-none'
+                        : isSizeActive
+                          ? 'border-[#B26B74] bg-[#B26B74] text-white shadow-xs cursor-pointer'
+                          : 'border-[#EAE0DC] bg-white text-[#231A19] hover:border-[#B26B74] cursor-pointer'
                     }`}
                   >
                     <span className="font-semibold text-[13.5px] leading-tight">{sz.label}</span>
                     <span
                       className={`text-[10.5px] leading-tight mt-0.5 ${
-                        isSizeActive ? 'text-white/80' : 'text-[#8A7978]'
+                        isOutOfStock
+                          ? 'text-stone-400 font-medium'
+                          : isSizeActive
+                            ? 'text-white/80'
+                            : 'text-[#8A7978]'
                       }`}
                     >
-                      {sz.note}
+                      {isOutOfStock ? 'Hết hàng' : sz.note}
                     </span>
                   </button>
                 );

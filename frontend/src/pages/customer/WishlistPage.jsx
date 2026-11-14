@@ -42,7 +42,7 @@ export default function WishlistPage() {
           setWishlistItems(getWishlistDresses(res.data));
         }
       })
-      .catch(() => {});
+      .catch(() => { });
     return () => {
       active = false;
     };
@@ -396,15 +396,11 @@ export default function WishlistPage() {
             {/* Header gợi ý */}
             <div className="flex flex-col sm:flex-row sm:items-end justify-between gap-4 mb-8">
               <div>
-                <span className="font-jakarta font-bold text-[10.5px] tracking-[2px] uppercase text-[#B8737D] block mb-1">
-                  RECOMMENDED FOR YOU
-                </span>
+
                 <h2 className="font-playfair text-[28px] sm:text-[34px] leading-tight font-semibold text-[#2C2523] m-0 mb-1.5">
                   Có Thể Nàng Cũng Yêu Thích
                 </h2>
-                <p className="font-jakarta text-[13.5px] text-[#695C4E] m-0">
-                  Những tuyệt tác váy cưới phù hợp với gu thẩm mỹ và phong cách tiệc cưới trong mơ của nàng
-                </p>
+
               </div>
 
               <Link
@@ -453,17 +449,15 @@ export default function WishlistPage() {
                           e.stopPropagation();
                           handleToggleRecommended(recDress);
                         }}
-                        className={`absolute top-2.5 right-2.5 w-[32px] h-[32px] rounded-[8px] bg-white flex items-center justify-center border shadow-[0px_2px_8px_rgba(0,0,0,0.08)] cursor-pointer z-10 transition-all active:scale-90 p-0 ${
-                          isSaved ? 'border-[#B8737D]/40 bg-[#FFF5F6] text-[#B8737D]' : 'border-[#EEDECF] text-[#4A3E3F] hover:text-[#B8737D] hover:border-[#B8737D]/40'
-                        }`}
+                        className={`absolute top-2.5 right-2.5 w-[32px] h-[32px] rounded-[8px] bg-white flex items-center justify-center border shadow-[0px_2px_8px_rgba(0,0,0,0.08)] cursor-pointer z-10 transition-all active:scale-90 p-0 ${isSaved ? 'border-[#B8737D]/40 bg-[#FFF5F6] text-[#B8737D]' : 'border-[#EEDECF] text-[#4A3E3F] hover:text-[#B8737D] hover:border-[#B8737D]/40'
+                          }`}
                         title={isSaved ? 'Xóa khỏi yêu thích' : 'Thêm vào yêu thích'}
                       >
                         <Heart
-                          className={`w-3.5 h-3.5 transition-all duration-200 ${
-                            isSaved
+                          className={`w-3.5 h-3.5 transition-all duration-200 ${isSaved
                               ? 'fill-[#B8737D] text-[#B8737D] scale-110'
                               : 'text-[#4A3E3F]'
-                          }`}
+                            }`}
                         />
                       </button>
                     </div>

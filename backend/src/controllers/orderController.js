@@ -1,5 +1,6 @@
 import * as orderService from '../services/orderService.js';
 import * as customer from '../services/customerAccountService.js';
+import { confirmDepositRefund as recordDepositRefund } from '../services/returnRefundService.js';
 
 export const createOrder = async (req, res, next) => {
   try {
@@ -124,7 +125,7 @@ export const getReturnInspection = async (req, res, next) => {
 
 export const approveReturnInspection = async (req, res, next) => {
   try {
-    const result = await customer.confirmInspection(req.user, req.params.id, req.body);
+    const result = await customer.confirmInspection(req.user._id, req.params.id, req.body);
     res.status(200).json({
       success: true,
       message: 'Đã xác nhận biên bản kiểm định. Đơn hàng đã hoàn tất thành công.',
@@ -139,7 +140,7 @@ export const approveReturnInspection = async (req, res, next) => {
 
 export const disputeReturnInspection = async (req, res, next) => {
   try {
-    const result = await customer.disputeInspection(req.user, req.params.id, req.body.reason);
+    const result = await customer.disputeInspection(req.user._id, req.params.id, req.body.reason);
     res.status(200).json({
       success: true,
       message: 'Gửi khiếu nại biên bản kiểm định thành công! Chuyên viên showroom sẽ liên hệ giải quyết.',
@@ -155,9 +156,18 @@ export const settleInspectionAdmin = async (req, res, next) => {
     const result = await orderService.settleInspectionAdmin(req.params.id, req.body, req.user);
     res.status(200).json({
       success: true,
-      message: 'Admin đã xác nhận đàm phán mức phạt và hoàn tiền thành công! Đơn hàng đã chuyển sang Hoàn tất.',
+      message: 'Đã lưu kết quả đàm phán và quyết toán cọc.',
       data: result,
     });
+  } catch (error) {
+    next(error);
+  }
+};
+
+export const confirmDepositRefund = async (req, res, next) => {
+  try {
+    const result = await recordDepositRefund(req.params.id, req.body, req.user);
+    res.status(200).json({ success: true, message: 'Đã ghi nhận quyết toán cọc.', data: result });
   } catch (error) {
     next(error);
   }

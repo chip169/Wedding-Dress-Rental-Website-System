@@ -8,7 +8,7 @@ import {
     reportBounds, previousBounds, reportBuckets, isInPeriod, paymentDate, sumPayments, growthRate,
     revenueChart, rankedDresses, depositBalance, retainedDepositCharges, revenueTotals,
 } from '../utils/adminReportMetrics.js';
-const DEPOSIT_ORDER_STATUSES = ['deposit_paid', 'preparing', 'delivered', 'renting', 'returned', 'completed', 'complete'];
+const DEPOSIT_ORDER_STATUSES = ['deposit_paid', 'preparing', 'delivered', 'renting', 'returned', 'waiting_refund', 'disputed', 'completed', 'complete'];
 const effectiveDateFilter = (start, end) => ({ $or: [{ paidAt: { ...(start ? { $gte: start } : {}), $lt: end } }, { paidAt: null, createdAt: { ...(start ? { $gte: start } : {}), $lt: end } }] });
 export async function revenueReport(period = 'month') {
     if (!['week', 'month', 'quarter', 'year'].includes(period))
@@ -77,7 +77,10 @@ export async function dashboard(period = 'month') {
         User.countDocuments({ role: 'customer', isActive: true }),
     ]);
     const buckets = reportBuckets(period, start, end);
-    const ordersPipeline = Object.fromEntries(['deposit_paid', 'preparing', 'delivered', 'renting', 'returned', 'completed'].map((status) => [status, orders.filter((order) => order.status === status || status === 'completed' && order.status === 'complete').length]));
+    const ordersPipeline = Object.fromEntries(['deposit_paid', 'preparing', 'delivered', 'renting', 'returned', 'completed'].map((status) => {
+        const statuses = status === 'returned' ? ['returned', 'waiting_refund', 'disputed'] : status === 'completed' ? ['completed', 'complete'] : [status];
+        return [status, orders.filter((order) => statuses.includes(order.status)).length];
+    }));
     return { period, revenue: report.revenue, growthRate: report.growthRate, orderValue: report.orderValue, totalOrders: orders.length, completedOrders: ordersPipeline.completed,
         maintenance, members, totalUsers, totalAppointments, todayAppointments, ordersPipeline, ordersMissingDepositTransaction: report.ordersMissingDepositTransaction.length,
         chart: report.chart.map((bucket, index) => ({ ...bucket, orderValue: orders.filter((order) => DEPOSIT_ORDER_STATUSES.includes(order.status) && isInPeriod(order.createdAt, buckets[index].start, buckets[index].end)).reduce((sum, order) => sum + order.totalRentPrice, 0) })),

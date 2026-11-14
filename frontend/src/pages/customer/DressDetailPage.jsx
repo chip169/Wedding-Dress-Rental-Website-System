@@ -4,12 +4,12 @@ import {
   Heart, Star, ShieldCheck, Crown, Scissors,
   Ruler, Calendar, Clock, Phone, MessageCircle,
   ChevronRight, ChevronLeft, Check, CheckCircle2, Info, ArrowRight, Share2,
-  X, ShoppingBag, Headphones, Sparkles
+  X, ShoppingBag, Headphones, Sparkles, AlertCircle
 } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useAuth } from '../../contexts/AuthContext';
-import { getDressById, getRelatedDresses, formatCurrencyVND } from '../../services/dressService';
+import { getDressById, getRelatedDresses, formatCurrencyVND, isDressOutOfStock } from '../../services/dressService';
 import { getDressBookedDates } from '../../services/orderService';
 import { addToCart } from '../../services/cartService';
 import { isWishlisted as checkWishlisted, toggleWishlist, WISHLIST_EVENT } from '../../services/wishlistService';
@@ -286,7 +286,14 @@ export default function DressDetailPage() {
     });
   };
 
+  const isOutOfStock = useMemo(() => isDressOutOfStock(dress), [dress]);
+
   const handleDirectRent = () => {
+    if (isOutOfStock) {
+      setRentNotification(`Mẫu váy "${dress?.name}" hiện đã hết hàng trong kho, không thể đặt lịch thuê.`);
+      setTimeout(() => setRentNotification(''), 4500);
+      return;
+    }
     addToCart({
       ...dress,
       selectedSize,
@@ -297,6 +304,11 @@ export default function DressDetailPage() {
   };
 
   const handleOnlineRent = () => {
+    if (isOutOfStock) {
+      setRentNotification(`Mẫu váy "${dress?.name}" hiện đã hết hàng trong kho, không thể thêm vào giỏ thuê.`);
+      setTimeout(() => setRentNotification(''), 4500);
+      return;
+    }
     const added = addToCart({
       ...dress,
       selectedSize,
@@ -544,6 +556,19 @@ export default function DressDetailPage() {
                 <div className="text-[#8A7978] tracking-wider text-[12px] font-medium">
                   MÃ SẢN PHẨM: <span className="text-[#231A19] font-bold">{dress.code}</span>
                 </div>
+                <div>
+                  {isOutOfStock ? (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#FEF2F2] text-[#DC2626] border border-[#FCA5A5]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626]" />
+                      TẠM HẾT HÀNG TRONG KHO
+                    </span>
+                  ) : (
+                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#F0FDF4] text-[#16A34A] border border-[#BBF7D0]">
+                      <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A]" />
+                      CÒN HÀNG KHẢ DỤNG
+                    </span>
+                  )}
+                </div>
               </div>
             </div>
 
@@ -566,22 +591,29 @@ export default function DressDetailPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {dress.sizes?.map((sz) => {
                   const isSizeActive = selectedSize === sz.id;
+                  const isOutOfStock = sz.quantity !== undefined && Number(sz.quantity) <= 0;
                   return (
                     <button
                       key={sz.id}
                       type="button"
-                      onClick={() => setSelectedSize(sz.id)}
-                      className={`py-2.5 px-3 rounded-[12px] border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${isSizeActive
-                        ? 'border-[#B26B74] bg-[#B26B74] text-white shadow-xs'
-                        : 'border-[#EAE0DC] bg-white text-[#231A19] hover:border-[#B26B74]'
-                        }`}
+                      disabled={isOutOfStock}
+                      onClick={() => !isOutOfStock && setSelectedSize(sz.id)}
+                      title={isOutOfStock ? `Size ${sz.label} hiện đã hết hàng trong kho` : undefined}
+                      className={`py-2.5 px-3 rounded-[12px] border text-center transition-all flex flex-col items-center justify-center ${
+                        isOutOfStock
+                          ? 'border-stone-200 bg-stone-100 text-stone-400 cursor-not-allowed opacity-40 line-through decoration-stone-400 select-none'
+                          : isSizeActive
+                            ? 'border-[#B26B74] bg-[#B26B74] text-white shadow-xs cursor-pointer'
+                            : 'border-[#EAE0DC] bg-white text-[#231A19] hover:border-[#B26B74] cursor-pointer'
+                      }`}
                     >
                       <span className="font-semibold text-[13.5px] leading-tight">{sz.label}</span>
                       <span
-                        className={`text-[10.5px] leading-tight mt-0.5 ${isSizeActive ? 'text-white/80' : 'text-[#8A7978]'
-                          }`}
+                        className={`text-[10.5px] leading-tight mt-0.5 ${
+                          isOutOfStock ? 'text-stone-400 font-medium' : isSizeActive ? 'text-white/80' : 'text-[#8A7978]'
+                        }`}
                       >
-                        {sz.note}
+                        {isOutOfStock ? 'Tạm hết hàng' : sz.note}
                       </span>
                     </button>
                   );
@@ -634,19 +666,40 @@ export default function DressDetailPage() {
 
             {/* Action Buttons - Khớp 100% với Hình 2 */}
             <div className="flex flex-col gap-2.5">
+              {/* Alert nếu mẫu váy hết hàng trong kho */}
+              {isOutOfStock && (
+                <div className="p-3.5 rounded-xl bg-[#FEF2F2] border border-[#FCA5A5] flex items-start gap-2.5 text-left mb-1">
+                  <AlertCircle className="w-5 h-5 text-[#DC2626] shrink-0 mt-0.5" />
+                  <div>
+                    <div className="text-[12.5px] font-bold text-[#991B1B]">
+                      Sản phẩm hiện đang TẠM HẾT HÀNG trong kho
+                    </div>
+                    <div className="text-[11.5px] text-[#7F1D1D] mt-0.5 leading-relaxed">
+                      Thiết kế này hiện đã được xuất thuê kín lịch hoặc đang trong kỳ bảo dưỡng chuyên sâu tại Atelier. Nàng tạm thời không thể đặt lịch thuê hoặc đặt lịch thử váy cho mẫu này.
+                    </div>
+                  </div>
+                </div>
+              )}
+
               {/* Row 1: ĐẶT THUÊ NGAY VÀ Wishlist */}
               <div className="flex items-center gap-2.5">
                 <button
                   type="button"
+                  disabled={isOutOfStock}
                   onClick={handleDirectRent}
-                  className="flex-1 h-[48px] px-5 rounded-[4px] bg-[#70484E] hover:bg-[#5E3B40] text-white font-jakarta text-[13.5px] font-medium tracking-[1.2px] uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer border-0 active:scale-[0.99]"
+                  className={`flex-1 h-[48px] px-5 rounded-[4px] font-jakarta text-[13.5px] font-medium tracking-[1.2px] uppercase transition-colors flex items-center justify-center gap-2 border-0 ${
+                    isOutOfStock
+                      ? 'bg-stone-200 text-stone-500 cursor-not-allowed opacity-75'
+                      : 'bg-[#70484E] hover:bg-[#5E3B40] text-white cursor-pointer active:scale-[0.99]'
+                  }`}
+                  title={isOutOfStock ? 'Sản phẩm tạm hết hàng trong kho, không thể đặt thuê' : 'Đặt thuê ngay'}
                 >
                   <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M12 3a2 2 0 0 0-2 2c0 .7.4 1.3 1 1.7L8 10h8l-3-3.3c.6-.4 1-1 1-1.7a2 2 0 0 0-2-2Z" />
                     <path d="M8 10 5 21h14l-3-11" />
                     <path d="M9 14h6" />
                   </svg>
-                  ĐẶT THUÊ NGAY (KÝ HỢP ĐỒNG VÀ CỌC)
+                  {isOutOfStock ? 'HẾT HÀNG TRONG KHO (KHÔNG THỂ THUÊ)' : 'ĐẶT THUÊ NGAY (KÝ HỢP ĐỒNG VÀ CỌC)'}
                 </button>
 
                 {isLoggedIn && (
@@ -667,24 +720,41 @@ export default function DressDetailPage() {
               {/* Row 2: ĐẶT LỊCH THỬ VÁY PRIVATE SUITE (MIỄN PHÍ) */}
               <button
                 type="button"
-                onClick={() => navigate(`/dat-lich?dressId=${dress.id}`)}
-                className="w-full h-[48px] px-5 rounded-[4px] bg-[#FAF4EE] hover:bg-[#F2E8DF] border border-[#E0D0C4] text-[#70484E] font-jakarta text-[13px] font-semibold tracking-[0.8px] uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                disabled={isOutOfStock}
+                onClick={() => {
+                  if (isOutOfStock) {
+                    setRentNotification(`Mẫu váy "${dress?.name}" hiện đã hết hàng trong kho, không thể đặt lịch thử.`);
+                    setTimeout(() => setRentNotification(''), 4500);
+                    return;
+                  }
+                  navigate(`/dat-lich?dressId=${dress.id}`);
+                }}
+                className={`w-full h-[48px] px-5 rounded-[4px] border font-jakarta text-[13px] font-semibold tracking-[0.8px] uppercase transition-colors flex items-center justify-center gap-2 ${
+                  isOutOfStock
+                    ? 'bg-[#F5F5F5] text-[#A3A3A3] border-[#E5E5E5] cursor-not-allowed opacity-75'
+                    : 'bg-[#FAF4EE] hover:bg-[#F2E8DF] border-[#E0D0C4] text-[#70484E] cursor-pointer active:scale-[0.99]'
+                }`}
+                title={isOutOfStock ? 'Sản phẩm tạm hết hàng trong kho, không thể đặt lịch thử' : 'Đặt lịch thử váy'}
               >
-                <Calendar className="w-4 h-4 text-[#70484E]" />
-                ĐẶT LỊCH THỬ VÁY PRIVATE SUITE (MIỄN PHÍ)
+                <Calendar className="w-4 h-4 text-current" />
+                {isOutOfStock ? 'HẾT HÀNG TRONG KHO (KHÔNG THỂ THỬ)' : 'ĐẶT LỊCH THỬ VÁY PRIVATE SUITE (MIỄN PHÍ)'}
               </button>
 
               {/* Row 3: THÊM VÀO GIỎ HÀNG */}
               {isLoggedIn && (
                 <button
                   type="button"
+                  disabled={isOutOfStock}
                   onClick={handleOnlineRent}
-                  className="w-full h-[48px] px-5 rounded-[4px] bg-white hover:bg-[#FAF4F3] border border-[#70484E] text-[#70484E] font-jakarta text-[13px] font-semibold tracking-[0.8px] uppercase transition-colors flex items-center justify-center gap-2 cursor-pointer active:scale-[0.99]"
+                  className={`w-full h-[48px] px-5 rounded-[4px] border font-jakarta text-[13px] font-semibold tracking-[0.8px] uppercase transition-colors flex items-center justify-center gap-2 ${
+                    isOutOfStock
+                      ? 'bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed opacity-75'
+                      : 'bg-white hover:bg-[#FAF4F3] border-[#70484E] text-[#70484E] cursor-pointer active:scale-[0.99]'
+                  }`}
                 >
                   <ShoppingBag className="w-4 h-4" strokeWidth={1.8} />
-                  THÊM VÀO GIỎ HÀNG
+                  {isOutOfStock ? 'HẾT HÀNG' : 'THÊM VÀO GIỎ HÀNG'}
                 </button>
-
               )}
 
               {/* Row 4: TƯ VẤN TRỰC TIẾP VỚI CHUYÊN VIÊN ATELIER */}
@@ -1163,7 +1233,8 @@ export default function DressDetailPage() {
 
                   for (let d = 1; d <= totalDays; d++) {
                     const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                    const isPast = dateStr < todayStr;
+                    const isPast = dateStr <= todayStr;
+                    const isToday = dateStr === todayStr;
                     const booked = isDateBooked(dateStr);
                     const isSelected = previewStartDate === dateStr;
 
@@ -1171,9 +1242,11 @@ export default function DressDetailPage() {
                       grid.push(
                         <div
                           key={dateStr}
+                          title={isToday ? 'Hôm nay (Cần tối thiểu 24h chuẩn bị lễ phục, chỉ nhận đặt từ ngày mai)' : 'Ngày trong quá khứ'}
                           className="h-10 rounded-lg flex flex-col items-center justify-center text-[12px] bg-[#F8F5F2] text-[#C2B5B3] opacity-40 cursor-not-allowed"
                         >
                           <span className="line-through">{d}</span>
+                          {isToday && <span className="text-[7px] font-bold text-[#8A7978] leading-none uppercase">Hôm nay</span>}
                         </div>
                       );
                       continue;
@@ -1228,11 +1301,7 @@ export default function DressDetailPage() {
                     ))}
                   </div>
                 </div>
-              ) : (
-                <div className="p-3 bg-[#F0FDF4] rounded-xl border border-[#DCFCE7] text-[12px] text-[#15803D]">
-                  ✦ Toàn bộ các ngày trong tháng hiện đang trống lịch sẵn sàng cho nàng đặt thuê!
-                </div>
-              )}
+              ) : null}
             </div>
 
             {/* Footer */}

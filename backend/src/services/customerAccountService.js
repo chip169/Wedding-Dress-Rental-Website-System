@@ -3,8 +3,10 @@ import Order from '../models/orderModel.js';
 import User from '../models/userModel.js';
 import Contract from '../models/contractModel.js';
 import ReturnInspection from '../models/returnInspectionModel.js';
-import Payment from '../models/paymentModel.js';
-import { sendRefundConfirmationEmail } from '../utils/sendEmail.js';
+import {
+    RETURN_REVIEW_STATUSES, completeReturnedOrder, getDepositPayments,
+    inspectionRefundState, refundBankDetails,
+} from './returnRefundService.js';
 const fail = (status, message) => { throw Object.assign(new Error(message), { statusCode: status }); };
 // Profile contacts are editable and cannot prove ownership of a guest order.
 // Personal endpoints only expose orders explicitly assigned to this account.
@@ -14,15 +16,8 @@ async function ownerFilter(userId) {
         fail(401, 'Vui lòng đăng nhập lại.');
     return { customerId: userId };
 }
-async function ownOrder(userOrId, identifier) {
+async function ownOrder(userId, identifier) {
     const identity = mongoose.isValidObjectId(identifier) ? { _id: identifier } : { orderCode: String(identifier).toUpperCase() };
-    const role = typeof userOrId === 'object' ? String(userOrId?.role || '').toUpperCase() : '';
-    if (['ADMIN', 'STAFF', 'MANAGER'].includes(role)) {
-        const order = await Order.findOne(identity);
-        if (!order) fail(404, 'Không tìm thấy thông tin đơn thuê.');
-        return order;
-    }
-    const userId = typeof userOrId === 'object' ? userOrId?._id : userOrId;
     const order = await Order.findOne({ $and: [identity, await ownerFilter(userId)] });
     if (!order)
         fail(404, 'Không tìm thấy đơn thuê thuộc tài khoản của bạn.');
@@ -37,40 +32,31 @@ export async function assertOrderAccess(user, identifier) {
 }
 export async function listOrders(userId) {
     const orders = await Order.find(await ownerFilter(userId)).sort({ createdAt: -1 }).lean();
-    const inspections = await ReturnInspection.find({ orderId: { $in: orders.map((order) => order._id) } }).lean();
-    const refunds = await Payment.find({ orderId: { $in: orders.map((order) => order._id) }, transactionType: 'deposit_refund', status: 'success' }).select('orderId amount').lean();
-    const paid = new Map();
-    refunds.forEach((payment) => paid.set(String(payment.orderId), (paid.get(String(payment.orderId)) || 0) + payment.amount));
-    const byOrder = new Map(inspections.map((inspection) => [String(inspection.orderId), { ...inspection, isRefunded: inspection.finalRefundAmount <= 0 || (paid.get(String(inspection.orderId)) || 0) >= inspection.finalRefundAmount }]));
+    const orderIds = orders.map((order) => order._id);
+    const [inspections, refunds] = await Promise.all([
+        ReturnInspection.find({ orderId: { $in: orderIds } }).lean(),
+        getDepositPayments(orderIds),
+    ]);
+    const byOrder = new Map(inspections.map((inspection) => [String(inspection.orderId), inspection]));
     return orders.map((order) => {
-        const insp = byOrder.get(String(order._id)) || null;
-        let status = order.status;
-        const isCustomerApproved = insp?.customerStatus === 'approved' || insp?.customerConfirmed;
-        if (isCustomerApproved && status !== 'completed' && status !== 'complete') {
-            status = 'completed';
-            Order.updateOne({ _id: order._id }, { $set: { status: 'completed' } }).catch(() => {});
-        }
+        const id = String(order._id);
+        const insp = inspectionRefundState(order, byOrder.get(id), refunds.get(id));
         const items = (order.items || []).map((it) => ({
             ...it,
         }));
-        return { ...order, items, status, inspection: insp };
+        return { ...order, items, inspection: insp };
     });
 }
 export async function orderDetail(userId, identifier) {
     const order = await ownOrder(userId, identifier);
     // Viewing a saved contract must never create one or infer a signature.
     const [inspection, contract] = await Promise.all([
-        getInspection(userId, identifier),
+        inspectionForOrder(order),
         Contract.findOne({ orderId: order._id })
             .select('contractCode templateName customerName phone idCard status signedAt signedMethod contractPdfUrl clauses contractSignature')
             .lean(),
     ]);
     const orderObj = order.toObject();
-    const isCustomerApproved = inspection?.customerStatus === 'approved' || inspection?.customerConfirmed;
-    if (isCustomerApproved && orderObj.status !== 'completed' && orderObj.status !== 'complete') {
-        orderObj.status = 'completed';
-        Order.updateOne({ _id: order._id }, { $set: { status: 'completed' } }).catch(() => {});
-    }
     const items = (orderObj.items || []).map((it) => ({
         ...it,
     }));
@@ -85,78 +71,60 @@ export async function cancelOrder(userId, identifier) {
         fail(409, 'Trạng thái đơn vừa thay đổi. Vui lòng tải lại.');
     return { ...updated.toObject(), inspection: null };
 }
+async function inspectionForOrder(order) {
+    const [inspection, refunds] = await Promise.all([
+        ReturnInspection.findOne({ orderId: order._id }).lean(),
+        getDepositPayments([order._id]),
+    ]);
+    return inspectionRefundState(order, inspection, refunds.get(String(order._id)));
+}
 export async function getInspection(userId, identifier) {
-    const order = await ownOrder(userId, identifier);
-    const inspection = await ReturnInspection.findOne({ orderId: order._id }).lean();
-    if (!inspection)
-        return null;
-    const refunds = await Payment.find({ orderId: order._id, transactionType: 'deposit_refund', status: 'success' }).select('amount').lean();
-    const confirmed = refunds.reduce((sum, payment) => sum + payment.amount, 0);
-    return { ...inspection, isRefunded: inspection.finalRefundAmount <= 0 || confirmed >= inspection.finalRefundAmount };
+    return inspectionForOrder(await ownOrder(userId, identifier));
 }
 export async function confirmInspection(userId, identifier, bankData = {}) {
     const order = await ownOrder(userId, identifier);
-    const inspection = await ReturnInspection.findOne({ orderId: order._id });
-    if (!inspection)
-        fail(404, 'Đơn chưa có biên bản kiểm định.');
-    if (!['returned', 'completed', 'complete'].includes(order.status))
-        fail(409, 'Chỉ có thể duyệt biên bản của đơn đã trả váy. Vui lòng tải lại hoặc liên hệ showroom.');
-    if (inspection.customerStatus === 'approved') {
-        if (order.status !== 'completed' && order.status !== 'complete') {
-            order.status = 'completed';
-            await order.save();
-        }
-        return { order: order.toObject(), inspection: await getInspection(userId, identifier) };
+    const inspection = await ReturnInspection.findOne({ orderId: order._id }).lean();
+    if (!inspection) fail(404, 'Đơn chưa có biên bản kiểm định.');
+    if (!RETURN_REVIEW_STATUSES.includes(order.status)) {
+        fail(409, 'Chỉ có thể duyệt biên bản của đơn đã trả váy.');
     }
-    if (inspection.finalRefundAmount > 0 && (!String(bankData.bankName || '').trim() || !/^\d{6,30}$/.test(String(bankData.accountNumber || '').trim()) || !String(bankData.accountHolder || '').trim())) {
-        fail(400, 'Vui lòng nhập ngân hàng, số tài khoản (6–30 chữ số) và tên chủ tài khoản hợp lệ.');
+
+    if (inspection.customerStatus === 'approved' || (!inspection.customerStatus && inspection.customerConfirmed === true)) {
+        const completed = await completeReturnedOrder(order);
+        return { order: completed.toObject(), inspection: await inspectionForOrder(completed) };
     }
-    const updated = await ReturnInspection.findOneAndUpdate({ _id: inspection._id, customerStatus: inspection.customerStatus }, { $set: {
-            customerStatus: 'approved', customerConfirmedAt: new Date(),
-            refundBankDetails: Object.fromEntries(['bankName', 'accountNumber', 'accountHolder', 'notes'].map((key) => [key, String(bankData[key] || '').trim()])),
-        } }, { new: true, runValidators: true });
-    if (!updated)
-        fail(409, 'Biên bản vừa thay đổi. Vui lòng tải lại.');
-    // Khi khách ấn duyệt -> cập nhật đơn hàng thành hoàn tất (completed)
-    order.status = 'completed';
-    order.completedAt = order.completedAt || new Date();
-    order.maintenanceUntil = new Date(Date.now() + 24 * 60 * 60 * 1000);
-    await order.save();
+    if (inspection.customerStatus !== 'pending') fail(409, 'Biên bản đang chờ showroom xử lý.');
 
-    await Contract.findOneAndUpdate(
-        { $or: [{ orderId: order._id }, { contractCode: order.contractCode }] },
-        { status: 'completed' }
-    ).catch(() => {});
+    const details = refundBankDetails(bankData, inspection.finalRefundAmount > 0);
+    const updated = await ReturnInspection.updateOne(
+        { _id: inspection._id, customerStatus: 'pending' },
+        { $set: { customerStatus: 'approved', customerConfirmedAt: new Date(), refundBankDetails: details } },
+    );
+    if (!updated.matchedCount) fail(409, 'Biên bản vừa thay đổi. Vui lòng tải lại.');
 
-    try {
-        let customerEmail = order.customerEmail || order.email;
-        let customerName = order.customerName || order.brideName || 'Quý khách';
-        if (!customerEmail && order.customerId) {
-            const cust = await User.findById(order.customerId).lean();
-            if (cust) {
-                customerEmail = cust.email;
-                customerName = cust.fullName || customerName;
-            }
-        }
-        if (customerEmail) {
-            sendRefundConfirmationEmail({
-                to: customerEmail,
-                fullName: customerName,
-                orderCode: order.orderCode,
-                finalRefundAmount: updated.finalRefundAmount,
-                bankDetails: updated.refundBankDetails,
-            }).catch(() => {});
-        }
-    } catch {}
-
-    return { order: order.toObject(), inspection: await getInspection(userId, identifier) };
+    // Khách duyệt thì đơn hoàn tất. Giao dịch hoàn cọc được xác nhận riêng.
+    const completed = await completeReturnedOrder(order);
+    return { order: completed.toObject(), inspection: await inspectionForOrder(completed) };
 }
+
 export async function disputeInspection(userId, identifier, reason) {
     const order = await ownOrder(userId, identifier);
-    if (!String(reason || '').trim())
-        fail(400, 'Vui lòng nhập lý do khiếu nại.');
-    const inspection = await ReturnInspection.findOneAndUpdate({ orderId: order._id, customerStatus: { $ne: 'approved' } }, { $set: { customerStatus: 'disputed', disputeReason: String(reason).trim(), disputeCreatedAt: new Date() } }, { new: true, runValidators: true });
-    if (!inspection)
-        fail(409, 'Biên bản không tồn tại hoặc đã được xác nhận.');
-    return { order: order.toObject(), inspection };
+    const disputableStatuses = ['returned', 'waiting_refund', 'disputed'];
+    if (!disputableStatuses.includes(order.status)) fail(409, 'Đơn hiện không chờ phản hồi biên bản.');
+    const disputeReason = String(reason || '').trim();
+    if (!disputeReason) fail(400, 'Vui lòng nhập lý do khiếu nại.');
+    const existingDispute = { orderId: order._id, customerStatus: 'disputed', disputeReason };
+    const inspection = await ReturnInspection.findOne(existingDispute) ?? await ReturnInspection.findOneAndUpdate(
+        { orderId: order._id, customerStatus: 'pending' },
+        { $set: { customerStatus: 'disputed', disputeReason, disputeCreatedAt: new Date() } },
+        { returnDocument: 'after', runValidators: true },
+    ) ?? await ReturnInspection.findOne(existingDispute);
+    if (!inspection) fail(409, 'Biên bản không tồn tại hoặc đã được xử lý.');
+    const disputed = await Order.findOneAndUpdate(
+        { _id: order._id, status: { $in: disputableStatuses } },
+        { $set: { status: 'disputed' } },
+        { returnDocument: 'after' },
+    );
+    if (!disputed) fail(409, 'Đơn vừa thay đổi. Vui lòng tải lại biên bản.');
+    return { order: disputed.toObject(), inspection };
 }

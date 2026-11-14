@@ -17,7 +17,7 @@ const tabs = [
 
 function OrderCard({ order, onOpenInspection, onOpenContract }) {
   const active = order.status === 'active';
-  const hasInspection = order.rawStatus === 'returned' || order.inspection;
+  const hasInspection = Boolean(order.inspection);
   const inspStatus = order.inspection?.customerStatus || 'pending';
 
   return (
@@ -78,7 +78,7 @@ function OrderCard({ order, onOpenInspection, onOpenContract }) {
                   onClick={() => onOpenInspection(order)}
                   className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#733F49] to-[#8C4654] hover:from-[#5A2D35] hover:to-[#733F49] text-white text-xs font-bold transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg border-0 shrink-0"
                 >
-                  <span>Xem Biên Bản và Xác Nhận Hoàn Cọc</span>
+                  <span>Xem Biên Bản Kiểm Định</span>
                 </button>
               </div>
 
@@ -98,7 +98,7 @@ function OrderCard({ order, onOpenInspection, onOpenContract }) {
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <span className="font-bold text-amber-900 flex items-center gap-2 text-[13px]">
                   <AlertTriangle size={16} className="text-amber-600" />
-                  Nàng đã gửi khiếu nại về biên bản kiểm định
+                  Biên bản kiểm định đang được showroom xử lý
                 </span>
                 <button
                   type="button"
@@ -121,7 +121,9 @@ function OrderCard({ order, onOpenInspection, onOpenContract }) {
             <div className="p-3 rounded-2xl bg-emerald-50 border border-emerald-200 text-xs text-emerald-800 flex items-center justify-between flex-wrap gap-2">
               <div className="flex items-center gap-1.5 font-medium">
                 <CheckCircle2 size={16} className="text-emerald-600" />
-                <span>Nàng đã duyệt biên bản. Vui lòng xem trạng thái hoàn cọc riêng trong biên bản.</span>
+                <span>{order.inspection.refundConflict ? 'Biên bản đã được duyệt. Showroom đang đối soát khoản hoàn cọc.' :
+                  order.inspection.refundStatus === 'not_required' ? 'Biên bản đã được duyệt. Không cần hoàn cọc.' :
+                  order.inspection.isRefunded ? 'Biên bản đã được duyệt. Tiền cọc đã hoàn.' : 'Biên bản đã được duyệt. Showroom đang xử lý hoàn cọc.'}</span>
               </div>
               <button
                 type="button"

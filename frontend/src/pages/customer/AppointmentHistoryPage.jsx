@@ -4,7 +4,6 @@ import {
   CalendarDays,
   Clock,
   MapPin,
-  Users,
   Search,
   CheckCircle2,
   AlertCircle,
@@ -172,33 +171,8 @@ export default function AppointmentHistoryPage() {
       subtitle="Theo dõi và quản lý các ca thử váy cưới riêng tư 1:1 cùng Stylist cao cấp tại hệ thống Showroom UniBridal"
     >
       <div className="space-y-6">
-        {/* Banner giới thiệu trải nghiệm thử váy */}
-        <div className="relative overflow-hidden bg-gradient-to-r from-[#FAF4EE] via-[#FFF8F6] to-[#FAF0EC] border border-[#EEDECF] rounded-2xl p-5 sm:p-6 shadow-2xs">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <Crown className="w-4 h-4 text-[#B8737D]" />
-                <span className="text-[11px] font-bold text-[#733F49] uppercase tracking-wider">
-                  Dịch Vụ Thử Váy Độc Quyền 1:1
-                </span>
-              </div>
-              <h3 className="font-playfair text-[18px] sm:text-[20px] font-bold text-[#2C2523] m-0">
-                Không Gian VIP Private Suite Dành Riêng Cho Nàng
-              </h3>
-              <p className="text-[12.5px] text-[#7A6B6A] m-0 leading-relaxed max-w-2xl">
-                Mỗi buổi thử váy kéo dài 90 phút trọn vẹn, có Stylist tư vấn số đo, tiệc trà chiều cao cấp và phòng thử riêng tư cho cô dâu và người thân.
-              </p>
-            </div>
-            <button
-              type="button"
-              onClick={() => navigate('/dat-lich')}
-              className="shrink-0 px-5 py-2.5 rounded-xl bg-[#733F49] hover:bg-[#5D333B] text-white text-xs font-bold tracking-wider uppercase transition-all shadow-xs flex items-center justify-center gap-2 cursor-pointer border-0"
-            >
-              <CalendarDays className="w-4 h-4 text-amber-200" />
-              Đặt lịch thử mới
-            </button>
-          </div>
-        </div>
+
+
 
         {/* Thanh điều khiển: Tabs + Tìm kiếm */}
         <div className="bg-white rounded-2xl border border-[#EEE2DF] p-3.5 sm:p-4 shadow-2xs flex flex-col md:flex-row md:items-center justify-between gap-3">
@@ -211,11 +185,10 @@ export default function AppointmentHistoryPage() {
                   key={tab.id}
                   type="button"
                   onClick={() => setActiveTab(tab.id)}
-                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border-0 ${
-                    isActive
+                  className={`px-3.5 py-2 rounded-xl text-xs font-bold transition-all cursor-pointer border-0 ${isActive
                       ? 'bg-[#733F49] text-white shadow-xs'
                       : 'bg-[#F7ECE8] text-[#745F5B] hover:bg-[#ECD8D3]'
-                  }`}
+                    }`}
                 >
                   {tab.label}
                   {tab.id === 'upcoming' && (
@@ -270,8 +243,8 @@ export default function AppointmentHistoryPage() {
                 {searchTerm
                   ? 'Không tìm thấy ca hẹn thử váy phù hợp'
                   : activeTab === 'upcoming'
-                  ? 'Nàng chưa có ca hẹn thử váy sắp diễn ra'
-                  : 'Nàng chưa có lịch hẹn thử váy nào'}
+                    ? 'Nàng chưa có ca hẹn thử váy sắp diễn ra'
+                    : 'Nàng chưa có lịch hẹn thử váy nào'}
               </h4>
               <p className="text-xs sm:text-[13px] text-[#7A6B6A] m-0 leading-relaxed">
                 {searchTerm
@@ -335,10 +308,6 @@ export default function AppointmentHistoryPage() {
                       <div className="flex items-center gap-2 text-xs font-semibold text-[#8C4654]">
                         <Clock className="w-4 h-4 text-[#8C4654]" />
                         <span>{apt.timeSlot || '09:00 — 10:30'} (Ca 90 phút)</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[11.5px] text-[#7A6B6A]">
-                        <Users className="w-3.5 h-3.5" />
-                        <span>Đi cùng: {apt.guestsCount || 1} khách</span>
                       </div>
                     </div>
 

@@ -1,7 +1,8 @@
 import { formatCurrencyVND, formatNumberDots } from '../../utils/formatCurrency';
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { ShieldCheck,
+import {
+  ShieldCheck,
   Calendar,
   MapPin,
   Check,
@@ -40,12 +41,14 @@ import { ShieldCheck,
   Info,
   Plus,
   Minus,
-  Zap } from 'lucide-react';
+  Sparkles,
+  Zap
+} from 'lucide-react';
 import { message } from 'antd';
 import { useAuth } from '../../contexts/AuthContext';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
-import { getDressById } from '../../services/dressService';
+import { getDressById, isDressOutOfStock } from '../../services/dressService';
 import { getCart, resolveCartItem, clearCart } from '../../services/cartService';
 import { getDressBookedDates, createOrder } from '../../services/orderService';
 import { simulateVietQRPaymentApi } from '../../services/paymentService';
@@ -114,6 +117,85 @@ function getTodayIsoString() {
   const m = String(d.getMonth() + 1).padStart(2, '0');
   const day = String(d.getDate()).padStart(2, '0');
   return `${y}-${m}-${day}`;
+}
+
+// Helper: Lấy ngày mai chuẩn YYYY-MM-DD theo giờ địa phương (Sớm nhất có thể đặt thuê váy)
+function getTomorrowIsoString() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
+// Helper: Kiểm tra một size cụ thể của mẫu váy có bị hết hàng hay không
+function checkIsSizeOutOfStock(sz, dress) {
+  const sClean = String(typeof sz === 'string' ? sz : sz?.size || sz?.label || sz?.id || '')
+    .replace(/^size\s*/i, '')
+    .trim()
+    .toUpperCase();
+
+  // 1. Kiểm tra trong kho override (localStorage)
+  try {
+    const rawOverrides = localStorage.getItem('unibridal_inventory_overrides');
+    if (rawOverrides) {
+      const overrides = JSON.parse(rawOverrides);
+      const dressId = String(dress?._id || dress?.id || '');
+      const dressCode = String(dress?.code || '').toUpperCase();
+      const ov =
+        overrides[dressId] ||
+        overrides[dressCode] ||
+        Object.values(overrides).find(
+          (o) =>
+            (o?.code && o.code.toUpperCase() === dressCode) ||
+            (o?.id && String(o.id) === dressId)
+        );
+
+      if (ov?.statusType === 'out_of_stock') {
+        return true;
+      }
+
+      if (Array.isArray(ov?.sizes)) {
+        const matchOv = ov.sizes.find((s) => {
+          const val = String(typeof s === 'string' ? s : s?.size || s?.label || s?.id || '')
+            .replace(/^size\s*/i, '')
+            .trim()
+            .toUpperCase();
+          return val === sClean;
+        });
+        if (matchOv && typeof matchOv === 'object' && matchOv?.quantity !== undefined) {
+          const q = Number(matchOv.quantity);
+          if (!isNaN(q) && q <= 0) return true;
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  // 2. Kiểm tra trực tiếp trên đối tượng sz
+  if (typeof sz === 'object' && sz !== null && sz?.quantity !== undefined) {
+    const q = Number(sz.quantity);
+    if (!isNaN(q) && q <= 0) return true;
+  }
+
+  // 3. Kiểm tra trong dress.sizes
+  if (Array.isArray(dress?.sizes)) {
+    const matchDress = dress.sizes.find((s) => {
+      const val = String(typeof s === 'string' ? s : s?.size || s?.label || s?.id || '')
+        .replace(/^size\s*/i, '')
+        .trim()
+        .toUpperCase();
+      return val === sClean;
+    });
+    if (matchDress && typeof matchDress === 'object' && matchDress?.quantity !== undefined) {
+      const q = Number(matchDress.quantity);
+      if (!isNaN(q) && q <= 0) return true;
+    }
+  }
+
+  return false;
 }
 
 // Chữ ký nghệ thuật đại diện Bên A (Ông Kim Xuân Hiếu - Tổng Giám Đốc)
@@ -207,6 +289,8 @@ export default function CheckoutPage() {
           if (!active) return;
           if (res?.data) {
             const d = res.data;
+            const chosenSize = sizeParam || selectedSize || d.sizes?.[0]?.size || d.sizes?.[0]?.label || (typeof d.sizes?.[0] === 'string' ? d.sizes[0] : 'S');
+            const chosenColor = colorParam || selectedColor || d.color || 'Trắng Sữa';
             const singleItem = {
               ...d,
               id: String(d._id || d.id),
@@ -215,10 +299,19 @@ export default function CheckoutPage() {
               deposit: Number(d.depositAmount || d.deposit) || 15000000,
               image: d.images?.[0] || d.image || '/assets/dresses/dress_01.jpg',
               code: d.code || 'UB-HC-2026',
-              size: d.sizes?.[0]?.size || d.sizes?.[0]?.label || (typeof d.sizes?.[0] === 'string' ? d.sizes[0] : 'S'),
+              size: chosenSize,
+              selectedSize: chosenSize,
+              color: chosenColor,
+              selectedColor: chosenColor,
             };
             setOrderItems([singleItem]);
             setActiveDress(singleItem);
+            if (chosenSize && chosenSize !== selectedSize) {
+              setSelectedSize(chosenSize);
+            }
+            if (chosenColor && chosenColor !== selectedColor) {
+              setSelectedColor(chosenColor);
+            }
           } else if (res?.success === false) {
             setDbError(res.message || 'Lỗi kết nối cơ sở dữ liệu.');
           }
@@ -434,9 +527,16 @@ export default function CheckoutPage() {
       afterDays = validDays - beforeDays;
     }
 
-    const startDisplay = addDaysToDate(wedIso, -beforeDays);
+    let calculatedStartIso = toIsoDateString(addDaysToDate(wedIso, -beforeDays));
+    const curTomorrow = getTomorrowIsoString();
+    // Nếu ngày nhận rơi vào hôm nay hoặc quá khứ, kẹp chặt tối thiểu từ ngày mai (chuẩn bị 24h)
+    if (calculatedStartIso < curTomorrow) {
+      calculatedStartIso = curTomorrow;
+    }
+
+    const startDisplay = toDisplayDateString(calculatedStartIso);
     const weddingDisplay = toDisplayDateString(wedIso);
-    const endDisplay = addDaysToDate(wedIso, afterDays);
+    const endDisplay = addDaysToDate(calculatedStartIso, validDays);
 
     return {
       startDate: startDisplay,
@@ -445,8 +545,9 @@ export default function CheckoutPage() {
     };
   };
 
-  // Lấy ngày hôm nay chuẩn ISO
+  // Lấy ngày hôm nay và ngày mai chuẩn ISO
   const todayIso = useMemo(() => getTodayIsoString(), []);
+  const tomorrowIso = useMemo(() => getTomorrowIsoString(), []);
 
   // Schedule state (Định dạng hiển thị DD/MM/YYYY)
   const [rentalSchedule, setRentalSchedule] = useState(() => {
@@ -458,7 +559,7 @@ export default function CheckoutPage() {
 
     const curToday = getTodayIsoString();
     const startIsoCheck = toIsoDateString(validStart);
-    if (startIsoCheck && startIsoCheck < curToday) {
+    if (startIsoCheck && startIsoCheck <= curToday) {
       return { startDate: '', weddingDate: '', endDate: '' };
     }
 
@@ -472,7 +573,7 @@ export default function CheckoutPage() {
 
     if (validWedding) {
       const wedIsoCheck = toIsoDateString(validWedding);
-      if (wedIsoCheck && wedIsoCheck < curToday) {
+      if (wedIsoCheck && wedIsoCheck <= curToday) {
         return { startDate: '', weddingDate: '', endDate: '' };
       }
       const initialDays = !isNaN(daysParam) && daysParam >= 1 && daysParam <= 30 ? daysParam : 4;
@@ -620,8 +721,8 @@ export default function CheckoutPage() {
   const handleSelectStartDate = (selectedIsoOrDisplay) => {
     const iso = toIsoDateString(selectedIsoOrDisplay);
     if (!iso) return;
-    if (iso < todayIso) {
-      message.warning('Ngày bắt đầu thuê không thể là ngày trong quá khứ!');
+    if (iso <= todayIso) {
+      message.warning(`Không thể đặt thuê nhận váy trong ngày hôm nay! Nàng vui lòng chọn ngày nhận từ ngày mai (${toDisplayDateString(tomorrowIso)}) trở đi để Atelier chuẩn bị và khử trùng lễ phục chu đáo.`);
       return;
     }
     const parts = iso.split('-').map(Number);
@@ -655,8 +756,8 @@ export default function CheckoutPage() {
   const handleSelectWeddingDate = (selectedIsoOrDisplay) => {
     const newWedIso = toIsoDateString(selectedIsoOrDisplay);
     if (!newWedIso) return;
-    if (newWedIso < todayIso) {
-      message.warning('Ngày cưới chính thức không thể là ngày trong quá khứ!');
+    if (newWedIso <= todayIso) {
+      message.warning(`Ngày cưới chính thức không thể là ngày hôm nay hoặc trong quá khứ! Nàng vui lòng chọn từ ngày mai (${toDisplayDateString(tomorrowIso)}) trở đi.`);
       return;
     }
     const parts = newWedIso.split('-').map(Number);
@@ -674,8 +775,8 @@ export default function CheckoutPage() {
   const handleSelectEndDate = (selectedIsoOrDisplay) => {
     const newEndIso = toIsoDateString(selectedIsoOrDisplay);
     if (!newEndIso) return;
-    if (newEndIso < todayIso) {
-      message.warning('Ngày hoàn trả không thể là ngày trong quá khứ!');
+    if (newEndIso <= todayIso) {
+      message.warning(`Ngày hoàn trả phải từ ngày mai (${toDisplayDateString(tomorrowIso)}) trở đi!`);
       return;
     }
     const startIso = toIsoDateString(rentalSchedule.startDate);
@@ -709,8 +810,12 @@ export default function CheckoutPage() {
   // Xử lý khi người dùng click vào ô ngày trên bảng lịch:
   // CHỈ CHO PHÉP CHỌN NGÀY THUÊ (Ngày nhận váy), ngày trả sẽ tự tính theo số ngày thuê
   const handleCalendarCellClick = (dateStr) => {
-    if (dateStr < todayIso) {
-      message.warning('Không thể chọn ngày trong quá khứ!');
+    if (dateStr <= todayIso) {
+      message.warning(
+        dateStr === todayIso
+          ? `Không thể đặt thuê nhận váy trong ngày hôm nay! Nàng vui lòng chọn ngày nhận từ ngày mai (${toDisplayDateString(tomorrowIso)}) trở đi để Atelier chuẩn bị lễ phục chu đáo.`
+          : 'Không thể chọn ngày trong quá khứ!'
+      );
       return;
     }
     const booked = getBookedInfoForDate(dateStr);
@@ -820,31 +925,39 @@ export default function CheckoutPage() {
 
   // Danh mục trang phục thuê chuẩn hóa hiển thị đồng bộ trong Hợp Đồng Điện Tử
   const contractItems = useMemo(() => {
+    const days = Math.max(1, Number(rentalDays) || 1);
     if (orderItems && orderItems.length > 0) {
-      return orderItems.map((item, idx) => ({
-        name: item.name || `Váy cưới Haute Couture #${idx + 1}`,
-        code: item.code || `UB-HC-0${idx + 1}`,
-        size: item.size || selectedSize || 'S',
-        color: item.color || 'Trắng Sữa',
-        rentPrice: Number(item.price || item.rentPrice || 0),
-        depositAmount: Number(item.deposit || item.depositAmount || 0),
-        startDate: rentalSchedule?.startDate || '',
-        endDate: rentalSchedule?.endDate || '',
-      }));
+      return orderItems.map((item, idx) => {
+        const itemDailyPrice = Number(item.dailyPrice || item.price || item.rentPrice || 0);
+        const itemTotalRent = itemDailyPrice * days;
+        return {
+          name: item.name || `Váy cưới Haute Couture #${idx + 1}`,
+          code: item.code || `UB-HC-0${idx + 1}`,
+          size: (dressIdParam && selectedSize) ? selectedSize : (item.size || selectedSize || 'S'),
+          color: (dressIdParam && selectedColor) ? selectedColor : (item.color || selectedColor || 'Trắng Sữa'),
+          rentPrice: itemTotalRent,
+          dailyPrice: itemDailyPrice,
+          depositAmount: Number(item.deposit || item.depositAmount || 0),
+          startDate: rentalSchedule?.startDate || '',
+          endDate: rentalSchedule?.endDate || '',
+        };
+      });
     }
     if (activeDress) {
+      const itemDailyPrice = Number(activeDress.price || activeDress.rentPrice || 0);
       return [{
         name: activeDress.name || 'Váy cưới Haute Couture',
         code: activeDress.code || 'UB-HC-2026',
-        size: selectedSize || 'S',
+        size: selectedSize || sizeParam || activeDress.size || 'S',
         rentPrice: totalRentPrice,
+        dailyPrice: itemDailyPrice,
         depositAmount: depositCollateral,
         startDate: rentalSchedule?.startDate || '',
         endDate: rentalSchedule?.endDate || '',
       }];
     }
     return [];
-  }, [orderItems, activeDress, selectedSize, totalRentPrice, depositCollateral, rentalSchedule]);
+  }, [orderItems, activeDress, selectedSize, selectedColor, rentalDays, totalRentPrice, depositCollateral, rentalSchedule]);
 
   // Validation chi tiết Step 1 (Thông tin người đại diện thuê)
   const validateCustomerInfo = () => {
@@ -899,9 +1012,24 @@ export default function CheckoutPage() {
     return Object.keys(errors).length === 0;
   };
 
+  // Kiểm tra sản phẩm trong đơn thuê có bị hết hàng trong kho không
+  const hasOutOfStockItem = useMemo(() => {
+    if (orderItems && orderItems.length > 0) {
+      return orderItems.some(isDressOutOfStock);
+    }
+    if (activeDress) {
+      return isDressOutOfStock(activeDress);
+    }
+    return false;
+  }, [orderItems, activeDress]);
+
   // Validation Step 1
   const handleProceedToContract = (e) => {
     e?.preventDefault();
+    if (hasOutOfStockItem) {
+      message.error('Sản phẩm trong đơn thuê hiện đã hết hàng trong kho. Vui lòng chọn mẫu váy khác!');
+      return;
+    }
     if (!rentalSchedule.startDate || !rentalSchedule.weddingDate || !rentalSchedule.endDate) {
       message.warning('Nàng vui lòng chọn ngày cưới và thời gian thuê trên bảng lịch trước khi tiếp tục!');
       return;
@@ -911,18 +1039,18 @@ export default function CheckoutPage() {
     const wedIso = toIsoDateString(rentalSchedule.weddingDate);
     const endIso = toIsoDateString(rentalSchedule.endDate);
 
-    if (startIso && startIso < todayIso) {
-      message.error('Ngày bắt đầu thuê không thể là ngày trong quá khứ!');
+    if (startIso && startIso <= todayIso) {
+      message.error(`Không thể đặt thuê cho ngày hôm nay! Ngày nhận váy phải từ ngày mai (${toDisplayDateString(tomorrowIso)}) trở đi.`);
       return;
     }
 
-    if (wedIso && wedIso < todayIso) {
-      message.error('Ngày cưới chính thức không thể là ngày trong quá khứ!');
+    if (wedIso && wedIso <= todayIso) {
+      message.error(`Ngày cưới chính thức phải từ ngày mai (${toDisplayDateString(tomorrowIso)}) trở đi!`);
       return;
     }
 
-    if (endIso && endIso < todayIso) {
-      message.error('Ngày hoàn trả không thể là ngày trong quá khứ!');
+    if (endIso && endIso <= todayIso) {
+      message.error(`Ngày hoàn trả phải từ ngày mai (${toDisplayDateString(tomorrowIso)}) trở đi!`);
       return;
     }
 
@@ -1461,13 +1589,14 @@ export default function CheckoutPage() {
         rentalStartDate: toIsoDateString(rentalSchedule?.startDate) || new Date().toISOString().split('T')[0],
         rentalEndDate: toIsoDateString(rentalSchedule?.endDate) || new Date(Date.now() + (Number(rentalDays) || 4) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         rentalDays,
+        selectedSize: (dressIdParam && selectedSize) ? selectedSize : (orderItems?.[0]?.size || selectedSize || 'S'),
         items: (orderItems && orderItems.length > 0 ? orderItems : [activeDress]).filter(Boolean).map((item, idx) => {
           const itemDailyPrice = Number(item.price || item.rentPrice) || 0;
           return {
             dressId: item.id || item._id,
             name: item.name,
             code: item.code || `UB-HC-2026-0${idx + 1}`,
-            size: item.size || selectedSize,
+            size: (dressIdParam && selectedSize) ? selectedSize : (item.size || selectedSize || 'S'),
             rentPrice: itemDailyPrice * Math.max(1, Number(rentalDays) || 1),
             dailyPrice: itemDailyPrice,
             rentalDays,
@@ -1558,13 +1687,15 @@ export default function CheckoutPage() {
       rentalStartDate: toIsoDateString(rentalSchedule?.startDate) || new Date().toISOString().split('T')[0],
       rentalEndDate: toIsoDateString(rentalSchedule?.endDate) || new Date(Date.now() + (Number(rentalDays) || 4) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       rentalDays,
+      selectedSize: (dressIdParam && selectedSize) ? selectedSize : (orderItems?.[0]?.size || selectedSize || 'S'),
       items: (orderItems && orderItems.length > 0 ? orderItems : [activeDress]).filter(Boolean).map((item, idx) => {
         const itemDailyPrice = Number(item.price || item.rentPrice) || 0;
         return {
           dressId: item.id || item._id,
           name: item.name,
           code: item.code || `UB-HC-2026-0${idx + 1}`,
-          size: item.size || selectedSize,
+          size: (dressIdParam && selectedSize) ? selectedSize : (item.size || selectedSize || 'S'),
+          color: (dressIdParam && selectedColor) ? selectedColor : (item.color || selectedColor || 'Trắng Sữa'),
           rentPrice: itemDailyPrice * Math.max(1, Number(rentalDays) || 1),
           dailyPrice: itemDailyPrice,
           rentalDays,
@@ -1589,7 +1720,7 @@ export default function CheckoutPage() {
         localStorage.removeItem('unibridal_cart');
         localStorage.removeItem('unibridal-rental-cart');
         window.dispatchEvent(new Event('unibridal-cart-updated'));
-      } catch {}
+      } catch { }
 
       navigate(`/thanh-toan-vietqr/${savedOrder.orderCode}`);
     } catch (err) {
@@ -1642,13 +1773,14 @@ export default function CheckoutPage() {
         rentalStartDate: toIsoDateString(rentalSchedule?.startDate) || new Date().toISOString().split('T')[0],
         rentalEndDate: toIsoDateString(rentalSchedule?.endDate) || new Date(Date.now() + (Number(rentalDays) || 4) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         rentalDays,
+        selectedSize: (dressIdParam && selectedSize) ? selectedSize : (orderItems?.[0]?.size || selectedSize || 'S'),
         items: (orderItems && orderItems.length > 0 ? orderItems : [activeDress]).filter(Boolean).map((item, idx) => {
           const itemDailyPrice = Number(item.price || item.rentPrice) || 0;
           return {
             dressId: item.id || item._id,
             name: item.name,
             code: item.code || `UB-HC-2026-0${idx + 1}`,
-            size: item.size || selectedSize,
+            size: (dressIdParam && selectedSize) ? selectedSize : (item.size || selectedSize || 'S'),
             rentPrice: itemDailyPrice * Math.max(1, Number(rentalDays) || 1),
             dailyPrice: itemDailyPrice,
             rentalDays,
@@ -1679,14 +1811,14 @@ export default function CheckoutPage() {
 
         try {
           localStorage.setItem('unibridal-last-order', JSON.stringify(savedOrder));
-        } catch {}
+        } catch { }
 
         try {
           clearCart();
           localStorage.removeItem('unibridal_cart');
           localStorage.removeItem('unibridal-rental-cart');
           window.dispatchEvent(new Event('unibridal-cart-updated'));
-        } catch {}
+        } catch { }
 
         setIsSuccessModalOpen(true);
         message.success({
@@ -1789,6 +1921,19 @@ export default function CheckoutPage() {
             {/* ================= STEP 1: THÔNG TIN VÀ SỐ ĐO ================= */}
             {currentStep === 1 && (
               <div className="space-y-8 animate-fade-in">
+
+                {/* Banner cảnh báo hết hàng trong kho */}
+                {hasOutOfStockItem && (
+                  <div className="bg-[#FEF2F2] border border-[#FCA5A5] text-[#991B1B] p-5 rounded-2xl flex items-start gap-3 shadow-xs">
+                    <AlertCircle className="w-5 h-5 text-[#DC2626] shrink-0 mt-0.5" />
+                    <div>
+                      <div className="text-[14px] font-bold">Sản phẩm trong đơn thuê hiện đang TẠM HẾT HÀNG trong kho</div>
+                      <div className="text-[12.5px] text-[#7F1D1D] mt-1 leading-relaxed">
+                        Thiết kế bạn đang chọn hiện tại đã hết số lượng khả dụng trong kho hoặc đang được phục vụ kín lịch. Bạn không thể tiếp tục đặt cọc và ký hợp đồng thuê mẫu này. Vui lòng quay lại bộ sưu tập để chọn tác phẩm lễ phục khác.
+                      </div>
+                    </div>
+                  </div>
+                )}
 
                 {/* 1. THÔNG TIN NGƯỜI THUÊ */}
                 <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
@@ -1986,7 +2131,7 @@ export default function CheckoutPage() {
                         <Calendar className="w-4 h-4 text-[#8C7A7B] group-hover:text-[#733F49] transition-colors shrink-0" />
                         <input
                           type="date"
-                          min={todayIso}
+                          min={tomorrowIso}
                           value={toIsoDateString(rentalSchedule.startDate) || ''}
                           onChange={(e) => {
                             if (e.target.value) {
@@ -2018,7 +2163,7 @@ export default function CheckoutPage() {
                         <Calendar className="w-4 h-4 text-[#733F49] transition-colors shrink-0" />
                         <input
                           type="date"
-                          min={todayIso}
+                          min={tomorrowIso}
                           value={toIsoDateString(rentalSchedule.weddingDate) || ''}
                           onChange={(e) => {
                             if (e.target.value) {
@@ -2055,7 +2200,7 @@ export default function CheckoutPage() {
                         <Calendar className="w-4 h-4 text-[#8C7A7B] group-hover:text-[#733F49] transition-colors shrink-0" />
                         <input
                           type="date"
-                          min={toIsoDateString(rentalSchedule.startDate) || todayIso}
+                          min={toIsoDateString(rentalSchedule.startDate) || tomorrowIso}
                           value={toIsoDateString(rentalSchedule.endDate) || ''}
                           onChange={(e) => {
                             if (e.target.value) {
@@ -2095,13 +2240,9 @@ export default function CheckoutPage() {
                               ✓ Cập nhật theo đơn thực tế
                             </span>
                           </div>
-                          {bookedIntervals.length > 0 ? (
+                          {bookedIntervals.length > 0 && (
                             <span className="text-[11px] text-[#B91C1C] font-medium block mt-1">
                               ⚠ Đang có {bookedIntervals.length} đợt thuê đã khóa lịch cho mẫu váy này
-                            </span>
-                          ) : (
-                            <span className="text-[11px] text-[#2E7D32] font-medium block mt-1">
-                              ✦ Toàn bộ các ngày trong tháng đang trống lịch sẵn sàng cho nàng đặt thuê
                             </span>
                           )}
                         </div>
@@ -2200,6 +2341,7 @@ export default function CheckoutPage() {
                       for (let d = 1; d <= daysInMonth; d++) {
                         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                         const isPast = dateStr < todayIso;
+                        const isToday = dateStr === todayIso;
                         const bookedInfo = getBookedInfoForDate(dateStr);
                         const isBooked = Boolean(bookedInfo);
                         const isStart = dateStr === startIso;
@@ -2218,6 +2360,25 @@ export default function CheckoutPage() {
                               className="relative h-10 sm:h-12 rounded-xl flex flex-col items-center justify-center text-[12px] sm:text-[13px] font-medium transition-all bg-[#F8F5F2] text-[#C2B5B3] cursor-not-allowed opacity-50"
                             >
                               <span className="line-through decoration-[#C2B5B3]">{d}</span>
+                            </button>
+                          );
+                          continue;
+                        }
+
+                        // Chặn ngày hôm nay: không cho phép nhận váy ngay hôm nay (cần tối thiểu 24h chuẩn bị)
+                        if (isToday) {
+                          cells.push(
+                            <button
+                              key={dateStr}
+                              type="button"
+                              onClick={() => message.warning(`Không thể đặt thuê nhận váy trong ngày hôm nay! Nàng vui lòng chọn ngày nhận từ ngày mai (${toDisplayDateString(tomorrowIso)}) trở đi để Atelier chuẩn bị lễ phục chu đáo.`)}
+                              title={`Hôm nay (${toDisplayDateString(dateStr)}) - Cần tối thiểu 24h chuẩn bị lễ phục, vui lòng chọn từ ngày mai`}
+                              className="relative h-10 sm:h-12 rounded-xl flex flex-col items-center justify-center text-[12px] sm:text-[13px] font-medium transition-all bg-[#F3F4F6] text-[#9CA3AF] border border-[#E5E7EB] cursor-not-allowed opacity-75 hover:opacity-100"
+                            >
+                              <span className="line-through decoration-[#9CA3AF]">{d}</span>
+                              <span className="text-[7.5px] font-bold leading-none text-[#6B7280] tracking-tight uppercase">
+                                HÔM NAY
+                              </span>
                             </button>
                           );
                           continue;
@@ -2621,13 +2782,18 @@ export default function CheckoutPage() {
                   <button
                     type="button"
                     onClick={handleProceedToContract}
-                    disabled={Boolean(scheduleConflict)}
-                    className={`w-full py-4 rounded-xl font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-2 border-0 ${scheduleConflict
+                    disabled={Boolean(scheduleConflict) || hasOutOfStockItem}
+                    className={`w-full py-4 rounded-xl font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-2 border-0 ${scheduleConflict || hasOutOfStockItem
                       ? 'bg-stone-300 text-stone-500 cursor-not-allowed shadow-none'
                       : 'bg-[#733F49] hover:bg-[#5F323B] text-white shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer active:scale-[0.99]'
                       }`}
                   >
-                    {scheduleConflict ? (
+                    {hasOutOfStockItem ? (
+                      <>
+                        <AlertCircle className="w-4 h-4 text-stone-500" />
+                        <span>SẢN PHẨM HẾT HÀNG TRONG KHO — KHÔNG THỂ THUÊ</span>
+                      </>
+                    ) : scheduleConflict ? (
                       <>
                         <AlertCircle className="w-4 h-4 text-stone-500" />
                         <span>LỊCH BỊ TRÙNG — VUI LÒNG ĐỔI NGÀY TRÊN BẢNG LỊCH</span>
@@ -2751,7 +2917,7 @@ export default function CheckoutPage() {
                               <th className="p-3">Mã Số</th>
                               <th className="p-3">Kích Cỡ</th>
                               <th className="p-3 text-center">Thời Gian Thuê</th>
-                              <th className="p-3 text-right">Tiền Thuê</th>
+                              <th className="p-3 text-right">Tổng Tiền Thuê</th>
                               <th className="p-3 text-right">Tiền Cọc Bảo Lãnh</th>
                             </tr>
                           </thead>
@@ -2769,13 +2935,18 @@ export default function CheckoutPage() {
                                     {rentalDays} ngày
                                   </span>
                                   <div className="text-xs">
-                                    <span className="font-semibold text-emerald-800">{it.startDate}</span>
+                                    <span className="font-semibold text-[#733F49]">{it.startDate}</span>
                                     <span className="text-[#A39192] mx-1">→</span>
-                                    <span className="font-semibold text-[#87565C]">{it.endDate}</span>
+                                    <span className="font-semibold text-[#733F49]">{it.endDate}</span>
                                   </div>
                                 </td>
-                                <td className="p-3 text-right font-bold text-emerald-800">
-                                  {formatCurrencyVND(it.rentPrice)}
+                                <td className="p-3 text-right font-bold text-[#733F49]">
+                                  <div>{formatCurrencyVND(it.rentPrice)}</div>
+                                  {Number(rentalDays) > 1 && (
+                                    <div className="text-[10px] font-normal text-[#8A7978]">
+                                      ({formatCurrencyVND(it.dailyPrice || Math.round(it.rentPrice / Number(rentalDays)))}/ngày)
+                                    </div>
+                                  )}
                                 </td>
                                 <td className="p-3 text-right font-bold text-[#733F49]">
                                   {formatCurrencyVND(it.depositAmount)}
@@ -2892,11 +3063,10 @@ export default function CheckoutPage() {
                               <button
                                 type="button"
                                 onClick={() => setSignatureMode('draw')}
-                                className={`px-2.5 py-1 rounded-md transition-colors border-0 cursor-pointer ${
-                                  signatureMode === 'draw'
-                                    ? 'bg-[#733F49] text-white shadow-2xs'
-                                    : 'bg-transparent text-[#733F49] hover:bg-white/60'
-                                }`}
+                                className={`px-2.5 py-1 rounded-md transition-colors border-0 cursor-pointer ${signatureMode === 'draw'
+                                  ? 'bg-[#733F49] text-white shadow-2xs'
+                                  : 'bg-transparent text-[#733F49] hover:bg-white/60'
+                                  }`}
                               >
                                 ✍️ Vẽ chữ ký
                               </button>
@@ -2907,11 +3077,10 @@ export default function CheckoutPage() {
                                   const existing = contractSignature && !contractSignature.startsWith('data:image') ? contractSignature : brideName;
                                   if (existing) setContractSignature(existing);
                                 }}
-                                className={`px-2.5 py-1 rounded-md transition-colors border-0 cursor-pointer ${
-                                  signatureMode === 'type'
-                                    ? 'bg-[#733F49] text-white shadow-2xs'
-                                    : 'bg-transparent text-[#733F49] hover:bg-white/60'
-                                }`}
+                                className={`px-2.5 py-1 rounded-md transition-colors border-0 cursor-pointer ${signatureMode === 'type'
+                                  ? 'bg-[#733F49] text-white shadow-2xs'
+                                  : 'bg-transparent text-[#733F49] hover:bg-white/60'
+                                  }`}
                               >
                                 ⌨️ Gõ họ tên
                               </button>
@@ -3346,6 +3515,43 @@ export default function CheckoutPage() {
                         <span>•</span>
                         <span>Gói <strong>{rentalDays} ngày</strong></span>
                       </div>
+                      {Array.isArray(activeDress?.sizes) && activeDress.sizes.length > 1 && (
+                        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[11px] font-semibold text-[#847374]">Đổi size:</span>
+                          {activeDress.sizes.map((sz, sIdx) => {
+                            const sVal = typeof sz === 'string' ? sz : sz.size || sz.label || sz.id;
+                            const sClean = String(sVal).replace(/^size\s*/i, '').trim();
+                            const isSzActive = (selectedSize || '').toUpperCase() === sClean.toUpperCase();
+                            const isOutOfStock = checkIsSizeOutOfStock(sz, activeDress);
+
+                            return (
+                              <button
+                                key={sIdx}
+                                type="button"
+                                disabled={isOutOfStock}
+                                onClick={() => {
+                                  if (isOutOfStock) return;
+                                  setSelectedSize(sClean);
+                                  setOrderItems((prev) => prev.map((it) => ({ ...it, size: sClean })));
+                                  if (activeDress) {
+                                    setActiveDress((prev) => ({ ...prev, size: sClean }));
+                                  }
+                                }}
+                                title={isOutOfStock ? `Size ${sClean} hiện đã hết hàng trong kho` : `Đổi sang size ${sClean}`}
+                                className={`px-2 py-0.5 rounded text-[10.5px] font-bold border transition-all ${
+                                  isOutOfStock
+                                    ? 'bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed opacity-40 line-through decoration-stone-400 select-none'
+                                    : isSzActive
+                                      ? 'bg-[#733F49] text-white border-[#733F49] cursor-pointer shadow-xs'
+                                      : 'bg-white text-[#733F49] border-[#EEDECF] hover:border-[#733F49] cursor-pointer'
+                                }`}
+                              >
+                                {sClean}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                       <div className="font-jakarta font-extrabold text-[17px] text-[#733F49] mt-1 tabular-nums tracking-tight">
                         {formatCurrencyVND(totalRentPrice)}
                       </div>
@@ -3471,11 +3677,15 @@ export default function CheckoutPage() {
             {currentStep === 1 && (
               <button
                 type="button"
+                disabled={hasOutOfStockItem}
                 onClick={handleProceedToContract}
-                className="px-5 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white text-[12.5px] sm:text-[13.5px] font-bold flex items-center gap-2 shadow-md transition-all cursor-pointer border-0 active:scale-[0.98]"
+                className={`px-5 sm:px-7 py-2.5 sm:py-3 rounded-xl text-white text-[12.5px] sm:text-[13.5px] font-bold flex items-center gap-2 shadow-md transition-all border-0 ${hasOutOfStockItem
+                  ? 'bg-stone-300 text-stone-500 cursor-not-allowed'
+                  : 'bg-[#733F49] hover:bg-[#5F323B] cursor-pointer active:scale-[0.98]'
+                  }`}
               >
-                <span>Xem Trước và Ký Hợp Đồng</span>
-                <ArrowRight className="w-4 h-4" />
+                <span>{hasOutOfStockItem ? 'Hết Hàng Trong Kho' : 'Xem Trước và Ký Hợp Đồng'}</span>
+                {!hasOutOfStockItem && <ArrowRight className="w-4 h-4" />}
               </button>
             )}
             {currentStep === 2 && (
@@ -3516,21 +3726,18 @@ export default function CheckoutPage() {
 
             <div>
               <span className="text-[11px] font-bold uppercase tracking-[2px] text-[#D4AF37] block mb-1">
-                ★ ĐƠN ĐẶT THUÊ #{createdOrder?.orderCode || 'UB-2026-0001'} ĐÃ KÍCH HOẠT ★
+                ★ ĐƠN ĐẶT THUÊ <strong className="font-mono font-black text-[#733F49] text-[13px] tracking-normal">#{createdOrder?.orderCode || 'UB-2026-0001'}</strong> ĐÃ KÍCH HOẠT ★
               </span>
               <h2 className="font-playfair text-[22px] sm:text-[28px] font-bold text-[#2C2523] m-0 mb-1.5">
                 Khóa Lịch Đặt Thuê Thành Công!
               </h2>
-              <p className="text-[13px] text-[#6B5C5D] leading-relaxed max-w-[500px] mx-auto m-0">
-                Chúc mừng cô dâu <strong>{brideName}</strong>. Hợp đồng cho thuê <strong>{orderItems && orderItems.length > 1 ? `${orderItems.length} tác phẩm lễ phục cưới` : `tác phẩm ${activeDress?.name}`}</strong> đã được ký kết điện tử thành công và lịch độc quyền đã được khóa cho hôn lễ của nàng.
-              </p>
             </div>
 
             {/* Contract Ticket Voucher */}
             <div className="bg-[#FAF4EE] p-5 rounded-2xl border border-[#EEDECF] text-left text-[12.5px] space-y-3">
               <div className="flex items-center justify-between pb-2.5 border-b border-[#EEDECF]">
                 <span className="text-[#847374] font-medium">Mã Đơn Hàng:</span>
-                <strong className="font-mono text-[#733F49] text-[14px]">{createdOrder?.orderCode || 'UB-2026-0001'}</strong>
+                <strong className="font-mono font-black text-[#733F49] text-[16px] tracking-wider">{createdOrder?.orderCode || 'UB-2026-0001'}</strong>
               </div>
 
               {/* Dress Details */}
@@ -3557,7 +3764,7 @@ export default function CheckoutPage() {
               <div className="space-y-2 pt-1 border-t border-[#EEDECF]/60">
                 <div className="flex items-center justify-between">
                   <span className="text-[#847374]">Thời gian nhận:</span>
-                  <strong className="text-[#2C2523]">{rentalSchedule.startDate} — {rentalSchedule.endDate}</strong>
+                  <strong className="text-[#2C2523]">{rentalSchedule?.startDate || 'Chưa chọn'} — {rentalSchedule?.endDate || 'Chưa chọn'}</strong>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[#847374]">Chữ ký số bên B:</span>
@@ -3621,12 +3828,12 @@ export default function CheckoutPage() {
                   <span className="text-[#847374] block leading-tight">Hợp đồng điện tử đã ký có hiệu lực pháp lý</span>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-[#F2D8D4] shadow-2xs">
-                  <span className="text-[10px] font-bold text-[#733F49] block mb-1">BÀN GIAO TRƯỚC 1 NGÀY ({rentalSchedule.startDate})</span>
+                  <span className="text-[10px] font-bold text-[#733F49] block mb-1">BÀN GIAO TRƯỚC 1 NGÀY ({rentalSchedule?.startDate || 'Theo lịch'})</span>
                   <strong className="text-[#2C2523] block mb-0.5">Bàn Giao Vali VIP</strong>
                   <span className="text-[#847374] block leading-tight">Bàn giao trước 1 ngày, nguyên seal chống ẩm và quà tặng găng tay</span>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-[#EEDECF] shadow-2xs">
-                  <span className="text-[10px] font-bold text-[#847374] block mb-1">GIAI ĐOẠN 3: {rentalSchedule.endDate}</span>
+                  <span className="text-[10px] font-bold text-[#847374] block mb-1">GIAI ĐOẠN 3: {rentalSchedule?.endDate || 'Khi hoàn tất'}</span>
                   <strong className="text-[#2C2523] block mb-0.5">Hoàn Trả và Giải Ngân</strong>
                   <span className="text-[#847374] block leading-tight">Hoàn cọc 100% qua tài khoản trong 24h</span>
                 </div>
@@ -3665,7 +3872,7 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const shareText = `Anh yêu ơi, em đã đặt thuê thành công ${orderItems && orderItems.length > 1 ? `${orderItems.length} tác phẩm váy cưới` : `tác phẩm váy cưới ${activeDress?.name}`} tại UniBridal cho ngày cưới ${rentalSchedule.weddingDate}! Mã đơn hàng: ${createdOrder?.orderCode || 'UB-2026-0001'}. Cùng xem với em nhé: ${window.location.href}`;
+                  const shareText = `Anh yêu ơi, em đã đặt thuê thành công ${orderItems && orderItems.length > 1 ? `${orderItems.length} tác phẩm váy cưới` : `tác phẩm váy cưới ${activeDress?.name || 'Haute Couture'}`} tại UniBridal cho ngày cưới ${rentalSchedule?.weddingDate || rentalSchedule?.startDate || 'hôn lễ'}! Mã đơn hàng: ${createdOrder?.orderCode || 'UB-2026-0001'}. Cùng xem với em nhé: ${window.location.href}`;
                   if (navigator.share) {
                     navigator.share({
                       title: 'Hợp Đồng Thuê Váy Cưới UniBridal',

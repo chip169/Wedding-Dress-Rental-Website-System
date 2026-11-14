@@ -68,10 +68,10 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
   const customerStatus = inspection?.customerStatus || 'pending';
   const initialDeposit = inspection?.initialDeposit ?? order.totalDeposit ?? order.deposit ?? 0;
   const lateDays = inspection?.lateDays ?? 0;
-  const lateFee = inspection?.latePenaltyFee ?? 0;
   const itemsCondition = inspection?.itemsCondition || [];
-  const compensation = itemsCondition.reduce((sum, it) => sum + Number(it.repairFee || 0), 0);
-  const totalDeduction = inspection?.totalDeduction ?? (lateFee + compensation);
+  const totalDeduction = inspection?.totalDeduction ?? 0;
+  const lateFee = Math.min(inspection?.latePenaltyFee ?? 0, totalDeduction);
+  const compensation = totalDeduction - lateFee;
   const finalRefund = inspection?.finalRefundAmount ?? Math.max(0, initialDeposit - totalDeduction);
   const needsBankDetails = finalRefund > 0;
   const evidencePhotos = inspection?.evidencePhotos || [];
@@ -106,11 +106,15 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
       const res = await approveReturnInspection(order._id || order.id, bankData);
       if (!res?.inspection || res.inspection.customerStatus !== 'approved') throw new Error('Máy chủ chưa xác nhận biên bản. Vui lòng tải lại.');
       setInspection(res.inspection);
-      message.success(needsBankDetails ? 'Đã duyệt biên bản. Đơn đã hoàn tất; khoản hoàn cọc đang chờ showroom xử lý.' : 'Đã duyệt biên bản và hoàn tất đơn. Không có khoản cọc cần hoàn.');
+      if (res.inspection.refundConflict) {
+        message.info('Đã duyệt biên bản. Showroom đang đối soát khoản hoàn cọc.');
+      } else {
+        message.success(needsBankDetails ? 'Đã duyệt biên bản. Đơn đã hoàn tất; khoản hoàn cọc đang chờ showroom xử lý.' : 'Đã duyệt biên bản và hoàn tất đơn. Không có khoản cọc cần hoàn.');
+      }
       setStep('inspection');
       if (onUpdated) onUpdated();
     } catch (err) {
-      message.error(err.response?.data?.message || err.message || 'Xác nhận hoàn cọc thất bại. Vui lòng thử lại.');
+      message.error(err.message || 'Duyệt biên bản thất bại. Vui lòng thử lại.');
     } finally {
       setSubmitting(false);
     }
@@ -140,7 +144,7 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
   };
 
   const handleRequestClose = () => {
-    if (customerStatus === 'pending' && !inspection?.customerConfirmed) {
+    if (inspection && customerStatus === 'pending') {
       Modal.confirm({
         title: 'Lưu ý bắt buộc xác nhận hoàn cọc',
         content: 'Đây là bước bắt buộc để showroom đối soát hiện trạng và giải ngân hoàn tiền cọc bảo lãnh về tài khoản của nàng. Nàng có chắc muốn đóng tạm thời không?',
@@ -373,7 +377,7 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
                 <div className="px-3.5 py-2.5 rounded-xl bg-amber-50 border border-amber-200 text-amber-900 flex items-center justify-between flex-wrap gap-2 text-[11.5px]">
                   <div className="flex items-center gap-2 font-bold text-amber-800">
                     <AlertTriangle size={15} className="text-amber-600 shrink-0" />
-                    <span>Nàng đã gửi khiếu nại: "{inspection?.disputeReason || 'Chưa đồng ý với khấu trừ'}"</span>
+                    <span>{inspection?.disputeReason || 'Showroom đang rà soát biên bản kiểm định.'}</span>
                   </div>
                   <span className="text-amber-700 text-[11px]">Showroom đang đối soát và sẽ liên hệ sớm.</span>
                 </div>
@@ -385,7 +389,9 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
                       Nàng đã duyệt biên bản kiểm định.
                     </span>
                     <span className="text-emerald-700">
-                      {inspection?.isRefunded ? 'Đã hoàn cọc:' : 'Đề nghị hoàn:'} <strong>{formatVnd(finalRefund)}</strong>
+                      {inspection?.refundConflict ? 'Showroom đang đối soát khoản hoàn cọc.' : inspection?.refundStatus === 'not_required' ? 'Không cần hoàn cọc' : (
+                        <>{inspection?.isRefunded ? 'Đã hoàn cọc' : 'Còn phải hoàn'} <strong>{formatVnd(inspection?.isRefunded ? finalRefund : inspection?.refundRemaining ?? finalRefund)}</strong></>
+                      )}
                     </span>
                   </div>
                   {refundBankDetails?.accountNumber && (
@@ -530,13 +536,18 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
                         <span>Tiền cọc bảo lãnh ban đầu:</span>
                         <span className="font-semibold text-[#2C2523]">{formatVnd(initialDeposit)}</span>
                       </div>
-                      {lateDays > 0 && (
+                      {inspection?.negotiatedByAdmin ? (
+                        <div className="flex justify-between text-[#92400E]">
+                          <span>Khấu trừ đã thống nhất:</span>
+                          <span className="font-semibold">{formatVnd(totalDeduction)}</span>
+                        </div>
+                      ) : lateFee > 0 && (
                         <div className={`flex justify-between ${lateDays > 5 ? 'text-rose-700 font-bold' : 'text-[#92400E]'}`}>
                           <span>Phí trễ hạn ({lateDays} ngày{lateDays > 5 ? ' - Quá 5 ngày: Tịch thu cọc' : ' - 50%/ngày'}):</span>
                           <span className="font-semibold">-{formatVnd(lateFee)}</span>
                         </div>
                       )}
-                      {compensation > 0 && (
+                      {!inspection?.negotiatedByAdmin && compensation > 0 && (
                         <div className="flex justify-between text-[#B84E5D]">
                           <span>Khấu trừ chi phí phục hồi hư hại:</span>
                           <span className="font-semibold">-{formatVnd(compensation)}</span>

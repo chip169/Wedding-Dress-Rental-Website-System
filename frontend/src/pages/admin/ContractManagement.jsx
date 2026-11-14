@@ -3,7 +3,8 @@ import { getAllOrdersAdmin, createOrder, updateOrderStatus } from '../../service
 import { formatCurrencyVND } from '../../utils/formatCurrency';
 import { formatShortDate } from '../../utils/formatDate';
 import AdminLayout from '../../components/layout/AdminLayout';
-import { Search,
+import {
+  Search,
   FileSignature,
   FileText,
   Calendar,
@@ -35,7 +36,8 @@ import { Search,
   RefreshCw,
   ExternalLink,
   ChevronLeft,
-  ChevronRight } from 'lucide-react';
+  ChevronRight
+} from 'lucide-react';
 import { Link } from 'react-router-dom';
 import SignedContractModal from '../../components/common/SignedContractModal';
 import { getContractTemplates } from '../../services/contractService';
@@ -44,32 +46,32 @@ import { DRESS_CATALOG } from '../../data/dressCatalog';
 
 const DRESS_OPTIONS = Array.isArray(DRESS_CATALOG) && DRESS_CATALOG.length > 0
   ? DRESS_CATALOG.map((d) => ({
-      id: d.id,
-      code: d.code,
-      name: d.name,
-      price: d.priceNumber || 5000000,
-      deposit: typeof d.depositAmount === 'string'
-        ? parseInt(d.depositAmount.replace(/\D/g, ''), 10) || 15000000
-        : (d.depositAmount || 15000000),
-      image: d.image || d.images?.[0] || 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?auto=format&fit=crop&w=600&q=80',
-      sizes: (d.sizes && d.sizes.length > 0)
-        ? d.sizes.map((s) => {
-            const szName = typeof s === 'string' ? s : (s?.size || s?.label || 'S');
-            return String(szName).startsWith('Size') ? szName : `Size ${szName}`;
-          })
-        : ['Size S', 'Size M', 'Size L']
-    }))
+    id: d.id,
+    code: d.code,
+    name: d.name,
+    price: d.priceNumber || 5000000,
+    deposit: typeof d.depositAmount === 'string'
+      ? parseInt(d.depositAmount.replace(/\D/g, ''), 10) || 15000000
+      : (d.depositAmount || 15000000),
+    image: d.image || d.images?.[0] || 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?auto=format&fit=crop&w=600&q=80',
+    sizes: (d.sizes && d.sizes.length > 0)
+      ? d.sizes.map((s) => {
+        const szName = typeof s === 'string' ? s : (s?.size || s?.label || 'S');
+        return String(szName).startsWith('Size') ? szName : `Size ${szName}`;
+      })
+      : ['Size S', 'Size M', 'Size L']
+  }))
   : [
-      {
-        id: '6aeb1d4f4880130a58dcff21',
-        code: 'UB-001',
-        name: 'Elysian Rose Ballgown',
-        price: 5200000,
-        deposit: 15000000,
-        image: 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?auto=format&fit=crop&w=600&q=80',
-        sizes: ['Size XS', 'Size S', 'Size M', 'Size L']
-      }
-    ];
+    {
+      id: '6aeb1d4f4880130a58dcff21',
+      code: 'UB-001',
+      name: 'Elysian Rose Ballgown',
+      price: 5200000,
+      deposit: 15000000,
+      image: 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?auto=format&fit=crop&w=600&q=80',
+      sizes: ['Size XS', 'Size S', 'Size M', 'Size L']
+    }
+  ];
 
 const fmtVnd = (num) => formatCurrencyVND(num);
 const PAGE_SIZE = 5;
@@ -101,7 +103,7 @@ const formatSignedDateTime = (dateVal) => {
       });
       return `${timeStr}\u00A0\u00A0${dateStr}`;
     }
-  } catch {}
+  } catch { }
 
   if (typeof dateVal === 'string') {
     const trimmed = dateVal.trim();
@@ -188,20 +190,84 @@ export default function ContractManagement() {
   const [newIdCard, setNewIdCard] = useState('');
   const [selectedDressCode, setSelectedDressCode] = useState(DRESS_OPTIONS[0].code);
   const [selectedDressSize, setSelectedDressSize] = useState(DRESS_OPTIONS[0].sizes[0]);
-  const [newStartDate, setNewStartDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 2);
-    return d.toISOString().split('T')[0];
-  });
-  const [newEndDate, setNewEndDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 5);
-    return d.toISOString().split('T')[0];
-  });
+  const [newStartDate, setNewStartDate] = useState('');
+  const [newEndDate, setNewEndDate] = useState('');
   const [newNote, setNewNote] = useState('');
   const [newTemplate, setNewTemplate] = useState('Hợp đồng Thuê Váy Cưới Haute Couture Tiêu Chuẩn');
   const [newInitialStatus, setNewInitialStatus] = useState('deposit_paid');
   const [creating, setCreating] = useState(false);
+
+  // Tính ngày hôm nay và ngày mai chuẩn ISO
+  const todayIso = useMemo(() => {
+    const d = new Date();
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }, []);
+
+  const tomorrowIso = useMemo(() => {
+    const d = new Date();
+    d.setDate(d.getDate() + 1);
+    const y = d.getFullYear();
+    const m = String(d.getMonth() + 1).padStart(2, '0');
+    const day = String(d.getDate()).padStart(2, '0');
+    return `${y}-${m}-${day}`;
+  }, []);
+
+  // Ngày hoàn tối thiểu phải sau ngày nhận ít nhất 1 ngày
+  const minEndDate = useMemo(() => {
+    if (!newStartDate) {
+      const d = new Date();
+      d.setDate(d.getDate() + 2);
+      const y = d.getFullYear();
+      const m = String(d.getMonth() + 1).padStart(2, '0');
+      const day = String(d.getDate()).padStart(2, '0');
+      return `${y}-${m}-${day}`;
+    }
+    const parts = newStartDate.split('-').map(Number);
+    if (parts.length === 3) {
+      const nextD = new Date(parts[0], parts[1] - 1, parts[2] + 1);
+      const ny = nextD.getFullYear();
+      const nm = String(nextD.getMonth() + 1).padStart(2, '0');
+      const nd = String(nextD.getDate()).padStart(2, '0');
+      return `${ny}-${nm}-${nd}`;
+    }
+    return tomorrowIso;
+  }, [newStartDate, tomorrowIso]);
+
+  const handleStartDateChange = (val) => {
+    if (val && val <= todayIso) {
+      showToast('Không thể chọn ngày trong quá khứ hoặc ngày hôm nay! Vui lòng chọn từ ngày mai trở đi.');
+      return;
+    }
+    setNewStartDate(val);
+    if (val) {
+      const parts = val.split('-').map(Number);
+      if (parts.length === 3) {
+        const nextD = new Date(parts[0], parts[1] - 1, parts[2] + 1);
+        const y = nextD.getFullYear();
+        const m = String(nextD.getMonth() + 1).padStart(2, '0');
+        const day = String(nextD.getDate()).padStart(2, '0');
+        const nextDayIso = `${y}-${m}-${day}`;
+        if (!newEndDate || newEndDate <= val) {
+          setNewEndDate(nextDayIso);
+        }
+      }
+    }
+  };
+
+  const handleEndDateChange = (val) => {
+    if (newStartDate && val <= newStartDate) {
+      showToast('Ngày hoàn trả phải sau ngày nhận váy ít nhất 1 ngày!');
+      return;
+    }
+    if (val && val <= todayIso) {
+      showToast('Ngày hoàn trả không thể là ngày hôm nay hoặc trong quá khứ!');
+      return;
+    }
+    setNewEndDate(val);
+  };
 
   const showToast = (msg) => {
     setToastMsg(msg);
@@ -220,8 +286,8 @@ export default function ContractManagement() {
           let status = 'active';
           if (ord.status === 'completed' || ord.status === 'complete') {
             status = 'completed';
-          } else if (ord.status === 'returned') {
-            status = 'disputed'; // Đang xử lý cọc sau khi nhận trả váy
+          } else if (['returned', 'waiting_refund', 'disputed'].includes(ord.status)) {
+            status = 'disputed';
           } else if (ord.status === 'pending_payment') {
             status = 'pending_signature'; // Chờ ký & cọc
           } else if (ord.status === 'cancelled') {
@@ -270,17 +336,18 @@ export default function ContractManagement() {
             depositAmount,
             totalValue: rentalPrice + depositAmount,
             status,
+            refundPending: ord.inspection?.refundStatus === 'pending',
             signedAt: ord.contract?.signedAt
               ? formatSignedDateTime(ord.contract.signedAt)
               : ord.createdAt
-              ? formatSignedDateTime(ord.createdAt)
-              : '—',
+                ? formatSignedDateTime(ord.createdAt)
+                : '—',
             rawSignedAt: ord.contract?.signedAt || ord.createdAt || null,
             signedAtTime: ord.contract?.signedAt
               ? new Date(ord.contract.signedAt).getTime()
               : ord.createdAt
-              ? new Date(ord.createdAt).getTime()
-              : 0,
+                ? new Date(ord.createdAt).getTime()
+                : 0,
             signedMethod: ord.contractSignature ? 'Chữ ký điện tử UniBridal' : 'Ký số điện tử',
             contractSignature: ord.contractSignature || ord.customerName || ord.brideName || '',
             rawOrder: ord,
@@ -447,7 +514,7 @@ export default function ContractManagement() {
 
     const labels = {
       active: 'Đã kích hoạt hợp đồng có hiệu lực pháp lý!',
-      completed: 'Hợp đồng đã hoàn thành và giải ngân hoàn cọc cho khách hàng!',
+      completed: 'Hợp đồng đã hoàn thành.',
       disputed: 'Đã chuyển hợp đồng sang trạng thái đối soát bồi thường cọc!'
     };
     showToast(labels[newStatus] || 'Đã cập nhật trạng thái hợp đồng thành công!');
@@ -458,6 +525,22 @@ export default function ContractManagement() {
     e.preventDefault();
     if (!newCustomerName.trim() || !newPhone.trim()) {
       showToast('Vui lòng nhập họ tên và số điện thoại khách hàng.');
+      return;
+    }
+    if (!newStartDate) {
+      showToast('Vui lòng chọn ngày nhận váy.');
+      return;
+    }
+    if (newStartDate <= todayIso) {
+      showToast('Ngày nhận váy không thể là ngày hôm nay hoặc trong quá khứ! Vui lòng chọn từ ngày mai trở đi.');
+      return;
+    }
+    if (!newEndDate) {
+      showToast('Vui lòng chọn ngày hoàn trả váy.');
+      return;
+    }
+    if (newEndDate <= newStartDate) {
+      showToast('Ngày hoàn trả phải sau ngày nhận váy ít nhất 1 ngày!');
       return;
     }
 
@@ -511,6 +594,8 @@ export default function ContractManagement() {
       setNewCustomerName('');
       setNewPhone('');
       setNewIdCard('');
+      setNewStartDate('');
+      setNewEndDate('');
       setNewNote('');
       showToast(`Đã lập thành công Hợp Đồng ${finalContractCode} và tự động tạo Đơn Thuê #${orderCode} cho cô dâu ${newCustomerName.trim()}!`);
     } catch (err) {
@@ -675,8 +760,8 @@ export default function ContractManagement() {
                 type="button"
                 onClick={() => setSelectedStatus(tab.id)}
                 className={`px-3 py-1.5 rounded-lg text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer ${selectedStatus === tab.id
-                    ? 'bg-[#733F49] text-white shadow-xs'
-                    : 'bg-[#F9ECE8] text-[#6E5957] hover:bg-[#F2DFD9]'
+                  ? 'bg-[#733F49] text-white shadow-xs'
+                  : 'bg-[#F9ECE8] text-[#6E5957] hover:bg-[#F2DFD9]'
                   }`}
               >
                 {tab.label}
@@ -767,7 +852,13 @@ export default function ContractManagement() {
 
                     <td className="py-4 px-4 whitespace-nowrap text-center">
                       <div className="flex flex-col items-center justify-center">
-                        {getStatusBadge(item.status)}
+                        {item.status === 'completed' && item.refundPending ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                            <Clock size={13} /> Chờ Hoàn Cọc
+                          </span>
+                        ) : (
+                          getStatusBadge(item.status)
+                        )}
                         {item.signedAt ? (
                           <div className="text-[10px] text-[#A39192] mt-1 flex items-center justify-center gap-1">
                             <ShieldCheck size={11} className="text-emerald-600 shrink-0" />
@@ -879,11 +970,10 @@ export default function ContractManagement() {
                       key={p}
                       type="button"
                       onClick={() => setCurrentPage(p)}
-                      className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition-colors cursor-pointer ${
-                        currentPage === p
-                          ? 'bg-[#733F49] text-white shadow-xs'
-                          : 'bg-white border border-[#EFE5E1] shadow-2xs text-[#4A3B3D] hover:bg-[#F5ECE8]'
-                      }`}
+                      className={`w-8 h-8 rounded-lg font-bold text-xs flex items-center justify-center transition-colors cursor-pointer ${currentPage === p
+                        ? 'bg-[#733F49] text-white shadow-xs'
+                        : 'bg-white border border-[#EFE5E1] shadow-2xs text-[#4A3B3D] hover:bg-[#F5ECE8]'
+                        }`}
                     >
                       {p}
                     </button>
@@ -938,15 +1028,7 @@ export default function ContractManagement() {
               </div>
 
               <form onSubmit={handleCreateSubmit} className="p-6 space-y-4">
-                {/* Banner giải thích đồng bộ đơn hàng */}
-                <div className="p-3.5 rounded-xl bg-[#FAF5F2] border border-[#EEDECF] flex items-start gap-2.5">
-                  <div className="w-5 h-5 rounded-full bg-[#733F49] text-white flex items-center justify-center shrink-0 mt-0.5 text-[11px] font-bold">
-                    ✓
-                  </div>
-                  <div className="text-[12px] text-[#594B49] leading-relaxed">
-                    <strong className="text-[#733F49]">Đồng bộ tự động:</strong> Khi lập hợp đồng tại Showroom, hệ thống sẽ lập tức tạo <strong>01 Đơn Thuê mới tương ứng</strong> trong danh sách <em>Quản Lý Đơn Thuê</em>, đảm bảo kiểm soát xuyên suốt từ thử váy, đặt cọc đến bàn giao và kiểm định hoàn cọc.
-                  </div>
-                </div>
+
                 <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
                   <div>
                     <label className="block text-xs font-bold text-[#594B49] uppercase mb-1">
@@ -955,7 +1037,7 @@ export default function ContractManagement() {
                     <input
                       type="text"
                       required
-                      placeholder="Ví dụ: Hoàng Ngọc Trâm"
+                      placeholder="Nhập họ và tên cô dâu"
                       value={newCustomerName}
                       onChange={(e) => setNewCustomerName(e.target.value)}
                       className="w-full px-3.5 py-2 rounded-lg border border-[#EFE5E1] text-sm text-[#302626] focus:outline-none focus:ring-2 focus:ring-[#B8737D]/30"
@@ -969,7 +1051,7 @@ export default function ContractManagement() {
                     <input
                       type="tel"
                       required
-                      placeholder="Ví dụ: 0938 123 456"
+                      placeholder="Nhập số điện thoại liên hệ"
                       value={newPhone}
                       onChange={(e) => setNewPhone(e.target.value)}
                       className="w-full px-3.5 py-2 rounded-lg border border-[#EFE5E1] text-sm text-[#302626] focus:outline-none focus:ring-2 focus:ring-[#B8737D]/30"
@@ -984,7 +1066,7 @@ export default function ContractManagement() {
                     </label>
                     <input
                       type="text"
-                      placeholder="001199008877"
+                      placeholder="Nhập số CCCD hoặc hộ chiếu"
                       value={newIdCard}
                       onChange={(e) => setNewIdCard(e.target.value)}
                       className="w-full px-3.5 py-2 rounded-lg border border-[#EFE5E1] text-sm text-[#302626] focus:outline-none focus:ring-2 focus:ring-[#B8737D]/30"
@@ -1050,8 +1132,9 @@ export default function ContractManagement() {
                     <input
                       type="date"
                       required
+                      min={tomorrowIso}
                       value={newStartDate}
-                      onChange={(e) => setNewStartDate(e.target.value)}
+                      onChange={(e) => handleStartDateChange(e.target.value)}
                       className="w-full px-3.5 py-2 rounded-lg border border-[#EFE5E1] text-sm text-[#302626] focus:outline-none focus:ring-2 focus:ring-[#B8737D]/30"
                     />
                   </div>
@@ -1063,8 +1146,9 @@ export default function ContractManagement() {
                     <input
                       type="date"
                       required
+                      min={minEndDate}
                       value={newEndDate}
-                      onChange={(e) => setNewEndDate(e.target.value)}
+                      onChange={(e) => handleEndDateChange(e.target.value)}
                       className="w-full px-3.5 py-2 rounded-lg border border-[#EFE5E1] text-sm text-[#302626] focus:outline-none focus:ring-2 focus:ring-[#B8737D]/30"
                     />
                   </div>
@@ -1104,7 +1188,7 @@ export default function ContractManagement() {
                   </label>
                   <textarea
                     rows={2}
-                    placeholder="Ví dụ: Hạ eo 1cm, tặng kèm voan cài đầu 2.5m, hoàn cọc chuyển khoản ngay khi nhận lại váy..."
+                    placeholder="Nhập ghi chú điều khoản bổ sung hoặc phụ lục fitting nếu có..."
                     value={newNote}
                     onChange={(e) => setNewNote(e.target.value)}
                     className="w-full px-3.5 py-2 rounded-lg border border-[#EFE5E1] text-sm text-[#302626] focus:outline-none focus:ring-2 focus:ring-[#B8737D]/30"

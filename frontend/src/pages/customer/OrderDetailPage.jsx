@@ -45,7 +45,7 @@ const TIMELINE_STEPS = [
   {
     key: 'waiting_refund',
     label: 'Chờ Hoàn Cọc',
-    subLabel: 'Đã kiểm định, chờ hoàn cọc',
+    subLabel: 'Đã nhận váy và lập biên bản',
     Icon: RefreshCcw,
   },
   {
@@ -65,6 +65,7 @@ const STATUS_STEP_MAP = {
   renting: 2,
   returned: 3,
   waiting_refund: 3,
+  disputed: 3,
   completed: 4,
   complete: 4,
 };
@@ -152,9 +153,7 @@ export default function OrderDetailPage() {
       .then((data) => {
         if (active) {
           setOrder(data);
-          const isApproved = data?.inspection?.customerStatus === 'approved' || data?.inspection?.customerConfirmed;
-          // Tự động mở màn hình bắt buộc khách hàng xem biên bản và xác nhận hoàn cọc
-          if (!isApproved && (data?.rawStatus === 'returned' || data?.inspection)) {
+          if (data?.inspection?.customerStatus === 'pending') {
             setIsInspectionOpen(true);
           }
         }
@@ -170,7 +169,7 @@ export default function OrderDetailPage() {
     };
   }, [orderId, reload]);
 
-  const approved = order?.inspection?.customerStatus === 'approved';
+  const needsInspectionReview = order?.inspection?.customerStatus === 'pending';
 
   return (
     <AccountLayout
@@ -217,7 +216,7 @@ export default function OrderDetailPage() {
             </div>
 
             {/* ── BANNER BIÊN BẢN KIỂM ĐỊNH VÀ HOÀN CỌC NỔI BẬT (Chỉ hiển thị khi đơn đang chờ duyệt kiểm định, ẩn đối với đơn đã hoàn thành) ── */}
-            {order.rawStatus !== 'completed' && order.status !== 'completed' && !approved && (order.rawStatus === 'returned' || order.inspection) && (
+            {needsInspectionReview && (
               <div className="mt-5 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#FFF4F0] via-[#FFF8F5] to-[#FFF1EC] border-2 border-[#E7BFB5] shadow-sm space-y-3 font-jakarta transition-all">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5">
@@ -226,7 +225,7 @@ export default function OrderDetailPage() {
                       <span className="relative inline-flex rounded-full h-3 w-3 bg-[#8C4654]"></span>
                     </span>
                     <span className="font-playfair font-bold text-[#5F2B36] text-[15px] sm:text-[16px] tracking-wide">
-                      ✦ Yêu Cầu Bắt Buộc: Xem Biên Bản Kiểm Định và Xác Nhận Hoàn Cọc
+                      Biên bản kiểm định đang chờ bạn xem và phản hồi
                     </span>
                   </div>
                   <button
@@ -234,7 +233,7 @@ export default function OrderDetailPage() {
                     onClick={() => setIsInspectionOpen(true)}
                     className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#733F49] to-[#8C4654] hover:from-[#5A2D35] hover:to-[#733F49] text-white text-xs font-bold transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg border-0 shrink-0"
                   >
-                    <span>Xem Biên Bản và Xác Nhận Hoàn Cọc</span>
+                    <span>Xem Biên Bản Kiểm Định</span>
                   </button>
                 </div>
 
@@ -250,6 +249,14 @@ export default function OrderDetailPage() {
             )}
 
             {/* ── STATUS TIMELINE ── */}
+            {order.inspection?.customerStatus === 'disputed' && (
+              <div className="mt-4 rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-xs text-amber-900">
+                Showroom đang xử lý biên bản kiểm định.
+                <button type="button" className="ml-2 font-semibold underline" onClick={() => setIsInspectionOpen(true)}>
+                  Xem biên bản
+                </button>
+              </div>
+            )}
             <OrderStatusTimeline rawStatus={order.rawStatus} />
 
             {/* ── 2-COLUMN DETAIL ── */}

@@ -1,14 +1,16 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, Heart,
+import {
+  Search, SlidersHorizontal, Heart,
   Crown, Scissors, ShieldCheck, ChevronLeft, ChevronRight,
-  Check, X, Calendar, LayoutGrid, Grid3X3, Filter } from 'lucide-react';
+  Check, X, Calendar, LayoutGrid, Grid3X3, Filter
+} from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useAuth } from '../../contexts/AuthContext';
 import { addToCart } from '../../services/cartService';
 import { getWishlistIds, toggleWishlist, WISHLIST_EVENT } from '../../services/wishlistService';
-import { getAllDresses, getCategories, formatCurrencyVND } from '../../services/dressService';
+import { getAllDresses, getCategories, formatCurrencyVND, isDressOutOfStock } from '../../services/dressService';
 import RentSelectionModal from '../../components/common/RentSelectionModal';
 
 import logoEmblemImg from '../../assets/logo_emblem.png';
@@ -149,7 +151,7 @@ export default function CollectionPage() {
           setSilhouetteOptions(loaded);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // 2. Tải toàn bộ mẫu váy cưới từ MongoDB Atlas
     getAllDresses()
@@ -219,18 +221,30 @@ export default function CollectionPage() {
 
   // Thêm vào giỏ thuê
   const handleAddToCart = (dress) => {
+    if (isDressOutOfStock(dress)) {
+      showToast(`Mẫu váy "${dress.name}" hiện đã hết hàng trong kho, không thể thêm vào giỏ.`);
+      return;
+    }
     const added = addToCart(dress);
     showToast(added ? `Đã thêm "${dress.name}" vào giỏ thuê váy!` : `"${dress.name}" đã có trong giỏ thuê váy.`);
   };
 
   // Thuê Ngay: Mở Popup chọn màu sắc & kích thước chuẩn Ảnh 3
   const handleRentNow = (dress) => {
+    if (isDressOutOfStock(dress)) {
+      showToast(`Mẫu váy "${dress.name}" hiện đã hết hàng trong kho, không thể đặt lịch thuê!`);
+      return;
+    }
     setSelectedDressForRent(dress);
     setIsRentModalOpen(true);
   };
 
   // Đặt Lịch Thử Váy Riêng Tư
   const handleOpenFitting = (dress) => {
+    if (isDressOutOfStock(dress)) {
+      showToast(`Mẫu váy "${dress.name}" hiện đã hết hàng trong kho, không thể đặt lịch thử!`);
+      return;
+    }
     navigate(dress?.id ? `/dat-lich?dressId=${dress.id}` : '/dat-lich');
   };
 
@@ -392,7 +406,7 @@ export default function CollectionPage() {
 
             {/* Subtext 2 lines */}
             <p className="font-jakarta text-[13.5px] sm:text-[14.5px] leading-[22px] text-[#514344] max-w-[880px] mx-auto mb-6">
-              Hòa quyện giữa kỹ thuật corsetry siết eo quý tộc và chất liệu lụa Mikado tơ tằm thượng hạng Ý VÀ Pháp.
+              Hòa quyện giữa kỹ thuật corsetry siết eo quý tộc và chất liệu lụa Mikado tơ tằm thượng hạng Ý và Pháp.
               <br className="hidden sm:inline" />
               Mỗi thiết kế là một độc bản tôn vinh trọn vẹn đường nét thuần khiết, rạng ngời của nàng dâu trong ngày trọng đại nhất cuộc đời.
             </p>
@@ -550,9 +564,8 @@ export default function CollectionPage() {
 
             {/* SIDEBAR BỘ LỌC TUYỂN CHỌN */}
             <aside
-              className={`lg:col-span-4 xl:col-span-3 bg-white rounded-[28px] border border-[#EEDECF] p-6 shadow-[0px_4px_24px_rgba(201,138,144,0.08)] lg:sticky lg:top-24 ${
-                isMobileFilterOpen ? 'block mb-6' : 'hidden lg:block'
-              }`}
+              className={`lg:col-span-4 xl:col-span-3 bg-white rounded-[28px] border border-[#EEDECF] p-6 shadow-[0px_4px_24px_rgba(201,138,144,0.08)] lg:sticky lg:top-24 ${isMobileFilterOpen ? 'block mb-6' : 'hidden lg:block'
+                }`}
             >
               {/* Header Sidebar */}
               <div className="flex items-center justify-between pb-4 border-b border-[#E6DAC8]/60 mb-6">
@@ -582,16 +595,14 @@ export default function CollectionPage() {
                           setSelectedSilhouette(opt.id);
                           setCurrentPage(1);
                         }}
-                        className={`w-full py-2.5 px-4 rounded-[14px] border flex items-center justify-between cursor-pointer transition-all text-left ${
-                          isSelected
+                        className={`w-full py-2.5 px-4 rounded-[14px] border flex items-center justify-between cursor-pointer transition-all text-left ${isSelected
                             ? 'bg-[#FFF9F6] border-[#BA7A83] shadow-xs'
                             : 'bg-white border-[#EEDECF] hover:border-[#BA7A83] hover:bg-[#FFFDFC]'
-                        }`}
+                          }`}
                       >
                         <span
-                          className={`font-jakarta text-[12.5px] transition-colors ${
-                            isSelected ? 'text-[#804E55] font-semibold' : 'text-[#2C2523] font-normal'
-                          }`}
+                          className={`font-jakarta text-[12.5px] transition-colors ${isSelected ? 'text-[#804E55] font-semibold' : 'text-[#2C2523] font-normal'
+                            }`}
                         >
                           {opt.label}
                         </span>
@@ -617,11 +628,10 @@ export default function CollectionPage() {
                         key={mat}
                         type="button"
                         onClick={() => handleToggleMaterial(mat)}
-                        className={`px-3.5 py-1.5 rounded-full font-jakarta text-[12px] transition-all cursor-pointer flex items-center gap-1.5 ${
-                          isSelected
+                        className={`px-3.5 py-1.5 rounded-full font-jakarta text-[12px] transition-all cursor-pointer flex items-center gap-1.5 ${isSelected
                             ? 'bg-[#BA7A83] text-white border border-[#BA7A83] font-medium shadow-xs'
                             : 'bg-white text-[#2C2523] border border-[#EEDECF] hover:border-[#BA7A83] hover:text-[#BA7A83]'
-                        }`}
+                          }`}
                       >
                         <span>{mat}</span>
                         {isSelected && <Check className="w-3 h-3 text-white stroke-[2.5]" />}
@@ -701,9 +711,8 @@ export default function CollectionPage() {
                     <button
                       type="button"
                       onClick={() => setGridCols(2)}
-                      className={`p-1.5 rounded transition-all cursor-pointer border-0 ${
-                        gridCols === 2 ? 'bg-[#FAF0EC] text-[#B8737D]' : 'bg-transparent text-[#847374] hover:text-[#2C2523]'
-                      }`}
+                      className={`p-1.5 rounded transition-all cursor-pointer border-0 ${gridCols === 2 ? 'bg-[#FAF0EC] text-[#B8737D]' : 'bg-transparent text-[#847374] hover:text-[#2C2523]'
+                        }`}
                       title="Xem ảnh lớn (2 cột)"
                     >
                       <LayoutGrid className="w-4 h-4" />
@@ -711,9 +720,8 @@ export default function CollectionPage() {
                     <button
                       type="button"
                       onClick={() => setGridCols(3)}
-                      className={`p-1.5 rounded transition-all cursor-pointer border-0 ${
-                        gridCols === 3 ? 'bg-[#FAF0EC] text-[#B8737D]' : 'bg-transparent text-[#847374] hover:text-[#2C2523]'
-                      }`}
+                      className={`p-1.5 rounded transition-all cursor-pointer border-0 ${gridCols === 3 ? 'bg-[#FAF0EC] text-[#B8737D]' : 'bg-transparent text-[#847374] hover:text-[#2C2523]'
+                        }`}
                       title="Xem lưới chuẩn (3 cột)"
                     >
                       <Grid3X3 className="w-4 h-4" />
@@ -763,6 +771,7 @@ export default function CollectionPage() {
               ) : (
                 <div className={`grid grid-cols-1 ${gridCols === 2 ? 'sm:grid-cols-2' : 'sm:grid-cols-2 xl:grid-cols-3'} gap-6`}>
                   {paginatedProducts.map((dress) => {
+                    const isOutOfStock = isDressOutOfStock(dress);
                     const isWishlisted = Boolean(
                       Array.isArray(wishlistIds) &&
                       wishlistIds.some((w) => {
@@ -782,11 +791,16 @@ export default function CollectionPage() {
                           <img
                             src={dress.image}
                             alt={dress.name}
-                            className="w-full h-full object-cover object-top group-hover:scale-105 transition-transform duration-500"
+                            className={`w-full h-full object-cover object-top transition-transform duration-500 ${isOutOfStock ? 'opacity-80 grayscale-[25%]' : 'group-hover:scale-105'}`}
                           />
 
                           {/* Left Badges */}
                           <div className="absolute top-3.5 left-3.5 flex flex-col gap-1.5 z-10">
+                            {isOutOfStock && (
+                              <span className="px-2.5 py-1 rounded-[6px] bg-[#DC2626] text-white font-jakarta font-bold text-[9px] tracking-[0.8px] shadow-sm uppercase">
+                                Hết hàng trong kho
+                              </span>
+                            )}
                             <span className="px-2.5 py-1 rounded-[6px] bg-white text-[#2C2523] font-jakarta font-bold text-[9px] tracking-[0.8px] shadow-xs">
                               {dress.badgeMain}
                             </span>
@@ -800,18 +814,16 @@ export default function CollectionPage() {
                                 e.stopPropagation();
                                 handleToggleWishlist(dress.id);
                               }}
-                              className={`absolute top-3.5 right-3.5 w-[34px] h-[34px] rounded-[8px] bg-white flex items-center justify-center border shadow-[0px_2px_8px_rgba(0,0,0,0.06)] cursor-pointer z-10 transition-all duration-200 active:scale-90 p-0 ${
-                                isWishlisted
+                              className={`absolute top-3.5 right-3.5 w-[34px] h-[34px] rounded-[8px] bg-white flex items-center justify-center border shadow-[0px_2px_8px_rgba(0,0,0,0.06)] cursor-pointer z-10 transition-all duration-200 active:scale-90 p-0 ${isWishlisted
                                   ? 'border-[#B8737D]/40 bg-[#FFF5F6] text-[#B8737D]'
                                   : 'border-[#EEDECF] text-[#4A3E3F] hover:text-[#B8737D] hover:border-[#B8737D]/40'
-                              }`}
+                                }`}
                               style={{ borderRadius: '8px' }}
                               title={isWishlisted ? 'Bỏ yêu thích' : 'Yêu thích'}
                             >
                               <Heart
-                                className={`w-4 h-4 transition-all duration-200 ${
-                                  isWishlisted ? 'fill-[#B8737D] text-[#B8737D] scale-110' : 'text-[#4A3E3F]'
-                                }`}
+                                className={`w-4 h-4 transition-all duration-200 ${isWishlisted ? 'fill-[#B8737D] text-[#B8737D] scale-110' : 'text-[#4A3E3F]'
+                                  }`}
                               />
                             </button>
                           )}
@@ -829,19 +841,21 @@ export default function CollectionPage() {
                           </div>
 
                           {/* Quick Fitting Button on Hover (nằm ở lớp trước z-20 đè lên trên logo) */}
-                          <div className="absolute inset-x-4 bottom-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex justify-center pointer-events-none group-hover:pointer-events-auto">
-                            <button
-                              type="button"
-                              onClick={(e) => {
-                                e.stopPropagation();
-                                handleOpenFitting(dress);
-                              }}
-                              className="px-4 py-2 rounded-xl bg-white hover:bg-[#FAF7F5] text-[#733F49] font-jakarta text-[12px] font-bold tracking-wide shadow-[0px_4px_16px_rgba(0,0,0,0.18)] border border-[#EEDECF] flex items-center gap-1.5 cursor-pointer transition-all"
-                            >
-                              <Calendar className="w-3.5 h-3.5 text-[#B8737D]" />
-                              <span>Đặt lịch thử tại Showroom</span>
-                            </button>
-                          </div>
+                          {!isOutOfStock && (
+                            <div className="absolute inset-x-4 bottom-4 z-20 opacity-0 group-hover:opacity-100 transition-opacity duration-300 flex justify-center pointer-events-none group-hover:pointer-events-auto">
+                              <button
+                                type="button"
+                                onClick={(e) => {
+                                  e.stopPropagation();
+                                  handleOpenFitting(dress);
+                                }}
+                                className="px-4 py-2 rounded-xl bg-white hover:bg-[#FAF7F5] text-[#733F49] font-jakarta text-[12px] font-bold tracking-wide shadow-[0px_4px_16px_rgba(0,0,0,0.18)] border border-[#EEDECF] flex items-center gap-1.5 cursor-pointer transition-all"
+                              >
+                                <Calendar className="w-3.5 h-3.5 text-[#B8737D]" />
+                                <span>Đặt lịch thử tại Showroom</span>
+                              </button>
+                            </div>
+                          )}
                         </div>
 
                         {/* Thông Tin Chi Tiết Thẻ */}
@@ -873,7 +887,11 @@ export default function CollectionPage() {
 
                           {/* Nút Bấm: Thêm Vào Giỏ và Thuê Ngay (Đẩy sát đáy card với mt-auto) */}
                           <div className="mt-auto pt-1">
-                            {isLoggedIn ? (
+                            {isOutOfStock ? (
+                              <div className="w-full py-2.5 rounded-[10px] bg-stone-100 text-stone-500 font-jakarta text-[12px] font-semibold tracking-wide text-center border border-stone-200 cursor-not-allowed select-none">
+                                Tạm Hết Hàng Trong Kho
+                              </div>
+                            ) : isLoggedIn ? (
                               <div className="grid grid-cols-2 gap-2.5">
                                 <button
                                   type="button"
@@ -939,11 +957,10 @@ export default function CollectionPage() {
                   <button
                     type="button"
                     onClick={() => handlePageChange(1)}
-                    className={`w-[34px] h-[34px] rounded-[10px] font-jakarta text-[13px] flex items-center justify-center cursor-pointer transition-all ${
-                      currentPage === 1
+                    className={`w-[34px] h-[34px] rounded-[10px] font-jakarta text-[13px] flex items-center justify-center cursor-pointer transition-all ${currentPage === 1
                         ? 'bg-[#BA7A83] text-white font-bold shadow-xs border-0'
                         : 'bg-white text-[#2C2523] font-medium border border-[#E6DAC8] hover:border-[#BA7A83] hover:text-[#BA7A83]'
-                    }`}
+                      }`}
                     style={{ borderRadius: '10px' }}
                   >
                     1
@@ -954,11 +971,10 @@ export default function CollectionPage() {
                     <button
                       type="button"
                       onClick={() => handlePageChange(2)}
-                      className={`w-[34px] h-[34px] rounded-[10px] font-jakarta text-[13px] flex items-center justify-center cursor-pointer transition-all ${
-                        currentPage === 2
+                      className={`w-[34px] h-[34px] rounded-[10px] font-jakarta text-[13px] flex items-center justify-center cursor-pointer transition-all ${currentPage === 2
                           ? 'bg-[#BA7A83] text-white font-bold shadow-xs border-0'
                           : 'bg-white text-[#2C2523] font-medium border border-[#E6DAC8] hover:border-[#BA7A83] hover:text-[#BA7A83]'
-                      }`}
+                        }`}
                       style={{ borderRadius: '10px' }}
                     >
                       2
@@ -970,11 +986,10 @@ export default function CollectionPage() {
                     <button
                       type="button"
                       onClick={() => handlePageChange(3)}
-                      className={`w-[34px] h-[34px] rounded-[10px] font-jakarta text-[13px] flex items-center justify-center cursor-pointer transition-all ${
-                        currentPage === 3
+                      className={`w-[34px] h-[34px] rounded-[10px] font-jakarta text-[13px] flex items-center justify-center cursor-pointer transition-all ${currentPage === 3
                           ? 'bg-[#BA7A83] text-white font-bold shadow-xs border-0'
                           : 'bg-white text-[#2C2523] font-medium border border-[#E6DAC8] hover:border-[#BA7A83] hover:text-[#BA7A83]'
-                      }`}
+                        }`}
                       style={{ borderRadius: '10px' }}
                     >
                       3
@@ -1011,11 +1026,10 @@ export default function CollectionPage() {
                     <button
                       type="button"
                       onClick={() => handlePageChange(totalPages)}
-                      className={`w-[34px] h-[34px] rounded-[10px] font-jakarta text-[13px] flex items-center justify-center cursor-pointer transition-all ${
-                        currentPage === totalPages
+                      className={`w-[34px] h-[34px] rounded-[10px] font-jakarta text-[13px] flex items-center justify-center cursor-pointer transition-all ${currentPage === totalPages
                           ? 'bg-[#BA7A83] text-white font-bold shadow-xs border-0'
                           : 'bg-white text-[#2C2523] font-medium border border-[#E6DAC8] hover:border-[#BA7A83] hover:text-[#BA7A83]'
-                      }`}
+                        }`}
                       style={{ borderRadius: '10px' }}
                     >
                       {totalPages}

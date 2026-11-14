@@ -4,6 +4,7 @@ import seraphinaImage from '../assets/card6_tiered_princess.jpg';
 import genevieveImage from '../assets/hero_bride.jpg';
 import julietteImage from '../assets/card4_monet.jpg';
 import { dressImage } from './dressApiService';
+import { isDressOutOfStock } from './dressService';
 
 const CART_KEY = 'unibridal-rental-cart';
 const WISHLIST_KEY = 'unibridal-wishlist';
@@ -104,6 +105,9 @@ function parseMoney(value) {
 }
 
 export function addToCart(dress) {
+  if (!dress || isDressOutOfStock(dress)) {
+    return false;
+  }
   const id = String(dress._id ?? dress.id);
   const current = getCart();
   const selectedSize = dress.selectedSize || dress.size || dress.sizes?.[0]?.label || 'Theo tư vấn';

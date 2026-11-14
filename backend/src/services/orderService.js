@@ -6,8 +6,11 @@ import Contract from '../models/contractModel.js';
 import ContractTemplate from '../models/contractTemplateModel.js';
 import User from '../models/userModel.js';
 import {
+  CLOSED_ORDER_STATUSES, CLOSED_ORDER_STATUS_FILTER, RETURN_REVIEW_STATUSES, returnError, getDepositPayments,
+  inspectionRefundState, completeReturnedOrder, refundBankDetails, confirmDepositRefund, validateRefundPayment,
+} from './returnRefundService.js';
+import {
   sendInspectionNotificationEmail,
-  sendRefundConfirmationEmail,
   sendDepositSuccessEmail,
 } from '../utils/sendEmail.js';
 
@@ -107,6 +110,27 @@ export const createOrder = async (orderData, currentUser = null) => {
     throw new Error('Đơn thuê cần ít nhất 1 sản phẩm váy cưới.');
   }
 
+  // Kiểm tra tình trạng tồn kho của từng sản phẩm trong đơn thuê
+  for (const item of resolvedItems) {
+    let dressDoc = null;
+    if (mongoose.Types.ObjectId.isValid(item.dressId)) {
+      dressDoc = await Dress.findById(item.dressId);
+    } else if (item.code) {
+      dressDoc = await Dress.findOne({ code: String(item.code).toUpperCase() });
+    }
+    if (dressDoc) {
+      const isOutOfStock =
+        dressDoc.status === 'out_of_stock' ||
+        dressDoc.status === 'retired' ||
+        dressDoc.status === 'unavailable' ||
+        (Array.isArray(dressDoc.sizes) &&
+          dressDoc.sizes.reduce((s, sz) => s + (sz.quantity || 0), 0) === 0);
+      if (isOutOfStock) {
+        throw new Error(`Sản phẩm "${dressDoc.name}" hiện đã hết hàng trong kho, không thể đặt lịch thuê.`);
+      }
+    }
+  }
+
   // Tính toán chi phí
   const totalRentPrice = resolvedItems.reduce((sum, item) => sum + item.rentPrice, 0);
   const totalDeposit = resolvedItems.reduce((sum, item) => sum + item.depositAmount, 0);
@@ -124,12 +148,12 @@ export const createOrder = async (orderData, currentUser = null) => {
   const resolvedStartDate = parseDateSafe(rentalStartDate, new Date());
   const resolvedEndDate = parseDateSafe(rentalEndDate, new Date(Date.now() + 4 * 24 * 60 * 60 * 1000));
 
-  // Kiểm tra không được đặt ngày trong quá khứ
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  // Kiểm tra không được đặt ngày trong quá khứ hoặc ngày hôm nay (cần tối thiểu 24h chuẩn bị)
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
 
-  if (resolvedStartDate < todayStart) {
-    throw new Error('Ngày bắt đầu thuê không thể là ngày trong quá khứ.');
+  if (resolvedStartDate <= todayEnd) {
+    throw new Error('Không thể đặt thuê cho ngày hôm nay! Ngày bắt đầu thuê phải từ ngày mai trở đi (Atelier cần tối thiểu 24h để chuẩn bị và khử khuẩn lễ phục).');
   }
 
   if (resolvedEndDate < resolvedStartDate) {
@@ -345,7 +369,24 @@ export const getMyOrders = async (userId) => {
 
 export const getAllOrders = async (filters = {}) => {
   const query = {};
-  if (filters.status === 'disputed') {
+  if (['returned', 'waiting_refund'].includes(filters.status)) {
+    const inspections = await ReturnInspection.find({
+      $or: [{ customerStatus: 'approved' }, { customerStatus: null, customerConfirmed: true }],
+      finalRefundAmount: { $gte: 0 },
+    }).select('orderId initialDeposit finalRefundAmount customerStatus customerConfirmed').lean();
+    const ids = inspections.map(({ orderId }) => orderId);
+    const [orders, deposits] = await Promise.all([
+      Order.find({ _id: { $in: ids }, status: { $in: ['returned', 'waiting_refund', ...CLOSED_ORDER_STATUS_FILTER] } })
+        .select('status totalDeposit').lean(),
+      getDepositPayments(ids),
+    ]);
+    const byOrder = new Map(inspections.map((inspection) => [String(inspection.orderId), inspection]));
+    query._id = { $in: orders.filter((order) => {
+      const key = String(order._id);
+      const state = inspectionRefundState(order, byOrder.get(key), deposits.get(key));
+      return state.canConfirmRefund || state.refundConflict;
+    }).map(({ _id }) => _id) };
+  } else if (filters.status === 'disputed') {
     const disputedInspections = await ReturnInspection.find({ customerStatus: 'disputed' }).select('orderId').lean();
     const disputedOrderIds = disputedInspections.map((i) => i.orderId);
     query.$or = [
@@ -356,21 +397,24 @@ export const getAllOrders = async (filters = {}) => {
     query.status = filters.status;
   } else if (!filters.search) {
     if (filters.viewMode === 'active') {
-      query.status = { $nin: ['completed', 'complete', 'cancelled'] };
+      query.status = { $nin: [...CLOSED_ORDER_STATUS_FILTER, 'cancelled'] };
     } else if (filters.viewMode === 'archived') {
-      query.status = { $in: ['completed', 'complete', 'cancelled'] };
+      query.status = { $in: [...CLOSED_ORDER_STATUS_FILTER, 'cancelled'] };
     }
   }
   if (filters.search) {
     const rawSearch = String(filters.search).trim();
-    const cleanSearch = rawSearch.replace(/^[#\s]+/, ''); // Loại bỏ ký tự # nếu người dùng nhập "#UB-2026-0012"
-    query.$or = [
+    const escapeSearch = (value) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+    const cleanSearch = escapeSearch(rawSearch.replace(/^[#\s]+/, ''));
+    const textSearch = escapeSearch(rawSearch);
+    const search = { $or: [
       { orderCode: { $regex: cleanSearch, $options: 'i' } },
-      { customerName: { $regex: rawSearch, $options: 'i' } },
+      { customerName: { $regex: textSearch, $options: 'i' } },
       { customerPhone: { $regex: cleanSearch, $options: 'i' } },
-      { 'items.name': { $regex: rawSearch, $options: 'i' } },
+      { 'items.name': { $regex: textSearch, $options: 'i' } },
       { 'items.code': { $regex: cleanSearch, $options: 'i' } },
-    ];
+    ] };
+    query.$and = [search];
   }
 
   const page = parseInt(filters.page, 10) || 1;
@@ -381,7 +425,7 @@ export const getAllOrders = async (filters = {}) => {
   const [totalAll, rentingCount, completedCount, cancelledCount, total, orders] = await Promise.all([
     Order.countDocuments({}),
     Order.countDocuments({ status: 'renting' }),
-    Order.countDocuments({ status: { $in: ['completed', 'complete'] } }),
+    Order.countDocuments({ status: { $in: CLOSED_ORDER_STATUS_FILTER } }),
     Order.countDocuments({ status: 'cancelled' }),
     Order.countDocuments(query),
     Order.find(query)
@@ -392,9 +436,10 @@ export const getAllOrders = async (filters = {}) => {
   ]);
 
   const orderIds = orders.map((o) => o._id);
-  const [inspections, contracts] = await Promise.all([
+  const [inspections, contracts, refunds] = await Promise.all([
     ReturnInspection.find({ orderId: { $in: orderIds } }).select('-evidencePhotos').lean(),
     Contract.find({ orderId: { $in: orderIds } }).select('orderId contractCode status packageType').lean(),
+    getDepositPayments(orderIds),
   ]);
   const inspectionMap = new Map(inspections.map((i) => [String(i.orderId), i]));
   const contractMap = new Map(contracts.map((c) => [String(c.orderId), c]));
@@ -435,22 +480,6 @@ export const getAllOrders = async (filters = {}) => {
     const hasAccount = Boolean(o.customerId && String(o.customerId).trim() !== '');
     const insp = inspectionMap.get(String(o._id)) || null;
     const contract = contractMap.get(String(o._id)) || null;
-    let status = o.status;
-    const isCustomerApproved = insp?.customerStatus === 'approved' || insp?.customerConfirmed;
-    if (isCustomerApproved && status !== 'completed' && status !== 'complete') {
-      status = 'completed';
-      Order.updateOne(
-        { _id: o._id },
-        {
-          $set: {
-            status: 'completed',
-            completedAt: new Date(),
-            maintenanceUntil: new Date(Date.now() + 24 * 60 * 60 * 1000),
-          },
-        }
-      ).catch(() => {});
-    }
-
     const items = (o.items || []).map((it) => {
       const code =
         it.code ||
@@ -466,10 +495,9 @@ export const getAllOrders = async (filters = {}) => {
     return {
       ...o,
       items,
-      status,
       hasAccount,
       isGuest: !hasAccount,
-      inspection: insp,
+      inspection: inspectionRefundState(o, insp, refunds.get(String(o._id))),
       contract: contract || o.contract || null,
     };
   });
@@ -497,30 +525,17 @@ export const getOrderByIdOrCode = async (idOrCode) => {
   if (!order) {
     throw new Error('Không tìm thấy thông tin đơn thuê.');
   }
-  const inspection = await ReturnInspection.findOne({ orderId: order._id }).lean();
-  let status = order.status;
-  const isCustomerApproved = inspection?.customerStatus === 'approved' || inspection?.customerConfirmed;
-  if (isCustomerApproved && status !== 'completed' && status !== 'complete') {
-    status = 'completed';
-    Order.updateOne(
-      { _id: order._id },
-      {
-        $set: {
-          status: 'completed',
-          completedAt: new Date(),
-          maintenanceUntil: new Date(Date.now() + 24 * 60 * 60 * 1000),
-        },
-      }
-    ).catch(() => {});
-  }
+  const [inspection, refunds] = await Promise.all([
+    ReturnInspection.findOne({ orderId: order._id }).lean(),
+    getDepositPayments([order._id]),
+  ]);
   const items = (order.items || []).map((it) => ({
     ...it,
   }));
   return {
     ...order,
     items,
-    status,
-    inspection: inspection || null,
+    inspection: inspectionRefundState(order, inspection, refunds.get(String(order._id))),
   };
 };
 
@@ -530,54 +545,28 @@ export const updateOrderStatus = async (idOrCode, status) => {
   const order = await Order.findOne(query);
   if (!order) throw new Error('Không tìm thấy đơn hàng.');
 
-  order.status = status;
+  if (CLOSED_ORDER_STATUSES.includes(status)) {
+    throw returnError(409, 'Hãy xác nhận hoàn cọc trong biên bản để hoàn tất đơn trả váy.');
+  }
+  if (['returned', 'waiting_refund', 'disputed', ...CLOSED_ORDER_STATUSES].some((value) => value === order.status || value === status)) {
+    throw returnError(409, 'Đơn đang hoặc đã xử lý trả váy. Vui lòng dùng thao tác trong biên bản.');
+  }
+  const updateFields = { status };
   if (status === 'renting') {
-    order.actualDeliveryDate = order.actualDeliveryDate || new Date();
+    updateFields.actualDeliveryDate = order.actualDeliveryDate || new Date();
   }
   if (status === 'completed' || status === 'complete') {
-    order.completedAt = order.completedAt || new Date();
-    order.maintenanceUntil = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    updateFields.completedAt = order.completedAt || new Date();
+    updateFields.maintenanceUntil = new Date(Date.now() + 24 * 60 * 60 * 1000);
   }
-  await order.save();
+  const next = await Order.findOneAndUpdate(
+    { _id: order._id, status: order.status },
+    { $set: updateFields },
+    { returnDocument: 'after', runValidators: true },
+  );
+  if (!next) throw returnError(409, 'Trạng thái đơn đã thay đổi. Vui lòng tải lại.');
 
-  if (status === 'completed' || status === 'complete') {
-    const insp = await ReturnInspection.findOneAndUpdate(
-      { orderId: order._id },
-      { isRefunded: true, refundedAt: new Date(), customerStatus: 'approved', customerConfirmedAt: new Date() },
-      { new: true }
-    );
-    // Tự động đồng bộ hợp đồng pháp lý sang trạng thái hoàn thành
-    await Contract.findOneAndUpdate(
-      { $or: [{ orderId: order._id }, { contractCode: order.contractCode }] },
-      { status: 'completed' }
-    ).catch(() => {});
-
-    // Gửi email biên lai hoàn cọc khi hoàn cọc thành công
-    if (insp) {
-      try {
-        let customerEmail = order.customerEmail || order.email;
-        let customerName = order.customerName || order.brideName || 'Quý khách';
-        if (!customerEmail && order.customerId) {
-          const customer = await User.findById(order.customerId).lean();
-          if (customer) {
-            customerEmail = customer.email;
-            customerName = customer.fullName || customerName;
-          }
-        }
-        if (customerEmail) {
-          sendRefundConfirmationEmail({
-            to: customerEmail,
-            fullName: customerName,
-            orderCode: order.orderCode,
-            finalRefundAmount: insp.finalRefundAmount,
-            bankDetails: insp.refundBankDetails,
-          }).catch((err) => console.error('[EMAIL REFUND SEND ERROR]', err.message));
-        }
-      } catch (err) {
-        console.error('[EMAIL REFUND NOTIFICATION ERROR]', err.message);
-      }
-    }
-  } else if (status === 'cancelled') {
+  if (status === 'cancelled') {
     await Contract.findOneAndUpdate(
       { $or: [{ orderId: order._id }, { contractCode: order.contractCode }] },
       { status: 'cancelled' }
@@ -589,7 +578,7 @@ export const updateOrderStatus = async (idOrCode, status) => {
     ).catch(() => {});
   }
 
-  return order;
+  return next;
 };
 
 export const getDressBookedDates = async (dressId) => {
@@ -674,25 +663,15 @@ export const getDressBookedDates = async (dressId) => {
     });
 };
 
-/**
- * Lập biên bản kiểm định tình trạng váy khi khách trả
- * @param {string} orderId - ID đơn thuê
- * @param {Object} data - { itemsCondition,
-    evidencePhotos: data.evidencePhotos || [], lateDays, staffId }
- * @param {Object} staffUser - user object của nhân viên
- */
-export const submitReturnInspection = async (orderId, data, staffUser) => {
-  const order = await Order.findById(orderId);
-  if (!order) throw new Error('Không tìm thấy đơn thuê.');
-
-  if (!['renting', 'delivered', 'returned'].includes(order.status)) {
-    throw new Error('Đơn thuê chưa ở trạng thái có thể kiểm định. Vui lòng xác nhận khách đã nhận váy trước.');
-  }
-
+const createReturnInspection = async (order, data, staffUser) => {
   // Tính số ngày trễ và phí phạt trễ hạn: 50% tiền thuê mỗi ngày, quá 5 ngày chưa trả tịch thu 100% tiền cọc
-  const today = new Date();
+  const receivedAt = order.actualReturnDate || new Date();
   const dueDate = new Date(order.rentalEndDate);
-  const lateDays = Math.max(0, Math.floor((today - dueDate) / (1000 * 60 * 60 * 24)));
+  if (!order.rentalEndDate || Number.isNaN(dueDate.getTime())) throw returnError(409, 'Đơn chưa có ngày hẹn trả hợp lệ.');
+  const dateKey = new Intl.DateTimeFormat('sv-SE', {
+    timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit',
+  });
+  const lateDays = Math.max(0, (Date.parse(dateKey.format(receivedAt)) - Date.parse(dateKey.format(dueDate))) / 86_400_000);
   const totalDeposit = Number(order.totalDeposit || 0);
   const totalRentPrice = Number(order.totalRentPrice || 0);
 
@@ -707,17 +686,26 @@ export const submitReturnInspection = async (orderId, data, staffUser) => {
 
   // Tổng khấu trừ từ hư hỏng
   const maxAllowed = totalDeposit || totalRentPrice || 0;
-  const itemsCondition = (data.itemsCondition || []).map((item) => {
+  if (!Array.isArray(data.itemsCondition) || data.itemsCondition.length !== order.items.length || !order.items.length) {
+    throw returnError(400, 'Kiểm định đầy đủ tất cả váy trong đơn trước khi lưu.');
+  }
+  const itemsCondition = data.itemsCondition.map((item, index) => {
+    const orderedDress = order.items[index].dressId;
+    const dressId = item.dressId || item.id || null;
+    if (orderedDress && String(orderedDress) !== String(dressId)) {
+      throw returnError(400, 'Danh sách váy kiểm định không khớp với đơn thuê.');
+    }
     const fee = Number(item.repairFee ?? item.compensation ?? 0);
+    if (!Number.isSafeInteger(fee) || fee < 0) throw returnError(400, 'Số tiền bồi thường không hợp lệ.');
     if (fee > maxAllowed && maxAllowed > 0) {
-      throw new Error(`Số tiền bồi thường không được lớn hơn giá trị của váy (Tối đa: ${maxAllowed.toLocaleString('vi-VN')} đ)`);
+      throw returnError(400, `Số tiền bồi thường không được vượt quá ${maxAllowed.toLocaleString('vi-VN')} đ.`);
     }
     const conditions = Array.isArray(item.conditions) && item.conditions.length > 0
       ? item.conditions
       : (item.condition ? [item.condition] : ['good']);
 
     return {
-      dressId: item.dressId || item.id || null,
+      dressId,
       condition: item.condition || 'good',
       conditions,
       damages: Array.isArray(item.damages) ? item.damages : [],
@@ -729,7 +717,12 @@ export const submitReturnInspection = async (orderId, data, staffUser) => {
     };
   });
   const damageTotal = itemsCondition.reduce((sum, i) => sum + i.repairFee, 0);
-  const evidencePhotos = Array.isArray(data.evidencePhotos) ? data.evidencePhotos : [];
+  if (totalDeposit > 0 && damageTotal > totalDeposit) {
+    throw returnError(400, 'Tổng tiền bồi thường không được vượt quá tiền cọc.');
+  }
+  const evidencePhotos = Array.isArray(data.evidencePhotos)
+    ? data.evidencePhotos.filter((photo) => typeof photo === 'string' && photo.trim())
+    : [];
 
   // BẮT BUỘC CHỤP ẢNH LỖI ĐẦY ĐỦ nếu có ghi nhận tình trạng váy bị bẩn, rách hoặc có phí bồi thường
   const hasDamage = itemsCondition.some((it) => {
@@ -738,83 +731,72 @@ export const submitReturnInspection = async (orderId, data, staffUser) => {
     return hasSingle || hasMultiple || it.repairFee > 0;
   });
   if (hasDamage && evidencePhotos.length === 0) {
-    throw new Error('Bắt buộc chụp hoặc tải ít nhất 1 ảnh bằng chứng lỗi hư hại của váy trước khi lập biên bản kiểm định!');
+    throw returnError(400, 'Cần ít nhất một ảnh bằng chứng hư hại trước khi lưu biên bản.');
   }
 
   const totalDeduction = Math.min(totalDeposit, latePenaltyFee + damageTotal);
   const finalRefundAmount = Math.max(0, totalDeposit - totalDeduction);
-  const holdForAdmin = Boolean(data.holdForAdmin || data.customerAgreed === false);
+  const holdForAdmin = Boolean(data.holdForAdmin || data.customerAgreed === false
+    || itemsCondition.some(({ condition, conditions }) => condition === 'total_damage' || conditions.includes('total_damage')));
   const confirmOnSite = !holdForAdmin && Boolean(data.confirmOnSite);
-  const refundMethod = data.refundMethod || 'bank_transfer';
-  const refundBankDetails = (!holdForAdmin && confirmOnSite) ? (data.refundBankDetails || {
-    bankName: data.bankName || 'Chuyển khoản ngân hàng',
-    accountNumber: data.accountNumber || '',
-    accountHolder: order.customerName || order.brideName || 'Khách hàng',
-    notes: 'Showroom chuyển khoản trực tiếp cho khách qua STK',
-  }) : null;
+  const bankDetails = data.refundBankDetails?.accountNumber
+    ? refundBankDetails(data.refundBankDetails, false)
+    : (confirmOnSite ? refundBankDetails(data.refundBankDetails, finalRefundAmount > 0) : null);
 
-  // Upsert: nếu đã có biên bản kiểm định thì cập nhật lại biên bản và số tiền trừ
-  let inspection = await ReturnInspection.findOne({ orderId });
-  if (inspection) {
-    if (inspection.customerStatus === 'approved' || inspection.customerConfirmed) {
-      const err = new Error('Khách hàng đã duyệt biên bản kiểm định, không thể chỉnh sửa.');
-      err.statusCode = 400;
-      throw err;
-    }
-    inspection.staffId = staffUser?._id || inspection.staffId;
-    inspection.returnedAt = new Date();
-    inspection.lateDays = lateDays;
-    inspection.latePenaltyFee = latePenaltyFee;
-    inspection.itemsCondition = itemsCondition;
-    inspection.evidencePhotos = evidencePhotos.length > 0 ? evidencePhotos : inspection.evidencePhotos;
-    inspection.totalDeduction = totalDeduction;
-    inspection.initialDeposit = order.totalDeposit;
-    inspection.finalRefundAmount = finalRefundAmount;
-    inspection.customerStatus = holdForAdmin ? 'disputed' : (confirmOnSite ? 'approved' : 'pending');
-    inspection.isRefunded = confirmOnSite;
-    inspection.refundedAt = confirmOnSite ? new Date() : null;
-    inspection.customerConfirmedAt = confirmOnSite ? new Date() : null;
-    inspection.disputeReason = holdForAdmin ? (data.disputeReason || 'Khách hàng không đồng ý với mức phạt/biên bản kiểm định tại chỗ') : '';
-    inspection.disputeCreatedAt = holdForAdmin ? new Date() : null;
-    if (confirmOnSite && refundBankDetails) {
-      inspection.refundBankDetails = refundBankDetails;
-    }
-    await inspection.save();
-  } else {
-    inspection = new ReturnInspection({
+  const now = new Date();
+  try {
+    return await ReturnInspection.create({
       orderId: order._id,
       staffId: staffUser?._id,
-      returnedAt: new Date(),
+      returnedAt: receivedAt,
       lateDays,
       latePenaltyFee,
       itemsCondition,
       evidencePhotos,
       totalDeduction,
-      initialDeposit: order.totalDeposit,
+      initialDeposit: totalDeposit,
       finalRefundAmount,
-      isRefunded: confirmOnSite,
-      refundedAt: confirmOnSite ? new Date() : null,
-      customerStatus: holdForAdmin ? 'disputed' : (confirmOnSite ? 'approved' : 'pending'),
-      customerConfirmedAt: confirmOnSite ? new Date() : null,
-      disputeReason: holdForAdmin ? (data.disputeReason || 'Khách hàng không đồng ý với mức phạt/biên bản kiểm định tại chỗ') : '',
-      disputeCreatedAt: holdForAdmin ? new Date() : null,
-      refundBankDetails: confirmOnSite && refundBankDetails ? refundBankDetails : undefined,
+      customerStatus: holdForAdmin ? 'disputed' : confirmOnSite ? 'approved' : 'pending',
+      customerConfirmedAt: confirmOnSite ? now : null,
+      disputeReason: holdForAdmin ? (data.disputeReason || 'Showroom chuyển Admin rà soát biên bản') : '',
+      disputeCreatedAt: holdForAdmin ? now : null,
+      refundBankDetails: bankDetails || undefined,
     });
-    await inspection.save();
+  } catch (error) {
+    if (error.code === 11000) throw returnError(409, 'Biên bản vừa được lưu. Vui lòng tải lại.');
+    throw error;
+  }
+};
+
+/** Lưu biên bản kiểm định và ghi nhận đơn đã trả váy. */
+export const submitReturnInspection = async (orderId, data = {}, staffUser) => {
+  const order = await Order.findById(orderId);
+  if (!order) throw returnError(404, 'Không tìm thấy đơn thuê.');
+  if (!['renting', 'delivered', 'returned'].includes(order.status)) {
+    throw returnError(409, 'Đơn thuê hiện không đủ điều kiện lập biên bản kiểm định.');
   }
 
-  // Cập nhật trạng thái đơn
-  order.actualReturnDate = new Date();
-  if (holdForAdmin) {
-    // TRƯỜNG HỢP 2: Giữ đơn chuyển Admin đàm phán
-    order.status = 'disputed';
-    await order.save();
-  } else {
-    // Hoàn tất kiểm định -> Tự động chuyển sang trạng thái "Chờ hoàn cọc"
-    // Chỉ khi hệ thống/nhân viên hoàn cọc thành công thì đơn hàng mới chuyển sang "Hoàn tất"
-    order.status = 'waiting_refund';
-    await order.save();
+  const existing = await ReturnInspection.findOne({ orderId: order._id });
+  if (existing && order.status === 'returned') {
+    throw returnError(409, 'Biên bản kiểm định đã được lưu. Vui lòng mở lại để xem.');
   }
+  if (existing && data.refundBankDetails?.accountNumber) {
+    existing.refundBankDetails = refundBankDetails(data.refundBankDetails, false);
+    await existing.save();
+  }
+  const inspection = existing ?? await createReturnInspection(order, data, staffUser);
+
+  const inspectionStatus = inspection.customerStatus;
+  const status = inspectionStatus === 'disputed' ? 'disputed'
+    : inspectionStatus === 'approved' ? 'waiting_refund' : 'returned';
+  const returnedOrder = await Order.findOneAndUpdate(
+    { _id: order._id, status: order.status },
+    { $set: { status, actualReturnDate: inspection.returnedAt || order.actualReturnDate || new Date() } },
+    { returnDocument: 'after' },
+  );
+  if (!returnedOrder) throw returnError(409, 'Trạng thái đơn đã thay đổi. Vui lòng tải lại.');
+  const currentOrder = inspectionStatus === 'approved' && inspection.finalRefundAmount === 0
+    ? await completeReturnedOrder(returnedOrder) : returnedOrder;
 
   // Tự động gửi email biên bản kiểm định lễ phục tới khách hàng ngay khi hoàn tất kiểm tra
   try {
@@ -863,6 +845,7 @@ export const submitReturnInspection = async (orderId, data, staffUser) => {
         bankDetails: inspection.refundBankDetails,
         returnUrl: isGuest ? null : `${clientUrl}/profile/orders`,
         isGuest,
+        customerStatus: inspection.customerStatus,
       }).catch((err) => console.error('[EMAIL INSPECTION SEND ERROR]', err.message));
 
       console.log(`[INSPECTION EMAIL SENT] Đã gửi biên bản kiểm định đơn #${order.orderCode} tới email: ${customerEmail}`);
@@ -871,7 +854,8 @@ export const submitReturnInspection = async (orderId, data, staffUser) => {
     console.error('[EMAIL NOTIFICATION ERROR]', err.message);
   }
 
-  return { order, inspection, heldForAdmin: holdForAdmin };
+  const payments = (await getDepositPayments([order._id])).get(String(order._id));
+  return { order: currentOrder, inspection: inspectionRefundState(currentOrder, inspection.toObject(), payments), heldForAdmin: inspectionStatus === 'disputed' };
 };
 
 /**
@@ -879,50 +863,85 @@ export const submitReturnInspection = async (orderId, data, staffUser) => {
  * @param {string} orderId
  */
 export const getReturnInspection = async (orderId) => {
-  const inspection = await ReturnInspection.findOne({ orderId }).lean();
-  if (!inspection) return null;
-  return inspection;
+  const identity = mongoose.isValidObjectId(orderId) ? { _id: orderId } : { orderCode: orderId.toUpperCase() };
+  const order = await Order.findOne(identity).select('status totalDeposit').lean();
+  if (!order) throw returnError(404, 'Không tìm thấy đơn thuê.');
+  const [inspection, refunds] = await Promise.all([
+    ReturnInspection.findOne({ orderId: order._id }).lean(),
+    getDepositPayments([order._id]),
+  ]);
+  return inspectionRefundState(order, inspection, refunds.get(String(order._id)));
 };
 
-/**
- * Khách hàng đồng ý biên bản kiểm định -> Hệ thống tự động hoàn cọc và hoàn tất đơn hàng
- * @param {string} orderId
- * @param {Object} bankData - { bankName, accountNumber, accountHolder, notes }
- * @param {Object} customerUser
- */
-export const approveReturnInspection = async (orderId, bankData = {}, customerUser) => {
+/** Lưu mức khấu trừ đã thống nhất và ghi nhận khoản thực tế đã hoàn. */
+export const settleInspectionAdmin = async (orderId, data = {}, adminUser) => {
+  if (String(adminUser?.role).toLowerCase() !== 'admin') throw returnError(403, 'Chỉ Admin được chốt đàm phán.');
   const order = await Order.findById(orderId);
-  if (!order) throw new Error('Không tìm thấy đơn hàng.');
+  if (!order) throw returnError(404, 'Không tìm thấy đơn hàng.');
+  const inspection = await ReturnInspection.findOne({ orderId: order._id }).lean();
+  if (!inspection) throw returnError(404, 'Chưa có biên bản kiểm định cho đơn hàng này.');
 
-  const inspection = await ReturnInspection.findOne({ orderId });
-  if (!inspection) throw new Error('Chưa có biên bản kiểm định cho đơn hàng này.');
-
-  if (inspection.customerStatus === 'approved') {
-    return { order, inspection, message: 'Biên bản đã được xác nhận trước đó.' };
+  if (inspection.negotiatedByAdmin && inspection.customerStatus === 'approved'
+      && ['disputed', ...RETURN_REVIEW_STATUSES].includes(order.status)) {
+    // Tiếp tục ghi nhận nếu lần trước đã lưu biên bản nhưng chưa lưu xong giao dịch.
+    if (order.status === 'disputed') {
+      await Order.updateOne({ _id: order._id, status: 'disputed' }, { $set: { status: 'waiting_refund' } });
+    }
+    return confirmDepositRefund(orderId, data, adminUser);
+  }
+  if (inspection.customerStatus !== 'disputed' || !['disputed', 'returned', 'waiting_refund'].includes(order.status)) {
+    throw returnError(409, 'Đơn hiện không chờ Admin xử lý.');
   }
 
-  const { bankName, accountNumber, accountHolder, notes } = bankData || {};
-
-  inspection.customerStatus = 'approved';
-  inspection.customerConfirmedAt = new Date();
-  inspection.isRefunded = true;
-  inspection.refundedAt = new Date();
-  if (bankName || accountNumber || accountHolder) {
-    inspection.refundBankDetails = {
-      bankName: bankName ? String(bankName).trim() : '',
-      accountNumber: accountNumber ? String(accountNumber).trim() : '',
-      accountHolder: accountHolder ? String(accountHolder).trim().toUpperCase() : '',
-      notes: notes ? String(notes).trim() : '',
-    };
+  const totalDeposit = Number(inspection.initialDeposit ?? order.totalDeposit);
+  const agreedPenalty = Number(data.agreedPenalty ?? data.agreedPenaltyFee);
+  if (!Number.isSafeInteger(totalDeposit) || !Number.isSafeInteger(agreedPenalty) || agreedPenalty < 0 || agreedPenalty > totalDeposit) {
+    throw returnError(400, 'Mức khấu trừ phải từ 0 đến số tiền cọc.');
   }
-  await inspection.save();
+  const finalRefundAmount = Math.max(0, totalDeposit - agreedPenalty);
+  const payments = (await getDepositPayments([order._id])).get(String(order._id));
+  const hasTxCode = Boolean(data.transactionCode && String(data.transactionCode).trim());
+  const bankDetails = data.refundBankDetails?.accountNumber
+    ? refundBankDetails(data.refundBankDetails, false)
+    : (inspection.refundBankDetails || null);
+  const now = new Date();
 
-  order.status = 'completed';
-  order.completedAt = order.completedAt || new Date();
-  order.maintenanceUntil = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  await order.save();
+  // Cập nhật chi tiết từng váy để phản ánh đúng mức bồi thường sau đàm phán của Admin
+  const updatedItems = (inspection.itemsCondition || []).map((it, idx) => {
+    if (idx === 0 || it.condition === 'custom_agreement' || it.conditions?.includes('custom_agreement') || (inspection.itemsCondition || []).length === 1) {
+      return {
+        ...it,
+        repairFee: agreedPenalty,
+        compensation: agreedPenalty,
+        feeLabel: `${agreedPenalty.toLocaleString('vi-VN')} ₫`,
+        note: data.negotiationNotes ? `${it.note ? it.note + ' • ' : ''}Thống nhất sau đàm phán: ${data.negotiationNotes}` : it.note,
+      };
+    }
+    return it;
+  });
 
-  // Tự động gửi email xác nhận hoàn cọc thành công
+  const result = await ReturnInspection.updateOne(
+    { _id: inspection._id },
+    { $set: {
+      totalDeduction: agreedPenalty,
+      agreedPenaltyFee: agreedPenalty,
+      finalRefundAmount,
+      itemsCondition: updatedItems,
+      customerStatus: 'approved',
+      customerConfirmedAt: now,
+      isRefunded: false,
+      refundedAt: null,
+      negotiatedByAdmin: true,
+      adminNegotiatorId: adminUser._id,
+      adminNegotiatorName: adminUser.fullName || 'Quản Trị Viên UniBridal',
+      adminNegotiationNotes: String(data.negotiationNotes ?? '').trim(),
+      adminSettledAt: now,
+      ...(bankDetails ? { refundBankDetails: bankDetails } : {}),
+    } },
+  );
+  if (!result.matchedCount) throw returnError(409, 'Biên bản vừa thay đổi. Vui lòng tải lại.');
+
+  // Gửi email cập nhật kết quả đàm phán và chốt số tiền hoàn cọc tới khách hàng
   try {
     let customerEmail = order.customerEmail || order.email;
     let customerName = order.customerName || order.brideName || 'Quý khách';
@@ -935,120 +954,69 @@ export const approveReturnInspection = async (orderId, bankData = {}, customerUs
       }
     }
 
+    if (!customerEmail) {
+      const contract = await Contract.findOne({
+        $or: [{ orderId: order._id }, { contractCode: order.contractCode }],
+      }).lean();
+      if (contract?.customerInfo?.email) {
+        customerEmail = contract.customerInfo.email;
+        customerName = contract.customerInfo.fullName || customerName;
+      }
+    }
+
     if (customerEmail) {
-      sendRefundConfirmationEmail({
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+      const hasAccount = Boolean(order.customerId && String(order.customerId).trim() !== '');
+      const isGuest = !hasAccount;
+
+      const inspectionItems = updatedItems.map((it) => ({
+        name: `${it.damageName || 'Váy cưới'} (${it.note || it.condition || 'Hiện trạng'})`,
+        status: it.repairFee > 0 ? `Khấu trừ ${it.repairFee.toLocaleString('vi-VN')} đ (Đã thống nhất sau đàm phán)` : '✓ Nguyên vẹn',
+        passed: !(it.repairFee > 0),
+      }));
+
+      sendInspectionNotificationEmail({
         to: customerEmail,
         fullName: customerName,
         orderCode: order.orderCode,
-        finalRefundAmount: inspection.finalRefundAmount,
-        bankDetails: inspection.refundBankDetails,
-      }).catch((err) => console.error('[EMAIL REFUND SEND ERROR]', err.message));
+        inspectorName: adminUser?.fullName || 'Quản Trị Viên Atelier UniBridal',
+        inspectionDate: now,
+        totalDeposit: totalDeposit,
+        totalDeduction: agreedPenalty,
+        finalRefundAmount: finalRefundAmount,
+        inspectionItems,
+        bankDetails: bankDetails || inspection.refundBankDetails,
+        returnUrl: isGuest ? null : `${clientUrl}/profile/orders`,
+        isGuest,
+        customerStatus: 'approved',
+      }).catch((err) => console.error('[EMAIL NEGOTIATION SEND ERROR]', err.message));
+
+      console.log(`[NEGOTIATION EMAIL SENT] Đã gửi biên bản đàm phán chốt khấu trừ ${agreedPenalty.toLocaleString('vi-VN')} đ đơn #${order.orderCode} tới email: ${customerEmail}`);
     }
   } catch (err) {
-    console.error('[EMAIL REFUND NOTIFICATION ERROR]', err.message);
+    console.error('[EMAIL NOTIFICATION ERROR]', err.message);
   }
 
-  return { order, inspection };
-};
-
-/**
- * Khách hàng không đồng ý và gửi khiếu nại biên bản kiểm định
- * @param {string} orderId
- * @param {Object} param1 - { reason }
- * @param {Object} customerUser
- */
-export const disputeReturnInspection = async (orderId, { reason }, customerUser) => {
-  const order = await Order.findById(orderId);
-  if (!order) throw new Error('Không tìm thấy đơn hàng.');
-
-  const inspection = await ReturnInspection.findOne({ orderId });
-  if (!inspection) throw new Error('Chưa có biên bản kiểm định cho đơn hàng này.');
-
-  if (!reason || !reason.trim()) {
-    throw new Error('Vui lòng nhập lý do khiếu nại biên bản.');
+  // Nếu Admin nhập mã giao dịch ngay tại modal đàm phán thì quyết toán luôn
+  if (hasTxCode) {
+    return confirmDepositRefund(orderId, data, adminUser);
   }
 
-  inspection.customerStatus = 'disputed';
-  inspection.disputeReason = reason.trim();
-  inspection.disputeCreatedAt = new Date();
-  await inspection.save();
+  // Đơn chuyển sang trạng thái 'waiting_refund' (Chờ hoàn cọc) nếu còn tiền hoàn, hoặc 'completed' nếu miễn hoàn
+  const nextStatus = finalRefundAmount > 0 ? 'waiting_refund' : 'completed';
+  const updatedOrder = await Order.findByIdAndUpdate(
+    order._id,
+    { $set: { status: nextStatus } },
+    { new: true }
+  );
 
-  return { order, inspection };
-};
+  if (nextStatus === 'completed') {
+    await completeReturnedOrder(updatedOrder, now);
+  }
 
-/**
- * Admin vào cuộc xử lý đàm phán mức phạt chung hợp lý và duyệt hoàn tất đơn
- * @param {string} orderId
- * @param {Object} data - { agreedPenalty, refundMethod, refundBankDetails, negotiationNotes }
- * @param {Object} adminUser
- */
-export const settleInspectionAdmin = async (orderId, data, adminUser) => {
-  const order = await Order.findById(orderId);
-  if (!order) throw new Error('Không tìm thấy đơn hàng.');
-
-  let inspection = await ReturnInspection.findOne({ orderId: order._id });
-  if (!inspection) throw new Error('Chưa có biên bản kiểm định cho đơn hàng này.');
-
-  const totalDeposit = Number(order.totalDeposit || 0);
-  const agreedPenalty = Math.max(0, Math.min(totalDeposit, Number(data.agreedPenalty ?? data.agreedPenaltyFee ?? 0)));
-  const finalRefund = Math.max(0, totalDeposit - agreedPenalty);
-  const refundMethod = data.refundMethod || 'bank_transfer';
-  const refundBankDetails = data.refundBankDetails || {
-    bankName: data.bankName || 'Chuyển khoản ngân hàng',
-    accountNumber: data.accountNumber || '',
-    accountHolder: data.accountHolder || order.customerName || '',
-    notes: data.negotiationNotes || 'Admin đã đàm phán và chuyển khoản hoàn tiền cho khách',
+  const updatedInspection = await ReturnInspection.findById(inspection._id).lean();
+  return {
+    order: updatedOrder,
+    inspection: inspectionRefundState(updatedOrder, updatedInspection, payments),
   };
-
-  inspection.totalDeduction = agreedPenalty;
-  inspection.agreedPenaltyFee = agreedPenalty;
-  inspection.finalRefundAmount = finalRefund;
-  inspection.customerStatus = 'approved';
-  inspection.isRefunded = true;
-  inspection.refundedAt = new Date();
-  inspection.negotiatedByAdmin = true;
-  inspection.adminNegotiatorId = adminUser?._id || null;
-  inspection.adminNegotiatorName = adminUser?.fullName || 'Quản Trị Viên UniBridal';
-  inspection.adminNegotiationNotes = data.negotiationNotes || 'Hai bên đã đàm phán và thống nhất mức phạt chung hợp lý.';
-  inspection.adminSettledAt = new Date();
-  inspection.refundBankDetails = refundBankDetails;
-  await inspection.save();
-
-  order.status = 'completed';
-  order.completedAt = new Date();
-  order.maintenanceUntil = new Date(Date.now() + 24 * 60 * 60 * 1000);
-  await order.save();
-
-  await Contract.findOneAndUpdate(
-    { $or: [{ orderId: order._id }, { contractCode: order.contractCode }] },
-    { status: 'completed' }
-  ).catch(() => {});
-
-  // Gửi email cảm ơn kèm biên lai hoàn cọc đã đàm phán
-  try {
-    let customerEmail = order.customerEmail || order.email;
-    let customerName = order.customerName || order.brideName || 'Quý khách';
-    if (!customerEmail && order.customerId) {
-      const customer = await User.findById(order.customerId).lean();
-      if (customer) {
-        customerEmail = customer.email;
-        customerName = customer.fullName || customerName;
-      }
-    }
-    if (customerEmail) {
-      sendRefundConfirmationEmail({
-        to: customerEmail,
-        fullName: customerName,
-        orderCode: order.orderCode,
-        finalRefundAmount: finalRefund,
-        bankDetails: refundBankDetails,
-        negotiationNote: inspection.adminNegotiationNotes,
-      }).catch((err) => console.error('[EMAIL REFUND SEND ERROR]', err.message));
-    }
-  } catch (err) {
-    console.error('[EMAIL REFUND NOTIFICATION ERROR]', err.message);
-  }
-
-  return { order, inspection };
 };
-

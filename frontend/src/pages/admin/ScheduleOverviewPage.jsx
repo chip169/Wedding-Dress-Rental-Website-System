@@ -123,6 +123,12 @@ const toDateKey = (dateStr) => {
   return `${y}-${m}-${day}`;
 };
 
+const hasReturned = (order) => Boolean(order.actualReturnDate)
+  || ['returned', 'waiting_refund', 'disputed', 'complete', 'completed'].includes(order.status);
+const canOpenInspection = (order) => Boolean(order.inspection)
+  || order.status === 'returned'
+  || (['delivered', 'renting'].includes(order.status) && !hasReturned(order));
+
 // Trợ giúp định dạng nhãn trạng thái chính xác theo nghiệp vụ database
 const getEventBadge = (item) => {
   if (!item) return { label: 'ĐANG XỬ LÝ', className: 'bg-gray-100 text-gray-700 border-gray-300' };
@@ -142,7 +148,7 @@ const getEventBadge = (item) => {
 
   // Sự kiện Giao Váy: Vàng (khách sắp lấy / sắp giao), Xanh (khách đã lấy / ship đã giao), Đỏ (chưa đến lấy / chưa giao)
   if (item.type === 'delivery') {
-    const isDone = ['delivered', 'renting', 'returned', 'completed', 'waiting_refund'].includes((item.status || '').toLowerCase()) || Boolean(item.actualDeliveryDate);
+    const isDone = ['delivered', 'renting', 'returned', 'completed', 'complete', 'waiting_refund', 'disputed'].includes((item.status || '').toLowerCase()) || Boolean(item.actualDeliveryDate);
     const deliveryDateKey = item.deliveryDate || item.date;
     const todayKey = toDateKey(new Date());
     const isExpress = item.deliveryMethod === 'express';
@@ -167,7 +173,7 @@ const getEventBadge = (item) => {
 
   // Sự kiện Trả Váy: Vàng (sắp đến hạn / tương lai), Xanh (đã trả), Đỏ (quá hạn chưa trả)
   if (item.type === 'return') {
-    const isDone = item.status === 'completed' || item.status === 'returned' || item.status === 'waiting_refund' || Boolean(item.actualReturnDate);
+    const isDone = hasReturned(item);
     const returnDateKey = item.date || toDateKey(item.rentalEndDate);
     const todayKey = toDateKey(new Date());
 
@@ -318,7 +324,7 @@ function CalendarDateCellEvents({
           }
 
           if (item.eventCategory === 'delivery') {
-            const isDone = ['delivered', 'renting', 'returned', 'completed', 'waiting_refund'].includes((item.status || '').toLowerCase()) || Boolean(item.actualDeliveryDate);
+            const isDone = ['delivered', 'renting', 'returned', 'completed', 'complete', 'waiting_refund', 'disputed'].includes((item.status || '').toLowerCase()) || Boolean(item.actualDeliveryDate);
             const isHighlight = Boolean(activeOrderCode && (item.code === activeOrderCode || item.id === activeOrderCode));
             const isExpress = item.deliveryMethod === 'express';
             const deliveryDateKey = item.deliveryDate || item.date;
@@ -398,7 +404,7 @@ function CalendarDateCellEvents({
           }
 
           // Trả Váy (return)
-          const isDone = item.status === 'completed' || item.status === 'returned' || item.status === 'waiting_refund' || Boolean(item.actualReturnDate);
+          const isDone = hasReturned(item);
           const isHighlight = Boolean(activeOrderCode && (item.code === activeOrderCode || item.id === activeOrderCode));
           const isExpress = item.deliveryMethod === 'express';
           const returnDateKey = item.date || toDateKey(item.rentalEndDate);
@@ -2017,13 +2023,13 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                         const badge = getEventBadge(item);
 
                         // Trạng thái Giao Váy: Vàng (khách sắp lấy), Xanh (khách đã lấy/ship đã giao), Đỏ (chưa đến lấy/chưa giao)
-                        const isDeliveryDone = isDelivery && (['delivered', 'renting', 'returned', 'completed', 'waiting_refund'].includes((item.status || '').toLowerCase()) || Boolean(item.actualDeliveryDate));
+                        const isDeliveryDone = isDelivery && (['delivered', 'renting', 'returned', 'completed', 'complete', 'waiting_refund', 'disputed'].includes((item.status || '').toLowerCase()) || Boolean(item.actualDeliveryDate));
                         const deliveryDateKey = isDelivery ? (item.deliveryDate || item.date) : '';
                         const isDeliveryOverdue = isDelivery && !isDeliveryDone && Boolean(deliveryDateKey && deliveryDateKey < todayKey);
                         const isDeliveryFutureOrToday = isDelivery && !isDeliveryDone && (!deliveryDateKey || deliveryDateKey >= todayKey);
 
                         // Trạng thái Trả Váy: Vàng (sắp đến hạn/tương lai), Xanh (đã trả), Đỏ (chưa trả)
-                        const isReturnDone = isReturn && (item.status === 'completed' || item.status === 'returned' || item.status === 'waiting_refund' || Boolean(item.actualReturnDate));
+                        const isReturnDone = isReturn && hasReturned(item);
                         const returnDateKey = isReturn ? (item.date || toDateKey(item.rentalEndDate)) : '';
                         const isReturnOverdue = isReturn && !isReturnDone && Boolean(returnDateKey && returnDateKey < todayKey);
                         const isReturnFutureOrToday = isReturn && !isReturnDone && (!returnDateKey || returnDateKey >= todayKey);
@@ -2420,6 +2426,20 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                                     <span>Kiểm Định Trả Váy</span>
                                   </button>
                                 )
+                              )}
+
+                              {!isReturn && !isDelivery && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedEvent(item);
+                                    setDetailModalOpen(true);
+                                  }}
+                                  className="p-2 rounded-xl bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 text-xs font-medium transition cursor-pointer"
+                                  title="Xem chi tiết đầy đủ"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
                               )}
                             </div>
                           </div>

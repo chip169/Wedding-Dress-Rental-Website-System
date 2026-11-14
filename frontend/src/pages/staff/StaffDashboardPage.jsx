@@ -204,7 +204,7 @@ export default function StaffDashboardPage() {
             <p className="ub-dashboard-eyebrow">
               <ChartNoAxesCombined size={16} /> HAUTE COUTURE PERFORMANCE
             </p>
-            <h2 id="staff-chart-title">Đơn Thuê và Bàn Giao Hoàn Tất</h2>
+            <h2 id="staff-chart-title">Đơn Thuê và Đơn Hoàn Tất</h2>
             <p className="ub-dashboard-chart-subtitle">
               Dữ liệu đơn hàng thực tế trong kỳ đã chọn tại showroom.
             </p>
@@ -301,11 +301,6 @@ export default function StaffDashboardPage() {
                           <Phone size={12} className="text-[#BA7A83]" />
                           <span>{phone}</span>
                         </div>
-                        {apt.guestsCount && (
-                          <div className="text-[10.5px] text-[#A89899] mt-0.5">
-                            Đi cùng: {apt.guestsCount} người
-                          </div>
-                        )}
                       </td>
                       <td className="py-3.5 px-4">
                         <div className="flex items-center gap-1.5 font-medium text-[#2C2523]">

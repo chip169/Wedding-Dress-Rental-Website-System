@@ -661,31 +661,33 @@ export default function RevenueReportPage() {
 
         <section className="ub-revenue-metrics" aria-label="Chỉ số doanh thu chính">
           <MetricCard
-            title="DOANH THU ĐÃ THU"
+            title="DOANH THU TRONG KỲ"
             value={report?.revenue}
             Icon={TrendingUp}
-            note="Tiền thuê váy, đền bù hư hỏng và phí trả quá hạn trong kỳ."
+            note="Tiền thuê đã thu, cộng tiền đền bù hư hỏng và phí trả váy trễ."
             growth={report?.growthRate}
           />
           <MetricCard
-            title="TIỀN CỌC CÒN GIỮ"
+            title="TIỀN CỌC ĐANG GIỮ"
             value={report?.depositsHeld}
             Icon={LockKeyhole}
-            note="Cọc đã thu, trừ phần đã hoàn theo giao dịch và phần đã khấu trừ, tính đến cuối kỳ."
+            note="Số cọc còn lại cuối kỳ sau khi trả lại cho khách và trừ các khoản phí."
           />
           <MetricCard
-            title="TỔNG TIỀN THUÊ THEO ĐƠN"
+            title="TỔNG GIÁ THUÊ GHI TRÊN ĐƠN"
             value={report?.orderValue}
             Icon={Banknote}
             note={report
-              ? `Tính ${report.activeOrdersCount} trên ${report.orders} đơn trong kỳ. Chỉ tính đơn đã qua bước đặt cọc và chưa hủy.`
-              : 'Tiền thuê ghi trên các đơn đã qua bước đặt cọc và chưa hủy.'}
+              ? `Cộng giá thuê của ${report.activeOrdersCount} đơn trong kỳ đã qua bước đặt cọc và chưa hủy, gồm cả tiền thuê chưa thu.`
+              : 'Cộng giá thuê của các đơn trong kỳ đã qua bước đặt cọc và chưa hủy, gồm cả tiền thuê chưa thu.'}
           />
           <MetricCard
-            title="TIỀN THUÊ TRUNG BÌNH MỖI ĐƠN"
+            title="GIÁ THUÊ TRUNG BÌNH MỖI ĐƠN"
             value={avgOrderValue}
             Icon={CreditCard}
-            note="Tổng tiền thuê theo đơn chia cho số đơn đã qua bước đặt cọc và chưa hủy trong kỳ."
+            note={report?.activeOrdersCount
+              ? `Lấy tổng giá thuê chia cho ${report.activeOrdersCount} đơn được tính trong kỳ.`
+              : report ? 'Kỳ này chưa có đơn đủ điều kiện để tính trung bình.' : 'Lấy tổng giá thuê chia cho số đơn được tính trong kỳ.'}
           />
         </section>
 

@@ -191,6 +191,14 @@ export default function SignedContractModal({ orderId, order: propOrder, contrac
       ? rawOrder.items
       : null;
 
+    const totalRentPrice = Number(
+      cData.rentalPrice ?? (rawOrder.totalRentPrice || 0)
+    );
+    const totalDeposit = Number(
+      cData.depositAmount ?? (rawOrder.totalDeposit || 0)
+    );
+
+    const days = Math.max(1, Number(rentalDays) || 1);
     let items = [];
     if (rawItems) {
       items = rawItems.map((it) => {
@@ -199,11 +207,23 @@ export default function SignedContractModal({ orderId, order: propOrder, contrac
           const match = rawOrder.notes?.match(/mẫu\s+(.*?)\s+phục vụ/i);
           name = match ? match[1].trim() : (cData.dressName || 'Váy cưới Haute Couture Tiêu Chuẩn');
         }
+        let dailyPrice = Number(it.dailyPrice || 0);
+        let itemRent = Number(it.rentPrice || it.price || 0);
+        if (rawItems.length === 1 && totalRentPrice > 0) {
+          itemRent = totalRentPrice;
+          dailyPrice = days > 1 ? Math.round(totalRentPrice / days) : totalRentPrice;
+        } else if (days > 1 && itemRent > 0 && totalRentPrice > 0 && itemRent * days === totalRentPrice) {
+          dailyPrice = itemRent;
+          itemRent = itemRent * days;
+        } else if (!dailyPrice && days > 1 && itemRent > 0) {
+          dailyPrice = Math.round(itemRent / days);
+        }
         return {
           name,
           code: it.dressCode || it.code || it.dressId?.code || cData.dressCode || 'UB-HC-2026',
           size: it.size ? (String(it.size).startsWith('Size') ? it.size : `Size ${it.size}`) : (cData.dressSize || 'Size S'),
-          rentPrice: Number(it.rentPrice || it.price || cData.rentalPrice || 0),
+          rentPrice: itemRent || Number(cData.rentalPrice || 0),
+          dailyPrice: dailyPrice || itemRent,
           depositAmount: Number(it.depositAmount || it.deposit || cData.depositAmount || 0)
         };
       });
@@ -213,24 +233,22 @@ export default function SignedContractModal({ orderId, order: propOrder, contrac
         const match = rawOrder.notes?.match(/mẫu\s+(.*?)\s+phục vụ/i);
         name = match ? match[1].trim() : 'Váy cưới Haute Couture Tiêu Chuẩn';
       }
+      const itemRent = Number(cData.rentalPrice || rawOrder.totalRentPrice || 0);
       items = [
         {
           name: name || 'Váy cưới Haute Couture Tiêu Chuẩn',
           code: cData.dressCode || 'UB-HC-2026',
           size: cData.dressSize || 'Size S',
-          rentPrice: Number(cData.rentalPrice || rawOrder.totalRentPrice || 0),
+          rentPrice: itemRent,
+          dailyPrice: days > 1 ? Math.round(itemRent / days) : itemRent,
           depositAmount: Number(cData.depositAmount || rawOrder.totalDeposit || 0)
         }
       ];
     }
 
-    const totalRentPrice = Number(
-      cData.rentalPrice ?? (rawOrder.totalRentPrice || items.reduce((s, it) => s + it.rentPrice, 0))
-    );
-    const totalDeposit = Number(
-      cData.depositAmount ?? (rawOrder.totalDeposit || items.reduce((s, it) => s + it.depositAmount, 0))
-    );
-    const totalValue = totalRentPrice + totalDeposit;
+    const calculatedTotalRent = totalRentPrice || items.reduce((s, it) => s + it.rentPrice, 0);
+    const calculatedTotalDeposit = totalDeposit || items.reduce((s, it) => s + it.depositAmount, 0);
+    const totalValue = calculatedTotalRent + calculatedTotalDeposit;
 
     // Trạng thái hợp đồng
     const status = cData.status || rawOrder.status || 'active';
@@ -457,7 +475,7 @@ export default function SignedContractModal({ orderId, order: propOrder, contrac
                           <th className="p-3">Mã Số</th>
                           <th className="p-3">Kích Cỡ</th>
                           <th className="p-3 text-center">Thời Gian Thuê</th>
-                          <th className="p-3 text-right">Tiền Thuê</th>
+                          <th className="p-3 text-right">Tổng Tiền Thuê</th>
                           <th className="p-3 text-right">Tiền Cọc Bảo Lãnh</th>
                         </tr>
                       </thead>
@@ -474,13 +492,18 @@ export default function SignedContractModal({ orderId, order: propOrder, contrac
                                 {effectiveData.rentalDays} ngày
                               </span>
                               <div className="text-xs">
-                                <span className="font-semibold text-emerald-800">{formatShortDate(it.startDate || effectiveData.startDate)}</span>
+                                <span className="font-semibold text-[#733F49]">{formatShortDate(it.startDate || effectiveData.startDate)}</span>
                                 <span className="text-[#A39192] mx-1">→</span>
-                                <span className="font-semibold text-[#87565C]">{formatShortDate(it.endDate || effectiveData.endDate)}</span>
+                                <span className="font-semibold text-[#733F49]">{formatShortDate(it.endDate || effectiveData.endDate)}</span>
                               </div>
                             </td>
-                            <td className="p-3 text-right font-bold text-emerald-800">
-                              {formatCurrencyVND(it.rentPrice)}
+                            <td className="p-3 text-right font-bold text-[#733F49]">
+                              <div>{formatCurrencyVND(it.rentPrice)}</div>
+                              {Number(effectiveData.rentalDays) > 1 && (
+                                <div className="text-[10px] font-normal text-[#8A7978]">
+                                  ({formatCurrencyVND(it.dailyPrice || Math.round(it.rentPrice / Number(effectiveData.rentalDays)))}/ngày)
+                                </div>
+                              )}
                             </td>
                             <td className="p-3 text-right font-bold text-[#733F49]">
                               {formatCurrencyVND(it.depositAmount)}
