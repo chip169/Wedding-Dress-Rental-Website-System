@@ -1,5 +1,21 @@
 import mongoose from 'mongoose';
 
+const dressSizeSchema = new mongoose.Schema(
+  {
+    size: {
+      type: String,
+      enum: ['XS', 'S', 'M', 'L', 'XL', 'FreeSize'],
+      required: true,
+    },
+    quantity: {
+      type: Number,
+      default: 1,
+      min: 0,
+    },
+  },
+  { _id: false }
+);
+
 const dressSchema = new mongoose.Schema(
   {
     code: {
@@ -46,9 +62,11 @@ const dressSchema = new mongoose.Schema(
       default: 'Trắng',
     },
     sizes: {
-      type: [String],
-      enum: ['XS', 'S', 'M', 'L', 'XL', 'FreeSize'],
-      default: ['S', 'M'],
+      type: [dressSizeSchema],
+      default: [
+        { size: 'S', quantity: 1 },
+        { size: 'M', quantity: 1 },
+      ],
     },
     images: [
       {

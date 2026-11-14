@@ -463,7 +463,7 @@ export async function seed25Dresses() {
         rentPrice: item.rentPrice,
         depositAmount: item.depositAmount,
         originalPrice: item.originalPrice,
-        sizes: item.sizes,
+        sizes: (item.sizes || []).map((s) => (typeof s === 'string' ? { size: s, quantity: 1 } : s)),
         images: {
           'UB-001': [
             '/assets/dresses/dress_01.jpg',

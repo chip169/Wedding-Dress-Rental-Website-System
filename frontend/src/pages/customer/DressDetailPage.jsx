@@ -160,7 +160,7 @@ export default function DressDetailPage() {
             setDress(result.data);
             setSelectedImageIndex(0);
             setSelectedColor(result.data.colors?.[0] || null);
-            setSelectedSize(result.data.sizes?.[1]?.id || 'S');
+            setSelectedSize(result.data.sizes?.[0]?.id || 'S');
             setIsWishlisted(checkWishlisted(result.data.id));
           }
           if (related.success) {

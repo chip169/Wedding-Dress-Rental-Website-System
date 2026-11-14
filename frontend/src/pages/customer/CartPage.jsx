@@ -1121,7 +1121,7 @@ export default function CartPage() {
       if (!active) return;
       refreshCartWithDresses(dresses);
       setCatalog(dresses);
-      setRecommendations(dresses.filter((dress) => dress.status === 'available').slice(0, 3).map((dress) => ({ ...dress, price: dress.rentPrice, deposit: dress.depositAmount, collection: dress.collectionTag, size: dress.sizes?.join(' / ') || 'Theo tư vấn', style: dress.code, detailHref: `/dresses/${dress.id}` })));
+      setRecommendations(dresses.filter((dress) => dress.status === 'available').slice(0, 3).map((dress) => ({ ...dress, price: dress.rentPrice, deposit: dress.depositAmount, collection: dress.collectionTag, size: (Array.isArray(dress.sizes) ? dress.sizes.map((s) => (typeof s === 'string' ? s : s?.size || s?.label)).filter(Boolean).join(' / ') : '') || 'Theo tư vấn', style: dress.code, detailHref: `/dresses/${dress.id}` })));
     }).catch((issue) => { if (active) setCatalogError(issue.message || 'Không cập nhật được giá váy. Vui lòng tải lại.'); })
       .finally(() => { if (active) setCatalogLoading(false); });
     return () => { active = false; };
