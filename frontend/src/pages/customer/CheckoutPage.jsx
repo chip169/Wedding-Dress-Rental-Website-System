@@ -2277,15 +2277,6 @@ export default function CheckoutPage() {
                               ✓ Cập nhật theo đơn thực tế
                             </span>
                           </div>
-                          {bookedIntervals.length > 0 ? (
-                            <span className="text-[11px] text-[#B91C1C] font-medium block mt-1">
-                              ⚠ Đang có {bookedIntervals.length} đợt thuê đã khóa lịch cho mẫu váy này
-                            </span>
-                          ) : (
-                            <span className="text-[11px] text-[#2E7D32] font-medium block mt-1">
-                              ✦ Toàn bộ các ngày trong tháng đang trống lịch sẵn sàng cho nàng đặt thuê
-                            </span>
-                          )}
                         </div>
                       </div>
 
