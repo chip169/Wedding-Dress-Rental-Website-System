@@ -672,28 +672,6 @@ export default function DressDetailPage() {
               </div>
             </div>
 
-            {/* Trạng thái lịch thuê thực tế theo đơn hàng */}
-            <div className="flex items-center justify-between p-3.5 bg-[#FAF4EE] border border-[#E8DDD4] rounded-xl text-[12.5px] transition-all">
-              <div className="flex items-center gap-2">
-                <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
-                <span className="font-medium text-[#4A3B3D]">
-                  {bookedDates.length > 0
-                    ? `Đang có ${bookedDates.length} đợt thuê đã khóa lịch`
-                    : 'Toàn bộ lịch thuê đang còn trống'}
-                </span>
-                <span className="hidden sm:inline-block text-[10px] text-[#2E7D32] bg-[#E8F5E9] border border-[#C8E6C9] px-2 py-0.5 rounded-full font-semibold">
-                  ✓ Đồng bộ đơn thực tế
-                </span>
-              </div>
-              <button
-                type="button"
-                onClick={() => setIsAvailabilityModalOpen(true)}
-                className="text-[12px] font-bold text-[#B26B74] hover:underline flex items-center gap-1 cursor-pointer bg-transparent border-0 p-0"
-              >
-                <Calendar className="w-3.5 h-3.5" />
-                Kiểm tra lịch trống
-              </button>
-            </div>
 
             {/* Action Buttons - Khớp 100% với Hình 2 */}
             <div className="flex flex-col gap-2.5">
