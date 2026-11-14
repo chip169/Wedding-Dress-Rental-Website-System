@@ -155,3 +155,50 @@ export function computeCompensation(conditionId, _optionValue, maxDeposit = 0) {
   }
   return 0;
 }
+
+/**
+ * Tính tổng chi phí bồi thường cho danh sách nhiều lỗi trên 1 váy
+ * @param {string[]} conditionIds - Mảng các ID lỗi
+ * @param {number} maxDeposit - Tiền cọc tối đa của váy / đơn hàng
+ * @returns {number}
+ */
+export function computeMultipleCompensation(conditionIds = [], maxDeposit = 0) {
+  if (!Array.isArray(conditionIds) || conditionIds.length === 0) return 0;
+  if (conditionIds.includes('total_damage')) {
+    return Math.max(0, maxDeposit);
+  }
+  let sum = 0;
+  for (const cid of conditionIds) {
+    if (cid === 'normal_wear' || cid === 'good') continue;
+    const cat = getDamageCatalogItem(cid);
+    if (cat && cat.feeType === 'fixed') {
+      sum += Number(cat.fixedFee || 0);
+    }
+  }
+  return maxDeposit > 0 ? Math.min(sum, maxDeposit) : sum;
+}
+
+/**
+ * Ghép tên các lỗi đã chọn thành chuỗi hiển thị
+ */
+export function formatMultipleDamageNames(conditionIds = []) {
+  if (!Array.isArray(conditionIds) || conditionIds.length === 0) return 'Hao mòn tự nhiên';
+  const realDamages = conditionIds.filter((cid) => cid !== 'normal_wear' && cid !== 'good');
+  if (realDamages.length === 0) return 'Hao mòn tự nhiên';
+  return realDamages.map((cid) => getDamageCatalogItem(cid).shortName).join(', ');
+}
+
+/**
+ * Tự động tạo mô tả hiện trạng mặc định từ các lỗi đã chọn
+ */
+export function formatMultipleDamageDescriptions(conditionIds = []) {
+  if (!Array.isArray(conditionIds) || conditionIds.length === 0) return '';
+  const realDamages = conditionIds.filter((cid) => cid !== 'normal_wear' && cid !== 'good');
+  if (realDamages.length === 0) return '';
+  return realDamages
+    .map((cid) => {
+      const cat = getDamageCatalogItem(cid);
+      return `• ${cat.shortName}: ${cat.description}`;
+    })
+    .join('\n');
+}

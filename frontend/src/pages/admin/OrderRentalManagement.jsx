@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import AdminLayout from '../../components/layout/AdminLayout';
-import { message, Modal, Radio, Input, Dropdown, notification } from 'antd';
+import { message, Modal, Radio, Input, Dropdown, notification, Select, Tag } from 'antd';
 import {
   Search,
   ChevronDown,
@@ -60,6 +60,9 @@ import {
   DAMAGE_PRICE_CATALOG,
   getDamageCatalogItem,
   computeCompensation,
+  computeMultipleCompensation,
+  formatMultipleDamageNames,
+  formatMultipleDamageDescriptions,
 } from '../../data/damagePriceCatalog';
 import { recordCompletedOrderMaintenance } from '../../utils/maintenanceStorage';
 
@@ -556,6 +559,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
           dressId: item.dressId || item.id || item._id || 'item_default',
           name: item.name,
           condition: 'normal_wear',
+          conditions: ['normal_wear'],
           selectedOption: null,
           damageNotes: '',
           compensation: 0,
@@ -590,13 +594,23 @@ function InspectionModal({ order, onClose, onSuccess }) {
                   insp.itemsCondition[idx] ||
                   insp.itemsCondition.find((c) => String(c.dressId) === String(it.dressId));
                 if (!match) return it;
-                const matchedCond = match.condition === 'good' ? 'normal_wear' : (match.condition || 'normal_wear');
-                const catItem = getDamageCatalogItem(matchedCond);
+                let loadedConditions = [];
+                if (Array.isArray(match.conditions) && match.conditions.length > 0) {
+                  loadedConditions = match.conditions.map((c) => (c === 'good' ? 'normal_wear' : c));
+                } else if (match.condition) {
+                  loadedConditions = [match.condition === 'good' ? 'normal_wear' : match.condition];
+                } else {
+                  loadedConditions = ['normal_wear'];
+                }
+                const primaryCond = loadedConditions.includes('total_damage')
+                  ? 'total_damage'
+                  : (loadedConditions.find((c) => c !== 'normal_wear') || 'normal_wear');
                 return {
                   ...it,
-                  condition: matchedCond,
+                  condition: primaryCond,
+                  conditions: loadedConditions,
                   damageNotes: match.note || match.damageNotes || '',
-                  selectedOption: match.repairFee ?? match.compensation ?? catItem.defaultFee,
+                  selectedOption: match.repairFee ?? match.compensation ?? 0,
                   compensation: match.repairFee ?? match.compensation ?? 0,
                 };
               })
@@ -661,33 +675,78 @@ function InspectionModal({ order, onClose, onSuccess }) {
   const totalCompensation = itemsCondition.reduce((acc, ic) => acc + Number(ic.compensation || 0), 0);
   const totalDeduction = Math.min(totalDeposit, lateFee + totalCompensation);
   const finalRefund = Math.max(0, totalDeposit - totalDeduction);
-  const hasSevereDamage = itemsCondition.some((ic) => ic.condition === 'total_damage');
+  const hasSevereDamage = itemsCondition.some((ic) => {
+    const conds = ic.conditions || [ic.condition];
+    return conds.includes('total_damage');
+  });
 
-  // Thay đổi nhóm lỗi theo Bảng giá niêm yết (Khóa giá cố định, Staff không được tự ý sửa)
-  const updateCondition = (idx, newCondId) => {
+  // Thay đổi nhóm lỗi theo Bảng giá niêm yết (Hỗ trợ chọn nhiều lỗi trên cùng 1 váy)
+  const updateConditions = (idx, newCondIds) => {
     if (isReadOnly) return;
-    const cat = getDamageCatalogItem(newCondId);
+    const oldConditions = itemsCondition[idx]?.conditions || [itemsCondition[idx]?.condition || 'normal_wear'];
+
+    let sanitized = Array.isArray(newCondIds) ? [...newCondIds] : [];
+
+    // Nếu vừa bấm chọn "normal_wear" (Hao mòn tự nhiên) khi trước đó đang có lỗi khác -> reset về chỉ có normal_wear
+    if (sanitized.includes('normal_wear') && !oldConditions.includes('normal_wear')) {
+      sanitized = ['normal_wear'];
+    } else {
+      // Nếu chọn bất kỳ lỗi hư hại nào (2-9), tự động bỏ "normal_wear"
+      sanitized = sanitized.filter((c) => c !== 'normal_wear');
+    }
+
+    // Nếu rỗng -> mặc định về 'normal_wear'
+    if (sanitized.length === 0) {
+      sanitized = ['normal_wear'];
+    }
+
     const maxLimit = itemsCondition[idx]?.maxDeposit || itemsCondition[idx]?.depositAmount || order.totalDeposit || 0;
-    const comp = computeCompensation(newCondId, null, maxLimit);
+    const comp = computeMultipleCompensation(sanitized, maxLimit);
+
+    // Xác định condition chính để tương thích ngược
+    const primaryCond = sanitized.includes('total_damage')
+      ? 'total_damage'
+      : (sanitized.find((c) => c !== 'normal_wear') || 'normal_wear');
+
+    const defaultNotes = formatMultipleDamageDescriptions(sanitized);
 
     setItemsCondition((prev) => {
       const next = [...prev];
+      const prevNotes = next[idx]?.damageNotes || '';
+      const shouldUpdateNotes = !prevNotes || prevNotes === formatMultipleDamageDescriptions(oldConditions);
+
       next[idx] = {
         ...next[idx],
-        condition: newCondId,
+        condition: primaryCond,
+        conditions: sanitized,
         compensation: comp,
-        // Khi chọn lỗi, mặc định điền mô tả hiện trạng để nhân viên có thể sửa đổi hoặc bổ sung chi tiết
-        damageNotes: (newCondId === 'normal_wear' || newCondId === 'good') ? '' : (cat.description || ''),
+        damageNotes: shouldUpdateNotes ? defaultNotes : prevNotes,
       };
       return next;
     });
 
-    if (cat.isAdminOnly) {
-      message.warning(`Lỗi "${cat.shortName}" cần [${cat.authorityLabel}]. Hệ thống kích hoạt nút [Tạm Giữ Kiểm Định] để chuyển Admin.`);
+    const hasAdminOnly = sanitized.some((cid) => getDamageCatalogItem(cid).isAdminOnly);
+    if (hasAdminOnly) {
+      message.warning(`Có lỗi cần [Cần Admin xác nhận]. Hệ thống kích hoạt nút [Tạm Giữ Kiểm Định] để chuyển Admin.`);
       if (!customerDisputeNote) {
         setCustomerDisputeNote('Váy bị hư hại nghiêm trọng / lỗi nặng không thể may lại, chuyển Quản lý & Admin trực tiếp thẩm định xử lý.');
       }
     }
+  };
+
+  // Toggle nhanh 1 lỗi qua button chip
+  const toggleCondition = (idx, condId) => {
+    if (isReadOnly) return;
+    const currentList = itemsCondition[idx]?.conditions || [itemsCondition[idx]?.condition || 'normal_wear'];
+    let nextList;
+    if (condId === 'normal_wear') {
+      nextList = ['normal_wear'];
+    } else if (currentList.includes(condId)) {
+      nextList = currentList.filter((c) => c !== condId);
+    } else {
+      nextList = [...currentList.filter((c) => c !== 'normal_wear'), condId];
+    }
+    updateConditions(idx, nextList);
   };
 
   const updateOption = (idx, optVal) => {
@@ -721,12 +780,17 @@ function InspectionModal({ order, onClose, onSuccess }) {
       return;
     }
 
-    const isHoldCase = actionType === 'hold' || itemsCondition.some((ic) => ic.condition === 'total_damage');
+    const isHoldCase = actionType === 'hold' || itemsCondition.some((ic) => {
+      const conds = ic.conditions || [ic.condition];
+      return conds.includes('total_damage');
+    });
 
     // 1. Kiểm tra tình trạng váy & BẮT BUỘC CHỤP ẢNH LỖI ĐẦY ĐỦ
-    const hasDamage = itemsCondition.some(
-      (ic) => (ic.condition !== 'normal_wear' && ic.condition !== 'good') || Number(ic.compensation || 0) > 0
-    );
+    const hasDamage = itemsCondition.some((ic) => {
+      const conds = ic.conditions || [ic.condition];
+      const hasRealDamage = conds.some((c) => c !== 'normal_wear' && c !== 'good');
+      return hasRealDamage || Number(ic.compensation || 0) > 0;
+    });
     if (hasDamage && (!evidencePhotos || evidencePhotos.length === 0)) {
       message.error('Quy định bắt buộc: Phải chụp hoặc tải ít nhất 1 ảnh bằng chứng lỗi hư hại của váy trước khi gửi!');
       return;
@@ -755,14 +819,31 @@ function InspectionModal({ order, onClose, onSuccess }) {
     setSubmitting(true);
     try {
       const payload = itemsCondition.map((ic) => {
-        const cat = getDamageCatalogItem(ic.condition);
+        const curConditions = ic.conditions || [ic.condition || 'normal_wear'];
+        const damageItems = curConditions
+          .filter((cid) => cid !== 'normal_wear' && cid !== 'good')
+          .map((cid) => {
+            const cat = getDamageCatalogItem(cid);
+            return {
+              id: cat.id,
+              name: cat.name,
+              fee: cat.fixedFee,
+              feeLabel: cat.feeLabel,
+            };
+          });
+
+        const damageNames = formatMultipleDamageNames(curConditions);
+        const primaryCond = ic.condition || (curConditions.includes('total_damage') ? 'total_damage' : curConditions[0] || 'normal_wear');
+
         return {
           dressId: ic.dressId,
-          condition: ic.condition,
-          damageName: cat.name,
-          feeLabel: cat.feeLabel,
-          note: ic.damageNotes || cat.description || '',
-          damageNotes: ic.damageNotes || cat.description || '',
+          condition: primaryCond,
+          conditions: curConditions,
+          damages: damageItems,
+          damageName: damageNames,
+          feeLabel: `${fmtVnd(ic.compensation || 0)}`,
+          note: ic.damageNotes || '',
+          damageNotes: ic.damageNotes || '',
           repairFee: Number(ic.compensation || 0),
           compensation: Number(ic.compensation || 0),
         };
@@ -775,7 +856,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
         customerAgreed: !isHoldCase,
         confirmOnSite: !isHoldCase,
         disputeReason: isHoldCase
-          ? (customerDisputeNote.trim() || (itemsCondition.some((ic) => ic.condition === 'total_damage') ? 'Váy bị lỗi nặng / hư hại nghiêm trọng không thể may lại, chuyển Admin thẩm định xử lý' : 'Tạm giữ kiểm định - Chuyển Quản lý showroom đàm phán cùng khách hàng'))
+          ? (customerDisputeNote.trim() || (itemsCondition.some((ic) => (ic.conditions || [ic.condition]).includes('total_damage')) ? 'Váy bị lỗi nặng / hư hại nghiêm trọng không thể may lại, chuyển Admin thẩm định xử lý' : 'Tạm giữ kiểm định - Chuyển Quản lý showroom đàm phán cùng khách hàng'))
           : '',
         refundMethod: 'bank_transfer',
         refundBankDetails: !isHoldCase ? {
@@ -938,33 +1019,104 @@ function InspectionModal({ order, onClose, onSuccess }) {
                     </span>
                   </div>
 
-                  {/* Chọn nhóm lỗi hư hại theo Bảng giá niêm yết */}
-                  <div className="space-y-1.5">
-                    <span className="text-[11.5px] font-bold text-[#5F4E50] block">
-                      Nhóm lỗi theo Bảng Giá Niêm Yết:
-                    </span>
+                  {/* Chọn nhóm lỗi hư hại theo Bảng giá niêm yết (Hỗ trợ chọn nhiều lỗi) */}
+                  <div className="space-y-2">
+                    <div className="flex items-center justify-between flex-wrap gap-1">
+                      <span className="text-[11.5px] font-bold text-[#5F4E50] block">
+                        Nhóm lỗi theo Bảng Giá Niêm Yết:
+                      </span>
+                      <span className="text-[10.5px] text-[#8C7D7E] italic">
+                        * Có thể chọn cùng lúc nhiều lỗi trên 1 váy
+                      </span>
+                    </div>
 
-                    <select
+                    <Select
+                      mode="multiple"
                       disabled={isReadOnly}
-                      value={ic.condition}
-                      onChange={(e) => updateCondition(idx, e.target.value)}
-                      className={`w-full px-3 py-2 rounded-xl border text-xs font-semibold outline-none transition-colors cursor-pointer disabled:bg-stone-100 disabled:text-stone-400 disabled:cursor-not-allowed ${
-                        ic.condition === 'total_damage'
-                          ? 'border-red-400 bg-red-50/60 text-red-950 focus:border-red-600'
-                          : 'border-[#DDC6C0] bg-white text-[#2C2523] focus:border-[#733F49]'
-                      }`}
-                    >
-                      {DAMAGE_PRICE_CATALOG.map((cat) => (
-                        <option key={cat.id} value={cat.id}>
-                          {cat.name} — Phí: {cat.feeLabel}
-                        </option>
-                      ))}
-                    </select>
+                      style={{ width: '100%' }}
+                      placeholder="Chọn một hoặc nhiều lỗi theo Bảng Giá Niêm Yết..."
+                      value={ic.conditions || [ic.condition || 'normal_wear']}
+                      onChange={(vals) => updateConditions(idx, vals)}
+                      options={DAMAGE_PRICE_CATALOG.map((cat) => ({
+                        value: cat.id,
+                        label: `${cat.name} — Phí: ${cat.feeLabel}`,
+                      }))}
+                      className="rounded-xl text-xs"
+                    />
+
+                    {/* Quick pills để nhân viên tiện click chọn/bỏ chọn nhanh */}
+                    {!isReadOnly && (
+                      <div className="flex flex-wrap gap-1.5 pt-0.5">
+                        {DAMAGE_PRICE_CATALOG.map((cat) => {
+                          const isSelected = (ic.conditions || [ic.condition || 'normal_wear']).includes(cat.id);
+                          return (
+                            <button
+                              key={cat.id}
+                              type="button"
+                              onClick={() => toggleCondition(idx, cat.id)}
+                              className={`text-[10.5px] px-2 py-0.5 rounded-lg border font-medium transition-all cursor-pointer ${
+                                isSelected
+                                  ? cat.id === 'total_damage'
+                                    ? 'bg-red-600 text-white border-red-700 shadow-2xs font-bold'
+                                    : cat.id === 'normal_wear'
+                                    ? 'bg-emerald-700 text-white border-emerald-800 shadow-2xs font-bold'
+                                    : 'bg-[#733F49] text-white border-[#5C323A] shadow-2xs font-bold'
+                                  : 'bg-white text-[#5F4E50] border-[#E5D7D0] hover:bg-[#FAF0EC]'
+                              }`}
+                            >
+                              {cat.shortName} ({cat.feeType === 'deposit_100' ? '100% Cọc' : cat.feeLabel})
+                            </button>
+                          );
+                        })}
+                      </div>
+                    )}
                   </div>
 
                   {/* Chi tiết hiện trạng & Mức phí đền bù khóa cố định */}
-                  {ic.condition !== 'normal_wear' && ic.condition !== 'good' && (
+                  {(ic.conditions || [ic.condition]).some((c) => c !== 'normal_wear' && c !== 'good') && (
                     <div className="p-3 rounded-xl bg-[#FFF9F6] border border-[#F4E1D8] space-y-2.5 animate-fadeIn text-xs">
+                      {/* Bảng danh sách các lỗi đã chọn */}
+                      <div className="space-y-1.5">
+                        <span className="text-[11px] font-bold text-[#733F49] uppercase tracking-wider block">
+                          Danh sách lỗi ghi nhận trên váy:
+                        </span>
+                        <div className="space-y-1">
+                          {(ic.conditions || [ic.condition])
+                            .filter((c) => c !== 'normal_wear' && c !== 'good')
+                            .map((cid) => {
+                              const cat = getDamageCatalogItem(cid);
+                              return (
+                                <div
+                                  key={cid}
+                                  className="flex items-center justify-between p-2 rounded-lg bg-white border border-[#EFE2DC] text-xs"
+                                >
+                                  <div className="flex items-center gap-1.5 flex-wrap">
+                                    <span className="font-bold text-[#2C2523]">{cat.name}</span>
+                                    <span className="text-[10.5px] text-[#8C7D7E] italic hidden sm:inline">
+                                      ({cat.description})
+                                    </span>
+                                  </div>
+                                  <div className="flex items-center gap-2 shrink-0">
+                                    <span className="font-bold text-red-700">
+                                      {cat.feeType === 'deposit_100' ? 'Tịch thu 100% Cọc' : cat.feeLabel}
+                                    </span>
+                                    {!isReadOnly && (
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleCondition(idx, cid)}
+                                        className="text-stone-400 hover:text-red-600 font-bold px-1 cursor-pointer text-sm leading-none"
+                                        title="Bỏ chọn lỗi này"
+                                      >
+                                        ×
+                                      </button>
+                                    )}
+                                  </div>
+                                </div>
+                              );
+                            })}
+                        </div>
+                      </div>
+
                       {/* Hiện trạng thực tế (Cho phép nhân viên trực tiếp điền / chỉnh sửa) */}
                       <div>
                         <div className="flex items-center justify-between mb-1.5">
@@ -973,30 +1125,32 @@ function InspectionModal({ order, onClose, onSuccess }) {
                             Hiện trạng thực tế:
                           </label>
                           <span className="text-[10px] text-[#8C7D7E] italic">
-                            * Có thể chỉnh sửa hoặc điền chi tiết vị trí lỗi trên váy
+                            * Có thể chỉnh sửa hoặc điền chi tiết vị trí từng lỗi trên váy
                           </span>
                         </div>
                         <Input.TextArea
-                          rows={2}
+                          rows={3}
                           disabled={isReadOnly}
                           placeholder="Mô tả hiện trạng thực tế, vị trí vết bẩn hoặc lỗi hư hại trên váy..."
-                          value={ic.damageNotes !== undefined && ic.damageNotes !== '' ? ic.damageNotes : catItem.description}
+                          value={ic.damageNotes !== undefined && ic.damageNotes !== '' ? ic.damageNotes : formatMultipleDamageDescriptions(ic.conditions || [ic.condition])}
                           onChange={(e) => updateNotes(idx, e.target.value)}
                           className="text-xs rounded-xl border-[#E5D7D0] focus:border-[#733F49]"
                         />
                       </div>
 
-                      {/* Hộp hiển thị mức bồi thường khóa cố định */}
+                      {/* Hộp hiển thị mức bồi thường tổng cộng */}
                       <div className="flex items-center justify-between p-2.5 rounded-xl bg-white border border-[#EFE2DC] flex-wrap gap-2">
                         <div className="flex items-center gap-1.5 text-xs">
                           <Lock size={13} className="text-[#8C7D7E]" />
-                          <span className="text-[#5F4E50] font-semibold">Mức phí đền bù niêm yết:</span>
+                          <span className="text-[#5F4E50] font-semibold">Tổng mức phí đền bù niêm yết:</span>
                           <span className="text-sm font-bold text-red-700">
-                            {catItem.feeType === 'deposit_100' ? `Tịch thu 100% Cọc (${fmtVnd(ic.compensation)})` : fmtVnd(ic.compensation)}
+                            {(ic.conditions || [ic.condition]).includes('total_damage')
+                              ? `Tịch thu 100% Cọc (${fmtVnd(ic.compensation)})`
+                              : fmtVnd(ic.compensation)}
                           </span>
                         </div>
                         <span className="text-[10px] text-[#8C7D7E] italic">
-                          🔒 Khóa cố định 1 mức theo Bảng giá niêm yết
+                          🔒 Khóa cố định theo Bảng giá niêm yết (Tối đa tiền cọc)
                         </span>
                       </div>
 
@@ -1020,7 +1174,10 @@ function InspectionModal({ order, onClose, onSuccess }) {
                 <span className="font-bold text-[12px] text-[#2C2523]">
                   Hồ Sơ Ảnh Giám Định Hiện Trạng ({evidencePhotos.length})
                 </span>
-                {itemsCondition.some((ic) => ic.condition !== 'good' || Number(ic.compensation || 0) > 0) && (
+                {itemsCondition.some((ic) => {
+                  const conds = ic.conditions || [ic.condition];
+                  return conds.some((c) => c !== 'normal_wear' && c !== 'good') || Number(ic.compensation || 0) > 0;
+                }) && (
                   <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${evidencePhotos.length > 0
                     ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
                     : 'bg-red-100 text-red-700 border border-red-200 animate-pulse'
@@ -1392,19 +1549,27 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
 
             {/* Chi tiết từng váy */}
             <div className="space-y-1.5">
-              {(inspection?.itemsCondition || order.items || []).map((it, idx) => (
-                <div key={idx} className="p-2 rounded-lg bg-[#FAF5F2] border border-[#F0E6E2] flex items-center justify-between text-[11.5px] flex-wrap gap-1">
-                  <div>
-                    <strong className="text-stone-900">{it.name || order.items?.[idx]?.name || `Váy ${idx + 1}`}</strong>
-                    <span className="text-stone-500 ml-1.5 font-medium">({it.condition || 'Tình trạng ghi nhận'})</span>
-                    {it.note && <span className="text-red-700 ml-1.5 italic">• {it.note}</span>}
+              {(inspection?.itemsCondition || order.items || []).map((it, idx) => {
+                const condList = Array.isArray(it.conditions) && it.conditions.length > 0
+                  ? it.conditions
+                  : (it.condition ? [it.condition] : ['good']);
+                const realDamages = condList.filter((c) => c !== 'normal_wear' && c !== 'good');
+                const displayName = it.damageName || (realDamages.length ? formatMultipleDamageNames(condList) : 'Hao mòn tự nhiên');
+
+                return (
+                  <div key={idx} className="p-2.5 rounded-lg bg-[#FAF5F2] border border-[#F0E6E2] flex items-center justify-between text-[11.5px] flex-wrap gap-1">
+                    <div>
+                      <strong className="text-stone-900">{it.name || order.items?.[idx]?.name || `Váy ${idx + 1}`}</strong>
+                      <span className="text-stone-500 ml-1.5 font-medium">({displayName})</span>
+                      {it.note && <div className="text-red-700 italic text-[11px] mt-0.5 whitespace-pre-line">• {it.note}</div>}
+                    </div>
+                    <div className="text-right">
+                      <span className="text-stone-600">Phí Staff ghi: </span>
+                      <strong className="text-red-700">{fmtVnd(it.repairFee || it.compensation || 0)}</strong>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <span className="text-stone-600">Phí Staff ghi: </span>
-                    <strong className="text-red-700">{fmtVnd(it.repairFee || it.compensation || 0)}</strong>
-                  </div>
-                </div>
-              ))}
+                );
+              })}
             </div>
 
             {/* Bộ sưu tập ảnh lỗi Staff chụp */}

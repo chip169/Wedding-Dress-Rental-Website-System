@@ -9,6 +9,15 @@ const itemConditionSchema = new mongoose.Schema({
     type: String,
     default: 'good',
   },
+  conditions: [{ type: String }],
+  damages: [
+    {
+      id: { type: String, default: '' },
+      name: { type: String, default: '' },
+      fee: { type: Number, default: 0 },
+      feeLabel: { type: String, default: '' },
+    },
+  ],
   damageName: {
     type: String,
     default: '',

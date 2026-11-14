@@ -612,20 +612,31 @@ export const submitReturnInspection = async (orderId, data, staffUser) => {
     if (fee > maxAllowed && maxAllowed > 0) {
       throw new Error(`Số tiền bồi thường không được lớn hơn giá trị của váy (Tối đa: ${maxAllowed.toLocaleString('vi-VN')} đ)`);
     }
+    const conditions = Array.isArray(item.conditions) && item.conditions.length > 0
+      ? item.conditions
+      : (item.condition ? [item.condition] : ['good']);
+
     return {
       dressId: item.dressId || item.id || null,
       condition: item.condition || 'good',
+      conditions,
+      damages: Array.isArray(item.damages) ? item.damages : [],
       damageName: item.damageName || '',
       feeLabel: item.feeLabel || '',
       note: item.note || item.damageNotes || '',
       repairFee: Math.max(0, fee),
+      compensation: Math.max(0, fee),
     };
   });
   const damageTotal = itemsCondition.reduce((sum, i) => sum + i.repairFee, 0);
   const evidencePhotos = Array.isArray(data.evidencePhotos) ? data.evidencePhotos : [];
 
   // BẮT BUỘC CHỤP ẢNH LỖI ĐẦY ĐỦ nếu có ghi nhận tình trạng váy bị bẩn, rách hoặc có phí bồi thường
-  const hasDamage = itemsCondition.some((it) => it.condition !== 'good' && it.condition !== 'normal_wear' || it.repairFee > 0);
+  const hasDamage = itemsCondition.some((it) => {
+    const hasSingle = it.condition !== 'good' && it.condition !== 'normal_wear';
+    const hasMultiple = Array.isArray(it.conditions) && it.conditions.some((c) => c !== 'good' && c !== 'normal_wear');
+    return hasSingle || hasMultiple || it.repairFee > 0;
+  });
   if (hasDamage && evidencePhotos.length === 0) {
     throw new Error('Bắt buộc chụp hoặc tải ít nhất 1 ảnh bằng chứng lỗi hư hại của váy trước khi lập biên bản kiểm định!');
   }
