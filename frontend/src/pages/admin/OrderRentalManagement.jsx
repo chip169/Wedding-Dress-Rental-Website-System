@@ -173,17 +173,24 @@ function StatusBadge({ status, order }) {
       </span>
     );
   }
-  if (status === 'waiting_refund' || status === 'returned') {
-    const refundStatus = order.inspection?.refundStatus;
-    const label = {
-      pending_review: 'Chờ Khách Duyệt',
-      pending: 'Chờ Hoàn Cọc',
-      reconciliation_required: 'Cần Đối Soát Cọc',
-      not_required: 'Chờ Quyết Toán',
-      refunded: 'Chờ Quyết Toán',
-    }[refundStatus] || 'Đã Trả Váy';
+
+  // Nếu đang chờ hoàn cọc hoặc cần đối soát cọc: hiển thị rõ trạng thái Chờ Hoàn Cọc
+  const isRefundPending =
+    status === 'waiting_refund' ||
+    status === 'returned' ||
+    order.refundPending ||
+    order.inspection?.canConfirmRefund ||
+    ['pending', 'reconciliation_required'].includes(order.inspection?.refundStatus);
+
+  if (isRefundPending) {
+    const isConflict = Boolean(
+      order.inspection?.refundConflict ||
+      order.inspection?.refundStatus === 'reconciliation_required'
+    );
+    const label = isConflict ? 'Cần Đối Soát Cọc' : 'Chờ Hoàn Cọc';
     return (
-      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A]">
+      <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A] shadow-2xs">
+        <span className="w-1.5 h-1.5 rounded-full bg-amber-500 mr-1.5"></span>
         {label}
       </span>
     );
@@ -195,11 +202,6 @@ function StatusBadge({ status, order }) {
       <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${cfg.bg} ${cfg.text}`}>
         {cfg.label}
       </span>
-      {['pending', 'reconciliation_required'].includes(order.inspection?.refundStatus) && (
-        <span className="text-[11px] font-semibold text-[#B45309]">
-          {order.inspection.refundConflict ? 'Cần đối soát cọc' : 'Chờ hoàn cọc'}
-        </span>
-      )}
     </div>
   );
 }

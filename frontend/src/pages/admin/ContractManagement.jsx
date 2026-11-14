@@ -852,9 +852,12 @@ export default function ContractManagement() {
 
                     <td className="py-4 px-4 whitespace-nowrap text-center">
                       <div className="flex flex-col items-center justify-center">
-                        {getStatusBadge(item.status)}
-                        {item.status === 'completed' && item.refundPending && (
-                          <span className="mt-1 text-[11px] text-amber-700">Chờ hoàn cọc</span>
+                        {item.status === 'completed' && item.refundPending ? (
+                          <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-semibold bg-amber-50 text-amber-700 border border-amber-200">
+                            <Clock size={13} /> Chờ Hoàn Cọc
+                          </span>
+                        ) : (
+                          getStatusBadge(item.status)
                         )}
                         {item.signedAt ? (
                           <div className="text-[10px] text-[#A39192] mt-1 flex items-center justify-center gap-1">
