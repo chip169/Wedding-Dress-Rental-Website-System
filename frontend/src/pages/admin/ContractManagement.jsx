@@ -220,8 +220,8 @@ export default function ContractManagement() {
           let status = 'active';
           if (ord.status === 'completed' || ord.status === 'complete') {
             status = 'completed';
-          } else if (ord.status === 'returned') {
-            status = 'disputed'; // Đang xử lý cọc sau khi nhận trả váy
+          } else if (['returned', 'waiting_refund', 'disputed'].includes(ord.status)) {
+            status = 'disputed';
           } else if (ord.status === 'pending_payment') {
             status = 'pending_signature'; // Chờ ký & cọc
           } else if (ord.status === 'cancelled') {
@@ -270,6 +270,7 @@ export default function ContractManagement() {
             depositAmount,
             totalValue: rentalPrice + depositAmount,
             status,
+            refundPending: ord.inspection?.refundStatus === 'pending',
             signedAt: ord.contract?.signedAt
               ? formatSignedDateTime(ord.contract.signedAt)
               : ord.createdAt
@@ -447,7 +448,7 @@ export default function ContractManagement() {
 
     const labels = {
       active: 'Đã kích hoạt hợp đồng có hiệu lực pháp lý!',
-      completed: 'Hợp đồng đã hoàn thành và giải ngân hoàn cọc cho khách hàng!',
+      completed: 'Hợp đồng đã hoàn thành.',
       disputed: 'Đã chuyển hợp đồng sang trạng thái đối soát bồi thường cọc!'
     };
     showToast(labels[newStatus] || 'Đã cập nhật trạng thái hợp đồng thành công!');
@@ -768,6 +769,9 @@ export default function ContractManagement() {
                     <td className="py-4 px-4 whitespace-nowrap text-center">
                       <div className="flex flex-col items-center justify-center">
                         {getStatusBadge(item.status)}
+                        {item.status === 'completed' && item.refundPending && (
+                          <span className="mt-1 text-[11px] text-amber-700">Chờ hoàn cọc</span>
+                        )}
                         {item.signedAt ? (
                           <div className="text-[10px] text-[#A39192] mt-1 flex items-center justify-center gap-1">
                             <ShieldCheck size={11} className="text-emerald-600 shrink-0" />

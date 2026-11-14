@@ -183,7 +183,7 @@ export default function AdminLayout({
             }
 
             // C. Lịch khách hẹn trả váy trong ngày hôm nay
-            if (isSameDayVietnam(o.rentalEndDate) && !['completed', 'complete'].includes(rawSt)) {
+            if (isSameDayVietnam(o.rentalEndDate) && ['delivered', 'renting'].includes(rawSt) && !o.actualReturnDate) {
               notifs.push({
                 id: `order-return-${orderIdStr}`,
                 type: 'return',

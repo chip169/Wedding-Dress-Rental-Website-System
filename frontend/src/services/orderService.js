@@ -47,7 +47,9 @@ export function mapOrder(order) {
   } else if (['returned', 'waiting_refund'].includes(currentRawStatus)) {
     currentRawStatus = 'waiting_refund';
   }
-  const [status, statusLabel] = STATUS[currentRawStatus] || ['active', order.statusLabel || currentRawStatus || 'Đang xử lý'];
+  const [status, label] = STATUS[currentRawStatus] || ['active', order.statusLabel || currentRawStatus || 'Đang xử lý'];
+  const statusLabel = currentRawStatus === 'waiting_refund' && order.inspection?.customerStatus === 'pending'
+    ? 'Chờ duyệt biên bản' : label;
   return {
     id: order.orderCode || order.id || order._id,
     _id: order._id || order.id,
@@ -146,18 +148,15 @@ export async function createOrder(orderData) {
   }
 }
 
-/**
- * Cập nhật trạng thái đơn hàng (Admin/Staff)
- * @param {string} orderId
- * @param {string} status - 'confirmed' | 'preparing' | 'handover' | 'renting' | 'returned' | 'completed' | 'cancelled'
- */
+export async function getOrderForManagement(idOrCode) {
+  return (await axiosClient.get(`/orders/${encodeURIComponent(idOrCode)}`)).data;
+}
+
+/** Cập nhật trạng thái đơn hàng (Admin/Staff). */
 export async function updateOrderStatus(orderId, status) {
+  const result = await axiosClient.patch(`/orders/${orderId}/status`, { status });
   clearAdminOrdersCache();
-  try {
-    return await axiosClient.patch(`/orders/${orderId}/status`, { status });
-  } catch (error) {
-    return { success: true, message: 'Cập nhật trạng thái đơn thành công (Offline Demo)' };
-  }
+  return result;
 }
 
 /**
@@ -166,12 +165,9 @@ export async function updateOrderStatus(orderId, status) {
  * @param {Object} inspectionData - { itemsCondition, evidencePhotos }
  */
 export async function submitReturnInspection(orderId, inspectionData) {
+  const result = await axiosClient.post(`/orders/${orderId}/inspection`, inspectionData);
   clearAdminOrdersCache();
-  try {
-    return await axiosClient.post(`/orders/${orderId}/inspection`, inspectionData);
-  } catch (error) {
-    throw error;
-  }
+  return result.data;
 }
 
 /**
@@ -180,13 +176,15 @@ export async function submitReturnInspection(orderId, inspectionData) {
  * @param {Object} data - { agreedPenaltyFee, refundMethod, refundBankDetails, negotiationNotes }
  */
 export async function settleInspectionAdmin(orderId, data) {
+  const result = await axiosClient.post(`/orders/${orderId}/inspection/admin-settle`, data);
   clearAdminOrdersCache();
-  try {
-    const res = await axiosClient.post(`/orders/${orderId}/inspection/admin-settle`, data);
-    return res.data;
-  } catch (error) {
-    throw error;
-  }
+  return result.data;
+}
+
+export async function confirmDepositRefund(orderId, data) {
+  const result = await axiosClient.post(`/orders/${orderId}/inspection/refund`, data);
+  clearAdminOrdersCache();
+  return result.data;
 }
 
 /**
@@ -247,7 +245,7 @@ export async function getDressBookedDates(dressId) {
  * @param {Object} params - { status, search, page, limit }
  * @param {boolean} forceRefresh - Bỏ qua cache để lấy mới
  */
-export async function getAllOrdersAdmin(params = {}, forceRefresh = false) {
+export async function getAllOrdersAdmin(params = {}, forceRefresh = false, { throwOnError = false } = {}) {
   const key = JSON.stringify(params);
   if (!forceRefresh) {
     const cached = adminOrdersCache.get(key);
@@ -273,6 +271,7 @@ export async function getAllOrdersAdmin(params = {}, forceRefresh = false) {
     adminOrdersCache.set(key, { data: result, timestamp: Date.now() });
     return result;
   } catch (error) {
+    if (throwOnError) throw error;
     return { orders: [], total: 0, page: 1, totalPages: 1, stats: null };
   }
 }
@@ -282,10 +281,5 @@ export async function getAllOrdersAdmin(params = {}, forceRefresh = false) {
  * @param {string} orderId
  */
 export async function getReturnInspection(orderId) {
-  try {
-    const res = await axiosClient.get(`/orders/${orderId}/inspection`);
-    return res.data?.data || res.data || null;
-  } catch (error) {
-    return null;
-  }
+  return (await axiosClient.get(`/orders/${orderId}/inspection`)).data;
 }

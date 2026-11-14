@@ -47,11 +47,12 @@ import HangerIcon from '../../components/common/HangerIcon';
 import {
   getAllOrdersAdmin,
   getCachedAdminOrders,
-  getOrder,
+  getOrderForManagement,
   updateOrderStatus,
   submitReturnInspection,
   getReturnInspection,
   settleInspectionAdmin,
+  confirmDepositRefund,
 } from '../../services/orderService';
 import { formatCurrencyVND } from '../../utils/formatCurrency';
 import { DRESS_CATALOG } from '../../data/dressCatalog';
@@ -113,23 +114,17 @@ const NEXT_STATUSES = {
   preparing: ['delivered', 'cancelled'],
   delivered: ['renting', 'cancelled'],
   renting: [], // Bắt buộc nhân viên bấm nút [Kiểm Định], không dùng dropdown tùy ý
-  returned: ['completed'],
-  waiting_refund: ['completed'],
+  returned: [],
+  waiting_refund: [],
   complete: [],
   completed: [],
   cancelled: [],
 };
 
-const FILTER_OPTIONS = [
-  { value: 'all', label: 'Tất Cả Trạng Thái' },
-  { value: 'disputed', label: '⚠️ Khách Khiếu Nại' },
-  { value: 'deposit_paid', label: 'Đã Đặt Cọc' },
-  { value: 'delivered', label: 'Đã Giao Váy' },
-  { value: 'renting', label: 'Đang Thuê' },
-  { value: 'waiting_refund', label: 'Chờ Hoàn Cọc' },
-  { value: 'completed', label: 'Hoàn Tất' },
-  { value: 'cancelled', label: 'Đã Hủy' },
-];
+const canRecordReturn = (order) => ['renting', 'delivered'].includes(order.status);
+const canInspectOrder = (order) => canRecordReturn(order) || (order.status === 'returned' && !order.inspection);
+const hasDisputedInspection = (order) => order.status === 'disputed'
+  || (order.inspection?.customerStatus || order.inspectionCustomerStatus) === 'disputed';
 
 const CONDITION_OPTIONS = [
   { value: 'good', label: 'Tốt' },
@@ -155,21 +150,22 @@ const getRentalDays = (order) => {
   return 4;
 };
 
-function calcLate(rentalEndDate) {
+const returnDateFormatter = new Intl.DateTimeFormat('sv-SE', {
+  timeZone: 'Asia/Ho_Chi_Minh', year: 'numeric', month: '2-digit', day: '2-digit',
+});
+
+function calcLate(rentalEndDate, returnedAt) {
   if (!rentalEndDate) return 0;
   const end = new Date(rentalEndDate);
-  end.setHours(0, 0, 0, 0);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
-  const diff = Math.floor((today - end) / 86400000);
-  return diff > 0 ? diff : 0;
+  const received = returnedAt ? new Date(returnedAt) : new Date();
+  if (!Number.isFinite(end.getTime()) || !Number.isFinite(received.getTime())) return 0;
+  return Math.max(0, (Date.parse(returnDateFormatter.format(received)) - Date.parse(returnDateFormatter.format(end))) / 86_400_000);
 }
 
 // ─── Sub-components ───────────────────────────────────────────────────────────
 
 function StatusBadge({ status, order }) {
-  const custStatus = order?.inspection?.customerStatus || order?.inspectionCustomerStatus;
-  if (status === 'disputed' || custStatus === 'disputed') {
+  if (hasDisputedInspection(order)) {
     return (
       <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEE2E2] text-[#991B1B] border border-[#FECACA] animate-pulse">
         <span className="w-1.5 h-1.5 rounded-full bg-red-600"></span>
@@ -178,20 +174,33 @@ function StatusBadge({ status, order }) {
     );
   }
   if (status === 'waiting_refund' || status === 'returned') {
+    const refundStatus = order.inspection?.refundStatus;
+    const label = {
+      pending_review: 'Chờ Khách Duyệt',
+      pending: 'Chờ Hoàn Cọc',
+      reconciliation_required: 'Cần Đối Soát Cọc',
+      not_required: 'Chờ Quyết Toán',
+      refunded: 'Chờ Quyết Toán',
+    }[refundStatus] || 'Đã Trả Váy';
     return (
       <span className="inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-bold bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A]">
-        Chờ Hoàn Cọc
+        {label}
       </span>
     );
   }
 
   const cfg = STATUS_CONFIG[status] || { label: status, bg: 'bg-gray-100', text: 'text-gray-600' };
   return (
-    <span
-      className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${cfg.bg} ${cfg.text}`}
-    >
-      {cfg.label}
-    </span>
+    <div className="inline-flex flex-col items-center gap-1">
+      <span className={`inline-flex items-center px-2.5 py-1 rounded-full text-[11px] font-semibold ${cfg.bg} ${cfg.text}`}>
+        {cfg.label}
+      </span>
+      {['pending', 'reconciliation_required'].includes(order.inspection?.refundStatus) && (
+        <span className="text-[11px] font-semibold text-[#B45309]">
+          {order.inspection.refundConflict ? 'Cần đối soát cọc' : 'Chờ hoàn cọc'}
+        </span>
+      )}
+    </div>
   );
 }
 
@@ -531,21 +540,21 @@ function InspectionModal({ order, onClose, onSuccess }) {
   const [customerStatus, setCustomerStatus] = useState(order.inspectionCustomerStatus || order.inspection?.customerStatus || 'pending');
   const isCustomerApproved = customerStatus === 'approved';
 
-  // 1. Khi đơn ĐANG THUÊ ('renting'): Nhân viên bấm [Kiểm Định Trả Váy] để kiểm tra & chọn lỗi (isReadOnly = false)
-  // 2. Khi đơn ĐÃ KIỂM ĐỊNH ('waiting_refund' / 'returned' / 'completed'): Bấm [Biên Bản] là CHẾ ĐỘ XEM CỐ ĐỊNH, KHÔNG ĐƯỢC PHÉP CHỈNH SỬA
-  const isReadOnly = isCompletedOrder || isReturnedOrder;
+  const [savedInspection, setSavedInspection] = useState(null);
+  const isReadOnly = !canInspectOrder(order) || Boolean(savedInspection);
+  const canResumeInspection = canRecordReturn(order) && Boolean(savedInspection);
 
   const [disputeReason, setDisputeReason] = useState('');
   const [refundBankDetails, setRefundBankDetails] = useState(null);
 
   // 2. Ý kiến khách hàng về biên bản kiểm định (Trường hợp 1: Chốt tại chỗ | Trường hợp 2: Giữ đơn chuyển Admin)
-  const [customerDecision, setCustomerDecision] = useState('agreed'); // 'agreed' | 'disputed'
+  const [inspectionLoading, setInspectionLoading] = useState(true);
+  const [inspectionError, setInspectionError] = useState('');
+  const [inspectionReload, setInspectionReload] = useState(0);
   const [customerDisputeNote, setCustomerDisputeNote] = useState('');
-  const [refundMethod] = useState('bank_transfer'); // Chỉ có 1 hình thức duy nhất là Chuyển khoản (STK)
   const [onSiteBankName, setOnSiteBankName] = useState('Vietcombank');
   const [onSiteAccountNum, setOnSiteAccountNum] = useState('');
   const [onSiteAccountHolder, setOnSiteAccountHolder] = useState(order.customerName || '');
-  const [onSiteNotes, setOnSiteNotes] = useState('');
 
   const [itemsCondition, setItemsCondition] = useState(
     () =>
@@ -574,9 +583,13 @@ function InspectionModal({ order, onClose, onSuccess }) {
 
   // Luôn luôn tải biên bản kiểm định đã lưu từ trước (nếu có)
   useEffect(() => {
+    let active = true;
+    setInspectionError('');
+    setInspectionLoading(true);
     getReturnInspection(order._id)
-      .then((res) => {
-        const insp = res?.data || res;
+      .then((insp) => {
+        if (!active) return;
+        setSavedInspection(insp);
         if (insp && (insp.itemsCondition || insp.totalDeduction !== undefined)) {
           if (insp.customerStatus) {
             setCustomerStatus(insp.customerStatus);
@@ -617,8 +630,10 @@ function InspectionModal({ order, onClose, onSuccess }) {
           }
         }
       })
-      .catch(() => { });
-  }, [order._id]);
+      .catch(() => { if (active) setInspectionError('Không tải được biên bản.'); })
+      .finally(() => { if (active) setInspectionLoading(false); });
+    return () => { active = false; };
+  }, [order._id, inspectionReload]);
 
   // Xử lý chụp ảnh / tải ảnh bằng chứng hiện trạng váy (tự động nén ảnh nhẹ để tối ưu tốc độ và database)
   const handlePhotoUpload = (e) => {
@@ -660,8 +675,8 @@ function InspectionModal({ order, onClose, onSuccess }) {
     setEvidencePhotos((prev) => prev.filter((_, i) => i !== idx));
   };
 
-  const lateDays = calcLate(order.rentalEndDate);
-  const totalDeposit = Number(order.totalDeposit || 0);
+  const lateDays = savedInspection?.lateDays ?? calcLate(order.rentalEndDate, order.actualReturnDate);
+  const totalDeposit = Number(savedInspection?.initialDeposit ?? order.totalDeposit ?? 0);
   const totalRentPrice = Number(order.totalRentPrice || itemsCondition.reduce((acc, ic) => acc + (ic.rentPrice || 0), 0) || 0);
 
   // Phạt trễ hạn: 50% tiền thuê mỗi ngày, quá 5 ngày chưa trả tịch thu 100% tiền cọc
@@ -672,8 +687,9 @@ function InspectionModal({ order, onClose, onSuccess }) {
     lateFee = Math.min(totalDeposit, lateDays * Math.round(totalRentPrice * 0.5));
   }
   const totalCompensation = itemsCondition.reduce((acc, ic) => acc + Number(ic.compensation || 0), 0);
-  const totalDeduction = Math.min(totalDeposit, lateFee + totalCompensation);
-  const finalRefund = Math.max(0, totalDeposit - totalDeduction);
+  lateFee = savedInspection?.latePenaltyFee ?? lateFee;
+  const totalDeduction = savedInspection?.totalDeduction ?? Math.min(totalDeposit, lateFee + totalCompensation);
+  const finalRefund = savedInspection?.finalRefundAmount ?? Math.max(0, totalDeposit - totalDeduction);
   const hasSevereDamage = itemsCondition.some((ic) => {
     const conds = ic.conditions || [ic.condition];
     return conds.includes('total_damage');
@@ -788,7 +804,32 @@ function InspectionModal({ order, onClose, onSuccess }) {
     });
   };
 
-  const handleSubmit = async (actionType = 'complete') => {
+  const saveInspection = async (body) => {
+    setSubmitting(true);
+    try {
+      const result = await submitReturnInspection(order._id, body);
+      if (result.heldForAdmin) {
+        message.warning('Đã lưu biên bản và chuyển Admin xử lý.');
+      } else if (result.inspection?.customerStatus === 'pending') {
+        message.success('Đã lưu biên bản và chuyển sang chờ khách xác nhận.');
+      } else if (result.inspection?.refundStatus === 'not_required') {
+        message.success('Đơn đã hoàn tất. Số tiền cần hoàn là 0 đ.');
+      } else if (result.inspection?.refundConflict) {
+        message.warning('Đã lưu biên bản. Cần đối soát tiền cọc trước khi quyết toán.');
+      } else {
+        message.success(`Đã hoàn tất kiểm định. Chờ hoàn ${fmtVnd(result.inspection?.refundRemaining)} tiền cọc.`);
+      }
+      onSuccess(result);
+    } catch (error) {
+      message.error(error.response?.data?.message || error.message || 'Không lưu được biên bản. Vui lòng thử lại.');
+      setInspectionReload((value) => value + 1);
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  const handleSubmit = (actionType = 'complete') => {
+    if (isReadOnly || inspectionLoading || inspectionError || submitting) return;
     if (isCustomerApproved) {
       message.error('Khách hàng đã duyệt biên bản kiểm định, hồ sơ đã khóa và không thể chỉnh sửa.');
       return;
@@ -825,75 +866,48 @@ function InspectionModal({ order, onClose, onSuccess }) {
     }
 
     // Nếu hoàn tất kiểm định và có tiền hoàn trả thì bắt buộc nhập STK
-    if (!isHoldCase && finalRefund > 0 && !onSiteAccountNum.trim()) {
-      message.warning('Vui lòng nhập Số tài khoản (STK) nhận tiền của khách để đối soát chuyển khoản hoàn cọc.');
+    const confirmOnSite = isGuestOrder || actionType === 'complete';
+    if (!isHoldCase && confirmOnSite && finalRefund > 0 &&
+        (!onSiteBankName.trim() || !/^\d{6,30}$/.test(onSiteAccountNum.trim()) || !onSiteAccountHolder.trim())) {
+      message.warning('Vui lòng kiểm tra ngân hàng, số tài khoản và tên chủ tài khoản.');
       return;
     }
 
-    setSubmitting(true);
-    try {
-      const payload = itemsCondition.map((ic) => {
-        const curConditions = ic.conditions || [ic.condition || 'normal_wear'];
-        const damageItems = curConditions
-          .filter((cid) => cid !== 'normal_wear' && cid !== 'good')
-          .map((cid) => {
-            const cat = getDamageCatalogItem(cid);
-            return {
-              id: cat.id,
-              name: cat.name,
-              fee: cat.fixedFee,
-              feeLabel: cat.feeLabel,
-            };
-          });
+    const payload = itemsCondition.map((ic) => {
+      const conditions = ic.conditions || [ic.condition || 'normal_wear'];
+      const damages = conditions
+        .filter((id) => id !== 'normal_wear' && id !== 'good')
+        .map((id) => {
+          const damage = getDamageCatalogItem(id);
+          return { id: damage.id, name: damage.name, fee: damage.fixedFee, feeLabel: damage.feeLabel };
+        });
+      const condition = ic.condition || (conditions.includes('total_damage') ? 'total_damage' : conditions[0]);
+      const repairFee = Number(ic.compensation || 0);
 
-        const damageNames = formatMultipleDamageNames(curConditions);
-        const primaryCond = ic.condition || (curConditions.includes('total_damage') ? 'total_damage' : curConditions[0] || 'normal_wear');
-
-        return {
-          dressId: ic.dressId,
-          condition: primaryCond,
-          conditions: curConditions,
-          damages: damageItems,
-          damageName: damageNames,
-          feeLabel: `${fmtVnd(ic.compensation || 0)}`,
-          note: ic.damageNotes || '',
-          damageNotes: ic.damageNotes || '',
-          repairFee: Number(ic.compensation || 0),
-          compensation: Number(ic.compensation || 0),
-        };
-      });
-
-      const body = {
-        itemsCondition: payload,
-        evidencePhotos,
-        holdForAdmin: isHoldCase,
-        customerAgreed: !isHoldCase,
-        confirmOnSite: !isHoldCase,
-        disputeReason: isHoldCase
-          ? (customerDisputeNote.trim() || (itemsCondition.some((ic) => (ic.conditions || [ic.condition]).includes('total_damage')) ? 'Váy bị lỗi nặng / hư hại nghiêm trọng không thể may lại, chuyển Admin thẩm định xử lý' : 'Tạm giữ kiểm định - Chuyển Quản lý showroom đàm phán cùng khách hàng'))
-          : '',
-        refundMethod: 'bank_transfer',
-        refundBankDetails: !isHoldCase ? {
-          bankName: onSiteBankName || 'Vietcombank',
-          accountNumber: onSiteAccountNum || '',
-          accountHolder: onSiteAccountHolder || order.customerName || '',
-          notes: onSiteNotes || 'Chuyển khoản trực tiếp cho khách qua STK',
-        } : null,
+      return {
+        dressId: ic.dressId,
+        condition,
+        conditions,
+        damages,
+        damageName: formatMultipleDamageNames(conditions),
+        feeLabel: fmtVnd(repairFee),
+        note: ic.damageNotes || '',
+        repairFee,
       };
+    });
 
-      await submitReturnInspection(order._id, body);
-
-      if (isHoldCase) {
-        message.warning('Đã tạm giữ kiểm định & chuyển đơn sang [Tạm giữ - Chờ Quản lý đàm phán]!');
-      } else {
-        message.success(`Đã hoàn tất kiểm định váy! Đơn chuyển sang [Chờ Hoàn Cọc] (${fmtVnd(finalRefund)}).`);
-      }
-      onSuccess();
-    } catch (err) {
-      message.error(err?.response?.data?.message || err.message || 'Gửi biên bản kiểm định thất bại. Vui lòng thử lại.');
-    } finally {
-      setSubmitting(false);
-    }
+    return saveInspection({
+      itemsCondition: payload,
+      evidencePhotos,
+      holdForAdmin: isHoldCase,
+      confirmOnSite: !isHoldCase && confirmOnSite,
+      disputeReason: isHoldCase ? customerDisputeNote.trim() : '',
+      refundBankDetails: !isHoldCase && confirmOnSite && finalRefund > 0 ? {
+        bankName: onSiteBankName,
+        accountNumber: onSiteAccountNum,
+        accountHolder: onSiteAccountHolder,
+      } : null,
+    });
   };
 
   return (
@@ -1369,9 +1383,20 @@ function InspectionModal({ order, onClose, onSuccess }) {
             </div>
           )}
 
-          {/* Actions - Nút bấm hoàn tất chuẩn mực */}
-          <div className="flex gap-2.5 pt-1.5">
-            {isReadOnly ? (
+          {inspectionLoading && <p role="status">Đang tải biên bản…</p>}
+          {inspectionError && <p role="alert" className="text-red-700">{inspectionError} <button type="button" className="underline" onClick={() => setInspectionReload((value) => value + 1)}>Thử lại</button></p>}
+          {isReadOnly && !savedInspection && !inspectionLoading && !inspectionError && <p>Đơn chưa có biên bản kiểm định.</p>}
+          <div className="flex flex-wrap gap-2.5 pt-1.5">
+            {canResumeInspection ? (
+              <button
+                type="button"
+                onClick={() => saveInspection({})}
+                disabled={submitting || inspectionLoading || Boolean(inspectionError)}
+                className="w-full py-2.5 rounded-xl bg-[#733F49] text-white text-[12.5px] font-bold disabled:opacity-60"
+              >
+                {submitting ? 'Đang cập nhật…' : 'Cập nhật trạng thái trả váy'}
+              </button>
+            ) : isReadOnly ? (
               <button
                 type="button"
                 onClick={onClose}
@@ -1388,27 +1413,33 @@ function InspectionModal({ order, onClose, onSuccess }) {
                 >
                   Hủy
                 </button>
-                {hasSevereDamage ? (
-                  <button
+                <button
                     type="button"
-                    disabled={submitting}
+                    disabled={submitting || inspectionLoading || Boolean(inspectionError)}
                     onClick={() => handleSubmit('hold')}
                     className="flex-1 py-2.5 rounded-xl bg-[#8B2635] hover:bg-[#701E2A] text-white text-[12.5px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-1.5 shadow-xs"
-                    title="Tạm giữ kiểm định do váy bị lỗi nặng để chuyển Admin trực tiếp thẩm định"
+                    title="Chuyển Admin khi cần thẩm định hoặc khách chưa đồng ý"
                   >
                     {submitting ? <RefreshCw size={13} className="animate-spin" /> : <ShieldAlert size={14} />}
                     <span>Tạm Giữ Kiểm Định (Chuyển Admin)</span>
-                  </button>
-                ) : (
+                </button>
+                {!hasSevereDamage && (
                   <button
                     type="button"
-                    disabled={submitting}
+                    disabled={submitting || inspectionLoading || Boolean(inspectionError)}
                     onClick={() => handleSubmit('complete')}
                     className="flex-1 py-2.5 rounded-xl bg-[#1E8347] hover:bg-[#166534] text-white text-[12.5px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-1.5 shadow-xs"
                     title="Hoàn tất kiểm định và chuyển đơn sang trạng thái Chờ Hoàn Cọc"
                   >
                     {submitting ? <RefreshCw size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                    <span>Hoàn Tất Kiểm Định Váy</span>
+                    <span>Khách Đồng Ý Tại Quầy</span>
+                  </button>
+                )}
+                {!isGuestOrder && !hasSevereDamage && (
+                  <button type="button" disabled={submitting || inspectionLoading || Boolean(inspectionError)}
+                    onClick={() => handleSubmit('online')}
+                    className="rounded-xl border border-[#EFE5E1] px-4 py-2 text-xs font-semibold text-[#733F49] disabled:opacity-60">
+                    Gửi Khách Duyệt
                   </button>
                 )}
               </>
@@ -1425,7 +1456,9 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [agreedPenalty, setAgreedPenalty] = useState(0);
-  const [refundMethod, setRefundMethod] = useState('bank_transfer'); // 'cash' | 'bank_transfer'
+  const [transactionCode, setTransactionCode] = useState('');
+  const [loadError, setLoadError] = useState('');
+  const [reload, setReload] = useState(0);
   const [bankName, setBankName] = useState('Vietcombank');
   const [accountNumber, setAccountNumber] = useState('');
   const [accountHolder, setAccountHolder] = useState(order.customerName || '');
@@ -1435,32 +1468,36 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
 
   useEffect(() => {
     let active = true;
+    setLoading(true);
+    setLoadError('');
     getReturnInspection(order._id)
-      .then((res) => {
+      .then((insp) => {
         if (!active) return;
-        const insp = res?.data || res;
         setInspection(insp);
+        if (!insp) setLoadError('Đơn chưa có biên bản kiểm định.');
         if (insp) {
-          const initPenalty = insp.agreedPenaltyFee ?? insp.totalDeduction ?? 0;
-          setAgreedPenalty(initPenalty);
+          const initPenalty = insp.negotiatedByAdmin ? insp.agreedPenaltyFee : insp.totalDeduction;
+          setAgreedPenalty(initPenalty ?? 0);
           if (insp.refundBankDetails?.bankName) setBankName(insp.refundBankDetails.bankName);
           if (insp.refundBankDetails?.accountNumber) setAccountNumber(insp.refundBankDetails.accountNumber);
           if (insp.refundBankDetails?.accountHolder) setAccountHolder(insp.refundBankDetails.accountHolder);
           if (insp.adminNegotiationNotes) setNegotiationNotes(insp.adminNegotiationNotes);
         }
       })
-      .catch(() => { })
+      .catch(() => { if (active) setLoadError('Không tải được biên bản kiểm định.'); })
       .finally(() => {
         if (active) setLoading(false);
       });
     return () => {
       active = false;
     };
-  }, [order._id]);
+  }, [order._id, reload]);
 
-  const totalDeposit = Number(order.totalDeposit || 0);
+  const totalDeposit = Number(inspection?.initialDeposit ?? order.totalDeposit ?? 0);
   const staffInitialDeduction = inspection?.totalDeduction ?? 0;
   const finalRefund = Math.max(0, totalDeposit - agreedPenalty);
+  const remaining = Math.max(0, finalRefund - (inspection?.refundedAmount ?? 0));
+  const invalidRefund = inspection && (finalRefund > inspection.depositCollected || finalRefund < inspection.refundedAmount);
   const phone = order.customerPhone || order.phone || order.customer?.phone || '';
 
   const handleCopyPhone = () => {
@@ -1472,39 +1509,38 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
   };
 
   const handleSubmitAdminSettle = async () => {
+    if (loading || loadError || !inspection || submitting) return;
+    if (invalidRefund) {
+      message.error('Số tiền hoàn không khớp với giao dịch thu hoặc hoàn cọc đã ghi nhận.');
+      return;
+    }
     if (agreedPenalty > totalDeposit) {
       message.error(`Mức phạt không được vượt quá số tiền cọc (${fmtVnd(totalDeposit)})!`);
       return;
     }
-    if (refundMethod === 'bank_transfer' && finalRefund > 0 && !accountNumber.trim()) {
-      message.error('Vui lòng nhập số tài khoản ngân hàng để chuyển khoản hoàn tiền cho khách!');
+    if (remaining > 0 && (!bankName.trim() || !/^\d{6,30}$/.test(accountNumber.trim()) ||
+        !accountHolder.trim() || !transactionCode.trim())) {
+      message.error('Vui lòng kiểm tra tài khoản nhận tiền và nhập mã giao dịch đã chuyển.');
       return;
     }
 
     setSubmitting(true);
     try {
-      await settleInspectionAdmin(order._id, {
+      const result = await settleInspectionAdmin(order._id, {
         agreedPenaltyFee: agreedPenalty,
-        refundMethod,
-        bankName,
-        accountNumber,
-        accountHolder: accountHolder || order.customerName,
+        transactionCode,
+        expectedAmount: remaining,
         negotiationNotes,
-        refundBankDetails: refundMethod === 'cash' ? {
-          bankName: 'Tiền mặt tại quầy',
-          accountNumber: 'TIỀN MẶT',
-          accountHolder: order.customerName,
-          notes: negotiationNotes || 'Admin đã đàm phán và hoàn tiền mặt trực tiếp cho khách',
-        } : {
+        refundBankDetails: {
           bankName,
           accountNumber,
           accountHolder,
-          notes: negotiationNotes || 'Admin đã đàm phán và chuyển khoản hoàn tiền cho khách',
+          notes: negotiationNotes,
         },
       });
 
-      message.success(`Admin đã xác nhận đàm phán thành công! Đơn hàng đã chuyển sang Hoàn tất và gửi email kèm biên lai hoàn cọc.`);
-      onSuccess();
+      message.success('Đã lưu kết quả đàm phán và quyết toán cọc.');
+      onSuccess(result);
     } catch (err) {
       message.error(err?.response?.data?.message || err.message || 'Xác nhận đàm phán thất bại. Vui lòng thử lại.');
     } finally {
@@ -1717,8 +1753,10 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
               </div>
             </div>
 
-            {/* Chuyển khoản ngân hàng (STK) duy nhất */}
-            <div className="bg-white p-3 rounded-xl border border-[#D5E8D8] space-y-2 text-[11.5px]">
+            {invalidRefund && <p role="alert" className="text-xs font-semibold text-amber-800">
+              Cần đối soát cọc. Đã thu {fmtVnd(inspection.depositCollected)}, đã hoàn {fmtVnd(inspection.refundedAmount)}.
+            </p>}
+            {remaining > 0 && !invalidRefund && <div className="bg-white p-3 rounded-xl border border-[#D5E8D8] space-y-2 text-[11.5px]">
               <div className="flex items-center justify-between flex-wrap gap-2">
                 <span className="text-stone-800 font-bold flex items-center gap-1.5 text-xs">
                   <CreditCard size={14} className="text-[#1E8347]" />
@@ -1761,7 +1799,12 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
                   />
                 </div>
               </div>
-            </div>
+              <label htmlFor="negotiation-refund-reference" className="mt-2 block">
+                Mã giao dịch sau khi đã chuyển {fmtVnd(remaining)} <span className="text-red-600">*</span>
+              </label>
+              <Input id="negotiation-refund-reference" size="small" value={transactionCode} maxLength={100}
+                onChange={(event) => setTransactionCode(event.target.value)} />
+            </div>}
 
             {/* Ghi chú kết quả đàm phán */}
             <div className="bg-white p-3 rounded-xl border border-[#D5E8D8]">
@@ -1778,6 +1821,7 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
             </div>
           </div>
 
+          {loadError && <p role="alert" className="text-red-700">{loadError} <button type="button" className="underline" onClick={() => setReload((value) => value + 1)}>Thử lại</button></p>}
           {/* Actions */}
           <div className="flex gap-2.5 pt-1">
             <button
@@ -1789,12 +1833,12 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
             </button>
             <button
               type="button"
-              disabled={submitting}
+              disabled={submitting || loading || Boolean(loadError) || !inspection || invalidRefund || (remaining > 0 && !transactionCode.trim())}
               onClick={handleSubmitAdminSettle}
               className="flex-1 py-2.5 rounded-xl bg-[#1E8347] hover:bg-[#166534] text-white text-[12.5px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 shadow-xs"
             >
               {submitting ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={15} />}
-              <span>XÁC NHẬN ĐÀM PHÁN & HOÀN TIỀN ({fmtVnd(finalRefund)})</span>
+              <span>{remaining > 0 ? 'LƯU ĐÀM PHÁN VÀ GIAO DỊCH HOÀN CỌC' : 'LƯU KẾT QUẢ ĐÀM PHÁN'}</span>
             </button>
           </div>
         </div>
@@ -1820,45 +1864,47 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
 function RefundModal({ order, onClose, onSuccess }) {
   const [submitting, setSubmitting] = useState(false);
   const [refundNote, setRefundNote] = useState('');
+  const [transactionCode, setTransactionCode] = useState('');
   const [inspectionData, setInspectionData] = useState(null);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState('');
+  const [reload, setReload] = useState(0);
 
   useEffect(() => {
+    let active = true;
+    setLoading(true);
+    setLoadError('');
+    setInspectionData(null);
     getReturnInspection(order._id)
-      .then((res) => {
-        const insp = res?.data || res;
-        if (insp && (insp.itemsCondition || insp.totalDeduction !== undefined)) {
-          setInspectionData(insp);
+      .then((inspection) => {
+        if (active) {
+          setInspectionData(inspection);
+          if (!inspection) setLoadError('Đơn chưa có biên bản kiểm định.');
         }
       })
-      .catch(() => { });
-  }, [order._id]);
+      .catch(() => { if (active) setLoadError('Không tải được biên bản kiểm định.'); })
+      .finally(() => { if (active) setLoading(false); });
+    return () => { active = false; };
+  }, [order._id, reload]);
 
-  const lateDays = inspectionData?.lateDays ?? calcLate(order.rentalEndDate);
-  const totalDeposit = Number(order.totalDeposit || 0);
-  const totalRentPrice = Number(order.totalRentPrice || 0);
-  let lateFee = inspectionData?.latePenaltyFee;
-  if (lateFee === undefined) {
-    if (lateDays > 5) {
-      lateFee = totalDeposit;
-    } else if (lateDays > 0) {
-      lateFee = Math.min(totalDeposit, lateDays * Math.round(totalRentPrice * 0.5));
-    } else {
-      lateFee = 0;
-    }
-  }
-  const compensation = inspectionData?.itemsCondition?.reduce((sum, item) => sum + (item.repairFee || 0), 0) ?? 0;
-  const totalDeduction = inspectionData?.totalDeduction ?? Math.min(totalDeposit, lateFee + compensation);
-  const finalRefund = inspectionData?.finalRefundAmount ?? Math.max(0, totalDeposit - totalDeduction);
-
+  const lateDays = inspectionData?.lateDays ?? 0;
+  const totalDeduction = inspectionData?.totalDeduction;
+  const lateFee = Math.min(inspectionData?.latePenaltyFee ?? 0, totalDeduction ?? 0);
+  const compensation = (totalDeduction ?? 0) - lateFee;
+  const finalRefund = inspectionData?.finalRefundAmount;
+  const remaining = inspectionData?.refundRemaining;
+  const refundConflict = inspectionData?.refundConflict;
+  const canConfirm = inspectionData?.canConfirmRefund && !loading && !loadError;
   const handleConfirmRefund = async () => {
+    if (!canConfirm || submitting || (remaining > 0 && !transactionCode.trim())) return;
     setSubmitting(true);
     try {
-      await updateOrderStatus(order._id, 'completed');
-      recordCompletedOrderMaintenance(order);
-      message.success(`Hoàn cọc thành công ${fmtVnd(finalRefund)}! Đơn hàng đã chuyển sang trạng thái Hoàn Tất.`);
-      onSuccess();
-    } catch {
-      message.error('Quyết toán hoàn cọc thất bại. Vui lòng thử lại.');
+      const result = await confirmDepositRefund(order._id, { transactionCode, notes: refundNote, expectedAmount: remaining });
+      message.success(remaining > 0 ? 'Đã ghi nhận giao dịch hoàn cọc.' : 'Đã lưu quyết toán cọc.');
+      onSuccess(result);
+    } catch (error) {
+      message.error(error.message || 'Không thể ghi nhận hoàn cọc. Vui lòng thử lại.');
+      setReload((value) => value + 1);
     } finally {
       setSubmitting(false);
     }
@@ -1917,16 +1963,27 @@ function RefundModal({ order, onClose, onSuccess }) {
               <span className="text-[#8C7D7E]">Tình trạng kiểm định:</span>
               <span className="inline-flex items-center gap-1 font-bold text-[#1E8347] bg-[#EAF7EE] px-2 py-0.5 rounded-md">
                 <CheckCircle2 size={12} />
-                {totalDeduction === 0 ? 'Phom dáng 100% nguyên vẹn (Đạt)' : `Đã khấu trừ bồi thường (${fmtVnd(totalDeduction)})`}
+                {totalDeduction == null ? 'Chưa có kết quả' : totalDeduction === 0 ? 'Không khấu trừ' : `Đã khấu trừ ${fmtVnd(totalDeduction)}`}
               </span>
             </div>
           </div>
 
-          {/* Chi tiết tính toán hoàn trả */}
-          <div className="p-4 rounded-xl bg-[#FFF9F6] border border-[#F2E5E0] space-y-2.5">
+          {loading && <p role="status">Đang tải biên bản…</p>}
+          {loadError && <p role="alert" className="text-red-700">{loadError} <button type="button" className="underline" onClick={() => setReload((value) => value + 1)}>Thử lại</button></p>}
+          {refundConflict && <p role="alert" className="text-amber-800 font-semibold">
+            {refundConflict === 'refund_exceeds_agreement'
+              ? 'Số tiền đã hoàn vượt mức trên biên bản. Cần đối chiếu sao kê.'
+              : 'Tiền hoàn theo biên bản vượt số cọc đã thu. Cần đối soát giao dịch thu cọc.'}
+          </p>}
+          {inspectionData && !canConfirm && !refundConflict && <p role="status">Biên bản chưa đủ điều kiện ghi nhận hoàn cọc hoặc đã được quyết toán.</p>}
+          {inspectionData && <div className="p-4 rounded-xl bg-[#FFF9F6] border border-[#F2E5E0] space-y-2.5">
             <div className="flex justify-between text-[#7A6B6C]">
               <span>1. Tiền cọc bảo lãnh ban đầu:</span>
-              <span className="font-semibold text-[#2C2523]">{fmtVnd(order.totalDeposit)}</span>
+              <span className="font-semibold text-[#2C2523]">{fmtVnd(inspectionData.initialDeposit ?? order.totalDeposit)}</span>
+            </div>
+            <div className="flex justify-between text-[#7A6B6C]">
+              <span>Tiền cọc đã thu:</span>
+              <span className="font-semibold text-[#2C2523]">{fmtVnd(inspectionData.depositCollected)}</span>
             </div>
             {lateDays > 0 && (
               <div className="flex justify-between text-[#92400E]">
@@ -1942,14 +1999,14 @@ function RefundModal({ order, onClose, onSuccess }) {
             )}
             <div className="flex justify-between items-baseline pt-2.5 mt-2 border-t border-[#ECDCD6]">
               <div>
-                <span className="font-bold text-[13px] text-[#2C2523] block">SỐ TIỀN THỰC TẾ HOÀN TRẢ:</span>
-                <span className="text-[11px] text-[#8C7D7E]">Đúng theo biên bản kiểm định đối soát</span>
+                  <span className="font-bold text-[13px] text-[#2C2523] block">SỐ TIỀN CHƯA GHI NHẬN HOÀN</span>
+                  <span className="text-[11px] text-[#8C7D7E]">Theo biên bản: {fmtVnd(finalRefund)} · Đã ghi nhận: {fmtVnd(inspectionData.refundedAmount)}</span>
               </div>
               <span className="font-sans text-[20px] font-bold text-[#1E8347]">
-                {fmtVnd(finalRefund)}
+                 {remaining == null ? '—' : fmtVnd(remaining)}
               </span>
             </div>
-          </div>
+          </div>}
 
           {/* Thông tin tài khoản ngân hàng thụ hưởng của khách */}
           {inspectionData?.refundBankDetails && (
@@ -1976,17 +2033,30 @@ function RefundModal({ order, onClose, onSuccess }) {
           )}
 
           {/* Ghi chú đối soát */}
-          <div className="p-3 rounded-xl border border-[#EFE5E1] bg-white">
-            <label className="text-[11.5px] text-[#8C7D7E] block mb-1">
-              Ghi chú đối soát / Mã giao dịch ngân hàng (Tùy chọn):
+          {canConfirm && remaining > 0 && <div className="p-3 rounded-xl border border-[#EFE5E1] bg-white space-y-2">
+            <p className="m-0 text-[11.5px] text-[#786663]">
+              {inspectionData.refundNeedsReconciliation
+                ? 'Biên bản cũ ghi đã hoàn nhưng thiếu giao dịch. Kiểm tra sao kê để tránh chuyển khoản lần nữa.'
+                : 'Đối chiếu giao dịch ngân hàng của đơn trước khi xác nhận.'}
+            </p>
+            <label htmlFor="refund-reference" className="text-[11.5px] text-[#8C7D7E] block">
+              Mã giao dịch sau khi đã chuyển khoản <span className="text-red-600">*</span>
             </label>
             <Input
-              placeholder="VD: Đã chuyển khoản qua STK Vietcombank lúc 15:30, mã GD: FT26001..."
+              id="refund-reference"
+              value={transactionCode}
+              onChange={(e) => setTransactionCode(e.target.value)}
+              maxLength={100}
+              required
+            />
+            <Input
+              aria-label="Ghi chú đối soát (tùy chọn)"
+              placeholder="Ghi chú đối soát (tùy chọn)"
               value={refundNote}
               onChange={(e) => setRefundNote(e.target.value)}
               className="text-[12px] rounded-lg"
             />
-          </div>
+          </div>}
 
           {/* Buttons */}
           <div className="flex gap-3 pt-2">
@@ -1999,7 +2069,7 @@ function RefundModal({ order, onClose, onSuccess }) {
             </button>
             <button
               type="button"
-              disabled={submitting}
+              disabled={submitting || !canConfirm || (remaining > 0 && !transactionCode.trim())}
               onClick={handleConfirmRefund}
               className="flex-1 py-2.5 rounded-xl bg-[#1E8347] text-[12.5px] font-bold text-white hover:bg-[#166534] transition-colors border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 shadow-xs"
             >
@@ -2008,7 +2078,7 @@ function RefundModal({ order, onClose, onSuccess }) {
               ) : (
                 <CheckCircle2 size={15} />
               )}
-              <span>Xác Nhận Đã Hoàn Cọc</span>
+              <span>{remaining === 0 ? 'Hoàn Tất Quyết Toán' : 'Xác Nhận Đã Hoàn Cọc'}</span>
             </button>
           </div>
         </div>
@@ -2022,7 +2092,7 @@ function RefundModal({ order, onClose, onSuccess }) {
 export default function OrderRentalManagement() {
   const [searchParams] = useSearchParams();
   const location = useLocation();
-  const { user } = useAuth();
+  const { user, isAdmin } = useAuth();
   const isStaffContext =
     location.pathname.startsWith('/staff') ||
     (user?.role === 'staff' && !location.pathname.startsWith('/admin'));
@@ -2054,8 +2124,7 @@ export default function OrderRentalManagement() {
   const [highlightedOrderCode, setHighlightedOrderCode] = useState(queryOrderCode);
   const autoHandledRef = useRef(false);
 
-  const [statusFilter, setStatusFilter] = useState('all');
-  const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
+  const [statusFilter, setStatusFilter] = useState(() => searchParams.get('status') === 'waiting_refund' ? 'waiting_refund' : 'all');
   const [viewMode, setViewMode] = useState('active'); // 'active' (Đơn Đang Xử Lý) | 'archived' (Kho Lưu Trữ)
   const [sortField, setSortField] = useState('orderCode'); // 'orderCode' | 'customer' | 'rentalDate' | 'deposit' | 'status'
   const [sortOrder, setSortOrder] = useState('desc'); // 'desc': mới nhất -> cũ nhất, 'asc': cũ nhất -> mới nhất
@@ -2096,7 +2165,7 @@ export default function OrderRentalManagement() {
         params.viewMode = viewMode;
       }
 
-      const result = await getAllOrdersAdmin(params);
+      const result = await getAllOrdersAdmin(params, false, { throwOnError: true });
       const rawList = result.orders || [];
 
       setOrders(rawList);
@@ -2133,6 +2202,13 @@ export default function OrderRentalManagement() {
     loadOrders();
   };
 
+  const syncReturnResult = ({ order, inspection }) => {
+    setOrders((previous) => previous.map((row) => (
+      row._id === order._id ? { ...row, ...order, inspection } : row
+    )));
+    loadOrders();
+  };
+
   useEffect(() => {
     loadOrders(Boolean(initialCached));
   }, [loadOrders]);
@@ -2158,7 +2234,7 @@ export default function OrderRentalManagement() {
       }
 
       if (queryAction === 'inspect') {
-        setInspectionOrder(found);
+        if (canInspectOrder(found) || found.inspection) setInspectionOrder(found);
       }
 
       setTimeout(() => {
@@ -2175,7 +2251,7 @@ export default function OrderRentalManagement() {
       return () => clearTimeout(timer);
     } else if (!loading) {
       // Trường hợp đơn hàng không nằm ở trang 1, gọi getOrder để nạp trực tiếp
-      getOrder(cleanQ)
+      getOrderForManagement(cleanQ)
         .then((detail) => {
           if (detail) {
             autoHandledRef.current = true;
@@ -2193,7 +2269,7 @@ export default function OrderRentalManagement() {
             });
 
             if (queryAction === 'inspect') {
-              setInspectionOrder(detail);
+              if (canInspectOrder(detail) || detail.inspection) setInspectionOrder(detail);
             }
 
             setTimeout(() => {
@@ -2225,14 +2301,7 @@ export default function OrderRentalManagement() {
   }, [globalStats, orders]);
 
   // ── Đơn hàng có khiếu nại từ khách hàng ─────────────────────────────────
-  const disputedOrders = useMemo(() => {
-    return orders.filter(
-      (o) =>
-        o.inspection?.customerStatus === 'disputed' ||
-        o.inspectionCustomerStatus === 'disputed' ||
-        o.status === 'disputed'
-    );
-  }, [orders]);
+  const disputedOrders = useMemo(() => orders.filter(hasDisputedInspection), [orders]);
 
   const notifiedDisputesRef = useRef(new Set());
 
@@ -2253,7 +2322,7 @@ export default function OrderRentalManagement() {
             description: (
               <div className="space-y-1.5 text-xs font-jakarta">
                 <p className="m-0 text-[#2C2523]">
-                  Đơn hàng <strong>#{ord.orderCode}</strong> — Khách hàng <strong>{ord.customerName}</strong> ({ord.customerPhone || 'SĐT'}) vừa gửi khiếu nại về biên bản kiểm định.
+                    Biên bản đơn <strong>#{ord.orderCode}</strong> đang chờ xử lý. Khách hàng <strong>{ord.customerName}</strong> ({ord.customerPhone || 'Chưa có SĐT'}).
                 </p>
                 {ord.inspection?.disputeReason && (
                   <p className="m-0 text-red-700 italic bg-red-50 p-2 rounded-lg border border-red-200">
@@ -2265,7 +2334,7 @@ export default function OrderRentalManagement() {
                     type="button"
                     onClick={() => {
                       notification.destroy(key);
-                      setInspectionOrder(ord);
+                      if (isAdmin) setNegotiationOrder(ord); else setInspectionOrder(ord);
                     }}
                     className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold border-0 cursor-pointer shadow-xs transition-colors"
                   >
@@ -2280,7 +2349,7 @@ export default function OrderRentalManagement() {
         }
       });
     }
-  }, [disputedOrders]);
+  }, [disputedOrders, isAdmin]);
 
   // ── Client-side filter (for demo fallback và search) ───────────────────────
   const filteredOrders = useMemo(() => {
@@ -2299,10 +2368,7 @@ export default function OrderRentalManagement() {
           return (it.name || '').toLowerCase().includes(qRaw) || (c && c.toLowerCase().includes(cleanQ));
         });
 
-      const isDisputed =
-        o.inspection?.customerStatus === 'disputed' ||
-        o.inspectionCustomerStatus === 'disputed' ||
-        o.status === 'disputed';
+      const isDisputed = hasDisputedInspection(o);
 
       const matchStatus =
         statusFilter === 'all'
@@ -2310,7 +2376,7 @@ export default function OrderRentalManagement() {
           : statusFilter === 'disputed'
             ? isDisputed
             : (statusFilter === 'waiting_refund' || statusFilter === 'returned')
-              ? (o.status === 'waiting_refund' || o.status === 'returned')
+              ? o.inspection?.canConfirmRefund || o.inspection?.refundConflict
               : o.status === statusFilter;
 
       // Khi người dùng đang tìm kiếm cụ thể: Hiển thị ngay kết quả kể cả đơn nằm ở Kho Lưu Trữ
@@ -2319,8 +2385,8 @@ export default function OrderRentalManagement() {
       }
 
       // Khi lọc đơn khiếu nại: Hiển thị luôn không phân biệt active/archived
-      if (statusFilter === 'disputed') {
-        return matchSearch && isDisputed;
+      if (['disputed', 'waiting_refund', 'returned'].includes(statusFilter)) {
+        return matchSearch && matchStatus;
       }
 
       // Khi không tìm kiếm: Phân tách rõ ràng giữa Đơn Đang Xử Lý và Kho Lưu Trữ
@@ -2372,9 +2438,6 @@ export default function OrderRentalManagement() {
       return 0;
     });
   }, [orders, searchTerm, statusFilter, viewMode, sortField, sortOrder]);
-
-  const selectedFilterLabel =
-    FILTER_OPTIONS.find((opt) => opt.value === statusFilter)?.label ?? 'Tất Cả Trạng Thái';
 
   // ── Pagination helper ────────────────────────────────────────────────────
   const pageNumbers = useMemo(() => {
@@ -2446,7 +2509,7 @@ export default function OrderRentalManagement() {
               </span>
               <span className="font-bold text-red-900 text-[14px] sm:text-[15.5px] flex items-center gap-2">
                 <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
-                <span>CẢNH BÁO: CÓ {disputedOrders.length} ĐƠN HÀNG ĐANG BỊ KHÁCH KHIẾU NẠI!</span>
+                <span>{disputedOrders.length} ĐƠN TRÊN TRANG NÀY CẦN XỬ LÝ BIÊN BẢN</span>
               </span>
             </div>
             <button
@@ -2457,7 +2520,7 @@ export default function OrderRentalManagement() {
               }}
               className="text-xs font-bold text-red-700 hover:text-red-900 underline cursor-pointer bg-transparent border-0"
             >
-              Lọc danh sách {disputedOrders.length} đơn khiếu nại →
+              Xem danh sách cần xử lý →
             </button>
           </div>
 
@@ -2487,11 +2550,11 @@ export default function OrderRentalManagement() {
                 </div>
                 <button
                   type="button"
-                  onClick={() => setNegotiationOrder(ord)}
+                  onClick={() => isAdmin ? setNegotiationOrder(ord) : setInspectionOrder(ord)}
                   className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-bold text-xs shrink-0 cursor-pointer shadow-xs transition-all flex items-center justify-center gap-1.5 border-0"
                 >
                   <PhoneCall size={14} />
-                  <span>Admin Đàm Phán & Xử Lý Ngay</span>
+                  <span>{isAdmin ? 'Đàm Phán & Xử Lý' : 'Xem Biên Bản'}</span>
                 </button>
               </div>
             ))}
@@ -2617,10 +2680,16 @@ export default function OrderRentalManagement() {
         </div>
 
         <div className="flex items-center gap-2 shrink-0 overflow-x-auto pb-1 md:pb-0">
+          <button type="button"
+            aria-pressed={statusFilter === 'waiting_refund'}
+            onClick={() => { setViewMode('active'); setStatusFilter(statusFilter === 'waiting_refund' ? 'all' : 'waiting_refund'); setActivePage(1); }}
+            className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-[#EFE5E1] px-3 py-2 text-xs font-semibold ${statusFilter === 'waiting_refund' ? 'bg-[#733F49] text-white' : 'bg-[#FCF7F4] text-[#733F49] hover:bg-[#FAF0EC]'}`}>
+            <Banknote size={14} aria-hidden="true" /> Chờ Hoàn Cọc
+          </button>
           <button
             type="button"
             onClick={() => { setViewMode('active'); setStatusFilter('all'); setActivePage(1); }}
-            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer border-0 ${viewMode === 'active'
+            className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer border-0 ${viewMode === 'active' && statusFilter !== 'waiting_refund'
               ? 'bg-[#733F49] text-white shadow-xs'
               : 'bg-[#FCF7F4] text-[#7A6B6C] hover:bg-[#FAF0EC] hover:text-[#733F49]'
               }`}
@@ -2760,7 +2829,7 @@ export default function OrderRentalManagement() {
                         <FolderArchive size={32} className="text-[#8C7D7E] mb-2 opacity-60" />
                         <p className="font-medium text-[#4A3B3D]">Kho lưu trữ hiện chưa có đơn hoàn tất nào.</p>
                         <p className="text-[12px] text-[#A39293] mt-0.5">
-                          Các đơn sau khi kiểm định và quyết toán cọc sẽ tự động chuyển vào đây.
+                          Các đơn đã hoàn tất hoặc hủy được lưu tại đây.
                         </p>
                       </div>
                     ) : (
@@ -2771,11 +2840,8 @@ export default function OrderRentalManagement() {
               ) : (
                 filteredOrders.map((order) => {
                   const firstItem = order.items?.[0] || {};
-                  const canInspect = order.status === 'renting' || order.status === 'delivered';
-                  const isDisputed =
-                    order.inspection?.customerStatus === 'disputed' ||
-                    order.inspectionCustomerStatus === 'disputed' ||
-                    order.status === 'disputed';
+                  const canInspect = canInspectOrder(order);
+                  const isDisputed = hasDisputedInspection(order);
                   const isHighlighted =
                     highlightedOrderCode &&
                     ((order.orderCode && order.orderCode.toLowerCase().replace(/^[#\s]+/, '') === highlightedOrderCode.toLowerCase().replace(/^[#\s]+/, '')) ||
@@ -2873,7 +2939,7 @@ export default function OrderRentalManagement() {
                             <span>Chi Tiết</span>
                           </button>
                           {/* ĐỐI VỚI CÁC ĐƠN ĐÃ HOÀN TẤT TRONG KHO LƯU TRỮ */}
-                          {isArchived(order) ? (
+                          {isArchived(order) && !order.inspection?.canConfirmRefund && !order.inspection?.refundConflict && !isDisputed ? (
                             <button
                               type="button"
                               onClick={() => setInspectionOrder(order)}
@@ -2883,7 +2949,7 @@ export default function OrderRentalManagement() {
                               <FileText size={13} />
                               <span>Hồ Sơ Lưu Trữ</span>
                             </button>
-                          ) : order.status === 'renting' ? (
+                          ) : canInspect ? (
                             <button
                               type="button"
                               onClick={() => setInspectionOrder(order)}
@@ -2891,29 +2957,29 @@ export default function OrderRentalManagement() {
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#733F49] text-white text-[12px] font-bold hover:bg-[#5C3038] shadow-xs transition-all cursor-pointer"
                             >
                               <ShieldCheck size={13} />
-                              <span>Kiểm Định Trả Váy</span>
+                              <span>{order.inspection ? 'Cập Nhật Trả Váy' : 'Kiểm Định Trả Váy'}</span>
                             </button>
-                          ) : (order.status === 'disputed' || isDisputed) ? (
+                          ) : isDisputed ? (
                             <button
                               type="button"
-                              onClick={() => setNegotiationOrder(order)}
+                              onClick={() => isAdmin ? setNegotiationOrder(order) : setInspectionOrder(order)}
                               title="Admin trực tiếp gọi điện đàm phán mức phạt & hoàn tất đơn"
                               className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 border border-red-600 shadow-xs text-[12px] font-bold transition-all cursor-pointer"
                             >
                               <PhoneCall size={13} />
-                              <span>Đàm Phán & Xử Lý</span>
+                              <span>{isAdmin ? 'Đàm Phán & Xử Lý' : 'Xem Biên Bản'}</span>
                             </button>
-                          ) : (order.status === 'returned' || order.status === 'waiting_refund') ? (
+                          ) : (order.status === 'returned' || order.status === 'waiting_refund' || order.inspection) ? (
                             <div className="inline-flex items-center gap-1.5">
-                              <button
+                              {(order.inspection?.canConfirmRefund || order.inspection?.refundConflict) && <button
                                 type="button"
                                 onClick={() => setRefundOrder(order)}
-                                title="Bước 2: Hoàn tiền cọc qua chuyển khoản và chuyển đơn sang Hoàn Tất"
+                                title="Mở biên bản để ghi nhận giao dịch hoàn cọc"
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1E8347] hover:bg-[#166534] text-white text-[12px] font-bold shadow-xs transition-all cursor-pointer"
                               >
                                 <Banknote size={14} />
-                                <span>Hoàn Cọc</span>
-                              </button>
+                                <span>{order.inspection.refundConflict ? 'Đối Soát Cọc' : order.inspection.refundRemaining > 0 ? 'Hoàn Cọc' : 'Quyết Toán'}</span>
+                              </button>}
                               <button
                                 type="button"
                                 onClick={() => setInspectionOrder(order)}
@@ -3009,37 +3075,21 @@ export default function OrderRentalManagement() {
         <InspectionModal
           order={inspectionOrder}
           onClose={() => setInspectionOrder(null)}
-          onSuccess={() => {
-            const updatedId = inspectionOrder._id;
+          onSuccess={(result) => {
             setInspectionOrder(null);
-            setOrders((prev) => {
-              const next = prev.map((o) => (o._id === updatedId ? { ...o, status: 'waiting_refund' } : o));
-              try {
-                localStorage.setItem('unibridal_orders_local', JSON.stringify(next));
-              } catch { }
-              return next;
-            });
-            loadOrders();
+            syncReturnResult(result);
           }}
         />
       )}
 
       {/* Bước 3 & 4: Admin Negotiation Modal (Admin trực tiếp đàm phán mức phạt & hoàn tất đơn) */}
-      {negotiationOrder && (
+      {isAdmin && negotiationOrder && (
         <AdminNegotiationModal
           order={negotiationOrder}
           onClose={() => setNegotiationOrder(null)}
-          onSuccess={() => {
-            const updatedId = negotiationOrder._id;
+          onSuccess={(result) => {
             setNegotiationOrder(null);
-            setOrders((prev) => {
-              const next = prev.map((o) => (o._id === updatedId ? { ...o, status: 'completed' } : o));
-              try {
-                localStorage.setItem('unibridal_orders_local', JSON.stringify(next));
-              } catch { }
-              return next;
-            });
-            loadOrders();
+            syncReturnResult(result);
           }}
         />
       )}
@@ -3049,17 +3099,9 @@ export default function OrderRentalManagement() {
         <RefundModal
           order={refundOrder}
           onClose={() => setRefundOrder(null)}
-          onSuccess={() => {
-            const updatedId = refundOrder._id;
+          onSuccess={(result) => {
             setRefundOrder(null);
-            setOrders((prev) => {
-              const next = prev.map((o) => (o._id === updatedId ? { ...o, status: 'completed' } : o));
-              try {
-                localStorage.setItem('unibridal_orders_local', JSON.stringify(next));
-              } catch { }
-              return next;
-            });
-            loadOrders();
+            syncReturnResult(result);
           }}
         />
       )}

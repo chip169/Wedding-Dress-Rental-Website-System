@@ -161,6 +161,7 @@ export async function sendInspectionNotificationEmail({
   bankDetails = null,
   returnUrl = null,
   isGuest = false,
+  customerStatus = 'pending',
 }) {
   const transporter = createTransporter();
   const formatMoney = (amount) => Number(amount || 0).toLocaleString('vi-VN') + ' đ';
@@ -242,9 +243,11 @@ export async function sendInspectionNotificationEmail({
             ✦ Đối chiếu Hợp đồng: Toàn bộ chi phí phục chế được áp dụng theo mức cố định niêm yết tại <strong>Điều 5 & Phụ lục Hợp đồng thuê váy</strong> đã ký kết, đảm bảo tính minh bạch tuyệt đối.
           </p>
           <p style="font-size: 13px; line-height: 1.6; color: #514344; margin: 0;">
-            ${isGuest
-              ? 'Dưới đây là chi tiết biên bản kiểm định và bảng quyết toán hoàn trả tiền cọc bảo lãnh của nàng sau khi bàn giao lễ phục.'
-              : 'Nàng vui lòng xem bảng quyết toán dưới đây. Khi nàng xác nhận đồng ý, hệ thống sẽ tiến hành giải ngân hoàn cọc về tài khoản ngân hàng của nàng.'}
+            ${customerStatus === 'disputed'
+              ? 'Showroom đang rà soát biên bản và sẽ liên hệ với nàng về kết quả xử lý.'
+              : !isGuest && customerStatus === 'pending'
+                ? 'Vui lòng kiểm tra biên bản và gửi phản hồi. Showroom sẽ xử lý khoản hoàn cọc sau khi đối soát.'
+                : 'Dưới đây là kết quả kiểm định và số tiền hoàn cọc theo biên bản.'}
           </p>
         </div>
 
@@ -274,13 +277,11 @@ export async function sendInspectionNotificationEmail({
         <!-- Nút hành động nổi bật dành riêng cho tài khoản thành viên -->
         <div style="text-align: center; margin: 32px 0 16px 0;">
           <a href="${returnUrl}" style="display: inline-block; background: linear-gradient(135deg, #733F49 0%, #54222B 100%); color: #FFFFFF; text-decoration: none; padding: 14px 36px; border-radius: 50px; font-weight: bold; font-size: 14px; box-shadow: 0 4px 14px rgba(115, 63, 73, 0.28); letter-spacing: 0.5px;">
-            ✦ Xem Chi Tiết Biên Bản và Xác Nhận Nhận Cọc
+            Xem biên bản kiểm định
           </a>
         </div>
 
-        <p style="font-size: 12px; color: #847374; text-align: center; margin-top: 14px;">
-          Nếu chưa hài lòng với kết quả kiểm định, nàng có quyền gửi đơn khiếu nại trong vòng 24 giờ trực tiếp trên hệ thống hoặc qua hotline hỗ trợ.
-        </p>
+        ${customerStatus === 'pending' ? '<p style="font-size: 12px; color: #847374; text-align: center; margin-top: 14px;">Nếu chưa đồng ý, nàng có thể phản hồi trong hồ sơ đơn thuê.</p>' : ''}
         ` : `
         <!-- Thông báo đối soát dành cho khách vãng lai (Guest - Không gửi kèm link dẫn) -->
         <div style="background: #FDF9F6; border: 1px dashed #DDC6C0; border-radius: 12px; padding: 18px 22px; margin: 28px 0 14px 0; text-align: center; line-height: 1.6;">
@@ -288,7 +289,9 @@ export async function sendInspectionNotificationEmail({
             ✦ THÔNG BÁO QUY TRÌNH HOÀN CỌC DÀNH CHO KHÁCH HÀNG
           </div>
           <p style="font-size: 13px; color: #514344; margin: 0 0 8px 0;">
-            Showroom Atelier UniBridal sẽ tiến hành giải ngân khoản tiền cọc thực nhận <strong>${formatMoney(finalRefundAmount)}</strong> trực tiếp về tài khoản ngân hàng của nàng theo thông tin đối soát niêm yết trên.
+            ${customerStatus === 'disputed'
+              ? 'Showroom sẽ trao đổi với nàng trước khi chốt khoản hoàn cọc.'
+              : 'Showroom sẽ đối soát và xử lý khoản hoàn cọc theo biên bản.'}
           </p>
           <p style="font-size: 12px; color: #847374; margin: 0;">
             Nếu cần hỗ trợ thêm thông tin hoặc giải đáp thắc mắc, nàng vui lòng liên hệ Hotline: <strong style="color: #733F49;">0908 123 888</strong>.
@@ -325,7 +328,7 @@ export async function sendInspectionNotificationEmail({
 }
 
 /**
- * Gửi email thông báo hoàn cọc thành công sau khi khách duyệt biên bản
+ * Gửi email sau khi giao dịch hoàn cọc đã được ghi nhận
  */
 export async function sendRefundConfirmationEmail({
   to,

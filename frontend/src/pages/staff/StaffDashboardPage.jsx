@@ -204,7 +204,7 @@ export default function StaffDashboardPage() {
             <p className="ub-dashboard-eyebrow">
               <ChartNoAxesCombined size={16} /> HAUTE COUTURE PERFORMANCE
             </p>
-            <h2 id="staff-chart-title">Đơn Thuê và Bàn Giao Hoàn Tất</h2>
+            <h2 id="staff-chart-title">Đơn Thuê và Đơn Hoàn Tất</h2>
             <p className="ub-dashboard-chart-subtitle">
               Dữ liệu đơn hàng thực tế trong kỳ đã chọn tại showroom.
             </p>
