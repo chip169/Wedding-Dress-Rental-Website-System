@@ -714,6 +714,53 @@ export default function ScheduleOverviewPage({ defaultTab }) {
     return () => window.removeEventListener(APPOINTMENT_EVENT, fetchData);
   }, [fetchData]);
 
+  // Tự động nhảy đến ngày và mở modal chi tiết lịch hẹn khi điều hướng từ thanh Ticker Header
+  useEffect(() => {
+    const dateParam = searchParams.get('date');
+    const codeParam = searchParams.get('code') || searchParams.get('search');
+
+    if (dateParam) {
+      const parsed = new Date(dateParam);
+      if (!isNaN(parsed.getTime())) {
+        setSelectedDate(parsed);
+      }
+    }
+
+    if (codeParam && appointments.length > 0) {
+      const cleanCode = codeParam.trim().toLowerCase();
+      const matched = appointments.find(
+        (a) =>
+          (a.appointmentCode && a.appointmentCode.toLowerCase() === cleanCode) ||
+          (a._id && String(a._id).toLowerCase() === cleanCode) ||
+          (a.id && String(a.id).toLowerCase() === cleanCode)
+      );
+      if (matched) {
+        if (matched.appointmentDate) {
+          const matchDate = new Date(matched.appointmentDate);
+          if (!isNaN(matchDate.getTime())) {
+            setSelectedDate(matchDate);
+          }
+        }
+        setSelectedEvent({
+          type: 'fitting',
+          id: matched._id || matched.id,
+          code: matched.appointmentCode || 'APT',
+          customerName: matched.customerName || matched.fullName || 'Cô dâu',
+          phone: matched.customerPhone || matched.phone,
+          email: matched.customerEmail || matched.email,
+          timeSlot: matched.timeSlot || '09:00 — 11:00',
+          branch: matched.branch || matched.branchId || 'hn-hoankiem',
+          status: matched.status,
+          notes: matched.notes,
+          interestedDresses: matched.interestedDresses || matched.selectedDresses || [],
+          weddingDate: matched.weddingDate,
+          date: toDateKey(matched.appointmentDate),
+        });
+        setDetailModalOpen(true);
+      }
+    }
+  }, [searchParams, appointments]);
+
   // Cập nhật trạng thái lịch hẹn (Xác nhận, Hoàn tất, Hủy)
   const handleUpdateAppointmentStatus = async (id, newStatus) => {
     setUpdatingId(id);

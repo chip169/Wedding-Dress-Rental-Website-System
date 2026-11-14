@@ -241,6 +241,8 @@ export default function AdminLayout({
 
               if (isForToday || isCreatedToday) {
                 const timeSlotStr = a.timeSlot || '09:00 — 10:30';
+                const dateOnly = aptDateStr ? String(aptDateStr).split('T')[0] : '';
+                const cleanAptCode = a.appointmentCode || a.id || '';
                 notifs.push({
                   id: `apt-${a._id || a.id || a.appointmentCode || Math.random()}`,
                   type: 'appointment',
@@ -250,7 +252,7 @@ export default function AdminLayout({
                   date: aptDateStr,
                   branchName: a.branchName || 'Showroom UniBridal',
                   time: a.createdAt || a.appointmentDate || new Date(),
-                  url: `${isStaff ? '/staff' : '/admin'}/lich-tong-quan`,
+                  url: `${isStaff ? '/staff' : '/admin'}/lich-tong-quan?date=${dateOnly}&code=${encodeURIComponent(cleanAptCode)}`,
                   badge: isForToday ? 'LỊCH THỬ HÔM NAY' : 'LỊCH THỬ MỚI',
                 });
               }
@@ -312,7 +314,8 @@ export default function AdminLayout({
   }, [isTickerPaused, activeNotifications.length]);
 
   const handleSelectNotification = (item) => {
-    markIdAsRead(item.id);
+    // Nhấp vào thông báo chỉ chuyển đến trang tương ứng, không làm mất thông báo.
+    // Chỉ khi bấm vào nút tích (✓) thì mới xác nhận đã đọc và tự ẩn.
     navigate(item.url);
   };
 
@@ -601,7 +604,7 @@ export default function AdminLayout({
                   </span>
                 </div>
 
-                <div className="flex items-center gap-1 shrink-0 pl-1.5 border-l border-[#EFE2DC]">
+                <div className="flex items-center gap-0.5 shrink-0 pl-1.5 border-l border-[#EFE2DC]">
                   {/* Nút lùi */}
                   <button
                     type="button"
@@ -616,7 +619,7 @@ export default function AdminLayout({
                   </button>
 
                   {/* Chỉ số */}
-                  <span className="text-[10px] text-[#A89899] font-mono px-0.5 select-none">
+                  <span className="text-[10px] text-[#A89899] font-mono px-1 select-none">
                     {safeIdx + 1}/{activeNotifications.length}
                   </span>
 
@@ -631,21 +634,6 @@ export default function AdminLayout({
                     title="Thông báo kế tiếp"
                   >
                     <ChevronRight size={13} />
-                  </button>
-
-                  {/* Nút tích xác nhận đã đọc -> Tự ẩn thông báo này */}
-                  <button
-                    type="button"
-                    onClick={(e) => {
-                      e.stopPropagation();
-                      if (currentNotif?.id) {
-                        markIdAsRead(currentNotif.id);
-                      }
-                    }}
-                    className="ml-0.5 p-1 rounded-full text-[#8A797A] hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer border border-transparent hover:border-emerald-200"
-                    title="Xác nhận đã đọc (tự động ẩn)"
-                  >
-                    <Check size={13} className="stroke-[2.5]" />
                   </button>
                 </div>
               </div>
