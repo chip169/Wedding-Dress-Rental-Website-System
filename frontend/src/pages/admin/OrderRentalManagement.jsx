@@ -922,7 +922,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
       evidencePhotos,
       holdForAdmin: isHoldCase,
       confirmOnSite: !isHoldCase && confirmOnSite,
-      disputeReason: isHoldCase ? customerDisputeNote.trim() : '',
+      disputeReason: isHoldCase ? (customerDisputeNote || itemsCondition.map((ic) => ic.damageNotes).filter(Boolean).join('; ') || 'Biên bản tạm giữ chuyển Admin thẩm định xử lý').trim() : '',
       refundBankDetails: !isHoldCase && confirmOnSite && finalRefund > 0 ? {
         bankName: onSiteBankName,
         accountNumber: onSiteAccountNum,
@@ -1384,19 +1384,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
                 </div>
               </div>
 
-              {/* Ghi chú phản hồi / Lý do tạm giữ nếu có */}
-              <div>
-                <span className="text-[11px] font-semibold text-[#662020] block mb-1">
-                  {isCurrentAdmin ? 'Ghi chú kiểm định / Ghi nhận thỏa thuận với khách:' : 'Ghi chú kiểm định / Lý do tạm giữ (nếu có khiếu nại hoặc lỗi nặng cần chuyển Admin):'}
-                </span>
-                <Input.TextArea
-                  rows={2}
-                  placeholder={isCurrentAdmin ? 'Ghi nhận chi tiết phản hồi của khách hoặc mô tả hiện trạng / thỏa thuận...' : 'Ghi nhận chi tiết phản hồi của khách hoặc mô tả khi tạm giữ chuyển Quản lý / Admin...'}
-                  value={customerDisputeNote}
-                  onChange={(e) => setCustomerDisputeNote(e.target.value)}
-                  className="text-xs rounded-xl"
-                />
-              </div>
+
             </div>
           )}
 
