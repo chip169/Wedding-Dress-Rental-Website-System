@@ -186,14 +186,17 @@ export function computeMultipleCompensation(conditionIds = [], maxDeposit = 0, a
   if (conditionIds.includes('total_damage')) {
     return Math.max(0, maxDeposit);
   }
+  // Khi đã chọn thỏa thuận 2 bên (Mục 10) thì chỉ tính mức thỏa thuận, các lỗi khác không tính
+  if (conditionIds.includes('custom_agreement')) {
+    const val = Number(agreedAmount || 0);
+    return maxDeposit > 0 ? Math.min(val, maxDeposit) : val;
+  }
   let sum = 0;
   for (const cid of conditionIds) {
     if (cid === 'normal_wear' || cid === 'good') continue;
     const cat = getDamageCatalogItem(cid);
     if (cat && cat.feeType === 'fixed') {
       sum += Number(cat.fixedFee || 0);
-    } else if (cat && cat.feeType === 'agreement') {
-      sum += Number(agreedAmount || 0);
     }
   }
   return maxDeposit > 0 ? Math.min(sum, maxDeposit) : sum;
@@ -204,6 +207,8 @@ export function computeMultipleCompensation(conditionIds = [], maxDeposit = 0, a
  */
 export function formatMultipleDamageNames(conditionIds = []) {
   if (!Array.isArray(conditionIds) || conditionIds.length === 0) return 'Hao mòn tự nhiên';
+  if (conditionIds.includes('total_damage')) return 'Hỏng hoàn toàn';
+  if (conditionIds.includes('custom_agreement')) return 'Thỏa thuận 2 bên';
   const realDamages = conditionIds.filter((cid) => cid !== 'normal_wear' && cid !== 'good');
   if (realDamages.length === 0) return 'Hao mòn tự nhiên';
   return realDamages.map((cid) => getDamageCatalogItem(cid).shortName).join(', ');

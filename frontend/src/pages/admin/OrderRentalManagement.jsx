@@ -720,9 +720,18 @@ function InspectionModal({ order, onClose, onSuccess }) {
     // Nếu vừa bấm chọn "normal_wear" (Hao mòn tự nhiên) khi trước đó đang có lỗi khác -> reset về chỉ có normal_wear
     if (sanitized.includes('normal_wear') && !oldConditions.includes('normal_wear')) {
       sanitized = ['normal_wear'];
+    } else if (sanitized.includes('custom_agreement') && !oldConditions.includes('custom_agreement')) {
+      // Khi chọn "Thỏa thuận 2 bên" (Mục 10) -> các lỗi khác không tính, chỉ giữ duy nhất custom_agreement
+      sanitized = ['custom_agreement'];
+    } else if (sanitized.includes('total_damage') && !oldConditions.includes('total_damage')) {
+      // Khi chọn "Hỏng hoàn toàn" (Mục 9) -> chỉ giữ duy nhất total_damage
+      sanitized = ['total_damage'];
     } else {
-      // Nếu chọn bất kỳ lỗi hư hại nào (2-9), tự động bỏ "normal_wear"
+      // Nếu chọn các lỗi thông thường (Mục 2-8), tự động bỏ normal_wear và bỏ custom_agreement / total_damage
       sanitized = sanitized.filter((c) => c !== 'normal_wear');
+      if (sanitized.some((c) => c !== 'custom_agreement' && c !== 'total_damage')) {
+        sanitized = sanitized.filter((c) => c !== 'custom_agreement' && c !== 'total_damage');
+      }
     }
 
     // Nếu rỗng -> mặc định về 'normal_wear'
@@ -795,10 +804,17 @@ function InspectionModal({ order, onClose, onSuccess }) {
     let nextList;
     if (condId === 'normal_wear') {
       nextList = ['normal_wear'];
+    } else if (condId === 'custom_agreement') {
+      // Khi chọn "Thỏa thuận 2 bên" (Mục 10) -> các lỗi khác không tính, chỉ giữ custom_agreement
+      nextList = currentList.includes('custom_agreement') ? ['normal_wear'] : ['custom_agreement'];
+    } else if (condId === 'total_damage') {
+      // Khi chọn "Hỏng hoàn toàn" (Mục 9) -> chỉ giữ total_damage
+      nextList = currentList.includes('total_damage') ? ['normal_wear'] : ['total_damage'];
     } else if (currentList.includes(condId)) {
       nextList = currentList.filter((c) => c !== condId);
     } else {
-      nextList = [...currentList.filter((c) => c !== 'normal_wear'), condId];
+      // Chọn lỗi thường thì bỏ normal_wear, custom_agreement, total_damage
+      nextList = [...currentList.filter((c) => c !== 'normal_wear' && c !== 'custom_agreement' && c !== 'total_damage'), condId];
     }
     updateConditions(idx, nextList);
   };
