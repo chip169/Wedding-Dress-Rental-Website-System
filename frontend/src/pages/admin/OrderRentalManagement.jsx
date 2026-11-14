@@ -1855,15 +1855,6 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
                   />
                 </div>
               </div>
-
-              <Input
-                id="negotiation-refund-reference"
-                size="small"
-                placeholder="Nhập mã giao dịch nếu đã chuyển tiền (không bắt buộc)..."
-                value={transactionCode}
-                maxLength={100}
-                onChange={(event) => setTransactionCode(event.target.value)}
-              />
             </div>}
 
             {/* Ghi chú kết quả đàm phán */}
@@ -1898,7 +1889,7 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
               className="flex-1 py-2.5 rounded-xl bg-[#1E8347] hover:bg-[#166534] text-white text-[12.5px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 shadow-xs"
             >
               {submitting ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={15} />}
-              <span>{transactionCode.trim() ? 'LƯU ĐÀM PHÁN VÀ HOÀN TẤT QUYẾT TOÁN' : 'HOÀN THÀNH ĐÀM PHÁN (CHUYỂN CHỜ HOÀN CỌC)'}</span>
+              <span>HOÀN THÀNH ĐÀM PHÁN (CHUYỂN CHỜ HOÀN CỌC)</span>
             </button>
           </div>
         </div>
@@ -1956,10 +1947,10 @@ function RefundModal({ order, onClose, onSuccess }) {
   const refundConflict = inspectionData?.refundConflict;
   const canConfirm = inspectionData?.canConfirmRefund && !loading && !loadError;
   const handleConfirmRefund = async () => {
-    if (!canConfirm || submitting || (remaining > 0 && !transactionCode.trim())) return;
+    if (!canConfirm || submitting) return;
     setSubmitting(true);
     try {
-      const result = await confirmDepositRefund(order._id, { transactionCode, notes: refundNote, expectedAmount: remaining });
+      const result = await confirmDepositRefund(order._id, { transactionCode: '', notes: refundNote, expectedAmount: remaining });
       message.success(remaining > 0 ? 'Đã ghi nhận giao dịch hoàn cọc.' : 'Đã lưu quyết toán cọc.');
       onSuccess(result);
     } catch (error) {
@@ -2099,16 +2090,6 @@ function RefundModal({ order, onClose, onSuccess }) {
                 ? 'Biên bản cũ ghi đã hoàn nhưng thiếu giao dịch. Kiểm tra sao kê để tránh chuyển khoản lần nữa.'
                 : 'Đối chiếu giao dịch ngân hàng của đơn trước khi xác nhận.'}
             </p>
-            <label htmlFor="refund-reference" className="text-[11.5px] text-[#8C7D7E] block">
-              Mã giao dịch sau khi đã chuyển khoản <span className="text-red-600">*</span>
-            </label>
-            <Input
-              id="refund-reference"
-              value={transactionCode}
-              onChange={(e) => setTransactionCode(e.target.value)}
-              maxLength={100}
-              required
-            />
             <Input
               aria-label="Ghi chú đối soát (tùy chọn)"
               placeholder="Ghi chú đối soát (tùy chọn)"
@@ -2129,7 +2110,7 @@ function RefundModal({ order, onClose, onSuccess }) {
             </button>
             <button
               type="button"
-              disabled={submitting || !canConfirm || (remaining > 0 && !transactionCode.trim())}
+              disabled={submitting || !canConfirm}
               onClick={handleConfirmRefund}
               className="flex-1 py-2.5 rounded-xl bg-[#1E8347] text-[12.5px] font-bold text-white hover:bg-[#166534] transition-colors border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 shadow-xs"
             >
