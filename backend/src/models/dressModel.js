@@ -105,14 +105,6 @@ const dressSchema = new mongoose.Schema(
       type: String,
       default: 'THE HAUTE COUTURE BRIDAL 2026',
     },
-    highlights: [
-      {
-        icon: { type: String, default: 'diamond' },
-        label: { type: String, default: '' },
-        value: { type: String, default: '' },
-        sub: { type: String, default: '' },
-      },
-    ],
     colorOptions: [
       {
         name: { type: String },
@@ -120,18 +112,6 @@ const dressSchema = new mongoose.Schema(
         border: { type: String },
       },
     ],
-    story: {
-      collectionName: { type: String, default: '' },
-      title: { type: String, default: '' },
-      content: [{ type: String }],
-      atelierImage: { type: String, default: '' },
-      stats: [
-        {
-          value: { type: String },
-          label: { type: String },
-        },
-      ],
-    },
   },
   {
     timestamps: true,

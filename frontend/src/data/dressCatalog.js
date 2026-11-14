@@ -7,7 +7,6 @@ export const DRESS_CATALOG = [
     "name": "Elysian Rose Ballgown",
     "badgeMain": "BALLGOWN VIP",
     "badgeSub": "Size: XS - S",
-    "rating": "4.8",
     "rentCount": "20 lượt thuê",
     "size": "Size: XS - S",
     "sizes": [
@@ -36,7 +35,6 @@ export const DRESS_CATALOG = [
     "name": "Celeste Royal Mermaid",
     "badgeMain": "HAUTE COUTURE",
     "badgeSub": "Size: M - L",
-    "rating": "5.0",
     "rentCount": "35 lượt thuê",
     "size": "Size: M - L",
     "sizes": [
@@ -65,7 +63,6 @@ export const DRESS_CATALOG = [
     "name": "Lumière Minimal Silk",
     "badgeMain": "TƠ TẰM Ý",
     "badgeSub": "Size: XS",
-    "rating": "4.8",
     "rentCount": "65 lượt thuê",
     "size": "Size: XS",
     "sizes": [
@@ -93,7 +90,6 @@ export const DRESS_CATALOG = [
     "name": "Monet 3D Floral Couture",
     "badgeMain": "NEW SEASON 2026",
     "badgeSub": "Size: S - M - L",
-    "rating": "4.9",
     "rentCount": "50 lượt thuê",
     "size": "Size: S - M - L",
     "sizes": [
@@ -123,7 +119,6 @@ export const DRESS_CATALOG = [
     "name": "Aurora Crystal Princess",
     "badgeMain": "ROYAL ATELIER",
     "badgeSub": "Size: M",
-    "rating": "5.0",
     "rentCount": "80 lượt thuê",
     "size": "Size: M",
     "sizes": [
@@ -151,7 +146,6 @@ export const DRESS_CATALOG = [
     "name": "Seraphina Feather Romance",
     "badgeMain": "SIGNATURE PIECE",
     "badgeSub": "Size: S - M",
-    "rating": "4.9",
     "rentCount": "23 lượt thuê",
     "size": "Size: S - M",
     "sizes": [
@@ -180,7 +174,6 @@ export const DRESS_CATALOG = [
     "name": "Vivienne Vintage Lace",
     "badgeMain": "VINTAGE HERITAGE",
     "badgeSub": "Size: L - XL",
-    "rating": "5.0",
     "rentCount": "53 lượt thuê",
     "size": "Size: L - XL",
     "sizes": [
@@ -209,7 +202,6 @@ export const DRESS_CATALOG = [
     "name": "Juliette Pure Silk",
     "badgeMain": "MINIMAL COUTURE",
     "badgeSub": "Size: XS - S - M",
-    "rating": "4.9",
     "rentCount": "68 lượt thuê",
     "size": "Size: XS - S - M",
     "sizes": [
@@ -239,7 +231,6 @@ export const DRESS_CATALOG = [
     "name": "Genevieve French Chantilly",
     "badgeMain": "PARISIAN CHIC",
     "badgeSub": "Size: S - L",
-    "rating": "4.8",
     "rentCount": "38 lượt thuê",
     "size": "Size: S - L",
     "sizes": [
@@ -268,7 +259,6 @@ export const DRESS_CATALOG = [
     "name": "Ophelia Sparkling Star",
     "badgeMain": "STARLIGHT BRIDAL",
     "badgeSub": "Size: XS - M - L",
-    "rating": "5.0",
     "rentCount": "26 lượt thuê",
     "size": "Size: XS - M - L",
     "sizes": [
@@ -298,7 +288,6 @@ export const DRESS_CATALOG = [
     "name": "Isabella Royal Court",
     "badgeMain": "IMPERIAL COLLECTION",
     "badgeSub": "Size: M - L - XL",
-    "rating": "4.8",
     "rentCount": "83 lượt thuê",
     "size": "Size: M - L - XL",
     "sizes": [
@@ -328,7 +317,6 @@ export const DRESS_CATALOG = [
     "name": "Camille Pearl Satin",
     "badgeMain": "PEARL ATELIER",
     "badgeSub": "Size: XS - S",
-    "rating": "5.0",
     "rentCount": "71 lượt thuê",
     "size": "Size: XS - S",
     "sizes": [
@@ -358,7 +346,6 @@ export const DRESS_CATALOG = [
     "name": "Valerie Rose Gold Embellished",
     "badgeMain": "ROSE GOLD LUXURY",
     "badgeSub": "Size: S - M - L",
-    "rating": "4.9",
     "rentCount": "41 lượt thuê",
     "size": "Size: S - M - L",
     "sizes": [
@@ -389,7 +376,6 @@ export const DRESS_CATALOG = [
     "name": "Helena Cathedral Veil",
     "badgeMain": "CATHEDRAL SPECIAL",
     "badgeSub": "Size: L - XL",
-    "rating": "4.8",
     "rentCount": "29 lượt thuê",
     "size": "Size: L - XL",
     "sizes": [
@@ -419,7 +405,6 @@ export const DRESS_CATALOG = [
     "name": "Rosalie Blossom Gown",
     "badgeMain": "SPRING BLOSSOM",
     "badgeSub": "Size: XS - L",
-    "rating": "4.8",
     "rentCount": "56 lượt thuê",
     "size": "Size: XS - L",
     "sizes": [
@@ -449,7 +434,6 @@ export const DRESS_CATALOG = [
     "name": "Penelope Feathered Train",
     "badgeMain": "MODERN COUTURE",
     "badgeSub": "Size: S - M",
-    "rating": "5.0",
     "rentCount": "44 lượt thuê",
     "size": "Size: S - M",
     "sizes": [
@@ -479,7 +463,6 @@ export const DRESS_CATALOG = [
     "name": "Anastasia Czarina Ballgown",
     "badgeMain": "ROYAL BALLROOM",
     "badgeSub": "Size: M - L",
-    "rating": "4.9",
     "rentCount": "32 lượt thuê",
     "size": "Size: M - L",
     "sizes": [
@@ -509,7 +492,6 @@ export const DRESS_CATALOG = [
     "name": "Diane Parisian Minimalist",
     "badgeMain": "PARIS MINIMAL",
     "badgeSub": "Size: S - M",
-    "rating": "4.8",
     "rentCount": "74 lượt thuê",
     "size": "Size: S - M",
     "sizes": [
@@ -539,7 +521,6 @@ export const DRESS_CATALOG = [
     "name": "Adeline Silk Crepe Mermaid",
     "badgeMain": "CREPE ATELIER",
     "badgeSub": "Size: XS - S - M",
-    "rating": "4.8",
     "rentCount": "47 lượt thuê",
     "size": "Size: XS - S - M",
     "sizes": [
@@ -570,7 +551,6 @@ export const DRESS_CATALOG = [
     "name": "Margot Corset Royal",
     "badgeMain": "CORSET COUTURE",
     "badgeSub": "Size: S - M",
-    "rating": "4.9",
     "rentCount": "86 lượt thuê",
     "size": "Size: S - M",
     "sizes": [
@@ -600,7 +580,6 @@ export const DRESS_CATALOG = [
     "name": "Beatrice Imperial Lace",
     "badgeMain": "IMPERIAL BRIDAL",
     "badgeSub": "Size: M - L",
-    "rating": "5.0",
     "rentCount": "89 lượt thuê",
     "size": "Size: M - L",
     "sizes": [
@@ -630,7 +609,6 @@ export const DRESS_CATALOG = [
     "name": "Clara Ethereal Chiffon",
     "badgeMain": "ETHEREAL DREAM",
     "badgeSub": "Size: S - M - L",
-    "rating": "4.9",
     "rentCount": "59 lượt thuê",
     "size": "Size: S - M - L",
     "sizes": [
@@ -661,7 +639,6 @@ export const DRESS_CATALOG = [
     "name": "Eleanor Sovereign Silk",
     "badgeMain": "VIETNAMESE SILK",
     "badgeSub": "Size: XS - S - M",
-    "rating": "4.9",
     "rentCount": "77 lượt thuê",
     "size": "Size: XS - S - M",
     "sizes": [
@@ -692,7 +669,6 @@ export const DRESS_CATALOG = [
     "name": "Guinevere Renaissance Gown",
     "badgeMain": "RENAISSANCE LUXE",
     "badgeSub": "Size: S - M - L",
-    "rating": "5.0",
     "rentCount": "62 lượt thuê",
     "size": "Size: S - M - L",
     "sizes": [
@@ -723,7 +699,6 @@ export const DRESS_CATALOG = [
     "name": "Sylvie Champagne Tulle",
     "badgeMain": "CHAMPAGNE MAGIC",
     "badgeSub": "Size: M - L",
-    "rating": "4.8",
     "rentCount": "92 lượt thuê",
     "size": "Size: M - L",
     "sizes": [

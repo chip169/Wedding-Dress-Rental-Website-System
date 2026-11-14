@@ -495,43 +495,45 @@ export default function DressDetailPage() {
               })}
             </div>
 
-            {/* 3 Key Highlight Badges (Below Thumbnails) */}
-            <div className="mt-2 bg-white border border-[#EAE0DC] rounded-[20px] p-3.5 sm:p-4 xl:p-4.5 shadow-xs grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#EAE0DC] gap-2.5 sm:gap-2">
-              {dress.highlights?.map((hl, idx) => (
-                <div key={idx} className="flex items-start gap-2 xl:gap-2.5 px-1 sm:px-1.5 pt-2 sm:pt-0 min-w-0">
-                  <div className="w-8 h-8 rounded-full bg-[#FFF5F3] border border-[#F4DDD8] flex items-center justify-center text-[#B26B74] shrink-0">
-                    {hl.icon === 'diamond' && <Crown className="w-4 h-4" />}
-                    {hl.icon === 'ruler' && <Ruler className="w-4 h-4" />}
-                    {hl.icon === 'sparkles' && <Crown className="w-4 h-4" />}
-                    {hl.icon === 'shield' && <ShieldCheck className="w-4 h-4" />}
-                    {!['diamond', 'ruler', 'sparkles', 'shield'].includes(hl.icon) && <Crown className="w-4 h-4" />}
+            {/* 3 Key Highlight Badges (Below Thumbnails - chỉ hiển thị khi có dữ liệu) */}
+            {Array.isArray(dress.highlights) && dress.highlights.length > 0 && (
+              <div className="mt-2 bg-white border border-[#EAE0DC] rounded-[20px] p-3.5 sm:p-4 xl:p-4.5 shadow-xs grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#EAE0DC] gap-2.5 sm:gap-2">
+                {dress.highlights.map((hl, idx) => (
+                  <div key={idx} className="flex items-start gap-2 xl:gap-2.5 px-1 sm:px-1.5 pt-2 sm:pt-0 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-[#FFF5F3] border border-[#F4DDD8] flex items-center justify-center text-[#B26B74] shrink-0">
+                      {hl.icon === 'diamond' && <Crown className="w-4 h-4" />}
+                      {hl.icon === 'ruler' && <Ruler className="w-4 h-4" />}
+                      {hl.icon === 'sparkles' && <Crown className="w-4 h-4" />}
+                      {hl.icon === 'shield' && <ShieldCheck className="w-4 h-4" />}
+                      {!['diamond', 'ruler', 'sparkles', 'shield'].includes(hl.icon) && <Crown className="w-4 h-4" />}
+                    </div>
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      <span
+                        title={hl.label}
+                        style={{ whiteSpace: 'nowrap' }}
+                        className="block font-jakarta text-[10px] xl:text-[10.5px] font-medium uppercase tracking-wider text-[#8A7978] whitespace-nowrap truncate"
+                      >
+                        {hl.label}
+                      </span>
+                      <strong
+                        title={hl.value}
+                        style={{ whiteSpace: 'nowrap' }}
+                        className="block font-jakarta text-[11.5px] sm:text-[12px] xl:text-[12.5px] font-semibold text-[#231A19] leading-snug mt-0.5 whitespace-nowrap"
+                      >
+                        {hl.value}
+                      </strong>
+                      <span
+                        title={hl.sub}
+                        style={{ whiteSpace: 'nowrap' }}
+                        className="block font-jakarta text-[10.5px] xl:text-[11px] text-[#A08E8D] mt-0.5 whitespace-nowrap truncate"
+                      >
+                        {hl.sub}
+                      </span>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1 overflow-hidden">
-                    <span
-                      title={hl.label}
-                      style={{ whiteSpace: 'nowrap' }}
-                      className="block font-jakarta text-[10px] xl:text-[10.5px] font-medium uppercase tracking-wider text-[#8A7978] whitespace-nowrap truncate"
-                    >
-                      {hl.label}
-                    </span>
-                    <strong
-                      title={hl.value}
-                      style={{ whiteSpace: 'nowrap' }}
-                      className="block font-jakarta text-[11.5px] sm:text-[12px] xl:text-[12.5px] font-semibold text-[#231A19] leading-snug mt-0.5 whitespace-nowrap"
-                    >
-                      {hl.value}
-                    </strong>
-                    <span
-                      title={hl.sub}
-                      style={{ whiteSpace: 'nowrap' }}
-                      className="block font-jakarta text-[10.5px] xl:text-[11px] text-[#A08E8D] mt-0.5 whitespace-nowrap truncate"
-                    >
-                      {hl.sub}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ================= RIGHT COLUMN: PRODUCT DETAILS VÀ BOOKING (Col 5) ================= */}
@@ -763,8 +765,8 @@ export default function DressDetailPage() {
 
         </div>
 
-        {/* ================= SECTION 2: CÂU CHUYỆN THIẾT KẾ ================= */}
-        {dress.story && (
+        {/* ================= SECTION 2: CÂU CHUYỆN THIẾT KẾ (Chỉ hiển thị khi có dữ liệu) ================= */}
+        {dress.story && Array.isArray(dress.story.content) && dress.story.content.length > 0 && (
           <section className="mt-20 pt-14 border-t border-[#EAE0DC]">
             {/* Header Tab Title: Câu Chuyện Thiết Kế */}
             <div className="mb-10 border-b border-[#EAE0DC]">

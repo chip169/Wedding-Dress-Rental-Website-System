@@ -53,66 +53,10 @@ function convertCatalogItemToDress(item) {
     rentCount: rentCountNum,
     isFeatured: true,
     collectionTag: item.badgeMain || 'THE HAUTE COUTURE BRIDAL 2026',
-    rating: parseFloat(item.rating) || 4.9,
-    reviewCount: 48,
-    highlights: [
-      {
-        icon: 'diamond',
-        label: 'Chất Liệu Cao Cấp',
-        value: item.material || 'Lụa Mikado Ý',
-        sub: 'Tơ tằm tự nhiên 100%',
-      },
-      {
-        icon: 'ruler',
-        label: 'Phom Dáng Thiết Kế',
-        value: item.categoryName || 'Dáng Váy Chuẩn Hoàng Gia',
-        sub: 'Cấu trúc siết eo corsetry Pháp',
-      },
-      {
-        icon: 'sparkles',
-        label: 'Kỹ Thuật Hoàn Thiện',
-        value: 'Đính Kết Thủ Công Độc Bản',
-        sub: 'Hạt pha lê Swarovski cao cấp',
-      },
-    ],
     colors: [
       { name: 'Trắng Ngọc Tinh Khôi', hex: '#FFFFFF', border: '#D9D9D9' },
       { name: 'Trắng Kem Ivory', hex: '#FDFBF7', border: '#E7DEC8' },
       { name: 'Hồng Pastel Nhẹ Nhàng', hex: '#F5D6D8', border: '#E8B6BC' },
-    ],
-    story: {
-      collection: `BỘ SƯU TẬP ${item.name.toUpperCase()}`,
-      title: `Vẻ Đẹp Quý Phái và Thuần Khiết Của ${item.name}`,
-      content: [
-        `Mỗi đường kim mũi chỉ trên thiết kế ${item.name} kết tinh hơn 380 giờ miệt mài may đo đính kết từ những nghệ nhân thủ công bậc thầy.`,
-        `Chất vải ${item.material || 'thượng hạng'} rủ mềm tôn vinh tối đa những bước đi uyển chuyển, kiêu sa của nàng dâu trong giây phút thiêng liêng bước vào lễ đường thành hôn.`,
-      ],
-      atelierImage: card9MannequinAtelier,
-      stats: [
-        { value: '380h', label: 'ĐÍNH KẾT THỦ CÔNG' },
-        { value: '1.600+', label: 'HẠT SWAROVSKI' },
-        { value: '100%', label: 'LỤA TƠ TẰM NHẬP KHẨU' },
-      ],
-    },
-    realBrides: [
-      {
-        brideName: 'Cô dâu Hà My và Lê Anh',
-        date: '15/10/2026',
-        image: card8LaceDream,
-        quote: `Váy ${item.name} đẹp xuất sắc! Cả hội trường cưới ai cũng khen lộng lẫy. Form siết eo tôn dáng cực kỳ.`,
-      },
-      {
-        brideName: 'Cô dâu Thục Quyên',
-        date: '02/10/2026',
-        image: heroBride,
-        quote: 'Đuôi váy dài thướt tha khi bước vào lễ đường tạo cảm giác như một nàng công chúa đích thực.',
-      },
-      {
-        brideName: 'Cô dâu Lan Chi',
-        date: '28/09/2026',
-        image: card7Vivienne,
-        quote: 'Mặc vào cảm thấy mình như một nữ hoàng trong buổi tiệc tối! Từng đường đính kết bắt sáng lung linh dưới ánh đèn.',
-      },
     ],
   };
 }
