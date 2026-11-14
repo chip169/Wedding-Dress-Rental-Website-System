@@ -525,29 +525,19 @@ export default function InventoryManagement() {
     try {
       const [dressesRes, ordersRes] = await Promise.all([
         getAllDresses(),
-        getAllOrdersAdmin({ limit: 150 }),
+        getAllOrdersAdmin({ limit: 150 }, true),
       ]);
 
       const dressList = Array.isArray(dressesRes?.data) ? dressesRes.data : [];
       const orderList = Array.isArray(ordersRes?.orders) ? ordersRes.orders : [];
 
-      // Gộp thêm các đơn từ localStorage nếu có (ví dụ đơn khách hàng vừa đặt hoặc offline)
-      let localOrders = [];
+      // Dọn dẹp key mock unibridal-orders cũ trong localStorage để không làm sai lệch trạng thái đơn
       try {
-        localOrders = JSON.parse(localStorage.getItem('unibridal-orders') || '[]');
-      } catch { }
-      try {
-        const lastOrder = JSON.parse(localStorage.getItem('unibridal-last-order') || 'null');
-        if (lastOrder) localOrders.push(lastOrder);
+        localStorage.removeItem('unibridal-orders');
       } catch { }
 
+      // Sử dụng trực tiếp danh sách đơn thuê từ backend database
       const combinedOrders = [...orderList];
-      localOrders.forEach((lo) => {
-        const loCode = String(lo.orderCode || lo.id || lo._id || '');
-        if (loCode && !combinedOrders.some((co) => String(co.orderCode || co.id || co._id) === loCode)) {
-          combinedOrders.push(lo);
-        }
-      });
 
       // Lấy danh sách ID đã xóa từ localStorage (nếu có) để lọc bỏ
       let deletedIds = [];
