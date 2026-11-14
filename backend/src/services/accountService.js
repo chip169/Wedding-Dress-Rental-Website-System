@@ -171,10 +171,12 @@ export async function attachAvailabilityToDresses(dresses) {
       });
 
       let totalAvailable = 0;
+      let totalInitialStock = 0;
       const updatedSizes = (d.sizes || []).map((s) => {
         const sName = typeof s === 'string' ? s : s?.size || s?.label || '';
         const cleanSName = String(sName).replace(/^size\s*/i, '').trim().toUpperCase();
-        const originalQty = typeof s === 'object' && s?.quantity !== undefined ? Number(s.quantity) : 1;
+        const originalQty = typeof s === 'object' && s?.quantity !== undefined ? Math.max(1, Number(s.quantity)) : 1;
+        totalInitialStock += originalQty;
         const rented = rentedBySize[cleanSName] || 0;
         const available = Math.max(0, originalQty - rented);
         totalAvailable += available;
@@ -183,16 +185,18 @@ export async function attachAvailabilityToDresses(dresses) {
           return {
             ...s,
             size: sName,
-            quantity: available,
+            quantity: originalQty,
             available,
+            availableQuantity: available,
             totalQuantity: originalQty,
             rented,
           };
         }
         return {
           size: sName,
-          quantity: available,
+          quantity: 1,
           available,
+          availableQuantity: available,
           totalQuantity: 1,
           rented,
         };
@@ -202,7 +206,7 @@ export async function attachAvailabilityToDresses(dresses) {
         ...d,
         sizes: updatedSizes,
         availableStock: totalAvailable,
-        totalStock: totalAvailable,
+        totalStock: totalInitialStock,
         isOutOfStock: totalAvailable === 0,
       };
     });

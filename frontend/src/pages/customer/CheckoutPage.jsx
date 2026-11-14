@@ -3547,13 +3547,12 @@ export default function CheckoutPage() {
                                   }
                                 }}
                                 title={isOutOfStock ? `Size ${sClean} hiện đã hết hàng trong kho` : `Đổi sang size ${sClean}`}
-                                className={`px-2 py-0.5 rounded text-[10.5px] font-bold border transition-all ${
-                                  isOutOfStock
+                                className={`px-2 py-0.5 rounded text-[10.5px] font-bold border transition-all ${isOutOfStock
                                     ? 'bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed opacity-40 line-through decoration-stone-400 select-none'
                                     : isSzActive
                                       ? 'bg-[#733F49] text-white border-[#733F49] cursor-pointer shadow-xs'
                                       : 'bg-white text-[#733F49] border-[#EEDECF] hover:border-[#733F49] cursor-pointer'
-                                }`}
+                                  }`}
                               >
                                 {sClean}
                               </button>
@@ -3765,7 +3764,7 @@ export default function CheckoutPage() {
                       {orderItems.map((i) => `${i.name} (Size ${i.size || selectedSize})`).join(' • ')}
                     </span>
                   ) : (
-                    <span>Kích cỡ: <strong>{selectedSize || 'M'}</strong> • Lịch độc quyền VIP</span>
+                    <span>Kích cỡ: <strong>{selectedSize || 'M'}</strong> </span>
                   )}
                 </div>
               </div>

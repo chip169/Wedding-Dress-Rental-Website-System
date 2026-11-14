@@ -281,26 +281,50 @@ export default function InventoryManagement() {
     const dbHasStructuredSizes = Array.isArray(d.sizes) && d.sizes.length > 0 && typeof d.sizes[0] === 'object' && d.sizes[0]?.size !== undefined;
     if (dbHasStructuredSizes) {
       sizeList = d.sizes.map((sz) => {
-        const q = Number(sz.quantity ?? 1);
+        const q = Math.max(1, Number(sz.totalQuantity ?? sz.quantity ?? 1));
         return {
           size: sz.size,
           quantity: q,
+          totalQuantity: q,
           label: `Size ${sz.size} (${String(q).padStart(2, '0')} bộ)`,
         };
       });
     } else if (override.sizes && Array.isArray(override.sizes) && override.sizes.length > 0) {
-      sizeList = override.sizes;
+      sizeList = override.sizes.map((sz) => ({
+        ...sz,
+        quantity: Math.max(1, Number(sz.totalQuantity ?? sz.quantity ?? 1)),
+        totalQuantity: Math.max(1, Number(sz.totalQuantity ?? sz.quantity ?? 1)),
+      }));
     } else {
       const defaultSizes = Array.isArray(d.sizes) && d.sizes.length > 0 ? d.sizes : ['S', 'M'];
       sizeList = defaultSizes.map((sz) => {
         if (typeof sz === 'object' && sz.size) {
-          const q = Number(sz.quantity ?? 1);
-          return { size: sz.size, quantity: q, label: `Size ${sz.size} (${String(q).padStart(2, '0')} bộ)` };
+          const q = Math.max(1, Number(sz.totalQuantity ?? sz.quantity ?? 1));
+          return { size: sz.size, quantity: q, totalQuantity: q, label: `Size ${sz.size} (${String(q).padStart(2, '0')} bộ)` };
         }
         const sName = typeof sz === 'object' ? (sz.label || 'S') : sz;
-        return { size: sName, quantity: 1, label: `Size ${sName} (01 bộ)` };
+        return { size: sName, quantity: 1, totalQuantity: 1, label: `Size ${sName} (01 bộ)` };
       });
     }
+
+    // Đảm bảo không bị mất bất kỳ size nào có trong định nghĩa gốc của mẫu váy (d.sizes)
+    if (Array.isArray(d.sizes) && d.sizes.length > 0) {
+      d.sizes.forEach((originSz) => {
+        const originName = typeof originSz === 'object' ? (originSz.size || originSz.label) : originSz;
+        if (originName && !sizeList.some((s) => String(s.size).toUpperCase() === String(originName).toUpperCase())) {
+          sizeList.push({
+            size: originName,
+            quantity: 1,
+            totalQuantity: 1,
+            label: `Size ${originName} (01 bộ)`,
+          });
+        }
+      });
+    }
+
+    // Sắp xếp thứ tự size chuẩn thời trang (XS -> S -> M -> L -> XL)
+    const SIZE_ORDER = { XS: 1, S: 2, M: 3, L: 4, XL: 5, XXL: 6, 'FREESIZE': 7 };
+    sizeList.sort((a, b) => (SIZE_ORDER[a.size?.toUpperCase()] || 99) - (SIZE_ORDER[b.size?.toUpperCase()] || 99));
 
     const totalStock = sizeList.reduce((sum, s) => sum + (Number(s.quantity) || 0), 0);
 
@@ -381,7 +405,7 @@ export default function InventoryManagement() {
     // 3. Phân bổ chi tiết theo từng Size: Khả dụng / Đang kiểm định / Đang thuê
     const detailedSizes = sizeList.map((sz) => {
       const sName = String(sz.size || '').trim();
-      const sQty = Number(sz.quantity) || 0;
+      const sQty = Math.max(1, Number(sz.totalQuantity ?? sz.quantity) || 1);
 
       // a) Bảo dưỡng từ đơn thuê (kiểm định sau thuê hoặc hoàn tất trong vòng 1 ngày)
       const orderMaintCount = maintenanceOrders.filter((o) => {
@@ -904,8 +928,8 @@ export default function InventoryManagement() {
 
     sourceSizes.forEach((sz) => {
       const sName = typeof sz === 'object' ? sz.size : sz;
-      const qty = typeof sz === 'object' ? (Number(sz.quantity) || 0) : 1;
-      if (sizeMap[sName] !== undefined) sizeMap[sName] = qty;
+      const qty = typeof sz === 'object' ? (Number(sz.totalQuantity ?? sz.quantity) || 1) : 1;
+      if (sizeMap[sName] !== undefined) sizeMap[sName] = Math.max(1, qty);
     });
     if (Object.values(sizeMap).every((v) => v === 0)) {
       sizeMap.S = 1;
@@ -1918,13 +1942,15 @@ export default function InventoryManagement() {
                           <div className="flex flex-wrap items-center justify-center gap-1 mt-1.5">
                             {(Array.isArray(item.sizes) ? item.sizes : [])
                               .filter((s) => {
-                                const sQty = typeof s === 'object' ? (s.quantity ?? 0) : 0;
+                                const sQty = typeof s === 'object' ? (s.totalQuantity ?? s.quantity ?? 0) : 0;
                                 const sAvail = typeof s === 'object' && s.available !== undefined ? s.available : sQty;
-                                return sQty > 0 || sAvail > 0;
+                                const sMaint = typeof s === 'object' ? (s.maintenance ?? 0) : 0;
+                                const sRented = typeof s === 'object' ? (s.rented ?? 0) : 0;
+                                return sQty > 0 || sAvail > 0 || sMaint > 0 || sRented > 0;
                               })
                               .map((s, idx) => {
                               const sName = typeof s === 'object' ? s.size : s;
-                              const sQty = typeof s === 'object' ? (s.quantity ?? 0) : 0;
+                              const sQty = typeof s === 'object' ? (s.totalQuantity ?? s.quantity ?? 0) : 0;
                               const sAvail = typeof s === 'object' && s.available !== undefined ? s.available : sQty;
                               const sMaint = typeof s === 'object' ? (s.maintenance ?? 0) : 0;
                               const sRented = typeof s === 'object' ? (s.rented ?? 0) : 0;
