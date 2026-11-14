@@ -3,7 +3,7 @@ import { Link } from 'react-router-dom';
 import { ArrowRight, CalendarDays, CheckCircle2, Heart, LockKeyhole, Minus, Phone, Plus, ShieldCheck, ShoppingBag, Crown, Trash2, X } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
-import { CART_EVENT, addToCart, clearCart, getCart, refreshCartWithDresses, removeFromCart, resolveCartItem, updateCartDays } from '../../services/cartService';
+import { CART_EVENT, addToCart, clearCart, getCart, refreshCartWithDresses, removeFromCart, resolveCartItem, updateCartDays, updateCartItemSize } from '../../services/cartService';
 import { getWishlistIds, toggleWishlist, WISHLIST_EVENT } from '../../services/wishlistService';
 import { getDressesFromApi } from '../../services/dressApiService';
 import logoEmblemImg from '../../assets/logo_emblem.png';
@@ -1045,9 +1045,12 @@ const cartPageStyles = `
 
 const money = (amount) => formatCurrencyVND(amount);
 
-function CartItem({ item, onUpdate, onRemove, onWishlist, isWishlisted }) {
+function CartItem({ item, onUpdate, onUpdateSize, onRemove, onWishlist, isWishlisted }) {
   const days = Math.max(1, Number(item.days || 1)); const total = Number(item.price || 0) * days;
   const ProductImage = item.detailHref === null ? 'div' : Link;
+  const curCleanSize = String(item.size || 'S').replace(/^size\s*[:\s-]*/i, '').trim();
+  const availableSizes = Array.isArray(item.sizes) && item.sizes.length > 0 ? item.sizes : [];
+
   return (
     <article className="cart-product">
       <ProductImage className="cart-product-image" {...(item.detailHref === null ? {} : { to: item.detailHref || `/dresses/${item.id}`, 'aria-label': `Xem ${item.name}` })}>
@@ -1064,7 +1067,43 @@ function CartItem({ item, onUpdate, onRemove, onWishlist, isWishlisted }) {
             <h3>{item.detailHref === null ? item.name : <Link to={item.detailHref || `/dresses/${item.id}`}>{item.name}</Link>}</h3>
           </div>
         </div>
-        <div className="cart-tags"><span>✦ Size {item.size || 'Theo tư vấn'}</span>{item.fabric && <span>✦ {item.fabric}</span>}{item.style && <span>{item.style}</span>}{item.unavailable && <span>Mẫu không còn trong danh sách hiện có</span>}</div>
+        <div className="cart-tags" style={{ display: 'flex', alignItems: 'center', gap: '6px', flexWrap: 'wrap' }}>
+          {availableSizes.length > 1 ? (
+            <div style={{ display: 'inline-flex', alignItems: 'center', gap: '4px' }}>
+              <span style={{ fontWeight: 600 }}>✦ Size:</span>
+              {availableSizes.map((sz, sIdx) => {
+                const sVal = typeof sz === 'object' ? (sz.size || sz.label) : sz;
+                const sClean = String(sVal).replace(/^size\s*[:\s-]*/i, '').trim();
+                const isAct = curCleanSize.toUpperCase() === sClean.toUpperCase();
+                return (
+                  <button
+                    key={sIdx}
+                    type="button"
+                    onClick={() => onUpdateSize && onUpdateSize(item.id, sClean)}
+                    style={{
+                      padding: '2px 8px',
+                      fontSize: '10.5px',
+                      fontWeight: 700,
+                      borderRadius: '5px',
+                      cursor: 'pointer',
+                      border: isAct ? '1px solid #733F49' : '1px solid #e0bcbc',
+                      backgroundColor: isAct ? '#733F49' : '#fff',
+                      color: isAct ? '#fff' : '#733F49',
+                      transition: 'all 0.15s ease',
+                    }}
+                  >
+                    {sClean}
+                  </button>
+                );
+              })}
+            </div>
+          ) : (
+            <span>✦ Size {curCleanSize || 'Theo tư vấn'}</span>
+          )}
+          {item.fabric && <span>✦ {item.fabric}</span>}
+          {item.style && <span>{item.style}</span>}
+          {item.unavailable && <span>Mẫu không còn trong danh sách hiện có</span>}
+        </div>
         <div className="cart-schedule">
 
           <small>Tiền cọc theo giá niêm yết: {money(item.deposit)}</small>
@@ -1180,7 +1219,7 @@ export default function CartPage() {
         <div className="cart-content">
           <section className="cart-saved" aria-labelledby="cart-saved-title">
             <div className="cart-section-bar"><div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}><h2 id="cart-saved-title">Tác phẩm trong giỏ thuê {items.length > 0 ? `(${items.length})` : ""}</h2>{items.length > 0 && (<button type="button" onClick={handleClearCart} style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 12px", borderRadius: "999px", backgroundColor: "#fff", border: "1px solid #e0bcbc", color: "#b84f58", fontSize: "11.5px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#fff0f0"; e.currentTarget.style.color = "#963740"; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#fff"; e.currentTarget.style.color = "#b84f58"; }} title="Xóa tất cả sản phẩm khỏi giỏ thuê"><Trash2 size={13} /><span>Xóa tất cả</span></button>)}</div></div>
-            {items.length ? <div className="cart-items">{items.map((item) => <CartItem key={item.id} item={item} onUpdate={updateCartDays} onRemove={removeFromCart} onWishlist={handleWishlist} isWishlisted={isWishlisted(item.id)} />)}</div> : <div className="cart-empty"><ShoppingBag size={38} strokeWidth={1.3} /><h3>Giỏ thuê của nàng đang trống</h3><p>Khám phá những tuyệt tác được tuyển chọn dành riêng cho ngày trọng đại.</p><Link to="/collection">Khám phá bộ sưu tập <ArrowRight size={16} /></Link></div>}
+            {items.length ? <div className="cart-items">{items.map((item) => <CartItem key={item.id} item={item} onUpdate={updateCartDays} onUpdateSize={updateCartItemSize} onRemove={removeFromCart} onWishlist={handleWishlist} isWishlisted={isWishlisted(item.id)} />)}</div> : <div className="cart-empty"><ShoppingBag size={38} strokeWidth={1.3} /><h3>Giỏ thuê của nàng đang trống</h3><p>Khám phá những tuyệt tác được tuyển chọn dành riêng cho ngày trọng đại.</p><Link to="/collection">Khám phá bộ sưu tập <ArrowRight size={16} /></Link></div>}
           </section>
 
           <aside className="cart-aside" aria-label="Tóm tắt đơn thuê">
