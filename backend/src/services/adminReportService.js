@@ -72,7 +72,7 @@ export async function dashboard(period = 'month') {
         revenueReport(period), Order.find({ createdAt: { $gte: start, $lt: end } }).select('status totalRentPrice createdAt').lean(),
         Dress.countDocuments({ status: 'maintenance' }),
         Appointment.countDocuments({ appointmentDate: { $gte: start, $lt: end }, status: { $ne: 'cancelled' } }),
-        Appointment.countDocuments({ appointmentDate: { $gte: today, $lt: tomorrow }, status: { $ne: 'cancelled' } }),
+        Appointment.countDocuments({ appointmentDate: { $gte: today, $lt: tomorrow }, status: { $in: ['pending', 'confirmed'] } }),
         User.countDocuments({}),
         User.countDocuments({ role: 'customer', isActive: true }),
     ]);

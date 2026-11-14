@@ -155,7 +155,7 @@ export async function dashboard(role, period = 'month', now = new Date()) {
   // Số lịch hẹn hôm nay
   const todayAppointments = (appointments || []).filter((apt) => {
     const d = new Date(apt.appointmentDate);
-    return d >= today && d < tomorrow;
+    return d >= today && d < tomorrow && ['pending', 'confirmed'].includes(apt.status);
   }).length;
 
   // Pipeline trạng thái đơn hàng

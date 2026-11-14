@@ -40,7 +40,7 @@ export function getProfile(user) {
 export async function updateProfile(user, data) {
   const name = String(data.name ?? '').trim();
   const email = String(data.email ?? user.email ?? '').trim().toLowerCase();
-  const phone = String(data.phone ?? '').trim();
+  const phone = String(data.phone ?? '').trim().replace(/[\s.-]/g, '');
 
   // Validate không cho phép sửa email đã đăng ký
   if (data.email && user.email && email !== user.email.toLowerCase()) {
@@ -49,6 +49,9 @@ export async function updateProfile(user, data) {
 
   if (!name || !phone) {
     fail(400, 'Họ tên và số điện thoại là thông tin bắt buộc.');
+  }
+  if (!/^0[35789]\d{8}$/.test(phone)) {
+    fail(400, 'Số điện thoại cần gồm 10 chữ số, bắt đầu bằng 03, 05, 07, 08 hoặc 09.');
   }
   if (name.length < 2) {
     fail(400, 'Họ và tên phải có tối thiểu 2 ký tự.');
