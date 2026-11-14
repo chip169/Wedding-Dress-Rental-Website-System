@@ -535,6 +535,61 @@ function DamagePriceCatalogModal({ open, onClose }) {
   );
 }
 
+const mapInspectionItems = (orderItems = [], inspItems = [], totalDeposit = 0, totalRentPrice = 0) => {
+  return (orderItems || []).map((item, idx) => {
+    const itemDeposit = item.depositAmount ?? (totalDeposit ? Math.round(totalDeposit / Math.max(1, (orderItems || []).length)) : 0);
+    const itemRent = item.rentPrice ?? (totalRentPrice ? Math.round(totalRentPrice / Math.max(1, (orderItems || []).length)) : 0);
+    const maxDepositLimit = itemDeposit > 0 ? itemDeposit : (totalDeposit || 0);
+
+    const match = Array.isArray(inspItems)
+      ? (inspItems[idx] || inspItems.find((c) => String(c.dressId) === String(item.dressId || item.id || item._id)))
+      : null;
+
+    if (!match) {
+      return {
+        dressId: item.dressId || item.id || item._id || 'item_default',
+        name: item.name,
+        condition: 'normal_wear',
+        conditions: ['normal_wear'],
+        selectedOption: null,
+        damageNotes: '',
+        compensation: 0,
+        rentPrice: itemRent,
+        depositAmount: maxDepositLimit,
+        maxPrice: maxDepositLimit,
+        maxDeposit: maxDepositLimit,
+      };
+    }
+
+    let loadedConditions = [];
+    if (Array.isArray(match.conditions) && match.conditions.length > 0) {
+      loadedConditions = match.conditions.map((c) => (c === 'good' ? 'normal_wear' : c));
+    } else if (match.condition) {
+      loadedConditions = [match.condition === 'good' ? 'normal_wear' : match.condition];
+    } else {
+      loadedConditions = ['normal_wear'];
+    }
+    const primaryCond = loadedConditions.includes('total_damage')
+      ? 'total_damage'
+      : (loadedConditions.find((c) => c !== 'normal_wear') || 'normal_wear');
+
+    const repairFee = match.repairFee ?? match.compensation ?? 0;
+    return {
+      dressId: item.dressId || item.id || item._id || 'item_default',
+      name: item.name,
+      condition: primaryCond,
+      conditions: loadedConditions,
+      damageNotes: match.note || match.damageNotes || '',
+      selectedOption: repairFee,
+      compensation: repairFee,
+      rentPrice: itemRent,
+      depositAmount: maxDepositLimit,
+      maxPrice: maxDepositLimit,
+      maxDeposit: maxDepositLimit,
+    };
+  });
+};
+
 function InspectionModal({ order, onClose, onSuccess }) {
   const { user, isAdmin } = useAuth();
   const location = useLocation();
@@ -544,55 +599,37 @@ function InspectionModal({ order, onClose, onSuccess }) {
   const isCompletedOrder = order.status === 'completed' || order.status === 'complete';
   const isReturnedOrder = order.status === 'waiting_refund' || order.status === 'returned';
   const isGuestOrder = !order.hasAccount && !order.customerId && !order.userId;
-  const [customerStatus, setCustomerStatus] = useState(order.inspectionCustomerStatus || order.inspection?.customerStatus || 'pending');
+  const initialInsp = order.inspection || null;
+  const [customerStatus, setCustomerStatus] = useState(initialInsp?.customerStatus || order.inspectionCustomerStatus || 'pending');
   const isCustomerApproved = customerStatus === 'approved';
 
-  const [savedInspection, setSavedInspection] = useState(null);
+  const [savedInspection, setSavedInspection] = useState(initialInsp);
   const isReadOnly = !canInspectOrder(order) || Boolean(savedInspection);
   const canResumeInspection = canRecordReturn(order) && Boolean(savedInspection);
 
-  const [disputeReason, setDisputeReason] = useState('');
-  const [refundBankDetails, setRefundBankDetails] = useState(null);
+  const [disputeReason, setDisputeReason] = useState(initialInsp?.disputeReason || '');
+  const [refundBankDetails, setRefundBankDetails] = useState(initialInsp?.refundBankDetails || null);
 
   // 2. Ý kiến khách hàng về biên bản kiểm định (Trường hợp 1: Chốt tại chỗ | Trường hợp 2: Giữ đơn chuyển Admin)
-  const [inspectionLoading, setInspectionLoading] = useState(true);
+  const [inspectionLoading, setInspectionLoading] = useState(!initialInsp);
   const [inspectionError, setInspectionError] = useState('');
   const [inspectionReload, setInspectionReload] = useState(0);
   const [customerDisputeNote, setCustomerDisputeNote] = useState('');
-  const [onSiteBankName, setOnSiteBankName] = useState('Vietcombank');
-  const [onSiteAccountNum, setOnSiteAccountNum] = useState('');
-  const [onSiteAccountHolder, setOnSiteAccountHolder] = useState(order.customerName || '');
+  const [onSiteBankName, setOnSiteBankName] = useState(initialInsp?.refundBankDetails?.bankName || 'Vietcombank');
+  const [onSiteAccountNum, setOnSiteAccountNum] = useState(initialInsp?.refundBankDetails?.accountNumber || '');
+  const [onSiteAccountHolder, setOnSiteAccountHolder] = useState(initialInsp?.refundBankDetails?.accountHolder || order.customerName || '');
 
-  const [itemsCondition, setItemsCondition] = useState(
-    () =>
-      (order.items || []).map((item) => {
-        const itemDeposit = item.depositAmount ?? (order.totalDeposit ? Math.round(order.totalDeposit / Math.max(1, (order.items || []).length)) : 0);
-        const itemRent = item.rentPrice ?? (order.totalRentPrice ? Math.round(order.totalRentPrice / Math.max(1, (order.items || []).length)) : 0);
-        // Giới hạn tiền bồi thường tối đa không được vượt quá tiền cọc
-        const maxDepositLimit = itemDeposit > 0 ? itemDeposit : (order.totalDeposit || 0);
-        return {
-          dressId: item.dressId || item.id || item._id || 'item_default',
-          name: item.name,
-          condition: 'normal_wear',
-          conditions: ['normal_wear'],
-          selectedOption: null,
-          damageNotes: '',
-          compensation: 0,
-          rentPrice: itemRent,
-          depositAmount: maxDepositLimit,
-          maxPrice: maxDepositLimit,
-          maxDeposit: maxDepositLimit,
-        };
-      })
+  const [itemsCondition, setItemsCondition] = useState(() =>
+    mapInspectionItems(order.items, initialInsp?.itemsCondition, order.totalDeposit, order.totalRentPrice)
   );
-  const [evidencePhotos, setEvidencePhotos] = useState([]);
+  const [evidencePhotos, setEvidencePhotos] = useState(initialInsp?.evidencePhotos || []);
   const [submitting, setSubmitting] = useState(false);
 
   // Luôn luôn tải biên bản kiểm định đã lưu từ trước (nếu có)
   useEffect(() => {
     let active = true;
     setInspectionError('');
-    setInspectionLoading(true);
+    if (!savedInspection) setInspectionLoading(true);
     getReturnInspection(order._id)
       .then((insp) => {
         if (!active) return;
@@ -602,38 +639,17 @@ function InspectionModal({ order, onClose, onSuccess }) {
             setCustomerStatus(insp.customerStatus);
           }
           if (insp.disputeReason) setDisputeReason(insp.disputeReason);
-          if (insp.refundBankDetails) setRefundBankDetails(insp.refundBankDetails);
+          if (insp.refundBankDetails) {
+            setRefundBankDetails(insp.refundBankDetails);
+            if (insp.refundBankDetails.bankName) setOnSiteBankName(insp.refundBankDetails.bankName);
+            if (insp.refundBankDetails.accountNumber) setOnSiteAccountNum(insp.refundBankDetails.accountNumber);
+            if (insp.refundBankDetails.accountHolder) setOnSiteAccountHolder(insp.refundBankDetails.accountHolder);
+          }
           if (insp.evidencePhotos?.length) {
             setEvidencePhotos(insp.evidencePhotos);
           }
           if (insp.itemsCondition?.length) {
-            setItemsCondition((prev) =>
-              prev.map((it, idx) => {
-                const match =
-                  insp.itemsCondition[idx] ||
-                  insp.itemsCondition.find((c) => String(c.dressId) === String(it.dressId));
-                if (!match) return it;
-                let loadedConditions = [];
-                if (Array.isArray(match.conditions) && match.conditions.length > 0) {
-                  loadedConditions = match.conditions.map((c) => (c === 'good' ? 'normal_wear' : c));
-                } else if (match.condition) {
-                  loadedConditions = [match.condition === 'good' ? 'normal_wear' : match.condition];
-                } else {
-                  loadedConditions = ['normal_wear'];
-                }
-                const primaryCond = loadedConditions.includes('total_damage')
-                  ? 'total_damage'
-                  : (loadedConditions.find((c) => c !== 'normal_wear') || 'normal_wear');
-                return {
-                  ...it,
-                  condition: primaryCond,
-                  conditions: loadedConditions,
-                  damageNotes: match.note || match.damageNotes || '',
-                  selectedOption: match.repairFee ?? match.compensation ?? 0,
-                  compensation: match.repairFee ?? match.compensation ?? 0,
-                };
-              })
-            );
+            setItemsCondition(mapInspectionItems(order.items, insp.itemsCondition, order.totalDeposit, order.totalRentPrice));
           }
         }
       })
@@ -983,7 +999,17 @@ function InspectionModal({ order, onClose, onSuccess }) {
         </div>
 
         <div className="p-4 sm:p-5 space-y-3.5 text-xs font-jakarta">
-          {/* Status banner nếu khách đã phản hồi */}
+          {inspectionLoading && !savedInspection ? (
+            <div className="py-20 flex flex-col items-center justify-center text-center space-y-3.5">
+              <div className="w-9 h-9 border-3 border-[#733F49] border-t-transparent rounded-full animate-spin"></div>
+              <div className="space-y-1">
+                <p className="text-sm font-bold text-[#5F2B36] m-0">Đang tải hồ sơ biên bản kiểm định...</p>
+                <p className="text-xs text-[#8C7D7E] m-0">Vui lòng chờ trong giây lát</p>
+              </div>
+            </div>
+          ) : (
+            <>
+              {/* Status banner nếu khách đã phản hồi */}
           {customerStatus === 'disputed' && (
             <div className="p-3 rounded-2xl bg-amber-50/80 border border-amber-200 text-xs text-amber-900 space-y-1 animate-fadeIn">
               <div className="font-bold flex items-center gap-2 text-amber-950 text-[12px]">
@@ -1403,8 +1429,9 @@ function InspectionModal({ order, onClose, onSuccess }) {
 
             </div>
           )}
+          </>
+          )}
 
-          {inspectionLoading && <p role="status">Đang tải biên bản…</p>}
           {inspectionError && <p role="alert" className="text-red-700">{inspectionError} <button type="button" className="underline" onClick={() => setInspectionReload((value) => value + 1)}>Thử lại</button></p>}
           {isReadOnly && !savedInspection && !inspectionLoading && !inspectionError && <p>Đơn chưa có biên bản kiểm định.</p>}
           <div className="flex flex-wrap gap-2.5 pt-1.5">
@@ -1421,7 +1448,8 @@ function InspectionModal({ order, onClose, onSuccess }) {
               <button
                 type="button"
                 onClick={onClose}
-                className="w-full py-2.5 rounded-xl border border-[#EFE5E1] text-[12.5px] font-bold text-[#5F4E50] hover:bg-[#FAF5F2] transition-colors bg-white cursor-pointer shadow-2xs"
+                disabled={inspectionLoading && !savedInspection}
+                className="w-full py-2.5 rounded-xl border border-[#EFE5E1] text-[12.5px] font-bold text-[#5F4E50] hover:bg-[#FAF5F2] transition-colors bg-white cursor-pointer shadow-2xs disabled:opacity-60"
               >
                 {isCompletedOrder ? 'Đóng Hồ Sơ Lưu Trữ' : 'Đóng Biên Bản'}
               </button>
@@ -1474,23 +1502,26 @@ function InspectionModal({ order, onClose, onSuccess }) {
 }
 
 function AdminNegotiationModal({ order, onClose, onSuccess }) {
-  const [inspection, setInspection] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const initialInsp = order.inspection || null;
+  const [inspection, setInspection] = useState(initialInsp);
+  const [loading, setLoading] = useState(!initialInsp);
   const [submitting, setSubmitting] = useState(false);
-  const [agreedPenalty, setAgreedPenalty] = useState(0);
+  const [agreedPenalty, setAgreedPenalty] = useState(
+    initialInsp?.negotiatedByAdmin ? (initialInsp.agreedPenaltyFee ?? 0) : (initialInsp?.totalDeduction ?? 0)
+  );
   const [transactionCode, setTransactionCode] = useState('');
   const [loadError, setLoadError] = useState('');
   const [reload, setReload] = useState(0);
-  const [bankName, setBankName] = useState('Vietcombank');
-  const [accountNumber, setAccountNumber] = useState('');
-  const [accountHolder, setAccountHolder] = useState(order.customerName || '');
-  const [negotiationNotes, setNegotiationNotes] = useState('');
+  const [bankName, setBankName] = useState(initialInsp?.refundBankDetails?.bankName || 'Vietcombank');
+  const [accountNumber, setAccountNumber] = useState(initialInsp?.refundBankDetails?.accountNumber || '');
+  const [accountHolder, setAccountHolder] = useState(initialInsp?.refundBankDetails?.accountHolder || order.customerName || '');
+  const [negotiationNotes, setNegotiationNotes] = useState(initialInsp?.adminNegotiationNotes || '');
   const [previewPhoto, setPreviewPhoto] = useState(null);
   const [copiedPhone, setCopiedPhone] = useState(false);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
+    if (!inspection) setLoading(true);
     setLoadError('');
     getReturnInspection(order._id)
       .then((insp) => {
@@ -1894,16 +1925,16 @@ function RefundModal({ order, onClose, onSuccess }) {
   const [submitting, setSubmitting] = useState(false);
   const [refundNote, setRefundNote] = useState('');
   const [transactionCode, setTransactionCode] = useState('');
-  const [inspectionData, setInspectionData] = useState(null);
-  const [loading, setLoading] = useState(true);
+  const initialInsp = order.inspection || null;
+  const [inspectionData, setInspectionData] = useState(initialInsp);
+  const [loading, setLoading] = useState(!initialInsp);
   const [loadError, setLoadError] = useState('');
   const [reload, setReload] = useState(0);
 
   useEffect(() => {
     let active = true;
-    setLoading(true);
+    if (!inspectionData) setLoading(true);
     setLoadError('');
-    setInspectionData(null);
     getReturnInspection(order._id)
       .then((inspection) => {
         if (active) {
