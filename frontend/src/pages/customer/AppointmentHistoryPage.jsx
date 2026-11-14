@@ -4,7 +4,6 @@ import {
   CalendarDays,
   Clock,
   MapPin,
-  Users,
   Search,
   CheckCircle2,
   AlertCircle,
@@ -335,10 +334,6 @@ export default function AppointmentHistoryPage() {
                       <div className="flex items-center gap-2 text-xs font-semibold text-[#8C4654]">
                         <Clock className="w-4 h-4 text-[#8C4654]" />
                         <span>{apt.timeSlot || '09:00 — 10:30'} (Ca 90 phút)</span>
-                      </div>
-                      <div className="flex items-center gap-2 text-[11.5px] text-[#7A6B6A]">
-                        <Users className="w-3.5 h-3.5" />
-                        <span>Đi cùng: {apt.guestsCount || 1} khách</span>
                       </div>
                     </div>
 
