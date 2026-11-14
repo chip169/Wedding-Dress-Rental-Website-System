@@ -215,7 +215,7 @@ export default function CheckoutPage() {
               deposit: Number(d.depositAmount || d.deposit) || 15000000,
               image: d.images?.[0] || d.image || '/assets/dresses/dress_01.jpg',
               code: d.code || 'UB-HC-2026',
-              size: d.sizes?.[0]?.label || 'S',
+              size: d.sizes?.[0]?.size || d.sizes?.[0]?.label || (typeof d.sizes?.[0] === 'string' ? d.sizes[0] : 'S'),
             };
             setOrderItems([singleItem]);
             setActiveDress(singleItem);

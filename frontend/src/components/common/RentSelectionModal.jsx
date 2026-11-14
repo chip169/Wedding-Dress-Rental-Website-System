@@ -45,8 +45,22 @@ export default function RentSelectionModal({
     // Trường hợp 1: sizes là mảng các object hoặc chuỗi
     if (Array.isArray(dress.sizes) && dress.sizes.length > 0) {
       return dress.sizes.map((s) => {
-        const key = typeof s === 'string' ? s.trim() : (s?.id || s?.label || '');
-        return SIZE_MAP[key] || { id: key, label: key, note: s?.note || 'Chuẩn dáng UniBridal' };
+        const rawKey = typeof s === 'string' ? s : (s?.size || s?.id || s?.label || '');
+        const clean = String(rawKey).replace(/^size\s*/i, '').trim().toUpperCase();
+        const mapKey = clean === 'FREESIZE' ? 'FreeSize' : clean;
+        const matched = SIZE_MAP[mapKey];
+        if (matched) {
+          return {
+            ...matched,
+            quantity: typeof s === 'object' && s?.quantity !== undefined ? s.quantity : 1,
+          };
+        }
+        return {
+          id: mapKey || 'S',
+          label: mapKey || 'S',
+          note: s?.note || 'Chuẩn dáng UniBridal',
+          quantity: typeof s === 'object' && s?.quantity !== undefined ? s.quantity : 1,
+        };
       });
     }
 

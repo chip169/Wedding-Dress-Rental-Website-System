@@ -122,7 +122,7 @@ const TrendingCollection = ({ onBookProduct, onToggleWishlist, wishlistedIds: pr
             rating: Number(d.rating || 4.9).toFixed(1),
             rentCount: `${d.rentCount || 88} lượt thuê`,
             size: d.sizes?.length
-              ? `Size: ${d.sizes.map((s) => (typeof s === 'string' ? s : s.id || s.label)).join(' - ')}`
+              ? `Size: ${d.sizes.map((s) => (typeof s === 'string' ? s : s?.size || s?.id || s?.label)).filter(Boolean).join(' - ')}`
               : 'Size: S - M',
             sizes: d.sizes,
             colors: d.colors || d.colorOptions,
