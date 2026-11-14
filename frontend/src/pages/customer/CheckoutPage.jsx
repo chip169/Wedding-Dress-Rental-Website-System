@@ -3453,7 +3453,7 @@ export default function CheckoutPage() {
 
             <div>
               <span className="text-[11px] font-bold uppercase tracking-[2px] text-[#D4AF37] block mb-1">
-                ★ HỢP ĐỒNG SỐ #HĐ-UB-2026/8992 ĐÃ KÍCH HOẠT ★
+                ★ ĐƠN ĐẶT THUÊ #{createdOrder?.orderCode || 'UB-2026-0001'} ĐÃ KÍCH HOẠT ★
               </span>
               <h2 className="font-playfair text-[22px] sm:text-[28px] font-bold text-[#2C2523] m-0 mb-1.5">
                 Khóa Lịch Đặt Thuê Thành Công!
@@ -3466,8 +3466,8 @@ export default function CheckoutPage() {
             {/* Contract Ticket Voucher */}
             <div className="bg-[#FAF4EE] p-5 rounded-2xl border border-[#EEDECF] text-left text-[12.5px] space-y-3">
               <div className="flex items-center justify-between pb-2.5 border-b border-[#EEDECF]">
-                <span className="text-[#847374] font-medium">Mã Đơn / Hợp Đồng:</span>
-                <strong className="font-mono text-[#733F49] text-[14px]">{createdOrder?.contractCode || createdOrder?.orderCode || 'HĐ-UB-2026/8992'}</strong>
+                <span className="text-[#847374] font-medium">Mã Đơn Hàng:</span>
+                <strong className="font-mono text-[#733F49] text-[14px]">{createdOrder?.orderCode || 'UB-2026-0001'}</strong>
               </div>
 
               {/* Dress Details */}
@@ -3577,7 +3577,7 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const shareText = `Anh yêu ơi, em đã đặt thuê thành công ${orderItems && orderItems.length > 1 ? `${orderItems.length} tác phẩm váy cưới` : `tác phẩm váy cưới ${activeDress?.name}`} tại UniBridal cho ngày cưới ${rentalSchedule.weddingDate}! Mã hợp đồng: ${createdOrder?.contractCode || 'HĐ-UB-2026/8992'}. Cùng xem với em nhé: ${window.location.href}`;
+                  const shareText = `Anh yêu ơi, em đã đặt thuê thành công ${orderItems && orderItems.length > 1 ? `${orderItems.length} tác phẩm váy cưới` : `tác phẩm váy cưới ${activeDress?.name}`} tại UniBridal cho ngày cưới ${rentalSchedule.weddingDate}! Mã đơn hàng: ${createdOrder?.orderCode || 'UB-2026-0001'}. Cùng xem với em nhé: ${window.location.href}`;
                   if (navigator.share) {
                     navigator.share({
                       title: 'Hợp Đồng Thuê Váy Cưới UniBridal',
