@@ -2665,13 +2665,21 @@ export default function OrderRentalManagement() {
             type="text"
             placeholder="Tìm theo mã đơn, tên khách, số điện thoại, váy thuê..."
             value={searchTerm}
-            onChange={(e) => { setSearchTerm(e.target.value); setActivePage(1); }}
+            onChange={(e) => {
+              setSearchTerm(e.target.value);
+              if (!e.target.value.trim()) setHighlightedOrderCode(null);
+              setActivePage(1);
+            }}
             className="w-full pl-10 pr-9 py-2.5 rounded-xl border border-[#EFE5E1] bg-[#FCF7F4] text-sm text-[#302626] placeholder-[#A39293] focus:outline-none focus:ring-2 focus:ring-[#B8737D]/30 focus:border-[#B8737D] transition-all"
           />
           {searchTerm && (
             <button
               type="button"
-              onClick={() => { setSearchTerm(''); setActivePage(1); }}
+              onClick={() => {
+                setSearchTerm('');
+                setHighlightedOrderCode(null);
+                setActivePage(1);
+              }}
               className="absolute right-3 top-1/2 -translate-y-1/2 text-[#A39192] hover:text-[#5F333B] cursor-pointer bg-transparent border-0 p-0"
             >
               <X size={15} />
@@ -2682,13 +2690,24 @@ export default function OrderRentalManagement() {
         <div className="flex items-center gap-2 shrink-0 overflow-x-auto pb-1 md:pb-0">
           <button type="button"
             aria-pressed={statusFilter === 'waiting_refund'}
-            onClick={() => { setViewMode('active'); setStatusFilter(statusFilter === 'waiting_refund' ? 'all' : 'waiting_refund'); setActivePage(1); }}
+            onClick={() => {
+              setViewMode('active');
+              const nextFilter = statusFilter === 'waiting_refund' ? 'all' : 'waiting_refund';
+              setStatusFilter(nextFilter);
+              if (nextFilter === 'all') setHighlightedOrderCode(null);
+              setActivePage(1);
+            }}
             className={`flex items-center gap-1.5 whitespace-nowrap rounded-xl border border-[#EFE5E1] px-3 py-2 text-xs font-semibold ${statusFilter === 'waiting_refund' ? 'bg-[#733F49] text-white' : 'bg-[#FCF7F4] text-[#733F49] hover:bg-[#FAF0EC]'}`}>
             <Banknote size={14} aria-hidden="true" /> Chờ Hoàn Cọc
           </button>
           <button
             type="button"
-            onClick={() => { setViewMode('active'); setStatusFilter('all'); setActivePage(1); }}
+            onClick={() => {
+              setViewMode('active');
+              setStatusFilter('all');
+              setHighlightedOrderCode(null);
+              setActivePage(1);
+            }}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer border-0 ${viewMode === 'active' && statusFilter !== 'waiting_refund'
               ? 'bg-[#733F49] text-white shadow-xs'
               : 'bg-[#FCF7F4] text-[#7A6B6C] hover:bg-[#FAF0EC] hover:text-[#733F49]'
@@ -2706,7 +2725,12 @@ export default function OrderRentalManagement() {
 
           <button
             type="button"
-            onClick={() => { setViewMode('archived'); setStatusFilter('all'); setActivePage(1); }}
+            onClick={() => {
+              setViewMode('archived');
+              setStatusFilter('all');
+              setHighlightedOrderCode(null);
+              setActivePage(1);
+            }}
             className={`flex items-center gap-2 px-4 py-2 rounded-xl text-xs font-semibold whitespace-nowrap transition-colors cursor-pointer border-0 ${viewMode === 'archived'
               ? 'bg-[#1E8347] text-white shadow-xs'
               : 'bg-[#FCF7F4] text-[#7A6B6C] hover:bg-[#FAF0EC] hover:text-[#733F49]'
@@ -2842,10 +2866,24 @@ export default function OrderRentalManagement() {
                   const firstItem = order.items?.[0] || {};
                   const canInspect = canInspectOrder(order);
                   const isDisputed = hasDisputedInspection(order);
+
+                  const hasSearch = Boolean(searchTerm && searchTerm.trim());
+                  const hasFilter = Boolean(statusFilter && statusFilter !== 'all');
+                  const hasSearchOrFilter = hasSearch || hasFilter;
+
+                  const cleanSearch = (searchTerm || '').trim().toLowerCase().replace(/^[#\s]+/, '');
+                  const cleanHighlight = (highlightedOrderCode || '').toLowerCase().replace(/^[#\s]+/, '');
+
+                  // Chỉ bôi vàng khi người dùng CÓ tìm kiếm hoặc CÓ lọc trạng thái cụ thể
                   const isHighlighted =
-                    highlightedOrderCode &&
-                    ((order.orderCode && order.orderCode.toLowerCase().replace(/^[#\s]+/, '') === highlightedOrderCode.toLowerCase().replace(/^[#\s]+/, '')) ||
-                      order._id === highlightedOrderCode);
+                    hasSearchOrFilter &&
+                    Boolean(
+                      (cleanHighlight && (
+                        (order.orderCode && order.orderCode.toLowerCase().replace(/^[#\s]+/, '') === cleanHighlight) ||
+                        order._id === highlightedOrderCode
+                      )) ||
+                      (hasSearch && cleanSearch && cleanSearch === (order.orderCode || '').toLowerCase().replace(/^[#\s]+/, ''))
+                    );
 
                   return (
                     <tr
