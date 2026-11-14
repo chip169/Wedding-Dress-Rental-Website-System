@@ -114,14 +114,6 @@ const dressSchema = new mongoose.Schema(
         },
       ],
     },
-    realBrides: [
-      {
-        brideName: { type: String },
-        date: { type: String },
-        image: { type: String },
-        quote: { type: String },
-      },
-    ],
   },
   {
     timestamps: true,
