@@ -71,6 +71,19 @@ const SIZE_MAP = {
   FreeSize: { id: 'FreeSize', label: 'FreeSize', note: 'Dây đan corset linh hoạt', bust: '82-96cm', waist: '60-80cm' },
 };
 
+function cleanMatchSize(sz) {
+  let s = String(sz || '').trim();
+  s = s.replace(/^size\s*[:\s-]*/i, '').trim();
+  const parenIdx = s.indexOf('(');
+  if (parenIdx > 0) {
+    s = s.slice(0, parenIdx).trim();
+  }
+  if (s.includes('-') || s.includes('/')) {
+    s = s.split(/[-/]/)[0].replace(/^size\s*[:\s-]*/i, '').trim();
+  }
+  return s.toUpperCase();
+}
+
 function formatDressSizes(rawSizes, dressMeta = null) {
   let overrides = {};
   try {
@@ -124,7 +137,7 @@ function formatDressSizes(rawSizes, dressMeta = null) {
 
   return sizesArray.map((s) => {
     const key = typeof s === 'string' ? s : s?.size || s?.id || s?.label;
-    const cleanKey = String(key || '').replace(/^size\s*/i, '').trim().toUpperCase();
+    const cleanKey = cleanMatchSize(key);
     const baseObj = SIZE_MAP[cleanKey] || SIZE_MAP[key] || { id: key, label: key, note: 'Chuẩn dáng UniBridal' };
 
     const totalQty = typeof s === 'object' && s?.totalQuantity !== undefined
@@ -143,7 +156,7 @@ function formatDressSizes(rawSizes, dressMeta = null) {
 
     // c) Bảo dưỡng từ đơn hoàn tất
     const storageMaint = activeCompletedItems.filter((it) => {
-      const itSz = String(it.size || '').replace(/^size\s*/i, '').trim().toUpperCase();
+      const itSz = cleanMatchSize(it.size);
       return itSz === cleanKey;
     }).length;
 

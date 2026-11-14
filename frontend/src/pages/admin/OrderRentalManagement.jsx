@@ -121,8 +121,8 @@ const NEXT_STATUSES = {
   cancelled: [],
 };
 
-const canRecordReturn = (order) => order.status === 'renting';
-const canInspectOrder = (order) => order.status === 'renting';
+const canRecordReturn = (order) => order.status === 'renting' || order.status === 'delivered';
+const canInspectOrder = (order) => order.status === 'renting' || order.status === 'delivered';
 const hasDisputedInspection = (order) => order.status === 'disputed'
   || (order.inspection?.customerStatus || order.inspectionCustomerStatus) === 'disputed';
 
@@ -2411,7 +2411,7 @@ export default function OrderRentalManagement() {
   const stats = useMemo(() => {
     return {
       total: globalStats.total || orders.length,
-      renting: globalStats.renting || orders.filter((o) => o.status === 'renting').length,
+      renting: globalStats.renting || orders.filter((o) => ['renting', 'delivered'].includes(o.status)).length,
       completed: globalStats.completed || orders.filter((o) => o.status === 'completed' || o.status === 'complete').length,
       cancelled: globalStats.cancelled || orders.filter((o) => o.status === 'cancelled').length,
     };
@@ -2443,7 +2443,9 @@ export default function OrderRentalManagement() {
             ? isDisputed
             : (statusFilter === 'waiting_refund' || statusFilter === 'returned')
               ? (o.status === 'waiting_refund' || o.status === 'returned' || o.inspection?.canConfirmRefund || o.inspection?.refundConflict)
-              : o.status === statusFilter;
+              : statusFilter === 'renting'
+                ? (o.status === 'renting' || o.status === 'delivered')
+                : o.status === statusFilter;
 
       // Khi người dùng đang tìm kiếm cụ thể: Hiển thị ngay kết quả kể cả đơn nằm ở Kho Lưu Trữ
       if (cleanQ) {

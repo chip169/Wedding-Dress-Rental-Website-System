@@ -141,6 +141,19 @@ function cleanMatchStr(s) {
   return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
+function cleanMatchSize(sz) {
+  let s = String(sz || '').trim();
+  s = s.replace(/^size\s*[:\s-]*/i, '').trim();
+  const parenIdx = s.indexOf('(');
+  if (parenIdx > 0) {
+    s = s.slice(0, parenIdx).trim();
+  }
+  if (s.includes('-') || s.includes('/')) {
+    s = s.split(/[-/]/)[0].replace(/^size\s*[:\s-]*/i, '').trim();
+  }
+  return s.toUpperCase();
+}
+
 /**
  * Tự động tính toán số lượng tồn kho khả dụng thực tế của từng size
  * sau khi trừ đi các đơn thuê đang hoạt động, đơn đã cọc hoặc trong chu trình bảo dưỡng/kiểm định.
@@ -195,7 +208,7 @@ export async function attachAvailabilityToDresses(dresses) {
           const nameMatch = itName && dressName && (itName === dressName && dressName.length >= 2);
 
           if (idMatch || codeMatch || nameMatch) {
-            const rawSize = String(it.size || '').replace(/^size\s*/i, '').trim().toUpperCase();
+            const rawSize = cleanMatchSize(it.size);
             const qty = Number(it.quantity || 1);
             if (isMaintenance) {
               maintBySize[rawSize] = (maintBySize[rawSize] || 0) + qty;
@@ -218,7 +231,7 @@ export async function attachAvailabilityToDresses(dresses) {
 
       const updatedSizes = (d.sizes || []).map((s) => {
         const sName = typeof s === 'string' ? s : s?.size || s?.label || '';
-        const cleanSName = String(sName).replace(/^size\s*/i, '').trim().toUpperCase();
+        const cleanSName = cleanMatchSize(sName);
         const originalQty = typeof s === 'object' && s?.quantity !== undefined ? Math.max(1, Number(s.quantity)) : 1;
         totalInitialStock += originalQty;
 

@@ -550,36 +550,41 @@ export default function InventoryManagement() {
       return parts.join(' • ');
     };
 
-    if (statusType === 'auto') {
-      // Khi khả dụng = 0 (tất cả các bộ đã được thuê hoặc đã cọc), hệ thống tự động hiển thị HẾT HÀNG
-      if (availableStock <= 0) {
+    // QUY TẮC CỐT LÕI: Khi khả dụng = 0 (tất cả các bộ trong kho đã cho thuê, cọc hoặc bảo dưỡng),
+    // TUYỆT ĐỐI KHÔNG ĐƯỢC hiển thị là "CÒN HÀNG" dù có manualStatus hay không!
+    if (availableStock <= 0) {
+      if (maintenanceCount > 0 && maintenanceCount === totalStock) {
+        statusType = 'drying';
+        statusText = 'ĐANG BẢO DƯỠNG';
+        statusSubNote = `Đang kiểm định & bảo dưỡng (${maintenanceCount} bộ)`;
+      } else if (rentedCount > 0) {
+        statusType = 'ready';
+        statusText = 'ĐÃ CHO THUÊ';
+        const reasons = [];
+        if (rentedCount > 0) reasons.push(`${rentedCount} đang thuê`);
+        if (bookedCount > 0) reasons.push(`${bookedCount} đã cọc`);
+        if (maintenanceCount > 0) reasons.push(`${maintenanceCount} bảo dưỡng`);
+        statusSubNote = reasons.join(' • ');
+      } else {
         statusType = 'out_of_stock';
         statusText = 'HẾT HÀNG';
         const reasons = [];
-        if (rentedCount > 0) reasons.push(`${rentedCount} đang thuê`);
         if (bookedCount > 0) reasons.push(`${bookedCount} đã cọc`);
         if (maintenanceCount > 0) reasons.push(`${maintenanceCount} bảo dưỡng`);
         statusSubNote = totalStock > 0
           ? `Tạm hết khả dụng (${reasons.length > 0 ? reasons.join(' • ') : `${totalStock} bộ`})`
           : 'Tạm hết mẫu này trong kho';
+      }
+    } else {
+      if (statusType === 'drying' || manualStatus === 'drying') {
+        statusType = 'drying';
+        statusText = 'ĐANG BẢO DƯỠNG';
+        statusSubNote = maintenanceCount > 0 ? `Đang kiểm định và bảo dưỡng (${maintenanceCount} bộ)` : 'Giặt khô, là hơi phục hồi';
       } else {
         statusType = 'stored';
         statusText = 'CÒN HÀNG';
         statusSubNote = computeStoredSubNote();
       }
-    } else if (statusType === 'drying') {
-      statusText = 'ĐANG BẢO DƯỠNG';
-      statusSubNote = maintenanceCount > 0 ? `Đang kiểm định và bảo dưỡng (${maintenanceCount} bộ)` : 'Giặt khô, là hơi phục hồi';
-    } else if (statusType === 'ready') {
-      statusText = 'ĐÃ CHO THUÊ';
-      statusSubNote = rentedCount > 0 ? `Đang phục vụ cô dâu (${rentedCount} bộ)` : 'Đang phục vụ cô dâu';
-    } else if (statusType === 'out_of_stock') {
-      statusText = 'HẾT HÀNG';
-      statusSubNote = 'Tạm hết mẫu này trong kho';
-    } else {
-      statusType = 'stored';
-      statusText = 'CÒN HÀNG';
-      statusSubNote = computeStoredSubNote();
     }
 
     return {

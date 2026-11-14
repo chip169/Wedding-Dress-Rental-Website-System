@@ -93,6 +93,10 @@ const orderSchema = new mongoose.Schema(
       default: 4,
       min: 1,
     },
+    actualDeliveryDate: {
+      type: Date,
+      default: null,
+    },
     actualReturnDate: {
       type: Date,
       default: null,

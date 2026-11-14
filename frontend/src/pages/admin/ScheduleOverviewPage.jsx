@@ -844,7 +844,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
     }
   };
 
-  // Xác nhận khách đã lấy váy (Cập nhật đơn thuê sang trạng thái 'renting' - Đang thuê)
+  // Xác nhận khách đã lấy váy (Cập nhật đơn thuê sang trạng thái 'delivered' - Đã giao váy)
   const handleConfirmCustomerReceived = async (deliveryItem) => {
     const orderId = deliveryItem.id || deliveryItem.rawOrder?._id || deliveryItem.code;
     if (!orderId) {
@@ -854,8 +854,8 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
     setUpdatingId(deliveryItem.id || orderId);
     try {
-      await updateOrderStatus(orderId, 'renting');
-      message.success(`Đã xác nhận khách lấy váy thành công! Đơn thuê #${deliveryItem.code || orderId} đã được chuyển sang trạng thái "Đang thuê".`);
+      await updateOrderStatus(orderId, 'delivered');
+      message.success(`Đã xác nhận khách lấy váy thành công! Đơn thuê #${deliveryItem.code || orderId} đã được chuyển sang trạng thái "Đã giao váy".`);
 
       // Cập nhật local state orders ngay lập tức để giao diện phản hồi tức thì
       setOrders((prev) =>
@@ -869,7 +869,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
           ) {
             return {
               ...ord,
-              status: 'renting',
+              status: 'delivered',
               actualDeliveryDate: new Date().toISOString(),
             };
           }
@@ -884,7 +884,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
         if (prevId === deliveryItem.id || prevId === deliveryItem.code || prevId === orderId) {
           return {
             ...prev,
-            status: 'renting',
+            status: 'delivered',
             actualDeliveryDate: new Date().toISOString(),
           };
         }
@@ -2247,7 +2247,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                                       handleConfirmCustomerReceived(item);
                                     }}
                                     className="text-[10.5px] px-3 py-1 rounded-full font-bold tracking-tight bg-amber-50 hover:bg-amber-100 active:scale-95 text-amber-900 border border-amber-300 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
-                                    title="Bấm để xác nhận khách đã lấy váy (đơn thuê sẽ tự động cập nhật sang trạng thái Đang thuê)"
+                                    title="Bấm để xác nhận khách đã lấy váy (đơn thuê sẽ tự động cập nhật sang trạng thái Đã giao váy)"
                                   >
                                     <CheckCircle2 className="w-3.5 h-3.5 text-amber-700" />
                                     <span>Xác Nhận Khách Đã Lấy</span>
@@ -2434,7 +2434,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                                       disabled={updatingId === item.id || updatingId === (item.rawOrder?._id || item.id)}
                                       onClick={() => handleConfirmCustomerReceived(item)}
                                       className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
-                                      title="Xác nhận khách đã lấy đồ (chuyển đơn sang trạng thái Đang Thuê)"
+                                      title="Xác nhận khách đã lấy đồ (chuyển đơn sang trạng thái Đã Giao Váy)"
                                     >
                                       <CheckCircle2 className="w-3.5 h-3.5" />
                                       <span>Xác Nhận Khách Đã Lấy</span>
@@ -2761,7 +2761,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                         disabled={updatingId === selectedEvent.id}
                         onClick={() => handleConfirmCustomerReceived(selectedEvent)}
                         className="flex-1 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
-                        title="Xác nhận khách đã lấy đồ (chuyển đơn sang trạng thái Đang Thuê)"
+                        title="Xác nhận khách đã lấy đồ (chuyển đơn sang trạng thái Đã Giao Váy)"
                       >
                         <CheckCircle2 className="w-4 h-4" />
                         <span>Xác Nhận Khách Đã Lấy</span>

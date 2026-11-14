@@ -452,6 +452,8 @@ export const getAllOrders = async (filters = {}) => {
       { _id: { $in: disputedOrderIds } },
       { status: 'disputed' }
     ];
+  } else if (filters.status === 'renting') {
+    query.status = { $in: ['renting', 'delivered'] };
   } else if (filters.status && filters.status !== 'all') {
     query.status = filters.status;
   } else if (!filters.search) {
@@ -483,7 +485,7 @@ export const getAllOrders = async (filters = {}) => {
   // Lấy tổng quan số liệu toàn hệ thống showroom (không bị phụ thuộc vào từ khóa tìm kiếm)
   const [totalAll, rentingCount, completedCount, cancelledCount, total, orders] = await Promise.all([
     Order.countDocuments({}),
-    Order.countDocuments({ status: 'renting' }),
+    Order.countDocuments({ status: { $in: ['renting', 'delivered'] } }),
     Order.countDocuments({ status: { $in: CLOSED_ORDER_STATUS_FILTER } }),
     Order.countDocuments({ status: 'cancelled' }),
     Order.countDocuments(query),
@@ -611,7 +613,7 @@ export const updateOrderStatus = async (idOrCode, status) => {
     throw returnError(409, 'Đơn đang hoặc đã xử lý trả váy. Vui lòng dùng thao tác trong biên bản.');
   }
   const updateFields = { status };
-  if (status === 'renting') {
+  if (status === 'renting' || status === 'delivered') {
     updateFields.actualDeliveryDate = order.actualDeliveryDate || new Date();
   }
   if (status === 'completed' || status === 'complete') {
@@ -852,8 +854,8 @@ const createReturnInspection = async (order, data, staffUser) => {
 export const submitReturnInspection = async (orderId, data = {}, staffUser) => {
   const order = await Order.findById(orderId);
   if (!order) throw returnError(404, 'Không tìm thấy đơn thuê.');
-  if (!['renting', 'returned', 'waiting_refund'].includes(order.status)) {
-    throw returnError(409, 'Đơn thuê hiện không đủ điều kiện lập biên bản kiểm định. Vui lòng chuyển sang trạng thái Đang Thuê trước khi kiểm định.');
+  if (!['renting', 'delivered', 'returned', 'waiting_refund'].includes(order.status)) {
+    throw returnError(409, 'Đơn thuê hiện không đủ điều kiện lập biên bản kiểm định. Vui lòng kiểm tra lại trạng thái đơn.');
   }
 
   const existing = await ReturnInspection.findOne({ orderId: order._id });
