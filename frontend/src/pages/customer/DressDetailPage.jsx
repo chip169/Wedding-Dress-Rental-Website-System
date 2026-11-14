@@ -556,19 +556,14 @@ export default function DressDetailPage() {
                 <div className="text-[#8A7978] tracking-wider text-[12px] font-medium">
                   MÃ SẢN PHẨM: <span className="text-[#231A19] font-bold">{dress.code}</span>
                 </div>
-                <div>
-                  {isOutOfStock ? (
+                {isOutOfStock && (
+                  <div>
                     <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#FEF2F2] text-[#DC2626] border border-[#FCA5A5]">
                       <span className="w-1.5 h-1.5 rounded-full bg-[#DC2626]" />
                       TẠM HẾT HÀNG TRONG KHO
                     </span>
-                  ) : (
-                    <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#F0FDF4] text-[#16A34A] border border-[#BBF7D0]">
-                      <span className="w-1.5 h-1.5 rounded-full bg-[#16A34A]" />
-                      CÒN HÀNG KHẢ DỤNG
-                    </span>
-                  )}
-                </div>
+                  </div>
+                )}
               </div>
             </div>
 
@@ -1142,7 +1137,7 @@ export default function DressDetailPage() {
                     Lịch Thuê Trống Tác Phẩm
                   </h3>
                   <span className="text-[12px] text-[#7A6B6A] block">
-                    {dress.name} {dress.code ? `• Mã: ${dress.code}` : ''}
+                    {dress.name} {dress.code ? `• Mã: ${dress.code}` : ''} • Kích cỡ: <strong className="text-[#B26B74] font-bold">Size {selectedSize}</strong>
                   </span>
                 </div>
               </div>
@@ -1164,6 +1159,36 @@ export default function DressDetailPage() {
                   <span>Dữ liệu thời gian thực đồng bộ trực tiếp từ các đơn đặt thuê của chiếc váy này</span>
                 </div>
               </div>
+
+              {/* Chọn kích cỡ ngay trong popup lịch */}
+              {Array.isArray(dress?.sizes) && dress.sizes.length > 0 && (
+                <div className="mb-4 p-3 bg-[#FAF7F5] border border-[#EAE0DC] rounded-xl flex items-center justify-between gap-2 flex-wrap">
+                  <span className="text-[12px] font-semibold text-[#5A4848]">Kích cỡ thuê:</span>
+                  <div className="flex items-center gap-1.5 flex-wrap">
+                    {dress.sizes.map((sz) => {
+                      const isSizeActive = selectedSize === sz.id;
+                      const isOutOfStock = sz.quantity !== undefined && Number(sz.quantity) <= 0;
+                      return (
+                        <button
+                          key={sz.id}
+                          type="button"
+                          disabled={isOutOfStock}
+                          onClick={() => !isOutOfStock && setSelectedSize(sz.id)}
+                          className={`px-3 py-1 rounded-md text-[11.5px] font-bold border transition-all cursor-pointer ${
+                            isOutOfStock
+                              ? 'border-stone-200 bg-stone-100 text-stone-400 cursor-not-allowed opacity-40 line-through'
+                              : isSizeActive
+                                ? 'border-[#B26B74] bg-[#B26B74] text-white shadow-xs'
+                                : 'border-[#EAE0DC] bg-white text-[#231A19] hover:border-[#B26B74]'
+                          }`}
+                        >
+                          Size {sz.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
 
               {/* Month Controller */}
               <div className="flex items-center justify-between mb-4">

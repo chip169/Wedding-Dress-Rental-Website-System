@@ -166,16 +166,18 @@ export default function RentSelectionModal({
   // State lựa chọn người dùng
   const [selectedSize, setSelectedSize] = useState('S');
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
+  const wasOpenRef = React.useRef(false);
 
-  // Cập nhật giá trị ban đầu tương ứng với từng chiếc váy khi mở popup
+  // Cập nhật giá trị ban đầu tương ứng với từng chiếc váy khi mới mở popup
   useEffect(() => {
-    if (isOpen && dress) {
+    if (isOpen && !wasOpenRef.current && dress) {
       if (availableSizes && availableSizes.length > 0) {
         const firstAvailable = availableSizes.find((sz) => !checkIsSizeOutOfStock(sz, dress));
         setSelectedSize(firstAvailable ? firstAvailable.id : availableSizes[0].id);
       }
       setIsSizeGuideOpen(false);
     }
+    wasOpenRef.current = isOpen;
   }, [isOpen, dress, availableSizes]);
 
   // Đóng modal khi bấm phím Escape

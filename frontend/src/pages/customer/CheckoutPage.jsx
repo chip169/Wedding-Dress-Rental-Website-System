@@ -232,7 +232,7 @@ function DirectorSignatureAndStamp({ className = "h-28", isSmall = false }) {
 export default function CheckoutPage() {
   const navigate = useNavigate();
   const location = useLocation();
-  const [searchParams] = useSearchParams();
+  const [searchParams, setSearchParams] = useSearchParams();
   const { user, isLoggedIn } = useAuth();
   const dressIdParam = searchParams.get('dressId');
   const sizeParam = searchParams.get('size');
@@ -245,6 +245,20 @@ export default function CheckoutPage() {
   // Selected dress size & color (định nghĩa sớm để tránh lỗi Temporal Dead Zone)
   const [selectedSize, setSelectedSize] = useState(sizeParam || 'S');
   const [selectedColor, setSelectedColor] = useState(colorParam || 'Trắng Sữa');
+
+  // Helper: Đồng bộ chọn size khi người dùng đổi size ở bất kỳ đâu trên Checkout
+  const handleSelectSize = (newSize) => {
+    if (!newSize) return;
+    const cleanSize = String(newSize).replace(/^size\s*/i, '').trim();
+    setSelectedSize(cleanSize);
+    setOrderItems((prev) => prev.map((it) => ({ ...it, size: cleanSize, selectedSize: cleanSize })));
+    if (activeDress) {
+      setActiveDress((prev) => ({ ...prev, size: cleanSize, selectedSize: cleanSize }));
+    }
+    const nextParams = new URLSearchParams(searchParams);
+    nextParams.set('size', cleanSize);
+    setSearchParams(nextParams, { replace: true });
+  };
 
   // Measurements: Nếu tài khoản chưa lưu số đo thì BẮT BUỘC để trống ('')
   const [measurements, setMeasurements] = useState(() => {
@@ -346,7 +360,9 @@ export default function CheckoutPage() {
           if (!active) return;
           if (res?.data) {
             const d = res.data;
-            const chosenSize = sizeParam || selectedSize || d.sizes?.[0]?.size || d.sizes?.[0]?.label || (typeof d.sizes?.[0] === 'string' ? d.sizes[0] : 'S');
+            const availableSizes = Array.isArray(d.sizes) ? d.sizes.map(s => String(typeof s === 'string' ? s : s?.size || s?.label || s?.id || '').replace(/^size\s*/i, '').trim()) : [];
+            const isValidSelectedSize = selectedSize && availableSizes.some(s => s.toUpperCase() === selectedSize.toUpperCase());
+            const chosenSize = sizeParam || (isValidSelectedSize ? selectedSize : null) || availableSizes[0] || d.sizes?.[0]?.size || d.sizes?.[0]?.label || (typeof d.sizes?.[0] === 'string' ? d.sizes[0] : 'S');
             const chosenColor = colorParam || selectedColor || d.color || 'Trắng Sữa';
             const singleItem = {
               ...d,
@@ -383,6 +399,11 @@ export default function CheckoutPage() {
         const resolved = cart.map(resolveCartItem);
         setOrderItems(resolved);
         setActiveDress(resolved[0]);
+        const initialCartSize = resolved[0]?.size || resolved[0]?.selectedSize;
+        if (initialCartSize) {
+          const cleanInitial = String(initialCartSize).replace(/^size\s*/i, '').trim();
+          setSelectedSize(cleanInitial);
+        }
       } else {
         setOrderItems([]);
         setActiveDress(null);
@@ -1016,7 +1037,7 @@ export default function CheckoutPage() {
         return {
           name: item.name || `Váy cưới Haute Couture #${idx + 1}`,
           code: item.code || `UB-HC-0${idx + 1}`,
-          size: (dressIdParam && selectedSize) ? selectedSize : (item.size || selectedSize || 'S'),
+          size: selectedSize || item.size || activeDress?.size || 'S',
           color: (dressIdParam && selectedColor) ? selectedColor : (item.color || selectedColor || 'Trắng Sữa'),
           rentPrice: itemTotalRent,
           dailyPrice: itemDailyPrice,
@@ -1042,54 +1063,69 @@ export default function CheckoutPage() {
     return [];
   }, [orderItems, activeDress, selectedSize, selectedColor, rentalDays, totalRentPrice, depositCollateral, rentalSchedule]);
 
+  // Validate helpers (chuẩn hóa đồng bộ như bên Đặt Lịch Hẹn - AppointmentPage)
+  const validateFullNameInput = (val) => {
+    const trimmed = (val || '').trim();
+    if (!trimmed) return 'Vui lòng nhập họ và tên cô dâu';
+    if (/\d/.test(trimmed)) return 'Họ và tên không được chứa chữ số';
+    if (trimmed.length < 2) return 'Họ và tên tối thiểu 2 ký tự';
+    return null;
+  };
+
+  const validatePhoneInput = (val) => {
+    const clean = (val || '').replace(/[\s.-]/g, '');
+    if (!clean) return 'Vui lòng nhập số điện thoại liên hệ';
+    if (!/^\d+$/.test(clean)) return 'Số điện thoại chỉ được chứa chữ số';
+    if (clean.length !== 10) return `Số điện thoại phải có đúng 10 số (hiện có ${clean.length} số)`;
+    if (!/^(0[2|3|5|7|8|9])[0-9]{8}$/.test(clean)) {
+      return 'Số điện thoại không hợp lệ (phải bắt đầu bằng các đầu số 03, 05, 07, 08, 09, 02)';
+    }
+    return null;
+  };
+
+  const validateEmailInput = (val) => {
+    const trimmed = (val || '').trim();
+    if (!trimmed) return 'Vui lòng nhập email nhận hợp đồng số';
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(trimmed)) {
+      return 'Email không hợp lệ (ví dụ: codau@gmail.com)';
+    }
+    return null;
+  };
+
+  const validateCccdInput = (val) => {
+    const clean = (val || '').replace(/[\s.-]/g, '');
+    if (!clean) return 'Vui lòng nhập số CCCD / CMND để lập hợp đồng pháp lý';
+    if (!/^\d+$/.test(clean)) return 'Số CCCD/CMND chỉ được chứa chữ số';
+    if (clean.length !== 9 && clean.length !== 12) {
+      return `Số CCCD/CMND phải gồm 9 hoặc 12 chữ số (hiện có ${clean.length} số)`;
+    }
+    return null;
+  };
+
+  const validateAddressInput = (val) => {
+    const trimmed = (val || '').trim();
+    if (!trimmed) return 'Vui lòng nhập địa chỉ thường trú hoặc nhận lễ phục';
+    if (trimmed.length < 5) return 'Địa chỉ cần chi tiết hơn (tối thiểu 5 ký tự)';
+    return null;
+  };
+
   // Validation chi tiết Step 1 (Thông tin người đại diện thuê)
   const validateCustomerInfo = () => {
     const errors = {};
-    const trimmedName = (brideName || '').trim();
-    const trimmedPhone = (phone || '').trim();
-    const trimmedEmail = (email || '').trim();
-    const trimmedCccd = (cccd || '').trim();
-    const trimmedAddress = (address || '').trim();
+    const nameErr = validateFullNameInput(brideName);
+    if (nameErr) errors.brideName = nameErr;
 
-    // 1. Họ và tên cô dâu
-    if (!trimmedName) {
-      errors.brideName = 'Vui lòng nhập họ và tên cô dâu';
-    } else if (trimmedName.length < 2) {
-      errors.brideName = 'Họ và tên tối thiểu 2 ký tự';
-    }
+    const phoneErr = validatePhoneInput(phone);
+    if (phoneErr) errors.phone = phoneErr;
 
-    // 2. Số điện thoại (chuẩn 10 số VN)
-    const cleanPhone = trimmedPhone.replace(/[\s.-]/g, '');
-    const phoneRegex = /^(0[3|5|7|8|9])+([0-9]{8})$/;
-    if (!trimmedPhone) {
-      errors.phone = 'Vui lòng nhập số điện thoại liên hệ';
-    } else if (!phoneRegex.test(cleanPhone)) {
-      errors.phone = 'Số điện thoại không hợp lệ (gồm 10 số, VD: 0912345678)';
-    }
+    const emailErr = validateEmailInput(email);
+    if (emailErr) errors.email = emailErr;
 
-    // 3. Email nhận hợp đồng
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!trimmedEmail) {
-      errors.email = 'Vui lòng nhập email nhận hợp đồng số';
-    } else if (!emailRegex.test(trimmedEmail)) {
-      errors.email = 'Địa chỉ email không đúng định dạng (VD: codau@gmail.com)';
-    }
+    const cccdErr = validateCccdInput(cccd);
+    if (cccdErr) errors.cccd = cccdErr;
 
-    // 4. Số CCCD / CMND
-    const cleanCccd = trimmedCccd.replace(/[\s.-]/g, '');
-    const cccdRegex = /^([0-9]{9}|[0-9]{12})$/;
-    if (!trimmedCccd) {
-      errors.cccd = 'Vui lòng nhập số CCCD / CMND để lập hợp đồng pháp lý';
-    } else if (!cccdRegex.test(cleanCccd)) {
-      errors.cccd = 'Số CCCD/CMND phải gồm 9 hoặc 12 chữ số';
-    }
-
-    // 5. Địa chỉ thường trú hoặc nhận lễ phục
-    if (!trimmedAddress) {
-      errors.address = 'Vui lòng nhập địa chỉ thường trú hoặc nhận lễ phục';
-    } else if (trimmedAddress.length < 5) {
-      errors.address = 'Địa chỉ cần chi tiết hơn (tối thiểu 5 ký tự)';
-    }
+    const addressErr = validateAddressInput(address);
+    if (addressErr) errors.address = addressErr;
 
     setFormErrors(errors);
     return Object.keys(errors).length === 0;
@@ -1672,14 +1708,15 @@ export default function CheckoutPage() {
         rentalStartDate: toIsoDateString(rentalSchedule?.startDate) || new Date().toISOString().split('T')[0],
         rentalEndDate: toIsoDateString(rentalSchedule?.endDate) || new Date(Date.now() + (Number(rentalDays) || 4) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         rentalDays,
-        selectedSize: (dressIdParam && selectedSize) ? selectedSize : (orderItems?.[0]?.size || selectedSize || 'S'),
+        selectedSize: selectedSize || orderItems?.[0]?.size || activeDress?.size || 'S',
         items: (orderItems && orderItems.length > 0 ? orderItems : [activeDress]).filter(Boolean).map((item, idx) => {
           const itemDailyPrice = Number(item.price || item.rentPrice) || 0;
           return {
             dressId: item.id || item._id,
             name: item.name,
             code: item.code || `UB-HC-2026-0${idx + 1}`,
-            size: (dressIdParam && selectedSize) ? selectedSize : (item.size || selectedSize || 'S'),
+            size: selectedSize || item.size || activeDress?.size || 'S',
+            color: item.color || selectedColor || 'Trắng Sữa',
             rentPrice: itemDailyPrice * Math.max(1, Number(rentalDays) || 1),
             dailyPrice: itemDailyPrice,
             rentalDays,
@@ -1772,14 +1809,14 @@ export default function CheckoutPage() {
       rentalStartDate: toIsoDateString(rentalSchedule?.startDate) || new Date().toISOString().split('T')[0],
       rentalEndDate: toIsoDateString(rentalSchedule?.endDate) || new Date(Date.now() + (Number(rentalDays) || 4) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       rentalDays,
-      selectedSize: (dressIdParam && selectedSize) ? selectedSize : (orderItems?.[0]?.size || selectedSize || 'S'),
+      selectedSize: selectedSize || orderItems?.[0]?.size || activeDress?.size || 'S',
       items: (orderItems && orderItems.length > 0 ? orderItems : [activeDress]).filter(Boolean).map((item, idx) => {
         const itemDailyPrice = Number(item.price || item.rentPrice) || 0;
         return {
           dressId: item.id || item._id,
           name: item.name,
           code: item.code || `UB-HC-2026-0${idx + 1}`,
-          size: (dressIdParam && selectedSize) ? selectedSize : (item.size || selectedSize || 'S'),
+          size: selectedSize || item.size || activeDress?.size || 'S',
           color: (dressIdParam && selectedColor) ? selectedColor : (item.color || selectedColor || 'Trắng Sữa'),
           rentPrice: itemDailyPrice * Math.max(1, Number(rentalDays) || 1),
           dailyPrice: itemDailyPrice,
@@ -1858,14 +1895,15 @@ export default function CheckoutPage() {
         rentalStartDate: toIsoDateString(rentalSchedule?.startDate) || new Date().toISOString().split('T')[0],
         rentalEndDate: toIsoDateString(rentalSchedule?.endDate) || new Date(Date.now() + (Number(rentalDays) || 4) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         rentalDays,
-        selectedSize: (dressIdParam && selectedSize) ? selectedSize : (orderItems?.[0]?.size || selectedSize || 'S'),
+        selectedSize: selectedSize || orderItems?.[0]?.size || activeDress?.size || 'S',
         items: (orderItems && orderItems.length > 0 ? orderItems : [activeDress]).filter(Boolean).map((item, idx) => {
           const itemDailyPrice = Number(item.price || item.rentPrice) || 0;
           return {
             dressId: item.id || item._id,
             name: item.name,
             code: item.code || `UB-HC-2026-0${idx + 1}`,
-            size: (dressIdParam && selectedSize) ? selectedSize : (item.size || selectedSize || 'S'),
+            size: selectedSize || item.size || activeDress?.size || 'S',
+            color: item.color || selectedColor || 'Trắng Sữa',
             rentPrice: itemDailyPrice * Math.max(1, Number(rentalDays) || 1),
             dailyPrice: itemDailyPrice,
             rentalDays,
@@ -2022,6 +2060,87 @@ export default function CheckoutPage() {
                   </div>
                 )}
 
+                {/* 0. LỄ PHỤC ĐANG CHỌN & CHỌN SIZE TRỰC TIẾP TRONG BƯỚC 1 */}
+                <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
+                  <div className="flex items-center justify-between pb-4 border-b border-[#F5EDE8] mb-5">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#FAF0EC] flex items-center justify-center text-[#B8737D]">
+                        <Crown className="w-5 h-5" />
+                      </div>
+                      <div>
+                        <h2 className="font-playfair text-[19px] sm:text-[21px] font-semibold text-[#2C2523] m-0">
+                          Lễ Phục Đang Thuê & Kích Cỡ
+                        </h2>
+                        <p className="text-[12px] text-[#847374] m-0 mt-0.5">
+                          Kiểm tra thông tin tác phẩm và chọn kích cỡ (Size) phù hợp nhất với vóc dáng của bạn
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="flex flex-col sm:flex-row gap-4 items-start sm:items-center justify-between bg-[#FCF9F6] p-4 rounded-xl border border-[#EEDECF]">
+                    <div className="flex items-center gap-3.5 min-w-0">
+                      <div className="w-14 h-20 rounded-lg overflow-hidden shrink-0 border border-[#EEDECF] bg-white shadow-2xs">
+                        <img
+                          src={activeDress?.images?.[0] || activeDress?.image || '/assets/dresses/dress_01.jpg'}
+                          alt={activeDress?.name}
+                          className="w-full h-full object-cover"
+                        />
+                      </div>
+                      <div className="min-w-0">
+                        <div className="font-playfair font-bold text-[16px] text-[#2C2523] truncate">
+                          {activeDress?.name || 'Tác phẩm lễ phục cưới'}
+                        </div>
+                        <div className="text-[12px] text-[#847374] mt-0.5">
+                          Mã: <span className="font-mono text-[#733F49] font-bold">{activeDress?.code || 'UB-HC-2026'}</span> • Giá niêm yết: <span className="font-bold text-[#733F49]">{formatCurrencyVND(activeDress?.price || totalRentPrice)}</span>
+                        </div>
+                        <div className="text-[11.5px] text-[#6B5C5D] mt-1 flex items-center gap-1.5 font-medium">
+                          <span>Kích cỡ đang chọn:</span>
+                          <span className="px-2.5 py-0.5 rounded-full bg-[#733F49] text-white font-bold text-[11px] shadow-2xs">
+                            Size {selectedSize}
+                          </span>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Bảng nút chọn size trực tiếp */}
+                    {Array.isArray(activeDress?.sizes) && activeDress.sizes.length > 0 && (
+                      <div className="w-full sm:w-auto flex flex-col items-start sm:items-end gap-1.5 pt-2 sm:pt-0 border-t sm:border-t-0 border-[#F0E5DC]">
+                        <span className="text-[11px] font-bold uppercase tracking-wider text-[#733F49]">
+                          ĐỔI KÍCH CỠ (SIZE):
+                        </span>
+                        <div className="flex items-center gap-2 flex-wrap">
+                          {activeDress.sizes.map((sz, sIdx) => {
+                            const sVal = typeof sz === 'string' ? sz : sz.size || sz.label || sz.id;
+                            const sClean = String(sVal).replace(/^size\s*/i, '').trim();
+                            const isSzActive = (selectedSize || '').toUpperCase() === sClean.toUpperCase();
+                            const isOutOfStock = checkIsSizeOutOfStock(sz, activeDress);
+
+                            return (
+                              <button
+                                key={sIdx}
+                                type="button"
+                                disabled={isOutOfStock}
+                                onClick={() => handleSelectSize(sClean)}
+                                className={`px-3.5 py-1.5 rounded-lg text-[12px] font-bold border transition-all cursor-pointer ${
+                                  isOutOfStock
+                                    ? 'bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed opacity-40 line-through'
+                                    : isSzActive
+                                      ? 'bg-[#733F49] text-white border-[#733F49] shadow-sm ring-2 ring-[#733F49]/20'
+                                      : 'bg-white text-[#733F49] border-[#EEDECF] hover:border-[#733F49] hover:bg-[#FAF4EE]'
+                                }`}
+                                title={isOutOfStock ? `Size ${sClean} hiện đã hết hàng` : `Chọn Size ${sClean}`}
+                              >
+                                Size {sClean}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </section>
+
                 {/* 1. THÔNG TIN NGƯỜI THUÊ */}
                 <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
                   <div className="flex items-center justify-between pb-5 border-b border-[#F5EDE8] mb-6">
@@ -2055,9 +2174,20 @@ export default function CheckoutPage() {
                           required
                           value={brideName}
                           onChange={(e) => {
-                            setBrideName(e.target.value);
-                            setContractSignature(e.target.value);
-                            if (formErrors.brideName) {
+                            const val = e.target.value;
+                            setBrideName(val);
+                            setContractSignature(val);
+                            if (/\d/.test(val)) {
+                              setFormErrors((prev) => ({ ...prev, brideName: 'Họ và tên không được chứa chữ số' }));
+                            } else if (formErrors.brideName) {
+                              setFormErrors((prev) => ({ ...prev, brideName: '' }));
+                            }
+                          }}
+                          onBlur={() => {
+                            const err = validateFullNameInput(brideName);
+                            if (err) {
+                              setFormErrors((prev) => ({ ...prev, brideName: err }));
+                            } else if (formErrors.brideName) {
                               setFormErrors((prev) => ({ ...prev, brideName: '' }));
                             }
                           }}
@@ -2081,12 +2211,25 @@ export default function CheckoutPage() {
                           SỐ ĐIỆN THOẠI *
                         </label>
                         <input
-                          type="text"
+                          type="tel"
                           required
+                          maxLength={10}
                           value={phone}
                           onChange={(e) => {
-                            setPhone(e.target.value);
+                            const rawVal = e.target.value;
+                            const cleanVal = rawVal.replace(/[^\d]/g, '').slice(0, 10);
+                            setPhone(cleanVal);
                             if (formErrors.phone) {
+                              if (cleanVal.length === 10 && /^(0[2|3|5|7|8|9])[0-9]{8}$/.test(cleanVal)) {
+                                setFormErrors((prev) => ({ ...prev, phone: '' }));
+                              }
+                            }
+                          }}
+                          onBlur={() => {
+                            const err = validatePhoneInput(phone);
+                            if (err) {
+                              setFormErrors((prev) => ({ ...prev, phone: err }));
+                            } else if (formErrors.phone) {
                               setFormErrors((prev) => ({ ...prev, phone: '' }));
                             }
                           }}
@@ -2094,7 +2237,7 @@ export default function CheckoutPage() {
                             ? 'border-2 border-red-400 bg-red-50/20 focus:border-red-500'
                             : 'bg-[#FCF9F6] border border-[#EEDECF] focus:border-[#733F49] focus:bg-white'
                             }`}
-                          placeholder="Nhập số điện thoại liên hệ"
+                          placeholder="Nhập số điện thoại liên hệ (10 chữ số)"
                         />
                         {formErrors.phone && (
                           <span className="text-[11.5px] font-semibold text-red-500 mt-1 flex items-center gap-1 animate-fade-in">
@@ -2121,6 +2264,14 @@ export default function CheckoutPage() {
                               setFormErrors((prev) => ({ ...prev, email: '' }));
                             }
                           }}
+                          onBlur={() => {
+                            const err = validateEmailInput(email);
+                            if (err) {
+                              setFormErrors((prev) => ({ ...prev, email: err }));
+                            } else if (formErrors.email) {
+                              setFormErrors((prev) => ({ ...prev, email: '' }));
+                            }
+                          }}
                           className={`w-full rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none transition-all ${formErrors.email
                             ? 'border-2 border-red-400 bg-red-50/20 focus:border-red-500'
                             : 'bg-[#FCF9F6] border border-[#EEDECF] focus:border-[#733F49] focus:bg-white'
@@ -2143,10 +2294,23 @@ export default function CheckoutPage() {
                         <input
                           type="text"
                           required
+                          maxLength={12}
                           value={cccd}
                           onChange={(e) => {
-                            setCccd(e.target.value);
+                            const rawVal = e.target.value;
+                            const cleanVal = rawVal.replace(/[^\d]/g, '').slice(0, 12);
+                            setCccd(cleanVal);
                             if (formErrors.cccd) {
+                              if (cleanVal.length === 9 || cleanVal.length === 12) {
+                                setFormErrors((prev) => ({ ...prev, cccd: '' }));
+                              }
+                            }
+                          }}
+                          onBlur={() => {
+                            const err = validateCccdInput(cccd);
+                            if (err) {
+                              setFormErrors((prev) => ({ ...prev, cccd: err }));
+                            } else if (formErrors.cccd) {
                               setFormErrors((prev) => ({ ...prev, cccd: '' }));
                             }
                           }}
@@ -2154,7 +2318,7 @@ export default function CheckoutPage() {
                             ? 'border-2 border-red-400 bg-red-50/20 focus:border-red-500'
                             : 'bg-[#FCF9F6] border border-[#EEDECF] focus:border-[#733F49] focus:bg-white'
                             }`}
-                          placeholder="Nhập số CCCD / CMND"
+                          placeholder="Nhập số CCCD (12 số) hoặc CMND (9 số)"
                         />
                         {formErrors.cccd && (
                           <span className="text-[11.5px] font-semibold text-red-500 mt-1 flex items-center gap-1 animate-fade-in">
@@ -2176,7 +2340,15 @@ export default function CheckoutPage() {
                         value={address}
                         onChange={(e) => {
                           setAddress(e.target.value);
-                          if (formErrors.address) {
+                          if (formErrors.address && e.target.value.trim().length >= 5) {
+                            setFormErrors((prev) => ({ ...prev, address: '' }));
+                          }
+                        }}
+                        onBlur={() => {
+                          const err = validateAddressInput(address);
+                          if (err) {
+                            setFormErrors((prev) => ({ ...prev, address: err }));
+                          } else if (formErrors.address) {
                             setFormErrors((prev) => ({ ...prev, address: '' }));
                           }
                         }}
@@ -3590,43 +3762,7 @@ export default function CheckoutPage() {
                         <span>•</span>
                         <span>Gói <strong>{rentalDays} ngày</strong></span>
                       </div>
-                      {Array.isArray(activeDress?.sizes) && activeDress.sizes.length > 1 && (
-                        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[11px] font-semibold text-[#847374]">Đổi size:</span>
-                          {activeDress.sizes.map((sz, sIdx) => {
-                            const sVal = typeof sz === 'string' ? sz : sz.size || sz.label || sz.id;
-                            const sClean = String(sVal).replace(/^size\s*/i, '').trim();
-                            const isSzActive = (selectedSize || '').toUpperCase() === sClean.toUpperCase();
-                            const isOutOfStock = checkIsSizeOutOfStock(sz, activeDress);
-
-                            return (
-                              <button
-                                key={sIdx}
-                                type="button"
-                                disabled={isOutOfStock}
-                                onClick={() => {
-                                  if (isOutOfStock) return;
-                                  setSelectedSize(sClean);
-                                  setOrderItems((prev) => prev.map((it) => ({ ...it, size: sClean })));
-                                  if (activeDress) {
-                                    setActiveDress((prev) => ({ ...prev, size: sClean }));
-                                  }
-                                }}
-                                title={isOutOfStock ? `Size ${sClean} hiện đã hết hàng trong kho` : `Đổi sang size ${sClean}`}
-                                className={`px-2 py-0.5 rounded text-[10.5px] font-bold border transition-all ${isOutOfStock
-                                  ? 'bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed opacity-40 line-through decoration-stone-400 select-none'
-                                  : isSzActive
-                                    ? 'bg-[#733F49] text-white border-[#733F49] cursor-pointer shadow-xs'
-                                    : 'bg-white text-[#733F49] border-[#EEDECF] hover:border-[#733F49] cursor-pointer'
-                                  }`}
-                              >
-                                {sClean}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                      <div className="font-jakarta font-extrabold text-[17px] text-[#733F49] mt-1 tabular-nums tracking-tight">
+                      <div className="font-jakarta font-extrabold text-[17px] text-[#733F49] mt-2 tabular-nums tracking-tight">
                         {formatCurrencyVND(totalRentPrice)}
                       </div>
                     </div>

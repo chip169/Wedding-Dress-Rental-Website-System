@@ -903,14 +903,32 @@ export default function AppointmentPage() {
                       <label className="block font-jakarta text-[11px] font-bold uppercase tracking-wider text-[#733F49] mb-1.5">
                         NGÀY HẸN THỬ VÁY *
                       </label>
-                      <div className="relative">
-                        <Calendar className="w-4 h-4 text-[#B8737D] absolute left-3.5 top-3" />
+                      <div 
+                        onClick={(e) => {
+                          const input = e.currentTarget.querySelector('input[type="date"]');
+                          if (input) {
+                            try { input.showPicker(); } catch (err) { input.focus(); }
+                          }
+                        }}
+                        className="relative flex items-center justify-between w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2.5 cursor-pointer hover:border-[#733F49] focus-within:border-[#733F49] focus-within:bg-white transition-all shadow-xs group"
+                      >
+                        <div className="flex items-center gap-2.5 min-w-0">
+                          <Calendar className="w-4 h-4 text-[#B8737D] shrink-0 group-hover:text-[#733F49] transition-colors" />
+                          <span className="text-[14px] font-bold text-[#2C2523]">
+                            {selectedDate ? formatShortDate(selectedDate) : 'dd/mm/yyyy'}
+                          </span>
+                        </div>
+                        <Calendar className="w-4 h-4 text-[#8C7A7B] shrink-0 opacity-70 group-hover:opacity-100 group-hover:text-[#733F49] transition-all" />
                         <input
                           type="date"
                           min={tomorrowStr}
-                          value={selectedDate}
-                          onChange={(e) => setSelectedDate(e.target.value)}
-                          className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl pl-10 pr-3.5 py-2.5 text-[14px] text-[#2C2523] font-bold focus:outline-none focus:border-[#733F49] focus:bg-white"
+                          value={selectedDate || ''}
+                          onChange={(e) => {
+                            if (e.target.value) {
+                              setSelectedDate(e.target.value);
+                            }
+                          }}
+                          className="absolute inset-0 w-full h-full opacity-0 cursor-pointer pointer-events-auto"
                         />
                       </div>
 
@@ -1421,13 +1439,30 @@ export default function AppointmentPage() {
                         <label className="block font-jakarta text-[11px] font-bold uppercase tracking-wider text-[#733F49] mb-1.5">
                           NGÀY CƯỚI CHÍNH THỨC (NẾU ĐÃ CÓ)
                         </label>
-                        <input
-                          type="date"
-                          min={tomorrowStr}
-                          value={weddingDate}
-                          onChange={(e) => setWeddingDate(e.target.value)}
-                          className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2 text-[13.5px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
-                        />
+                        <div 
+                          onClick={(e) => {
+                            const input = e.currentTarget.querySelector('input[type="date"]');
+                            if (input) {
+                              try { input.showPicker(); } catch (err) { input.focus(); }
+                            }
+                          }}
+                          className="relative flex items-center justify-between w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2 cursor-pointer hover:border-[#733F49] focus-within:border-[#733F49] focus-within:bg-white transition-all shadow-xs group"
+                        >
+                          <div className="flex items-center gap-2 min-w-0">
+                            <Calendar className="w-4 h-4 text-[#B8737D] shrink-0 group-hover:text-[#733F49] transition-colors" />
+                            <span className="text-[13.5px] font-medium text-[#2C2523]">
+                              {weddingDate ? formatShortDate(weddingDate) : 'dd/mm/yyyy (không bắt buộc)'}
+                            </span>
+                          </div>
+                          <Calendar className="w-4 h-4 text-[#8C7A7B] shrink-0 opacity-70 group-hover:opacity-100 group-hover:text-[#733F49] transition-all" />
+                          <input
+                            type="date"
+                            min={tomorrowStr}
+                            value={weddingDate || ''}
+                            onChange={(e) => setWeddingDate(e.target.value)}
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer pointer-events-auto"
+                          />
+                        </div>
                         {errors.weddingDate && (
                           <span className="text-[11px] text-red-500 font-semibold mt-1 block">
                             {errors.weddingDate}

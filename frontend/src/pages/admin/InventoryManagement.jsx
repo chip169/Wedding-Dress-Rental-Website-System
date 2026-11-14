@@ -375,8 +375,27 @@ export default function InventoryManagement() {
     //    Bao gồm các đơn mới đặt cọc ('deposit_paid', 'preparing', 'confirmed' mà chưa giao váy)
     const bookedOrders = matchedOrders.filter((o) => {
       const st = String(o.rawStatus || o.status || '').toLowerCase();
-      if (['renting', 'delivered', 'returned', 'completed', 'complete', 'cancelled'].includes(st)) return false;
-      return ['deposit_paid', 'preparing', 'confirmed', 'active', 'pending_delivery'].includes(st) || (o.totalDeposit > 0 && st !== 'cancelled');
+      // Loại trừ tất cả các đơn đã nhận váy, đã trả, đang bảo dưỡng/kiểm định/chờ hoàn cọc, hoàn tất hoặc đã hủy:
+      const nonBookedStatuses = [
+        'renting',
+        'delivered',
+        'returned',
+        'waiting_refund',
+        'disputed',
+        'inspecting',
+        'maintenance',
+        'completed',
+        'complete',
+        'cancelled',
+      ];
+      if (nonBookedStatuses.includes(st)) return false;
+      // Không được tính trùng với đơn đã thuộc diện bảo dưỡng
+      const isInMaint = maintenanceOrders.some((m) => String(m._id || m.id) === String(o._id || o.id));
+      if (isInMaint) return false;
+      return (
+        ['deposit_paid', 'preparing', 'confirmed', 'active', 'pending_delivery'].includes(st) ||
+        (Number(o.totalDeposit) > 0 && !nonBookedStatuses.includes(st))
+      );
     });
 
     // Chuẩn hóa tên size để so khớp chuẩn xác (ví dụ "Size L", "L", "l " đều thành "L")
@@ -456,11 +475,11 @@ export default function InventoryManagement() {
         return itemSize === sCleanName;
       }).length;
 
-      // CHẶN TRẦN: Số lượng đang thuê không thể vượt quá tổng số lượng tồn kho của size (sQty)
-      const sRented = Math.min(sQty, rawRented);
-      const sBooked = Math.min(Math.max(0, sQty - sRented), rawBooked);
+      // CHẶN TRẦN THEO THỨ TỰ ƯU TIÊN THỰC TẾ TẠI KHO: Bảo dưỡng -> Đang thuê -> Đã cọc giữ lịch
+      const sRented = Math.min(Math.max(0, sQty - sMaint), rawRented);
+      const sBooked = Math.min(Math.max(0, sQty - sMaint - sRented), rawBooked);
 
-      // Cả đơn đang thuê lẫn đơn đã cọc giữ lịch ĐỀU TRỪ vào số lượng khả dụng của size:
+      // Cả đơn bảo dưỡng, đang thuê lẫn đã cọc đều trừ vào số lượng khả dụng của size:
       const sAvail = Math.max(0, sQty - sMaint - sRented - sBooked);
       return {
         ...sz,
@@ -470,6 +489,8 @@ export default function InventoryManagement() {
         maintenance: sMaint,
         rented: sRented,
         booked: sBooked,
+        rawBooked,
+        rawRented,
       };
     });
 
@@ -1928,11 +1949,12 @@ export default function InventoryManagement() {
                               const sMaint = typeof s === 'object' ? (s.maintenance ?? 0) : 0;
                               const sRented = typeof s === 'object' ? (s.rented ?? 0) : 0;
                               const sBooked = typeof s === 'object' ? (s.booked ?? 0) : 0;
+                              const rawBooked = typeof s === 'object' ? (s.rawBooked ?? sBooked) : sBooked;
 
                               const titleText = sMaint > 0
-                                ? `Đang có ${sMaint} bộ size ${sName} kiểm định / bảo dưỡng sau thuê${sBooked > 0 ? ` (Có ${sBooked} đơn đã cọc giữ lịch sắp tới)` : ''}`
+                                ? `Đang có ${sMaint} bộ size ${sName} kiểm định / bảo dưỡng sau thuê${rawBooked > 0 ? ` (Có ${rawBooked} đơn đã cọc giữ lịch sắp tới)` : ''}`
                                 : sRented > 0
-                                ? `Đang có ${sRented} bộ size ${sName} đang được khách thuê${sBooked > 0 ? ` (${sBooked} đơn đã cọc giữ lịch sắp tới)` : ''}`
+                                ? `Đang có ${sRented} bộ size ${sName} đang được khách thuê${rawBooked > 0 ? ` (${rawBooked} đơn đã cọc giữ lịch sắp tới)` : ''}`
                                 : sBooked > 0
                                 ? `Sẵn sàng tại showroom: ${sAvail} bộ (Có ${sBooked} đơn đã cọc giữ lịch sắp tới)`
                                 : `Sẵn sàng phục vụ: ${sAvail} bộ`;
