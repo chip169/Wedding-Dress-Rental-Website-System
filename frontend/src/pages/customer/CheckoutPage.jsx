@@ -3470,33 +3470,24 @@ export default function CheckoutPage() {
                 <strong className="font-mono text-[#733F49] text-[14px]">{createdOrder?.contractCode || createdOrder?.orderCode || 'HĐ-UB-2026/8992'}</strong>
               </div>
 
-              {/* Dress Details with Visual Thumbnail */}
-              <div className="flex items-center gap-3.5 py-1">
-                <div className="w-13 h-17 rounded-xl overflow-hidden border border-[#EEDECF] shrink-0 bg-white shadow-2xs">
-                  <img
-                    src={activeDress?.images?.[0] || activeDress?.image || orderItems?.[0]?.images?.[0] || orderItems?.[0]?.image}
-                    alt={activeDress?.name || 'Váy cưới'}
-                    className="w-full h-full object-cover"
-                  />
+              {/* Dress Details */}
+              <div className="py-1">
+                <div className="text-[#847374] text-[11px] font-bold uppercase tracking-wider mb-0.5">
+                  Trang phục đặt thuê:
                 </div>
-                <div className="flex-1 min-w-0">
-                  <div className="text-[#847374] text-[11px] font-bold uppercase tracking-wider mb-0.5">
-                    Trang phục đặt thuê:
-                  </div>
-                  <div className="text-[#2C2523] font-bold text-[13.5px] truncate">
-                    {orderItems && orderItems.length > 1
-                      ? `${orderItems.length} tác phẩm váy cưới Haute Couture`
-                      : activeDress?.name}
-                  </div>
-                  <div className="text-[12px] text-[#733F49] font-medium mt-0.5">
-                    {orderItems && orderItems.length > 1 ? (
-                      <span className="text-[#847374] text-[11.5px]">
-                        {orderItems.map((i) => `${i.name} (Size ${i.size || selectedSize})`).join(' • ')}
-                      </span>
-                    ) : (
-                      <span>Kích cỡ: <strong>{selectedSize || 'M'}</strong> • Lịch độc quyền VIP</span>
-                    )}
-                  </div>
+                <div className="text-[#2C2523] font-bold text-[13.5px]">
+                  {orderItems && orderItems.length > 1
+                    ? `${orderItems.length} tác phẩm váy cưới Haute Couture`
+                    : activeDress?.name}
+                </div>
+                <div className="text-[12px] text-[#733F49] font-medium mt-0.5">
+                  {orderItems && orderItems.length > 1 ? (
+                    <span className="text-[#847374] text-[11.5px]">
+                      {orderItems.map((i) => `${i.name} (Size ${i.size || selectedSize})`).join(' • ')}
+                    </span>
+                  ) : (
+                    <span>Kích cỡ: <strong>{selectedSize || 'M'}</strong> • Lịch độc quyền VIP</span>
+                  )}
                 </div>
               </div>
 
