@@ -31,7 +31,7 @@ function checkIsSizeOutOfStock(sz, dress) {
 
   // 1. Kiểm tra trạng thái chung của váy
   const status = String(dress.status || dress.statusType || '').toLowerCase();
-  if (['out_of_stock', 'retired', 'unavailable'].includes(status)) {
+  if (['out_of_stock', 'retired', 'unavailable', 'drying'].includes(status)) {
     return true;
   }
 
@@ -51,8 +51,27 @@ function checkIsSizeOutOfStock(sz, dress) {
             (o?.id && String(o.id) === dressId)
         );
 
-      if (ov?.statusType === 'out_of_stock') {
+      if (ov?.statusType === 'out_of_stock' || ov?.statusType === 'drying') {
         return true;
+      }
+
+      // Kiểm tra bảo dưỡng thủ công theo size
+      const manualMaint = Number(ov?.maintenanceSizes?.[sClean] ?? 0);
+      if (manualMaint > 0) {
+        let totalSizeQty = 1;
+        if (Array.isArray(dress.sizes)) {
+          const matchDress = dress.sizes.find((s) => {
+            const val = String(typeof s === 'string' ? s : s?.size || s?.label || s?.id || '')
+              .replace(/^size\s*/i, '')
+              .trim()
+              .toUpperCase();
+            return val === sClean;
+          });
+          if (matchDress && typeof matchDress === 'object') {
+            totalSizeQty = Math.max(1, Number(matchDress.totalQuantity ?? matchDress.quantity) || 1);
+          }
+        }
+        if (manualMaint >= totalSizeQty) return true;
       }
 
       if (Array.isArray(ov?.sizes)) {
@@ -63,9 +82,12 @@ function checkIsSizeOutOfStock(sz, dress) {
             .toUpperCase();
           return val === sClean;
         });
-        if (matchOv && typeof matchOv === 'object' && matchOv?.quantity !== undefined) {
-          const q = Number(matchOv.quantity);
-          if (!isNaN(q) && q <= 0) return true;
+        if (matchOv && typeof matchOv === 'object') {
+          if (matchOv?.available !== undefined && Number(matchOv.available) <= 0) return true;
+          if (matchOv?.quantity !== undefined) {
+            const q = Number(matchOv.quantity);
+            if (!isNaN(q) && q <= 0) return true;
+          }
         }
       }
     }
@@ -80,6 +102,7 @@ function checkIsSizeOutOfStock(sz, dress) {
       const q = Number(sz.quantity);
       if (!isNaN(q) && q <= 0) return true;
     }
+    if (sz.isMaintenance) return true;
   }
 
   // 4. Kiểm tra trong dress.sizes
@@ -97,6 +120,7 @@ function checkIsSizeOutOfStock(sz, dress) {
         const q = Number(matchDress.quantity);
         if (!isNaN(q) && q <= 0) return true;
       }
+      if (matchDress.isMaintenance) return true;
     }
   }
 

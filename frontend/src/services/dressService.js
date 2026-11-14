@@ -33,12 +33,15 @@ function convertCatalogItemToDress(item) {
     silhouetteCategory: item.categoryName || 'Váy Cưới Thiết Kế Hoàng Gia',
     description: `Tuyệt phẩm ${item.name} là mẫu thiết kế Haute Couture độc bản năm 2026. Được may đo tinh xảo với cấu trúc siết eo corsetry Pháp tôn trọn vóc dáng kiều diễm, kết hợp chất liệu ${item.material || 'lụa Mikado Ý'} thượng hạng.`,
     material: item.material || 'Lụa Mikado Ý và Ren Chantilly',
-    sizes: [
-      { id: 'XS', label: 'XS', note: 'Dưới 46kg', bust: '80-82cm', waist: '58-62cm' },
-      { id: 'S', label: 'S', note: '46 - 52kg', bust: '83-86cm', waist: '63-67cm' },
-      { id: 'M', label: 'M', note: '52 - 58kg', bust: '87-90cm', waist: '68-73cm' },
-      { id: 'L', label: 'L', note: '58 - 65kg', bust: '91-95cm', waist: '74-78cm' },
-    ],
+    sizes: formatDressSizes(
+      item.sizes || [
+        { id: 'XS', label: 'XS', note: 'Dưới 46kg', bust: '80-82cm', waist: '58-62cm' },
+        { id: 'S', label: 'S', note: '46 - 52kg', bust: '83-86cm', waist: '63-67cm' },
+        { id: 'M', label: 'M', note: '52 - 58kg', bust: '87-90cm', waist: '68-73cm' },
+        { id: 'L', label: 'L', note: '58 - 65kg', bust: '91-95cm', waist: '74-78cm' },
+      ],
+      item
+    ),
     images: (item.images && item.images.length >= 4) ? item.images : [
       item.image,
       item.image?.replace('.jpg', '_mannequin.jpg') || card9MannequinAtelier,
@@ -68,18 +71,117 @@ const SIZE_MAP = {
   FreeSize: { id: 'FreeSize', label: 'FreeSize', note: 'Dây đan corset linh hoạt', bust: '82-96cm', waist: '60-80cm' },
 };
 
-function formatDressSizes(rawSizes) {
-  if (Array.isArray(rawSizes) && rawSizes.length > 0) {
-    return rawSizes.map(s => {
-      const key = typeof s === 'string' ? s : s?.size || s?.id || s?.label;
-      const baseObj = SIZE_MAP[key] || { id: key, label: key, note: 'Chuẩn dáng UniBridal' };
-      const qty = typeof s === 'object' && s?.available !== undefined
-        ? Number(s.available)
-        : (typeof s === 'object' && s?.quantity !== undefined ? Number(s.quantity) : 1);
-      return { ...baseObj, quantity: qty, available: qty, totalQuantity: s?.totalQuantity };
-    });
-  }
-  return [SIZE_MAP.S, SIZE_MAP.M];
+function formatDressSizes(rawSizes, dressMeta = null) {
+  let overrides = {};
+  try {
+    const rawOv = localStorage.getItem('unibridal_inventory_overrides');
+    if (rawOv) overrides = JSON.parse(rawOv);
+  } catch {}
+
+  const dressId = String(dressMeta?._id || dressMeta?.id || '');
+  const dressCode = String(dressMeta?.code || '').trim().toUpperCase();
+  const dressName = String(dressMeta?.name || '').trim().toLowerCase();
+
+  const ov =
+    overrides[dressId] ||
+    overrides[dressCode] ||
+    Object.values(overrides).find(
+      (o) =>
+        (o?.code && String(o.code).trim().toUpperCase() === dressCode) ||
+        (o?.id && String(o.id) === dressId) ||
+        (o?.name && String(o.name).trim().toLowerCase() === dressName && dressName.length >= 2)
+    ) || {};
+
+  // Lấy các bảo dưỡng đang hiệu lực từ các đơn hoàn tất (< 24 giờ)
+  const activeCompletedItems = [];
+  try {
+    const rawMaint = localStorage.getItem('unibridal_completed_maintenance');
+    if (rawMaint) {
+      const records = JSON.parse(rawMaint);
+      const now = Date.now();
+      Object.values(records || {}).forEach((rec) => {
+        const until = Number(rec?.maintenanceUntil || 0);
+        if (until && until < now) return;
+        (rec?.items || []).forEach((it) => {
+          const itId = String(it.dressId || '');
+          const itCode = String(it.code || '').trim().toUpperCase();
+          const itName = String(it.name || '').trim().toLowerCase();
+          if (
+            (dressId && itId === dressId) ||
+            (dressCode && itCode === dressCode) ||
+            (dressName && itName === dressName && dressName.length >= 2)
+          ) {
+            activeCompletedItems.push(it);
+          }
+        });
+      });
+    }
+  } catch {}
+
+  const sizesArray = (Array.isArray(rawSizes) && rawSizes.length > 0)
+    ? rawSizes
+    : [SIZE_MAP.S, SIZE_MAP.M];
+
+  return sizesArray.map((s) => {
+    const key = typeof s === 'string' ? s : s?.size || s?.id || s?.label;
+    const cleanKey = String(key || '').replace(/^size\s*/i, '').trim().toUpperCase();
+    const baseObj = SIZE_MAP[cleanKey] || SIZE_MAP[key] || { id: key, label: key, note: 'Chuẩn dáng UniBridal' };
+
+    const totalQty = typeof s === 'object' && s?.totalQuantity !== undefined
+      ? Math.max(1, Number(s.totalQuantity))
+      : (typeof s === 'object' && s?.quantity !== undefined ? Math.max(1, Number(s.quantity)) : 1);
+
+    // a) Bảo dưỡng từ Backend
+    const backendMaint = typeof s === 'object' && s?.maintenance !== undefined ? Number(s.maintenance) : 0;
+
+    // b) Bảo dưỡng thủ công do Admin/Staff thiết lập trong Kho
+    const manualMaint = Number(
+      ov.maintenanceSizes?.[cleanKey] ??
+      ov.maintenanceSizes?.[key] ??
+      0
+    );
+
+    // c) Bảo dưỡng từ đơn hoàn tất
+    const storageMaint = activeCompletedItems.filter((it) => {
+      const itSz = String(it.size || '').replace(/^size\s*/i, '').trim().toUpperCase();
+      return itSz === cleanKey;
+    }).length;
+
+    const maint = Math.max(backendMaint, manualMaint + storageMaint);
+
+    const rented = typeof s === 'object' && s?.rented !== undefined ? Number(s.rented) : 0;
+    const booked = typeof s === 'object' && s?.booked !== undefined ? Number(s.booked) : 0;
+
+    // Tính available
+    let available = Math.max(0, totalQty - maint - rented - booked);
+    if (typeof s === 'object' && s?.available !== undefined) {
+      available = Math.min(Number(s.available), available);
+    }
+
+    if (ov.statusType === 'out_of_stock' || (ov.statusType === 'drying' && maint === 0)) {
+      available = 0;
+    }
+
+    const isMaintenance = Boolean((maint > 0 && available === 0) || (typeof s === 'object' && s?.isMaintenance));
+
+    return {
+      ...baseObj,
+      id: baseObj.id || key,
+      label: baseObj.label || key,
+      size: cleanKey,
+      quantity: available,
+      available,
+      availableQuantity: available,
+      totalQuantity: totalQty,
+      maintenance: maint,
+      rented,
+      booked,
+      isMaintenance,
+      note: available === 0
+        ? (isMaintenance ? 'Đang bảo dưỡng' : 'Tạm hết hàng')
+        : baseObj.note,
+    };
+  });
 }
 
 
@@ -127,7 +229,7 @@ export async function getDressById(idOrSlug) {
             ...(((d.code === 'UB-024' || (d.image && d.image.includes('dress_24')))) ? ['/assets/dresses/dress_24_banquet.jpg'] : []),
             ...(((d.code === 'UB-025' || (d.image && d.image.includes('dress_25')))) ? ['/assets/dresses/dress_25_banquet.jpg'] : []),
           ],
-          sizes: formatDressSizes(d.sizes),
+          sizes: formatDressSizes(d.sizes, d),
         },
       };
     }
@@ -367,21 +469,29 @@ export function isDressOutOfStock(dress) {
       if (ov?.statusType === 'out_of_stock') {
         return true;
       }
+      if (ov?.statusType === 'drying') {
+        return true;
+      }
     }
   } catch {
     // ignore json error
   }
 
-  // 3. Kiểm tra số lượng tồn kho (sizes hoặc totalStock/quantity)
-  if (Array.isArray(dress.sizes) && dress.sizes.length > 0) {
-    const totalQty = dress.sizes.reduce((sum, s) => {
-      const q = typeof s === 'object' && s?.quantity !== undefined ? Number(s.quantity) : 1;
-      return sum + (isNaN(q) ? 0 : q);
-    }, 0);
-    if (totalQty === 0) return true;
-  } else if (dress.quantity !== undefined && Number(dress.quantity) === 0) {
+  // 3. Kiểm tra số lượng tồn kho (sizes hoặc totalStock/quantity/availableStock)
+  if (dress.availableStock !== undefined && Number(dress.availableStock) <= 0) {
     return true;
-  } else if (dress.totalStock !== undefined && Number(dress.totalStock) === 0) {
+  }
+  if (Array.isArray(dress.sizes) && dress.sizes.length > 0) {
+    const totalAvail = dress.sizes.reduce((sum, s) => {
+      const q = typeof s === 'object'
+        ? (s?.available !== undefined ? Number(s.available) : (s?.quantity !== undefined ? Number(s.quantity) : 1))
+        : 1;
+      return sum + (isNaN(q) ? 0 : Math.max(0, q));
+    }, 0);
+    if (totalAvail <= 0) return true;
+  } else if (dress.quantity !== undefined && Number(dress.quantity) <= 0) {
+    return true;
+  } else if (dress.totalStock !== undefined && Number(dress.totalStock) <= 0) {
     return true;
   }
 

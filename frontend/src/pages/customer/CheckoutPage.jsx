@@ -154,7 +154,13 @@ function checkIsSizeOutOfStock(sz, dress) {
     .trim()
     .toUpperCase();
 
-  // 1. Kiểm tra trong kho override (localStorage)
+  // 1. Kiểm tra trạng thái chung của váy
+  const status = String(dress?.status || dress?.statusType || '').toLowerCase();
+  if (['out_of_stock', 'retired', 'unavailable', 'drying'].includes(status)) {
+    return true;
+  }
+
+  // 2. Kiểm tra trong kho override (localStorage)
   try {
     const rawOverrides = localStorage.getItem('unibridal_inventory_overrides');
     if (rawOverrides) {
@@ -170,8 +176,27 @@ function checkIsSizeOutOfStock(sz, dress) {
             (o?.id && String(o.id) === dressId)
         );
 
-      if (ov?.statusType === 'out_of_stock') {
+      if (ov?.statusType === 'out_of_stock' || ov?.statusType === 'drying') {
         return true;
+      }
+
+      // Kiểm tra bảo dưỡng thủ công theo size
+      const manualMaint = Number(ov?.maintenanceSizes?.[sClean] ?? 0);
+      if (manualMaint > 0) {
+        let totalSizeQty = 1;
+        if (Array.isArray(dress?.sizes)) {
+          const matchDress = dress.sizes.find((s) => {
+            const val = String(typeof s === 'string' ? s : s?.size || s?.label || s?.id || '')
+              .replace(/^size\s*/i, '')
+              .trim()
+              .toUpperCase();
+            return val === sClean;
+          });
+          if (matchDress && typeof matchDress === 'object') {
+            totalSizeQty = Math.max(1, Number(matchDress.totalQuantity ?? matchDress.quantity) || 1);
+          }
+        }
+        if (manualMaint >= totalSizeQty) return true;
       }
 
       if (Array.isArray(ov?.sizes)) {
@@ -182,9 +207,12 @@ function checkIsSizeOutOfStock(sz, dress) {
             .toUpperCase();
           return val === sClean;
         });
-        if (matchOv && typeof matchOv === 'object' && matchOv?.quantity !== undefined) {
-          const q = Number(matchOv.quantity);
-          if (!isNaN(q) && q <= 0) return true;
+        if (matchOv && typeof matchOv === 'object') {
+          if (matchOv?.available !== undefined && Number(matchOv.available) <= 0) return true;
+          if (matchOv?.quantity !== undefined) {
+            const q = Number(matchOv.quantity);
+            if (!isNaN(q) && q <= 0) return true;
+          }
         }
       }
     }
@@ -192,13 +220,17 @@ function checkIsSizeOutOfStock(sz, dress) {
     // ignore
   }
 
-  // 2. Kiểm tra trực tiếp trên đối tượng sz
-  if (typeof sz === 'object' && sz !== null && sz?.quantity !== undefined) {
-    const q = Number(sz.quantity);
-    if (!isNaN(q) && q <= 0) return true;
+  // 3. Kiểm tra trực tiếp trên đối tượng sz
+  if (typeof sz === 'object' && sz !== null) {
+    if (sz.available !== undefined && Number(sz.available) <= 0) return true;
+    if (sz.quantity !== undefined) {
+      const q = Number(sz.quantity);
+      if (!isNaN(q) && q <= 0) return true;
+    }
+    if (sz.isMaintenance) return true;
   }
 
-  // 3. Kiểm tra trong dress.sizes
+  // 4. Kiểm tra trong dress.sizes
   if (Array.isArray(dress?.sizes)) {
     const matchDress = dress.sizes.find((s) => {
       const val = String(typeof s === 'string' ? s : s?.size || s?.label || s?.id || '')
@@ -207,9 +239,13 @@ function checkIsSizeOutOfStock(sz, dress) {
         .toUpperCase();
       return val === sClean;
     });
-    if (matchDress && typeof matchDress === 'object' && matchDress?.quantity !== undefined) {
-      const q = Number(matchDress.quantity);
-      if (!isNaN(q) && q <= 0) return true;
+    if (matchDress && typeof matchDress === 'object') {
+      if (matchDress.available !== undefined && Number(matchDress.available) <= 0) return true;
+      if (matchDress.quantity !== undefined) {
+        const q = Number(matchDress.quantity);
+        if (!isNaN(q) && q <= 0) return true;
+      }
+      if (matchDress.isMaintenance) return true;
     }
   }
 
