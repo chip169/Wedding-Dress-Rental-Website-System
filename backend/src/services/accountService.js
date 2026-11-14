@@ -180,7 +180,8 @@ export async function attachAvailabilityToDresses(dresses) {
         const cleanSName = String(sName).replace(/^size\s*/i, '').trim().toUpperCase();
         const originalQty = typeof s === 'object' && s?.quantity !== undefined ? Math.max(1, Number(s.quantity)) : 1;
         totalInitialStock += originalQty;
-        const rented = rentedBySize[cleanSName] || 0;
+        const rawRented = rentedBySize[cleanSName] || 0;
+        const rented = Math.min(originalQty, rawRented);
         const available = Math.max(0, originalQty - rented);
         totalAvailable += available;
 

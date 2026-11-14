@@ -648,13 +648,15 @@ export default function CheckoutPage() {
             endDate: toIsoDateString(item.endDate),
             orderCode: item.orderCode,
             bride: item.bride || 'Kín lịch',
+            size: item.size || '',
+            sizes: item.sizes || (item.size ? [item.size] : []),
           }))
           .filter((item) => item.startDate && item.endDate);
 
-        // Loại bỏ các khoảng ngày trùng lặp
+        // Loại bỏ các khoảng ngày trùng lặp (xét cùng size)
         const uniqueIntervals = [];
         formatted.forEach((item) => {
-          if (!uniqueIntervals.some((u) => u.startDate === item.startDate && u.endDate === item.endDate)) {
+          if (!uniqueIntervals.some((u) => u.startDate === item.startDate && u.endDate === item.endDate && u.size === item.size)) {
             uniqueIntervals.push(item);
           }
         });
@@ -672,13 +674,24 @@ export default function CheckoutPage() {
     };
   }, [orderItems, activeDress]);
 
-  // Kiểm tra 1 ngày cụ thể (YYYY-MM-DD) có bị kín lịch hay không
+  // Kiểm tra 1 ngày cụ thể (YYYY-MM-DD) có bị kín lịch hay không (xét theo size hiện tại)
   const getBookedInfoForDate = (dateStr) => {
     if (!dateStr) return null;
+    const currentSizeClean = String(selectedSize || '').replace(/^size\s*/i, '').trim().toUpperCase();
     return bookedIntervals.find((interval) => {
       const s = toIsoDateString(interval.startDate);
       const e = toIsoDateString(interval.endDate);
-      return dateStr >= s && dateStr <= e;
+      const isDateInRange = dateStr >= s && dateStr <= e;
+      if (!isDateInRange) return false;
+
+      const intervalSizes = (interval.sizes || [interval.size]).map((sz) =>
+        String(sz || '').replace(/^size\s*/i, '').trim().toUpperCase()
+      ).filter(Boolean);
+
+      if (currentSizeClean && intervalSizes.length > 0 && !intervalSizes.includes(currentSizeClean)) {
+        return false;
+      }
+      return true;
     });
   };
 
@@ -688,10 +701,21 @@ export default function CheckoutPage() {
     const userEnd = toIsoDateString(rentalSchedule.endDate);
     if (!userStart || !userEnd) return null;
 
+    const currentSizeClean = String(selectedSize || '').replace(/^size\s*/i, '').trim().toUpperCase();
+
     for (const interval of bookedIntervals) {
       const bStart = toIsoDateString(interval.startDate);
       const bEnd = toIsoDateString(interval.endDate);
       if (!bStart || !bEnd) continue;
+
+      const intervalSizes = (interval.sizes || [interval.size]).map((sz) =>
+        String(sz || '').replace(/^size\s*/i, '').trim().toUpperCase()
+      ).filter(Boolean);
+
+      // Nếu khoảng ngày đã đặt thuộc size khác với size khách đang chọn -> không tính là xung đột
+      if (currentSizeClean && intervalSizes.length > 0 && !intervalSizes.includes(currentSizeClean)) {
+        continue;
+      }
 
       // Hai dải thời gian giao nhau nếu userStart <= bEnd và userEnd >= bStart
       if (userStart <= bEnd && userEnd >= bStart) {
@@ -703,7 +727,7 @@ export default function CheckoutPage() {
       }
     }
     return null;
-  }, [rentalSchedule.startDate, rentalSchedule.endDate, bookedIntervals]);
+  }, [rentalSchedule.startDate, rentalSchedule.endDate, bookedIntervals, selectedSize]);
 
   // Helper tính ngày cưới mặc định nằm trong khoảng thuê
   const computeWeddingDate = (startDisplayOrIso, days) => {
@@ -2240,9 +2264,13 @@ export default function CheckoutPage() {
                               ✓ Cập nhật theo đơn thực tế
                             </span>
                           </div>
-                          {bookedIntervals.length > 0 && (
+                          {bookedIntervals.length > 0 ? (
                             <span className="text-[11px] text-[#B91C1C] font-medium block mt-1">
                               ⚠ Đang có {bookedIntervals.length} đợt thuê đã khóa lịch cho mẫu váy này
+                            </span>
+                          ) : (
+                            <span className="text-[11px] text-[#2E7D32] font-medium block mt-1">
+                              ✦ Toàn bộ các ngày trong tháng đang trống lịch sẵn sàng cho nàng đặt thuê
                             </span>
                           )}
                         </div>
@@ -3355,7 +3383,7 @@ export default function CheckoutPage() {
                       </div>
                       <div className="flex items-start gap-2.5">
                         <span className="w-5 h-5 rounded-full bg-[#733F49] text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</span>
-                        <span className="text-[#6B5C5D]">Xác nhận chuyển khoản và bấm nút <strong>Xác nhận</strong> bên dưới</span>
+                        <span className="text-[#6B5C5D]">Xác nhận giao dịch chuyển khoản trên ứng dụng ngân hàng</span>
                       </div>
                     </div>
 
@@ -3405,32 +3433,6 @@ export default function CheckoutPage() {
                     <span>Quay lại Bước 2: Xem Hợp đồng</span>
                   </button>
 
-                  <button
-                    type="button"
-                    disabled={isSubmitting || isVerifyingPayment}
-                    onClick={handleConfirmFinalPayment}
-                    className={`w-full sm:w-auto px-8 py-4 rounded-xl text-white font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer border-0 flex items-center justify-center gap-2 ${!isContractSigned
-                      ? 'bg-[#B08968] hover:bg-[#8D6E63] ring-2 ring-amber-400'
-                      : 'bg-[#733F49] hover:bg-[#5F323B]'
-                      }`}
-                  >
-                    {isVerifyingPayment ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Đang kiểm tra giao dịch Techcombank...</span>
-                      </>
-                    ) : !isContractSigned ? (
-                      <>
-                        <AlertCircle className="w-4 h-4 text-amber-200" />
-                        <span>CHƯA KÝ HỢP ĐỒNG (BẤM ĐỂ QUAY LẠI BƯỚC 2 KÝ)</span>
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="w-4 h-4" />
-                        <span>XÁC NHẬN ĐÃ CHUYỂN KHOẢN VÀ KHÓA LỊCH ĐẶT THUÊ</span>
-                      </>
-                    )}
-                  </button>
                 </div>
 
               </div>

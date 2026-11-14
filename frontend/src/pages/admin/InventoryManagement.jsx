@@ -363,10 +363,33 @@ export default function InventoryManagement() {
       });
     });
 
-    // 2. Các đơn đang được khách thuê / chuẩn bị giao
-    const rentingOrders = matchedOrders.filter((o) =>
-      ['renting', 'delivered', 'preparing', 'deposit_paid'].includes(o.rawStatus || o.status)
-    );
+    // 2. Phân loại các đơn thuê liên quan:
+    // a) Đơn ĐANG THUÊ THỰC TẾ (chiếc váy đang rời khỏi showroom hoặc đã bàn giao cho khách):
+    //    - Trạng thái 'renting', 'delivered' (khách đang giữ váy)
+    //    - Hoặc 'preparing', 'deposit_paid' nhưng đã đến ngày nhận/giao váy (rentalStartDate <= hôm nay)
+    const todayEnd = new Date();
+    todayEnd.setHours(23, 59, 59, 999);
+    const todayEndMs = todayEnd.getTime();
+
+    const rentingOrders = matchedOrders.filter((o) => {
+      const st = String(o.rawStatus || o.status || '').toLowerCase();
+      if (['renting', 'delivered'].includes(st)) return true;
+      if (['preparing', 'deposit_paid'].includes(st)) {
+        if (!o.rentalStartDate) return true;
+        const startMs = new Date(o.rentalStartDate).getTime();
+        return !isNaN(startMs) && startMs <= todayEndMs;
+      }
+      return false;
+    });
+
+    // b) Đơn ĐẶT CỌC GIỮ LỊCH TRONG TƯƠNG LAI (đã cọc nhưng chưa đến ngày nhận, chiếc váy vẫn đang ở showroom):
+    const futureBookedOrders = matchedOrders.filter((o) => {
+      const st = String(o.rawStatus || o.status || '').toLowerCase();
+      if (!['preparing', 'deposit_paid'].includes(st)) return false;
+      if (!o.rentalStartDate) return false;
+      const startMs = new Date(o.rentalStartDate).getTime();
+      return !isNaN(startMs) && startMs > todayEndMs;
+    });
 
     // 3. Phân bổ chi tiết theo từng Size: Khả dụng / Đang kiểm định / Đang thuê
     const detailedSizes = sizeList.map((sz) => {
@@ -405,7 +428,7 @@ export default function InventoryManagement() {
 
       const sMaint = Math.min(sQty, orderMaintCount + storageMaintCount + manualMaintCount);
 
-      const sRented = rentingOrders.filter((o) => {
+      const rawRented = rentingOrders.filter((o) => {
         const matchedItem = (o.items || []).find((it) => {
           const itId = it.dressId?._id || it.dressId || it.id || it._id;
           const itCleanName = cleanStr(it.name);
@@ -420,6 +443,25 @@ export default function InventoryManagement() {
         return String(itemSize).trim().toUpperCase() === sName.toUpperCase();
       }).length;
 
+      const rawBooked = futureBookedOrders.filter((o) => {
+        const matchedItem = (o.items || []).find((it) => {
+          const itId = it.dressId?._id || it.dressId || it.id || it._id;
+          const itCleanName = cleanStr(it.name);
+          const itCleanCode = cleanStr(it.code);
+          return (
+            (itId && (String(itId) === String(dressId) || (d._id && String(itId) === String(d._id)))) ||
+            (itCleanCode && dressCleanCode && itCleanCode === dressCleanCode) ||
+            (itCleanName && dressCleanName && itCleanName === dressCleanName && dressCleanName.length >= 2)
+          );
+        });
+        const itemSize = matchedItem?.size || o.size || '';
+        return String(itemSize).trim().toUpperCase() === sName.toUpperCase();
+      }).length;
+
+      // CHẶN TRẦN: Số lượng đang thuê không thể vượt quá tổng số lượng tồn kho của size (sQty)
+      const sRented = Math.min(sQty, rawRented);
+      const sBooked = rawBooked;
+
       const sAvail = Math.max(0, sQty - sMaint - sRented);
       return {
         ...sz,
@@ -428,6 +470,7 @@ export default function InventoryManagement() {
         available: sAvail,
         maintenance: sMaint,
         rented: sRented,
+        booked: sBooked,
       };
     });
 
@@ -1872,7 +1915,8 @@ export default function InventoryManagement() {
                                 const sAvail = typeof s === 'object' && s.available !== undefined ? s.available : sQty;
                                 const sMaint = typeof s === 'object' ? (s.maintenance ?? 0) : 0;
                                 const sRented = typeof s === 'object' ? (s.rented ?? 0) : 0;
-                                return sQty > 0 || sAvail > 0 || sMaint > 0 || sRented > 0;
+                                const sBooked = typeof s === 'object' ? (s.booked ?? 0) : 0;
+                                return sQty > 0 || sAvail > 0 || sMaint > 0 || sRented > 0 || sBooked > 0;
                               })
                               .map((s, idx) => {
                               const sName = typeof s === 'object' ? s.size : s;
@@ -1880,21 +1924,33 @@ export default function InventoryManagement() {
                               const sAvail = typeof s === 'object' && s.available !== undefined ? s.available : sQty;
                               const sMaint = typeof s === 'object' ? (s.maintenance ?? 0) : 0;
                               const sRented = typeof s === 'object' ? (s.rented ?? 0) : 0;
+                              const sBooked = typeof s === 'object' ? (s.booked ?? 0) : 0;
+
+                              const titleText = sMaint > 0
+                                ? `Đang có ${sMaint} bộ size ${sName} kiểm định sau thuê`
+                                : sRented > 0
+                                ? `Đang có ${sRented} bộ size ${sName} đang được khách thuê${sBooked > 0 ? ` (${sBooked} đơn đã cọc giữ lịch sắp tới)` : ''}`
+                                : sBooked > 0
+                                ? `Sẵn sàng tại showroom: ${sAvail} bộ (Có ${sBooked} đơn đã cọc giữ lịch sắp tới)`
+                                : `Sẵn sàng phục vụ: ${sAvail} bộ`;
 
                               return (
                                 <span
                                   key={idx}
-                                  title={sMaint > 0 ? `Đang có ${sMaint} bộ size ${sName} kiểm định sau thuê` : sRented > 0 ? `Đang có ${sRented} bộ size ${sName} đang được khách thuê` : `Sẵn sàng phục vụ: ${sAvail} bộ`}
+                                  title={titleText}
                                   className={`inline-flex items-center px-1.5 py-0.5 rounded-md border font-semibold text-[10.5px] ${sMaint > 0
                                     ? 'bg-[#FEF2E6] text-[#B45309] border-[#FED7AA]'
                                     : sRented > 0
                                       ? 'bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]'
+                                      : sBooked > 0
+                                      ? 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]'
                                       : 'bg-[#FAF5F2] text-[#733F49] border-[#EFE2DC]'
                                     }`}
                                 >
                                   {sName}: <span className="font-bold ml-1 text-[#2C2523]">{sAvail}/{sQty}</span>
                                   {sMaint > 0 && <span className="ml-1 text-[9px] text-[#D97706] font-bold">({sMaint} bảo dưỡng)</span>}
                                   {sRented > 0 && <span className="ml-1 text-[9px] text-[#1D4ED8] font-bold">({sRented} đang thuê)</span>}
+                                  {sRented === 0 && sBooked > 0 && <span className="ml-1 text-[9px] text-[#15803D] font-bold">({sBooked} đã cọc)</span>}
                                 </span>
                               );
                             })}

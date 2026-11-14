@@ -128,6 +128,16 @@ export const createOrder = async (orderData, currentUser = null) => {
       if (isOutOfStock) {
         throw new Error(`Sản phẩm "${dressDoc.name}" hiện đã hết hàng trong kho, không thể đặt lịch thuê.`);
       }
+      if (item.size && Array.isArray(dressDoc.sizes) && dressDoc.sizes.length > 0) {
+        const itemSizeClean = String(item.size).replace(/^size\s*/i, '').trim().toUpperCase();
+        const matchedSize = dressDoc.sizes.find(
+          (sz) => String(sz.size || sz).replace(/^size\s*/i, '').trim().toUpperCase() === itemSizeClean
+        );
+        const sizeQty = matchedSize ? Number(matchedSize.quantity ?? matchedSize.totalQuantity ?? 1) : 0;
+        if (!matchedSize || sizeQty <= 0) {
+          throw new Error(`Mẫu váy "${dressDoc.name}" hiện không có sẵn Size ${itemSizeClean} trong kho. Vui lòng chọn kích cỡ khác!`);
+        }
+      }
     }
   }
 
@@ -218,18 +228,48 @@ export const createOrder = async (orderData, currentUser = null) => {
       // ignore
     }
 
-    const overlappingOrder = await Order.findOne({
+    const itemSizeClean = String(item.size || '').replace(/^size\s*/i, '').trim().toUpperCase();
+    const overlappingOrders = await Order.find({
       status: { $in: bookedStatuses },
       $or: dressConditions,
       rentalStartDate: { $lte: resolvedEndDate },
       rentalEndDate: { $gte: resolvedStartDate },
+    }).lean();
+
+    // Lọc các đơn trùng lịch có cùng Size với sản phẩm đang đặt
+    const overlappingSameSize = overlappingOrders.filter((o) => {
+      const matchIt = (o.items || []).find((it) => {
+        const itId = String(it.dressId?._id || it.dressId || it.id || it._id || '');
+        const itCode = String(it.code || '').toUpperCase();
+        const itName = String(it.name || '').trim().toLowerCase();
+        return (
+          (itId && (itId === dressIdStr || (dressDoc && itId === String(dressDoc._id)))) ||
+          (dressDoc?.code && itCode === String(dressDoc.code).toUpperCase()) ||
+          (dressDoc?.name && itName === String(dressDoc.name).trim().toLowerCase()) ||
+          (item.name && itName === String(item.name).trim().toLowerCase())
+        );
+      });
+      const orderItemSize = String(matchIt?.size || o.size || '').replace(/^size\s*/i, '').trim().toUpperCase();
+      return !itemSizeClean || !orderItemSize || orderItemSize === itemSizeClean;
     });
 
-    if (overlappingOrder) {
-      const s = overlappingOrder.rentalStartDate ? new Date(overlappingOrder.rentalStartDate).toLocaleDateString('vi-VN') : '';
-      const e = overlappingOrder.rentalEndDate ? new Date(overlappingOrder.rentalEndDate).toLocaleDateString('vi-VN') : '';
+    // Lấy số lượng tồn kho thực tế của size này
+    let sizeCapacity = 1;
+    if (dressDoc && Array.isArray(dressDoc.sizes)) {
+      const foundSz = dressDoc.sizes.find(
+        (sz) => String(sz.size || sz).replace(/^size\s*/i, '').trim().toUpperCase() === itemSizeClean
+      );
+      if (foundSz && typeof foundSz === 'object') {
+        sizeCapacity = Math.max(1, Number(foundSz.quantity ?? foundSz.totalQuantity ?? 1));
+      }
+    }
+
+    if (overlappingSameSize.length >= sizeCapacity) {
+      const firstConflict = overlappingSameSize[0];
+      const s = firstConflict.rentalStartDate ? new Date(firstConflict.rentalStartDate).toLocaleDateString('vi-VN') : '';
+      const e = firstConflict.rentalEndDate ? new Date(firstConflict.rentalEndDate).toLocaleDateString('vi-VN') : '';
       throw new Error(
-        `Váy "${item.name}" đã có nàng dâu khác cọc thuê kín lịch trong khoảng từ ${s} đến ${e}. Vui lòng chọn khoảng ngày khác!`
+        `Váy "${item.name}" (Size ${itemSizeClean || 'này'}) đã có nàng dâu khác cọc thuê kín lịch trong khoảng từ ${s} đến ${e}. Vui lòng chọn khoảng ngày khác!`
       );
     }
   }
@@ -653,12 +693,15 @@ export const getDressBookedDates = async (dressId) => {
         return str.includes('T') ? str.split('T')[0] : str.slice(0, 10);
       };
 
+      const itemSizes = (o.items || []).map((it) => it.size).filter(Boolean);
       return {
         orderCode: o.orderCode,
         startDate: formatYMD(o.rentalStartDate),
         endDate: formatYMD(o.rentalEndDate),
         bride: o.customerName || 'Nàng dâu UniBridal',
         status: o.status,
+        size: itemSizes[0] || '',
+        sizes: itemSizes,
       };
     });
 };
