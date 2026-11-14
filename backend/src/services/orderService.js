@@ -145,12 +145,12 @@ export const createOrder = async (orderData, currentUser = null) => {
   const resolvedStartDate = parseDateSafe(rentalStartDate, new Date());
   const resolvedEndDate = parseDateSafe(rentalEndDate, new Date(Date.now() + 4 * 24 * 60 * 60 * 1000));
 
-  // Kiểm tra không được đặt ngày trong quá khứ
-  const todayStart = new Date();
-  todayStart.setHours(0, 0, 0, 0);
+  // Kiểm tra không được đặt ngày trong quá khứ hoặc ngày hôm nay (cần tối thiểu 24h chuẩn bị)
+  const todayEnd = new Date();
+  todayEnd.setHours(23, 59, 59, 999);
 
-  if (resolvedStartDate < todayStart) {
-    throw new Error('Ngày bắt đầu thuê không thể là ngày trong quá khứ.');
+  if (resolvedStartDate <= todayEnd) {
+    throw new Error('Không thể đặt thuê cho ngày hôm nay! Ngày bắt đầu thuê phải từ ngày mai trở đi (Atelier cần tối thiểu 24h để chuẩn bị và khử khuẩn lễ phục).');
   }
 
   if (resolvedEndDate < resolvedStartDate) {

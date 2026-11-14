@@ -117,6 +117,16 @@ function getTodayIsoString() {
   return `${y}-${m}-${day}`;
 }
 
+// Helper: Lấy ngày mai chuẩn YYYY-MM-DD theo giờ địa phương (Sớm nhất có thể đặt thuê váy)
+function getTomorrowIsoString() {
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 // Chữ ký nghệ thuật đại diện Bên A (Ông Kim Xuân Hiếu - Tổng Giám Đốc)
 function DirectorSignatureAndStamp({ className = "h-28", isSmall = false }) {
   return (
@@ -435,9 +445,16 @@ export default function CheckoutPage() {
       afterDays = validDays - beforeDays;
     }
 
-    const startDisplay = addDaysToDate(wedIso, -beforeDays);
+    let calculatedStartIso = toIsoDateString(addDaysToDate(wedIso, -beforeDays));
+    const curTomorrow = getTomorrowIsoString();
+    // Nếu ngày nhận rơi vào hôm nay hoặc quá khứ, kẹp chặt tối thiểu từ ngày mai (chuẩn bị 24h)
+    if (calculatedStartIso < curTomorrow) {
+      calculatedStartIso = curTomorrow;
+    }
+
+    const startDisplay = toDisplayDateString(calculatedStartIso);
     const weddingDisplay = toDisplayDateString(wedIso);
-    const endDisplay = addDaysToDate(wedIso, afterDays);
+    const endDisplay = addDaysToDate(calculatedStartIso, validDays);
 
     return {
       startDate: startDisplay,
@@ -446,8 +463,9 @@ export default function CheckoutPage() {
     };
   };
 
-  // Lấy ngày hôm nay chuẩn ISO
+  // Lấy ngày hôm nay và ngày mai chuẩn ISO
   const todayIso = useMemo(() => getTodayIsoString(), []);
+  const tomorrowIso = useMemo(() => getTomorrowIsoString(), []);
 
   // Schedule state (Định dạng hiển thị DD/MM/YYYY)
   const [rentalSchedule, setRentalSchedule] = useState(() => {
@@ -459,7 +477,7 @@ export default function CheckoutPage() {
 
     const curToday = getTodayIsoString();
     const startIsoCheck = toIsoDateString(validStart);
-    if (startIsoCheck && startIsoCheck < curToday) {
+    if (startIsoCheck && startIsoCheck <= curToday) {
       return { startDate: '', weddingDate: '', endDate: '' };
     }
 
@@ -473,7 +491,7 @@ export default function CheckoutPage() {
 
     if (validWedding) {
       const wedIsoCheck = toIsoDateString(validWedding);
-      if (wedIsoCheck && wedIsoCheck < curToday) {
+      if (wedIsoCheck && wedIsoCheck <= curToday) {
         return { startDate: '', weddingDate: '', endDate: '' };
       }
       const initialDays = !isNaN(daysParam) && daysParam >= 1 && daysParam <= 30 ? daysParam : 4;
@@ -621,8 +639,8 @@ export default function CheckoutPage() {
   const handleSelectStartDate = (selectedIsoOrDisplay) => {
     const iso = toIsoDateString(selectedIsoOrDisplay);
     if (!iso) return;
-    if (iso < todayIso) {
-      message.warning('Ngày bắt đầu thuê không thể là ngày trong quá khứ!');
+    if (iso <= todayIso) {
+      message.warning(`Không thể đặt thuê nhận váy trong ngày hôm nay! Nàng vui lòng chọn ngày nhận từ ngày mai (${toDisplayDateString(tomorrowIso)}) trở đi để Atelier chuẩn bị và khử trùng lễ phục chu đáo.`);
       return;
     }
     const parts = iso.split('-').map(Number);
@@ -656,8 +674,8 @@ export default function CheckoutPage() {
   const handleSelectWeddingDate = (selectedIsoOrDisplay) => {
     const newWedIso = toIsoDateString(selectedIsoOrDisplay);
     if (!newWedIso) return;
-    if (newWedIso < todayIso) {
-      message.warning('Ngày cưới chính thức không thể là ngày trong quá khứ!');
+    if (newWedIso <= todayIso) {
+      message.warning(`Ngày cưới chính thức không thể là ngày hôm nay hoặc trong quá khứ! Nàng vui lòng chọn từ ngày mai (${toDisplayDateString(tomorrowIso)}) trở đi.`);
       return;
     }
     const parts = newWedIso.split('-').map(Number);
@@ -675,8 +693,8 @@ export default function CheckoutPage() {
   const handleSelectEndDate = (selectedIsoOrDisplay) => {
     const newEndIso = toIsoDateString(selectedIsoOrDisplay);
     if (!newEndIso) return;
-    if (newEndIso < todayIso) {
-      message.warning('Ngày hoàn trả không thể là ngày trong quá khứ!');
+    if (newEndIso <= todayIso) {
+      message.warning(`Ngày hoàn trả phải từ ngày mai (${toDisplayDateString(tomorrowIso)}) trở đi!`);
       return;
     }
     const startIso = toIsoDateString(rentalSchedule.startDate);
@@ -710,8 +728,12 @@ export default function CheckoutPage() {
   // Xử lý khi người dùng click vào ô ngày trên bảng lịch:
   // CHỈ CHO PHÉP CHỌN NGÀY THUÊ (Ngày nhận váy), ngày trả sẽ tự tính theo số ngày thuê
   const handleCalendarCellClick = (dateStr) => {
-    if (dateStr < todayIso) {
-      message.warning('Không thể chọn ngày trong quá khứ!');
+    if (dateStr <= todayIso) {
+      message.warning(
+        dateStr === todayIso
+          ? `Không thể đặt thuê nhận váy trong ngày hôm nay! Nàng vui lòng chọn ngày nhận từ ngày mai (${toDisplayDateString(tomorrowIso)}) trở đi để Atelier chuẩn bị lễ phục chu đáo.`
+          : 'Không thể chọn ngày trong quá khứ!'
+      );
       return;
     }
     const booked = getBookedInfoForDate(dateStr);
@@ -937,18 +959,18 @@ export default function CheckoutPage() {
     const wedIso = toIsoDateString(rentalSchedule.weddingDate);
     const endIso = toIsoDateString(rentalSchedule.endDate);
 
-    if (startIso && startIso < todayIso) {
-      message.error('Ngày bắt đầu thuê không thể là ngày trong quá khứ!');
+    if (startIso && startIso <= todayIso) {
+      message.error(`Không thể đặt thuê cho ngày hôm nay! Ngày nhận váy phải từ ngày mai (${toDisplayDateString(tomorrowIso)}) trở đi.`);
       return;
     }
 
-    if (wedIso && wedIso < todayIso) {
-      message.error('Ngày cưới chính thức không thể là ngày trong quá khứ!');
+    if (wedIso && wedIso <= todayIso) {
+      message.error(`Ngày cưới chính thức phải từ ngày mai (${toDisplayDateString(tomorrowIso)}) trở đi!`);
       return;
     }
 
-    if (endIso && endIso < todayIso) {
-      message.error('Ngày hoàn trả không thể là ngày trong quá khứ!');
+    if (endIso && endIso <= todayIso) {
+      message.error(`Ngày hoàn trả phải từ ngày mai (${toDisplayDateString(tomorrowIso)}) trở đi!`);
       return;
     }
 
@@ -2027,7 +2049,7 @@ export default function CheckoutPage() {
                         <Calendar className="w-4 h-4 text-[#8C7A7B] group-hover:text-[#733F49] transition-colors shrink-0" />
                         <input
                           type="date"
-                          min={todayIso}
+                          min={tomorrowIso}
                           value={toIsoDateString(rentalSchedule.startDate) || ''}
                           onChange={(e) => {
                             if (e.target.value) {
@@ -2059,7 +2081,7 @@ export default function CheckoutPage() {
                         <Calendar className="w-4 h-4 text-[#733F49] transition-colors shrink-0" />
                         <input
                           type="date"
-                          min={todayIso}
+                          min={tomorrowIso}
                           value={toIsoDateString(rentalSchedule.weddingDate) || ''}
                           onChange={(e) => {
                             if (e.target.value) {
@@ -2096,7 +2118,7 @@ export default function CheckoutPage() {
                         <Calendar className="w-4 h-4 text-[#8C7A7B] group-hover:text-[#733F49] transition-colors shrink-0" />
                         <input
                           type="date"
-                          min={toIsoDateString(rentalSchedule.startDate) || todayIso}
+                          min={toIsoDateString(rentalSchedule.startDate) || tomorrowIso}
                           value={toIsoDateString(rentalSchedule.endDate) || ''}
                           onChange={(e) => {
                             if (e.target.value) {
@@ -2237,6 +2259,7 @@ export default function CheckoutPage() {
                       for (let d = 1; d <= daysInMonth; d++) {
                         const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
                         const isPast = dateStr < todayIso;
+                        const isToday = dateStr === todayIso;
                         const bookedInfo = getBookedInfoForDate(dateStr);
                         const isBooked = Boolean(bookedInfo);
                         const isStart = dateStr === startIso;
@@ -2255,6 +2278,25 @@ export default function CheckoutPage() {
                               className="relative h-10 sm:h-12 rounded-xl flex flex-col items-center justify-center text-[12px] sm:text-[13px] font-medium transition-all bg-[#F8F5F2] text-[#C2B5B3] cursor-not-allowed opacity-50"
                             >
                               <span className="line-through decoration-[#C2B5B3]">{d}</span>
+                            </button>
+                          );
+                          continue;
+                        }
+
+                        // Chặn ngày hôm nay: không cho phép nhận váy ngay hôm nay (cần tối thiểu 24h chuẩn bị)
+                        if (isToday) {
+                          cells.push(
+                            <button
+                              key={dateStr}
+                              type="button"
+                              onClick={() => message.warning(`Không thể đặt thuê nhận váy trong ngày hôm nay! Nàng vui lòng chọn ngày nhận từ ngày mai (${toDisplayDateString(tomorrowIso)}) trở đi để Atelier chuẩn bị lễ phục chu đáo.`)}
+                              title={`Hôm nay (${toDisplayDateString(dateStr)}) - Cần tối thiểu 24h chuẩn bị lễ phục, vui lòng chọn từ ngày mai`}
+                              className="relative h-10 sm:h-12 rounded-xl flex flex-col items-center justify-center text-[12px] sm:text-[13px] font-medium transition-all bg-[#F3F4F6] text-[#9CA3AF] border border-[#E5E7EB] cursor-not-allowed opacity-75 hover:opacity-100"
+                            >
+                              <span className="line-through decoration-[#9CA3AF]">{d}</span>
+                              <span className="text-[7.5px] font-bold leading-none text-[#6B7280] tracking-tight uppercase">
+                                HÔM NAY
+                              </span>
                             </button>
                           );
                           continue;

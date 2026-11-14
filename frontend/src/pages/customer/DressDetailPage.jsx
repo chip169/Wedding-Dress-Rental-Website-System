@@ -1267,7 +1267,8 @@ export default function DressDetailPage() {
 
                   for (let d = 1; d <= totalDays; d++) {
                     const dateStr = `${y}-${String(m + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
-                    const isPast = dateStr < todayStr;
+                    const isPast = dateStr <= todayStr;
+                    const isToday = dateStr === todayStr;
                     const booked = isDateBooked(dateStr);
                     const isSelected = previewStartDate === dateStr;
 
@@ -1275,9 +1276,11 @@ export default function DressDetailPage() {
                       grid.push(
                         <div
                           key={dateStr}
+                          title={isToday ? 'Hôm nay (Cần tối thiểu 24h chuẩn bị lễ phục, chỉ nhận đặt từ ngày mai)' : 'Ngày trong quá khứ'}
                           className="h-10 rounded-lg flex flex-col items-center justify-center text-[12px] bg-[#F8F5F2] text-[#C2B5B3] opacity-40 cursor-not-allowed"
                         >
                           <span className="line-through">{d}</span>
+                          {isToday && <span className="text-[7px] font-bold text-[#8A7978] leading-none uppercase">Hôm nay</span>}
                         </div>
                       );
                       continue;
