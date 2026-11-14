@@ -3521,32 +3521,54 @@ export default function CheckoutPage() {
               </div>
             </div>
 
-            {/* LỘ TRÌNH CHĂM SÓC LỄ PHỤC (POST-BOOKING JOURNEY TIMELINE) */}
+            {/* LỘ TRÌNH CHĂM SÓC LỄ PHỤC (POST-BOOKING JOURNEY TIMELINE - 3 GIAI ĐOẠN) */}
             <div className="bg-[#FCF9F6] p-5 rounded-2xl border border-[#EEDECF] text-left">
               <span className="text-[11px] font-bold text-[#733F49] uppercase tracking-wider block mb-3">
-                ✦ LỘ TRÌNH CHĂM SÓC LỄ PHỤC CỦA NÀNG (4 GIAI ĐOẠN)
+                ✦ LỘ TRÌNH CHĂM SÓC LỄ PHỤC CỦA NÀNG (3 GIAI ĐOẠN)
               </span>
-              <div className="grid grid-cols-1 sm:grid-cols-4 gap-2.5 text-[11.5px]">
+              <div className="grid grid-cols-1 sm:grid-cols-3 gap-2.5 text-[11.5px]">
                 <div className="bg-white p-3 rounded-xl border border-[#E8F5E9] shadow-2xs">
                   <span className="text-[10px] font-bold text-[#2E7D32] block mb-1">GIAI ĐOẠN 1: HÔM NAY</span>
                   <strong className="text-[#2C2523] block mb-0.5">Khóa Lịch Độc Quyền</strong>
                   <span className="text-[#847374] block leading-tight">Hợp đồng điện tử đã ký có hiệu lực pháp lý</span>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-[#F2D8D4] shadow-2xs">
-                  <span className="text-[10px] font-bold text-[#733F49] block mb-1">TRƯỚC CƯỚI 7 NGÀY</span>
-                  <strong className="text-[#2C2523] block mb-0.5">Thử Vừa Lần Cuối</strong>
-                  <span className="text-[#847374] block leading-tight">Chuyên viên ủi sấy sinh học và chỉnh eo</span>
-                </div>
-                <div className="bg-white p-3 rounded-xl border border-[#EEDECF] shadow-2xs">
-                  <span className="text-[10px] font-bold text-[#847374] block mb-1">{rentalSchedule.startDate}</span>
+                  <span className="text-[10px] font-bold text-[#733F49] block mb-1">BÀN GIAO TRƯỚC 1 NGÀY ({rentalSchedule.startDate})</span>
                   <strong className="text-[#2C2523] block mb-0.5">Bàn Giao Vali VIP</strong>
-                  <span className="text-[#847374] block leading-tight">Nguyên seal chống ẩm và quà tặng găng tay</span>
+                  <span className="text-[#847374] block leading-tight">Bàn giao trước 1 ngày, nguyên seal chống ẩm và quà tặng găng tay</span>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-[#EEDECF] shadow-2xs">
-                  <span className="text-[10px] font-bold text-[#847374] block mb-1">{rentalSchedule.endDate}</span>
+                  <span className="text-[10px] font-bold text-[#847374] block mb-1">GIAI ĐOẠN 3: {rentalSchedule.endDate}</span>
                   <strong className="text-[#2C2523] block mb-0.5">Hoàn Trả và Giải Ngân</strong>
-                  <span className="text-[#847374] block leading-tight">Hoàn cọc 100% qua tài khoản trong 2h</span>
+                  <span className="text-[#847374] block leading-tight">Hoàn cọc 100% qua tài khoản trong 24h</span>
                 </div>
+              </div>
+
+              {/* Đề xuất từ Atelier: Nên chọn lịch thử váy để vừa vặn hơn */}
+              <div className="mt-3.5 p-3.5 rounded-xl bg-[#FFF8F3] border border-[#F2D8D4] flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-left">
+                <div className="flex items-start sm:items-center gap-2.5 min-w-0">
+                  <div className="w-8 h-8 rounded-lg bg-[#FAF0EC] text-[#733F49] flex items-center justify-center shrink-0 border border-[#F2D8D4] mt-0.5 sm:mt-0">
+                    <Calendar className="w-4 h-4 text-[#733F49]" />
+                  </div>
+                  <div>
+                    <div className="text-[12px] font-bold text-[#733F49] flex items-center gap-1.5">
+                      <span>💡 Đề xuất từ Atelier UniBridal:</span>
+                    </div>
+                    <div className="text-[11.5px] text-[#6B5C5D] leading-relaxed mt-0.5">
+                      Nàng nên chủ động đặt lịch thử váy tại Showroom trước ngày cưới để chuyên viên may đo căn chỉnh eo và chiều dài vừa vặn hoàn hảo nhất với vóc dáng của bạn.
+                    </div>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  onClick={() => {
+                    setIsSuccessModalOpen(false);
+                    navigate('/appointment');
+                  }}
+                  className="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-[#733F49] hover:bg-[#5F323B] text-white text-[11px] font-bold shrink-0 transition-colors cursor-pointer border-0 shadow-2xs whitespace-nowrap text-center"
+                >
+                  Đặt Lịch Thử Váy Ngay
+                </button>
               </div>
             </div>
 
