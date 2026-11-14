@@ -42,7 +42,6 @@ import {
   FileCheck,
   ArrowUp,
   ArrowDown,
-  Truck,
 } from 'lucide-react';
 import HangerIcon from '../../components/common/HangerIcon';
 import {
@@ -2973,50 +2972,10 @@ export default function OrderRentalManagement() {
                               </button>
                             </div>
                           ) : (
-                            <div className="inline-flex items-center gap-1.5">
-                              {order.status === 'deposit_paid' && (
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    try {
-                                      await updateOrderStatus(order._id, 'delivered');
-                                      message.success('Đã cập nhật trạng thái thành "Đã Giao Váy"');
-                                      handleOrderUpdated(order._id, 'delivered');
-                                    } catch {
-                                      message.error('Cập nhật trạng thái thất bại. Vui lòng thử lại.');
-                                    }
-                                  }}
-                                  title="Chuyển sang trạng thái Đã Giao Váy cho khách"
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#FFEDD5] border border-[#FED7AA] text-[#C2410C] text-[12px] font-bold hover:bg-[#FDBA74] transition-all cursor-pointer shadow-2xs"
-                                >
-                                  <Truck size={13} />
-                                  <span>Giao Váy</span>
-                                </button>
-                              )}
-                              {order.status === 'delivered' && (
-                                <button
-                                  type="button"
-                                  onClick={async () => {
-                                    try {
-                                      await updateOrderStatus(order._id, 'renting');
-                                      message.success('Đã cập nhật trạng thái thành "Đang Thuê"');
-                                      handleOrderUpdated(order._id, 'renting');
-                                    } catch {
-                                      message.error('Cập nhật trạng thái thất bại. Vui lòng thử lại.');
-                                    }
-                                  }}
-                                  title="Chuyển sang trạng thái Đang Thuê"
-                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#EDE9FE] border border-[#DDD6FE] text-[#6D28D9] text-[12px] font-bold hover:bg-[#DDD6FE] transition-all cursor-pointer shadow-2xs"
-                                >
-                                  <Clock size={13} />
-                                  <span>Đang Thuê</span>
-                                </button>
-                              )}
-                              <UpdateStatusDropdown
-                                order={order}
-                                onUpdated={handleOrderUpdated}
-                              />
-                            </div>
+                            <UpdateStatusDropdown
+                              order={order}
+                              onUpdated={handleOrderUpdated}
+                            />
                           )}
                         </div>
                       </td>
