@@ -741,6 +741,9 @@ export const submitReturnInspection = async (orderId, data, staffUser) => {
 
     if (customerEmail) {
       const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+      const hasAccount = Boolean(order.customerId && String(order.customerId).trim() !== '');
+      const isGuest = !hasAccount;
+
       const inspectionItems = (inspection.itemsCondition || []).map((it) => ({
         name: `${it.damageName || 'Váy cưới'} (${it.note || it.condition || 'Hiện trạng'})`,
         status: it.repairFee > 0 ? `Khấu trừ ${it.repairFee.toLocaleString('vi-VN')} đ` : '✓ Nguyên vẹn',
@@ -758,7 +761,8 @@ export const submitReturnInspection = async (orderId, data, staffUser) => {
         finalRefundAmount: inspection.finalRefundAmount,
         inspectionItems,
         bankDetails: inspection.refundBankDetails,
-        returnUrl: `${clientUrl}/profile/orders`,
+        returnUrl: isGuest ? null : `${clientUrl}/profile/orders`,
+        isGuest,
       }).catch((err) => console.error('[EMAIL INSPECTION SEND ERROR]', err.message));
 
       console.log(`[INSPECTION EMAIL SENT] Đã gửi biên bản kiểm định đơn #${order.orderCode} tới email: ${customerEmail}`);
