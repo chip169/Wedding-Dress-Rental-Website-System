@@ -3661,21 +3661,18 @@ export default function CheckoutPage() {
 
             <div>
               <span className="text-[11px] font-bold uppercase tracking-[2px] text-[#D4AF37] block mb-1">
-                ★ ĐƠN ĐẶT THUÊ #{createdOrder?.orderCode || 'UB-2026-0001'} ĐÃ KÍCH HOẠT ★
+                ★ ĐƠN ĐẶT THUÊ <strong className="font-mono font-black text-[#733F49] text-[13px] tracking-normal">#{createdOrder?.orderCode || 'UB-2026-0001'}</strong> ĐÃ KÍCH HOẠT ★
               </span>
               <h2 className="font-playfair text-[22px] sm:text-[28px] font-bold text-[#2C2523] m-0 mb-1.5">
                 Khóa Lịch Đặt Thuê Thành Công!
               </h2>
-              <p className="text-[13px] text-[#6B5C5D] leading-relaxed max-w-[500px] mx-auto m-0">
-                Chúc mừng cô dâu <strong>{brideName}</strong>. Hợp đồng cho thuê <strong>{orderItems && orderItems.length > 1 ? `${orderItems.length} tác phẩm lễ phục cưới` : `tác phẩm ${activeDress?.name}`}</strong> đã được ký kết điện tử thành công và lịch độc quyền đã được khóa cho hôn lễ của nàng.
-              </p>
             </div>
 
             {/* Contract Ticket Voucher */}
             <div className="bg-[#FAF4EE] p-5 rounded-2xl border border-[#EEDECF] text-left text-[12.5px] space-y-3">
               <div className="flex items-center justify-between pb-2.5 border-b border-[#EEDECF]">
                 <span className="text-[#847374] font-medium">Mã Đơn Hàng:</span>
-                <strong className="font-mono text-[#733F49] text-[14px]">{createdOrder?.orderCode || 'UB-2026-0001'}</strong>
+                <strong className="font-mono font-black text-[#733F49] text-[16px] tracking-wider">{createdOrder?.orderCode || 'UB-2026-0001'}</strong>
               </div>
 
               {/* Dress Details */}
