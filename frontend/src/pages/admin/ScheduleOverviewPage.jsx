@@ -825,10 +825,6 @@ export default function ScheduleOverviewPage({ defaultTab }) {
   const appointmentsByDate = useMemo(() => {
     const map = {};
     appointments.forEach((apt) => {
-      const st = (apt.status || '').toLowerCase();
-      // Bỏ qua ca hẹn đã hủy
-      if (st === 'cancelled') return;
-
       const key = toDateKey(apt.appointmentDate);
       if (!key) return;
 
@@ -870,12 +866,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
     return appointments.filter((a) => {
       const matchBranch =
         calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter;
-      if (!matchBranch) return false;
-
-      const st = (a.status || '').toLowerCase();
-      if (st === 'cancelled') return false;
-
-      return true;
+      return matchBranch;
     });
   }, [appointments, calendarBranchFilter]);
 
@@ -1208,9 +1199,37 @@ export default function ScheduleOverviewPage({ defaultTab }) {
       },
     },
     {
+      title: 'TRẠNG THÁI',
+      key: 'status',
+      width: 140,
+      render: (_, record) => {
+        const st = (record.status || '').toLowerCase();
+        const isCompleted = st === 'completed';
+        const isCancelled = st === 'cancelled';
+        return (
+          <span
+            className={`inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full text-xs font-bold border uppercase tracking-wider ${
+              isCompleted
+                ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                : isCancelled
+                ? 'bg-rose-50 text-rose-700 border-rose-300'
+                : 'bg-sky-50 text-sky-800 border-sky-300'
+            }`}
+          >
+            <span
+              className={`w-1.5 h-1.5 rounded-full ${
+                isCompleted ? 'bg-emerald-500' : isCancelled ? 'bg-rose-500' : 'bg-sky-500'
+              }`}
+            />
+            {isCompleted ? 'Có Mặt' : isCancelled ? 'Vắng Mặt' : 'Đã Xác Nhận'}
+          </span>
+        );
+      },
+    },
+    {
       title: 'THAO TÁC',
       key: 'actions',
-      width: 175,
+      width: 185,
       render: (_, record) => {
         const st = (record.status || '').toLowerCase();
         const id = record._id || record.id;
@@ -1253,7 +1272,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                 title="Ghi nhận khách có mặt thử váy"
               >
                 <CheckCircle2 className="w-3 h-3 text-emerald-600" />
-                <span>Có Mặt</span>
+                <span>{st === 'cancelled' ? 'Đổi: Có Mặt' : 'Có Mặt'}</span>
               </button>
             )}
 
@@ -1266,7 +1285,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                 title="Ghi nhận khách vắng mặt"
               >
                 <XCircle className="w-3 h-3 text-rose-600" />
-                <span>Vắng Mặt</span>
+                <span>{st === 'completed' ? 'Đổi: Vắng Mặt' : 'Vắng Mặt'}</span>
               </button>
             )}
           </div>
@@ -2010,11 +2029,13 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                             key={item.id}
                             className={`p-4 rounded-2xl border transition-all shadow-xs ${
                               isFitting
-                                ? isPending
-                                  ? 'border-amber-300 bg-amber-50/30'
-                                  : isConfirmed
+                                ? item.status === 'cancelled'
+                                  ? 'border-rose-300 bg-rose-50/30'
+                                  : item.status === 'completed'
                                   ? 'border-emerald-300 bg-emerald-50/30'
-                                  : 'border-purple-300 bg-purple-50/20'
+                                  : isPending
+                                  ? 'border-amber-300 bg-amber-50/30'
+                                  : 'border-sky-300 bg-sky-50/30'
                                 : isDelivery
                                 ? isDeliveryDone
                                   ? 'border-emerald-300 bg-emerald-50/30'
@@ -2250,34 +2271,62 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
                             {/* CÁC NÚT THAO TÁC TRỰC TIẾP DÀNH CHO STAFF */}
                             <div className="flex items-center gap-2 pt-3 border-t border-gray-200/70 mt-3">
-                              {isFitting && item.status === 'confirmed' && (
+                              {isFitting && (
                                 (item.date || toDateKey(item.appointmentDate)) <= todayKey ? (
-                                  <>
-                                    <button
-                                      type="button"
-                                      disabled={updatingId === item.id}
-                                      onClick={() =>
-                                        handleUpdateAppointmentStatus(item.id, 'completed')
-                                      }
-                                      className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
-                                      title="Khách hàng đã đến showroom: Đánh dấu có mặt"
-                                    >
-                                      <CheckCircle2 className="w-3.5 h-3.5" />
-                                      <span>Có Mặt</span>
-                                    </button>
+                                  item.status === 'confirmed' ? (
+                                    <>
+                                      <button
+                                        type="button"
+                                        disabled={updatingId === item.id}
+                                        onClick={() =>
+                                          handleUpdateAppointmentStatus(item.id, 'completed')
+                                        }
+                                        className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
+                                        title="Khách hàng đã đến showroom: Đánh dấu có mặt"
+                                      >
+                                        <CheckCircle2 className="w-3.5 h-3.5" />
+                                        <span>Có Mặt</span>
+                                      </button>
+                                      <button
+                                        type="button"
+                                        disabled={updatingId === item.id}
+                                        onClick={() =>
+                                          handleUpdateAppointmentStatus(item.id, 'cancelled')
+                                        }
+                                        className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center justify-center gap-1 transition cursor-pointer disabled:opacity-50"
+                                        title="Khách bận hoặc không đến: Đánh dấu vắng mặt"
+                                      >
+                                        <XCircle className="w-3.5 h-3.5" />
+                                        <span>Vắng Mặt</span>
+                                      </button>
+                                    </>
+                                  ) : item.status === 'completed' ? (
                                     <button
                                       type="button"
                                       disabled={updatingId === item.id}
                                       onClick={() =>
                                         handleUpdateAppointmentStatus(item.id, 'cancelled')
                                       }
-                                      className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center justify-center gap-1 transition cursor-pointer disabled:opacity-50"
-                                      title="Khách bận hoặc không đến: Đánh dấu vắng mặt"
+                                      className="w-full py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center justify-center gap-1.5 transition cursor-pointer disabled:opacity-50"
+                                      title="Khách không đến: Đổi sang Vắng Mặt"
                                     >
                                       <XCircle className="w-3.5 h-3.5" />
-                                      <span>Vắng Mặt</span>
+                                      <span>Đổi: Vắng Mặt</span>
                                     </button>
-                                  </>
+                                  ) : (
+                                    <button
+                                      type="button"
+                                      disabled={updatingId === item.id}
+                                      onClick={() =>
+                                        handleUpdateAppointmentStatus(item.id, 'completed')
+                                      }
+                                      className="w-full py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
+                                      title="Khách đã đến: Đổi sang Có Mặt"
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                      <span>Đổi: Có Mặt</span>
+                                    </button>
+                                  )
                                 ) : (
                                   <div className="flex-1 py-1.5 px-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-500 text-xs font-semibold flex items-center justify-center gap-1.5">
                                     <Clock className="w-3.5 h-3.5 text-gray-400" />
@@ -2601,8 +2650,8 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
                     {/* Nút hành động phê duyệt trực tiếp trong Modal */}
                     <div className="pt-2 border-t border-gray-100 flex flex-wrap gap-2">
-                      {selectedEvent.status === 'confirmed' && (
-                        (selectedEvent.date || toDateKey(selectedEvent.appointmentDate)) <= todayKey ? (
+                      {(selectedEvent.date || toDateKey(selectedEvent.appointmentDate)) <= todayKey ? (
+                        selectedEvent.status === 'confirmed' ? (
                           <>
                             <button
                               type="button"
@@ -2625,12 +2674,34 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                               <span>Vắng Mặt</span>
                             </button>
                           </>
+                        ) : selectedEvent.status === 'completed' ? (
+                          <button
+                            type="button"
+                            disabled={updatingId === selectedEvent.id}
+                            onClick={() => handleUpdateAppointmentStatus(selectedEvent.id, 'cancelled')}
+                            className="w-full py-2.5 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
+                            title="Khách không đến: Đổi sang Vắng Mặt"
+                          >
+                            <XCircle className="w-4 h-4" />
+                            <span>Đổi Trạng Thái: Vắng Mặt</span>
+                          </button>
                         ) : (
-                          <div className="w-full py-2.5 px-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-600 text-xs font-semibold text-center flex items-center justify-center gap-2">
-                            <Clock className="w-4 h-4 text-gray-400" />
-                            <span>Lịch hẹn chưa đến ngày — Chỉ mở thao tác khi đến ngày hẹn</span>
-                          </div>
+                          <button
+                            type="button"
+                            disabled={updatingId === selectedEvent.id}
+                            onClick={() => handleUpdateAppointmentStatus(selectedEvent.id, 'completed')}
+                            className="w-full py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
+                            title="Khách đã đến: Đổi sang Có Mặt"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Đổi Trạng Thái: Có Mặt</span>
+                          </button>
                         )
+                      ) : (
+                        <div className="w-full py-2.5 px-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-600 text-xs font-semibold text-center flex items-center justify-center gap-2">
+                          <Clock className="w-4 h-4 text-gray-400" />
+                          <span>Lịch hẹn chưa đến ngày — Chỉ mở thao tác khi đến ngày hẹn</span>
+                        </div>
                       )}
                     </div>
                   </div>
