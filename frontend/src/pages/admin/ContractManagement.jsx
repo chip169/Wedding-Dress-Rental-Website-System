@@ -664,7 +664,6 @@ export default function ContractManagement() {
             {[
               { id: 'all', label: 'Tất cả' },
               { id: 'active', label: 'Có hiệu lực' },
-              { id: 'pending_signature', label: 'Chờ ký' },
               { id: 'completed', label: 'Đã hoàn thành' },
               { id: 'disputed', label: 'Đang xử lý cọc' }
             ].map((tab) => (
