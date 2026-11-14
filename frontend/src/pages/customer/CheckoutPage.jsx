@@ -40,6 +40,7 @@ import { ShieldCheck,
   Info,
   Plus,
   Minus,
+  Sparkles,
   Zap } from 'lucide-react';
 import { message } from 'antd';
 import { useAuth } from '../../contexts/AuthContext';
@@ -3576,7 +3577,7 @@ export default function CheckoutPage() {
               <div className="space-y-2 pt-1 border-t border-[#EEDECF]/60">
                 <div className="flex items-center justify-between">
                   <span className="text-[#847374]">Thời gian nhận:</span>
-                  <strong className="text-[#2C2523]">{rentalSchedule.startDate} — {rentalSchedule.endDate}</strong>
+                  <strong className="text-[#2C2523]">{rentalSchedule?.startDate || 'Chưa chọn'} — {rentalSchedule?.endDate || 'Chưa chọn'}</strong>
                 </div>
                 <div className="flex items-center justify-between">
                   <span className="text-[#847374]">Chữ ký số bên B:</span>
@@ -3640,12 +3641,12 @@ export default function CheckoutPage() {
                   <span className="text-[#847374] block leading-tight">Hợp đồng điện tử đã ký có hiệu lực pháp lý</span>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-[#F2D8D4] shadow-2xs">
-                  <span className="text-[10px] font-bold text-[#733F49] block mb-1">BÀN GIAO TRƯỚC 1 NGÀY ({rentalSchedule.startDate})</span>
+                  <span className="text-[10px] font-bold text-[#733F49] block mb-1">BÀN GIAO TRƯỚC 1 NGÀY ({rentalSchedule?.startDate || 'Theo lịch'})</span>
                   <strong className="text-[#2C2523] block mb-0.5">Bàn Giao Vali VIP</strong>
                   <span className="text-[#847374] block leading-tight">Bàn giao trước 1 ngày, nguyên seal chống ẩm và quà tặng găng tay</span>
                 </div>
                 <div className="bg-white p-3 rounded-xl border border-[#EEDECF] shadow-2xs">
-                  <span className="text-[10px] font-bold text-[#847374] block mb-1">GIAI ĐOẠN 3: {rentalSchedule.endDate}</span>
+                  <span className="text-[10px] font-bold text-[#847374] block mb-1">GIAI ĐOẠN 3: {rentalSchedule?.endDate || 'Khi hoàn tất'}</span>
                   <strong className="text-[#2C2523] block mb-0.5">Hoàn Trả và Giải Ngân</strong>
                   <span className="text-[#847374] block leading-tight">Hoàn cọc 100% qua tài khoản trong 24h</span>
                 </div>
@@ -3684,7 +3685,7 @@ export default function CheckoutPage() {
               <button
                 type="button"
                 onClick={() => {
-                  const shareText = `Anh yêu ơi, em đã đặt thuê thành công ${orderItems && orderItems.length > 1 ? `${orderItems.length} tác phẩm váy cưới` : `tác phẩm váy cưới ${activeDress?.name}`} tại UniBridal cho ngày cưới ${rentalSchedule.weddingDate}! Mã đơn hàng: ${createdOrder?.orderCode || 'UB-2026-0001'}. Cùng xem với em nhé: ${window.location.href}`;
+                  const shareText = `Anh yêu ơi, em đã đặt thuê thành công ${orderItems && orderItems.length > 1 ? `${orderItems.length} tác phẩm váy cưới` : `tác phẩm váy cưới ${activeDress?.name || 'Haute Couture'}`} tại UniBridal cho ngày cưới ${rentalSchedule?.weddingDate || rentalSchedule?.startDate || 'hôn lễ'}! Mã đơn hàng: ${createdOrder?.orderCode || 'UB-2026-0001'}. Cùng xem với em nhé: ${window.location.href}`;
                   if (navigator.share) {
                     navigator.share({
                       title: 'Hợp Đồng Thuê Váy Cưới UniBridal',
