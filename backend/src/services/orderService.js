@@ -901,12 +901,27 @@ export const settleInspectionAdmin = async (orderId, data = {}, adminUser) => {
     : (inspection.refundBankDetails || null);
   const now = new Date();
 
+  // Cập nhật chi tiết từng váy để phản ánh đúng mức bồi thường sau đàm phán của Admin
+  const updatedItems = (inspection.itemsCondition || []).map((it, idx) => {
+    if (idx === 0 || it.condition === 'custom_agreement' || it.conditions?.includes('custom_agreement') || (inspection.itemsCondition || []).length === 1) {
+      return {
+        ...it,
+        repairFee: agreedPenalty,
+        compensation: agreedPenalty,
+        feeLabel: `${agreedPenalty.toLocaleString('vi-VN')} ₫`,
+        note: data.negotiationNotes ? `${it.note ? it.note + ' • ' : ''}Thống nhất sau đàm phán: ${data.negotiationNotes}` : it.note,
+      };
+    }
+    return it;
+  });
+
   const result = await ReturnInspection.updateOne(
     { _id: inspection._id },
     { $set: {
       totalDeduction: agreedPenalty,
       agreedPenaltyFee: agreedPenalty,
       finalRefundAmount,
+      itemsCondition: updatedItems,
       customerStatus: 'approved',
       customerConfirmedAt: now,
       isRefunded: false,
@@ -920,6 +935,62 @@ export const settleInspectionAdmin = async (orderId, data = {}, adminUser) => {
     } },
   );
   if (!result.matchedCount) throw returnError(409, 'Biên bản vừa thay đổi. Vui lòng tải lại.');
+
+  // Gửi email cập nhật kết quả đàm phán và chốt số tiền hoàn cọc tới khách hàng
+  try {
+    let customerEmail = order.customerEmail || order.email;
+    let customerName = order.customerName || order.brideName || 'Quý khách';
+
+    if (!customerEmail && order.customerId) {
+      const customer = await User.findById(order.customerId).lean();
+      if (customer) {
+        customerEmail = customer.email;
+        customerName = customer.fullName || customerName;
+      }
+    }
+
+    if (!customerEmail) {
+      const contract = await Contract.findOne({
+        $or: [{ orderId: order._id }, { contractCode: order.contractCode }],
+      }).lean();
+      if (contract?.customerInfo?.email) {
+        customerEmail = contract.customerInfo.email;
+        customerName = contract.customerInfo.fullName || customerName;
+      }
+    }
+
+    if (customerEmail) {
+      const clientUrl = process.env.CLIENT_URL || 'http://localhost:3000';
+      const hasAccount = Boolean(order.customerId && String(order.customerId).trim() !== '');
+      const isGuest = !hasAccount;
+
+      const inspectionItems = updatedItems.map((it) => ({
+        name: `${it.damageName || 'Váy cưới'} (${it.note || it.condition || 'Hiện trạng'})`,
+        status: it.repairFee > 0 ? `Khấu trừ ${it.repairFee.toLocaleString('vi-VN')} đ (Đã thống nhất sau đàm phán)` : '✓ Nguyên vẹn',
+        passed: !(it.repairFee > 0),
+      }));
+
+      sendInspectionNotificationEmail({
+        to: customerEmail,
+        fullName: customerName,
+        orderCode: order.orderCode,
+        inspectorName: adminUser?.fullName || 'Quản Trị Viên Atelier UniBridal',
+        inspectionDate: now,
+        totalDeposit: totalDeposit,
+        totalDeduction: agreedPenalty,
+        finalRefundAmount: finalRefundAmount,
+        inspectionItems,
+        bankDetails: bankDetails || inspection.refundBankDetails,
+        returnUrl: isGuest ? null : `${clientUrl}/profile/orders`,
+        isGuest,
+        customerStatus: 'approved',
+      }).catch((err) => console.error('[EMAIL NEGOTIATION SEND ERROR]', err.message));
+
+      console.log(`[NEGOTIATION EMAIL SENT] Đã gửi biên bản đàm phán chốt khấu trừ ${agreedPenalty.toLocaleString('vi-VN')} đ đơn #${order.orderCode} tới email: ${customerEmail}`);
+    }
+  } catch (err) {
+    console.error('[EMAIL NOTIFICATION ERROR]', err.message);
+  }
 
   // Nếu Admin nhập mã giao dịch ngay tại modal đàm phán thì quyết toán luôn
   if (hasTxCode) {
