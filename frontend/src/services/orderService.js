@@ -143,6 +143,12 @@ export async function createOrder(orderData) {
     const res = await axiosClient.post('/orders', orderData);
     clearAdminOrdersCache();
     if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('unibridal_order_ping', String(Date.now()));
+        const bc = new BroadcastChannel('unibridal_channel');
+        bc.postMessage({ type: 'order_created', order: res?.data });
+        bc.close();
+      } catch (_) {}
       window.dispatchEvent(new Event('unibridal_order_created'));
       window.dispatchEvent(new Event('unibridal_order_updated'));
     }
@@ -160,6 +166,15 @@ export async function getOrderForManagement(idOrCode) {
 export async function updateOrderStatus(orderId, status) {
   const result = await axiosClient.patch(`/orders/${orderId}/status`, { status });
   clearAdminOrdersCache();
+  if (typeof window !== 'undefined') {
+    try {
+      localStorage.setItem('unibridal_order_ping', String(Date.now()));
+      const bc = new BroadcastChannel('unibridal_channel');
+      bc.postMessage({ type: 'order_updated', orderId, status });
+      bc.close();
+    } catch (_) {}
+    window.dispatchEvent(new Event('unibridal_order_updated'));
+  }
   return result;
 }
 

@@ -680,8 +680,8 @@ export default function ScheduleOverviewPage({ defaultTab }) {
   };
 
   // Lấy dữ liệu cả Lịch Hẹn Thử Váy và Đơn Thuê (Luôn ép buộc lấy mới nhất từ server)
-  const fetchData = useCallback(async () => {
-    setLoading(true);
+  const fetchData = useCallback(async (silent = false) => {
+    if (!silent) setLoading(true);
     try {
       const [resApt, resOrd] = await Promise.all([
         getAppointmentsApi({ limit: 1000 }).catch(() => ({ data: [] })),
@@ -717,24 +717,49 @@ export default function ScheduleOverviewPage({ defaultTab }) {
     } catch (err) {
       console.error('Lỗi tải dữ liệu lịch:', err);
     } finally {
-      setLoading(false);
+      if (!silent) setLoading(false);
     }
   }, []);
 
   useEffect(() => {
-    fetchData();
-    const handleUpdate = () => fetchData();
-    window.addEventListener(APPOINTMENT_EVENT, handleUpdate);
-    window.addEventListener('unibridal_order_created', handleUpdate);
-    window.addEventListener('unibridal_order_updated', handleUpdate);
-    window.addEventListener('storage', handleUpdate);
-    const interval = setInterval(() => fetchData(), 10000);
+    fetchData(false);
+    const handleSilentUpdate = () => fetchData(true);
+
+    let bc;
+    try {
+      bc = new BroadcastChannel('unibridal_channel');
+      bc.onmessage = () => {
+        fetchData(true);
+      };
+    } catch (_) {}
+
+    window.addEventListener(APPOINTMENT_EVENT, handleSilentUpdate);
+    window.addEventListener('unibridal_order_created', handleSilentUpdate);
+    window.addEventListener('unibridal_order_updated', handleSilentUpdate);
+    window.addEventListener('storage', handleSilentUpdate);
+    window.addEventListener('focus', handleSilentUpdate);
+
+    const handleVisibility = () => {
+      if (!document.hidden) handleSilentUpdate();
+    };
+    document.addEventListener('visibilitychange', handleVisibility);
+
+    // Tự động kiểm tra cập nhật ngầm mỗi 4 giây mà không cần người dùng refresh trang
+    const interval = setInterval(() => fetchData(true), 4000);
+
     return () => {
       clearInterval(interval);
-      window.removeEventListener(APPOINTMENT_EVENT, handleUpdate);
-      window.removeEventListener('unibridal_order_created', handleUpdate);
-      window.removeEventListener('unibridal_order_updated', handleUpdate);
-      window.removeEventListener('storage', handleUpdate);
+      if (bc) {
+        try {
+          bc.close();
+        } catch (_) {}
+      }
+      window.removeEventListener(APPOINTMENT_EVENT, handleSilentUpdate);
+      window.removeEventListener('unibridal_order_created', handleSilentUpdate);
+      window.removeEventListener('unibridal_order_updated', handleSilentUpdate);
+      window.removeEventListener('storage', handleSilentUpdate);
+      window.removeEventListener('focus', handleSilentUpdate);
+      document.removeEventListener('visibilitychange', handleVisibility);
     };
   }, [fetchData]);
 
@@ -901,9 +926,8 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
   const highlightStartDateKey = useMemo(() => {
     if (!activeHighlightOrder?.rentalStartDate) return null;
-    const d = activeHighlightOrder.deliveryDate
-      ? new Date(activeHighlightOrder.deliveryDate)
-      : new Date(activeHighlightOrder.rentalStartDate);
+    const d = new Date(activeHighlightOrder.rentalStartDate);
+    d.setDate(d.getDate() - 1);
     return toDateKey(d);
   }, [activeHighlightOrder]);
   const highlightEndDateKey = activeHighlightOrder ? toDateKey(activeHighlightOrder.rentalEndDate) : null;
@@ -1000,7 +1024,8 @@ export default function ScheduleOverviewPage({ defaultTab }) {
     );
   }, [calendarBranchOrders, deliveryMethodFilter]);
 
-  // Danh sách sự kiện bàn giao / nhận váy theo ngày bắt đầu thuê (hoặc ngày giao hẹn trước)
+  // Danh sách sự kiện bàn giao / nhận váy: LÙI 1 NGÀY so với ngày khách bắt đầu thuê
+  // (Showroom bàn giao váy sớm 1 ngày để cô dâu chuẩn bị và thử trước ngày hôn lễ/ngày thuê)
   const deliveriesByDate = useMemo(() => {
     const map = {};
     orders.forEach((ord) => {
@@ -1010,7 +1035,9 @@ export default function ScheduleOverviewPage({ defaultTab }) {
       const startDate = ord.rentalStartDate ? new Date(ord.rentalStartDate) : null;
       if (!startDate || isNaN(startDate.getTime())) return;
 
-      const deliveryDate = ord.deliveryDate ? new Date(ord.deliveryDate) : startDate;
+      // Lùi 1 ngày so với ngày khách bắt đầu thuê
+      const deliveryDate = new Date(startDate);
+      deliveryDate.setDate(deliveryDate.getDate() - 1);
 
       const key = toDateKey(deliveryDate);
       if (!key) return;

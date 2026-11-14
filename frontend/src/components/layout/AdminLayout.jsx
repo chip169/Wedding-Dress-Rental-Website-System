@@ -290,14 +290,33 @@ export default function AdminLayout({
 
   useEffect(() => {
     fetchLiveNotifications();
-    const timer = setInterval(() => fetchLiveNotifications(true), 25000); // 25s polling ngầm
+    const timer = setInterval(() => fetchLiveNotifications(true), 10000); // 10s polling ngầm
     const handleUpdate = () => fetchLiveNotifications(true);
+
+    let bc;
+    try {
+      bc = new BroadcastChannel('unibridal_channel');
+      bc.onmessage = () => fetchLiveNotifications(true);
+    } catch (_) {}
+
     window.addEventListener(APPOINTMENT_EVENT, handleUpdate);
+    window.addEventListener('unibridal_order_created', handleUpdate);
+    window.addEventListener('unibridal_order_updated', handleUpdate);
     window.addEventListener('storage', handleUpdate);
+    window.addEventListener('focus', handleUpdate);
+
     return () => {
       clearInterval(timer);
+      if (bc) {
+        try {
+          bc.close();
+        } catch (_) {}
+      }
       window.removeEventListener(APPOINTMENT_EVENT, handleUpdate);
+      window.removeEventListener('unibridal_order_created', handleUpdate);
+      window.removeEventListener('unibridal_order_updated', handleUpdate);
       window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('focus', handleUpdate);
     };
   }, [isStaff]);
 
