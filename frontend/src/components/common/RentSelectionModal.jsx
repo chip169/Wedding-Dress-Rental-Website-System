@@ -14,12 +14,6 @@ const SIZE_MAP = {
   FreeSize: { id: 'FreeSize', label: 'FreeSize', note: 'Dây đan corset linh hoạt', bust: '82-96cm', waist: '60-80cm' },
 };
 
-// Màu sắc mặc định chuẩn tiệc cưới sang trọng khớp ảnh 3
-const DEFAULT_COLORS = [
-  { name: 'Trắng Sữa', hex: '#FFFFFF', border: '#D9D9D9' },
-  { name: 'Trắng Kem Ivory', hex: '#FDFBF7', border: '#E7DEC8' },
-];
-
 function formatPriceVND(amount) {
   if (amount === undefined || amount === null || amount === '') return '0 ₫';
   const num = typeof amount === 'number' ? amount : Number(String(amount).replace(/[^0-9]/g, ''));
@@ -169,60 +163,20 @@ export default function RentSelectionModal({
     return [SIZE_MAP.XS, SIZE_MAP.S, SIZE_MAP.M, SIZE_MAP.L];
   }, [dress]);
 
-  // 2. Phân tích danh sách màu sắc của mẫu váy
-  const availableColors = useMemo(() => {
-    if (!dress) return DEFAULT_COLORS;
-
-    if (Array.isArray(dress.colors) && dress.colors.length > 0) {
-      return dress.colors;
-    }
-
-    if (Array.isArray(dress.colorOptions) && dress.colorOptions.length > 0) {
-      return dress.colorOptions;
-    }
-
-    if (typeof dress.color === 'string' && dress.color.trim()) {
-      const hexMap = {
-        'trắng sữa': { hex: '#FFFFFF', border: '#D9D9D9' },
-        'trắng kem ivory': { hex: '#FDFBF7', border: '#E7DEC8' },
-        'trắng tinh khôi': { hex: '#FFFFFF', border: '#D9D9D9' },
-        'trắng kem': { hex: '#FDFBF7', border: '#E7DEC8' },
-        'champagne': { hex: '#F7E7CE', border: '#DEC8A6' },
-        'hồng pastel': { hex: '#F5D6D8', border: '#E8B6BC' },
-      };
-      const parsed = dress.color.split(',').map((c) => {
-        const cName = c.trim();
-        const lower = cName.toLowerCase();
-        return {
-          name: cName,
-          hex: hexMap[lower]?.hex || '#FFFFFF',
-          border: hexMap[lower]?.border || '#D9D9D9',
-        };
-      });
-      if (parsed.length > 0) return parsed;
-    }
-
-    return DEFAULT_COLORS;
-  }, [dress]);
-
   // State lựa chọn người dùng
-  const [selectedColor, setSelectedColor] = useState(DEFAULT_COLORS[0]);
   const [selectedSize, setSelectedSize] = useState('S');
   const [isSizeGuideOpen, setIsSizeGuideOpen] = useState(false);
 
   // Cập nhật giá trị ban đầu tương ứng với từng chiếc váy khi mở popup
   useEffect(() => {
     if (isOpen && dress) {
-      if (availableColors && availableColors.length > 0) {
-        setSelectedColor(availableColors[0]);
-      }
       if (availableSizes && availableSizes.length > 0) {
         const firstAvailable = availableSizes.find((sz) => !checkIsSizeOutOfStock(sz, dress));
         setSelectedSize(firstAvailable ? firstAvailable.id : availableSizes[0].id);
       }
       setIsSizeGuideOpen(false);
     }
-  }, [isOpen, dress, availableColors, availableSizes]);
+  }, [isOpen, dress, availableSizes]);
 
   // Đóng modal khi bấm phím Escape
   useEffect(() => {
@@ -248,9 +202,6 @@ export default function RentSelectionModal({
       ...dress,
       selectedSize,
       size: selectedSize,
-      selectedColor,
-      color: selectedColor?.name,
-      fabric: selectedColor?.name,
       rentalDays: 1,
     };
 
@@ -262,8 +213,7 @@ export default function RentSelectionModal({
 
     onClose();
 
-    const colorQuery = selectedColor?.name ? `&color=${encodeURIComponent(selectedColor.name)}` : '';
-    navigate(`/checkout?dressId=${dress.id}&size=${selectedSize}${colorQuery}`);
+    navigate(`/checkout?dressId=${dress.id}&size=${selectedSize}`);
   };
 
   const dressPrice = dress.priceNumber || dress.rentPrice || dress.price;
@@ -317,44 +267,9 @@ export default function RentSelectionModal({
           </button>
         </div>
 
-        {/* Nội dung chính: Bê nguyên xi Ảnh 3 */}
+        {/* Nội dung chính */}
         <div className="p-5 sm:p-6 bg-white flex flex-col gap-5">
-          {/* 1. KHU VỰC CHỌN MÀU SẮC (Khớp 100% Ảnh 3) */}
-          <div>
-            <div className="flex items-center gap-2 mb-2.5">
-              <span className="text-[13.5px] font-medium text-[#231A19]">
-                Màu sắc: <strong className="text-[#B26B74] font-semibold">{selectedColor?.name || 'Trắng Sữa'}</strong>
-              </span>
-            </div>
-            <div className="flex items-center gap-3 flex-wrap">
-              {availableColors.map((col, idx) => {
-                const isColorActive = selectedColor?.name === col.name;
-                return (
-                  <button
-                    key={idx}
-                    type="button"
-                    onClick={() => setSelectedColor(col)}
-                    title={col.name}
-                    className={`group flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all cursor-pointer ${
-                      isColorActive
-                        ? 'border-[#B26B74] bg-[#FFF5F3] shadow-xs'
-                        : 'border-[#EAE0DC] bg-white hover:border-[#C4A5AA]'
-                    }`}
-                  >
-                    <span
-                      className="w-5 h-5 rounded-full border border-black/10 shrink-0 shadow-xs"
-                      style={{ backgroundColor: col.hex }}
-                    />
-                    <span className={`text-[12.5px] font-medium ${isColorActive ? 'text-[#B26B74]' : 'text-[#5A4848]'}`}>
-                      {col.name}
-                    </span>
-                  </button>
-                );
-              })}
-            </div>
-          </div>
-
-          {/* 2. KHU VỰC CHỌN KÍCH THƯỚC CÓ SẴN (Khớp 100% Ảnh 3) */}
+          {/* KHU VỰC CHỌN KÍCH THƯỚC CÓ SẴN */}
           <div>
             <div className="flex items-center justify-between mb-2.5">
               <span className="text-[13.5px] font-medium text-[#231A19]">

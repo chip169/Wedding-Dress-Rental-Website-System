@@ -58,17 +58,6 @@ const DEFAULT_MATERIALS = [
   'Gấm và Dạ Cao Cấp',
 ];
 
-// Danh mục Màu Sắc cưới cao cấp phổ biến
-const POPULAR_COLORS = [
-  { name: 'Trắng Tinh Khôi', hex: '#FFFFFF', border: '#D1D5DB' },
-  { name: 'Trắng Kem (Ivory)', hex: '#FFFDD0', border: '#D6CE9A' },
-  { name: 'Champagne', hex: '#F7E7CE', border: '#D8C3A5' },
-  { name: 'Hồng Pastel', hex: '#FFD1DC', border: '#EAA6B6' },
-  { name: 'Hồng Nude', hex: '#E8C5B8', border: '#CFA496' },
-  { name: 'Đỏ Ruby', hex: '#C41E3A', border: '#9E152D' },
-  { name: 'Xanh Khói (Dusty Blue)', hex: '#A2B2C8', border: '#8A9DB5' },
-];
-
 // Cấu hình Trạng Thái Kho chuẩn (khớp 100% màu sắc và icon với bảng danh sách bên ngoài)
 const STATUS_OPTIONS_CONFIG = [
   {
@@ -150,7 +139,6 @@ export default function InventoryManagement() {
   const [editStatusDropdownOpen, setEditStatusDropdownOpen] = useState(false);
   const [editDescription, setEditDescription] = useState('');
   const [editSizes, setEditSizes] = useState({ XS: 0, S: 2, M: 2, L: 0 });
-  const [editColor, setEditColor] = useState('Trắng Tinh Khôi');
   const [editImages, setEditImages] = useState([]);
   const [isSubmittingEdit, setIsSubmittingEdit] = useState(false);
 
@@ -165,7 +153,6 @@ export default function InventoryManagement() {
   const [newSizeS, setNewSizeS] = useState('');
   const [newSizeM, setNewSizeM] = useState('');
   const [newSizeL, setNewSizeL] = useState('');
-  const [newColor, setNewColor] = useState('');
   const [newImages, setNewImages] = useState([]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
@@ -234,27 +221,6 @@ export default function InventoryManagement() {
     const digits = String(val).replace(/\D/g, '');
     if (!digits) return '';
     return digits.replace(/\B(?=(\d{3})+(?!\d))/g, '.');
-  };
-
-  const isColorMatch = (a, b) => {
-    if (!a || !b) return false;
-    const ca = cleanStr(a);
-    const cb = cleanStr(b);
-    return ca && cb && (ca === cb || ca.includes(cb) || cb.includes(ca));
-  };
-
-  const handleToggleColorSelection = (colorName, currentVal, setter) => {
-    const list = (currentVal || '')
-      .split(',')
-      .map((c) => c.trim())
-      .filter(Boolean);
-    const existingIndex = list.findIndex((c) => isColorMatch(c, colorName));
-    if (existingIndex > -1) {
-      list.splice(existingIndex, 1);
-    } else {
-      list.push(colorName);
-    }
-    setter(list.join(', '));
   };
 
   // Tính toán tình trạng kho và liên kết đơn thuê tự động
@@ -542,7 +508,6 @@ export default function InventoryManagement() {
       rentPrice: parseNum(override.rentPrice) || parseNum(d.rentPrice) || parseNum(d.price) || 5000000,
       depositAmount: parseNum(override.depositAmount) || parseNum(d.depositAmount) || parseNum(d.deposit) || 15000000,
       material: override.material || d.material || 'Lụa Mikado Ý',
-      color: override.color || d.color || 'Trắng Tinh Khôi',
       silhouette: override.silhouette || d.silhouette || d.category?.name || 'Ballgown',
       images: (Array.isArray(d.images) && d.images.length > 0)
         ? d.images
@@ -645,7 +610,6 @@ export default function InventoryManagement() {
         (item.code || '').toLowerCase().includes(q) ||
         (item.location || '').toLowerCase().includes(q) ||
         (item.material || '').toLowerCase().includes(q) ||
-        (item.color || '').toLowerCase().includes(q) ||
         (item.silhouette || '').toLowerCase().includes(q) ||
         (item.description || '').toLowerCase().includes(q);
 
@@ -863,37 +827,6 @@ export default function InventoryManagement() {
     );
     setEditDescription(item.description || rawDress.description || '');
 
-    // Tự động nạp chính xác 100% tất cả Màu Sắc từ MongoDB Atlas (kể cả mảng colorOptions):
-    let loadedColors = [];
-    if (Array.isArray(rawDress.colorOptions) && rawDress.colorOptions.length > 0) {
-      loadedColors = rawDress.colorOptions.map((co) => (typeof co === 'object' ? co.name : co)).filter(Boolean);
-    } else if (Array.isArray(item.colorOptions) && item.colorOptions.length > 0) {
-      loadedColors = item.colorOptions.map((co) => (typeof co === 'object' ? co.name : co)).filter(Boolean);
-    }
-
-    const singleColorStr = rawDress.color || item.color || item.rawDress?.color || '';
-    if (singleColorStr) {
-      const splitColors = singleColorStr.split(',').map((c) => c.trim()).filter(Boolean);
-      splitColors.forEach((sc) => {
-        if (!loadedColors.some((lc) => cleanStr(lc) === cleanStr(sc))) {
-          loadedColors.push(sc);
-        }
-      });
-    }
-
-    if (loadedColors.length === 0) {
-      loadedColors = ['Trắng Tinh Khôi'];
-    }
-
-    // Chuẩn hóa tên màu để khớp với tên các pill POPULAR_COLORS nếu có
-    const normalizedColorList = loadedColors.map((colName) => {
-      const cleaned = cleanStr(colName);
-      const matchedPopular = POPULAR_COLORS.find((pc) => cleanStr(pc.name) === cleaned);
-      return matchedPopular ? matchedPopular.name : colName;
-    });
-
-    setEditColor(Array.from(new Set(normalizedColorList)).join(', '));
-
     let imgs = [];
     if (Array.isArray(rawDress.images) && rawDress.images.length > 1) {
       imgs = [...rawDress.images];
@@ -1043,7 +976,6 @@ export default function InventoryManagement() {
         ...(selectedCatObj?._id ? { categoryId: selectedCatObj._id } : {}),
         silhouette: finalSil,
         material: editMaterial.trim() || 'Lụa Mikado Ý',
-        color: editColor.trim() || 'Trắng Tinh Khôi',
         rentPrice: parseNum(editRentPrice, 5000000),
         depositAmount: parseNum(editDepositAmount, 15000000),
         description: editDescription.trim(),
@@ -1068,7 +1000,6 @@ export default function InventoryManagement() {
         silhouette: selectedCatObj?.name || editSilhouette,
         category: selectedCatObj?.name || editSilhouette,
         material: editMaterial.trim(),
-        color: editColor.trim(),
         rentPrice: parseNum(editRentPrice, 5000000),
         depositAmount: parseNum(editDepositAmount, 15000000),
         statusType: editStatusType,
@@ -1157,7 +1088,6 @@ export default function InventoryManagement() {
     setNewSizeS('');
     setNewSizeM('');
     setNewSizeL('');
-    setNewColor('');
     setNewImages([]);
     setNewDescription('');
     if (categoriesList && categoriesList.length > 0) {
@@ -1182,7 +1112,6 @@ export default function InventoryManagement() {
     setNewSizeS('');
     setNewSizeM('');
     setNewSizeL('');
-    setNewColor('');
     setNewImages([]);
     setNewDescription('');
   };
@@ -1198,7 +1127,6 @@ export default function InventoryManagement() {
     if (!newRentPrice || parsedRentPrice <= 0) missingFields.push('Đơn Giá Thuê');
     const parsedDeposit = parseNum(newDepositAmount, 0);
     if (!newDepositAmount || parsedDeposit <= 0) missingFields.push('Tiền Đặt Cọc');
-    if (!newColor.trim()) missingFields.push('Màu Sắc');
     if (!newImages || newImages.length === 0) missingFields.push('Ảnh Sản Phẩm (tải lên ít nhất 1 ảnh)');
 
     if (missingFields.length > 0) {
@@ -1244,7 +1172,6 @@ export default function InventoryManagement() {
         category: selectedCatObj?.name || newSilhouette,
         silhouette: selectedCatObj?.slug || selectedCatObj?.silhouette || newSilhouette,
         material: newMaterial.trim() || 'Lụa Mikado Ý',
-        color: newColor.trim(),
         rentPrice: parsedRentPrice,
         depositAmount: parsedDeposit,
         description: newDescription.trim() || 'Lễ phục cưới cao cấp bảo quản tiêu chuẩn vi khí hậu.',
@@ -1263,7 +1190,6 @@ export default function InventoryManagement() {
       const overrideObj = {
         name: newName.trim(),
         material: newMaterial.trim(),
-        color: newColor.trim(),
         silhouette: selectedCatObj?.name || newSilhouette,
         sizes: sizeList,
         rentPrice: parsedRentPrice,
@@ -2655,51 +2581,7 @@ export default function InventoryManagement() {
                 </div>
               </div>
 
-              {/* 6. Màu Sắc */}
-              <div>
-                <label className="block font-bold text-[#5F4E50] mb-1">
-                  Màu Sắc *
-                  <span className="text-[11px] font-normal text-[#8C7A7C] ml-2">
-                    (Gõ trực tiếp hoặc bấm chọn nhanh bên dưới, hỗ trợ nhiều màu)
-                  </span>
-                </label>
-                <input
-                  type="text"
-                  required
-                  placeholder="VD: Trắng Tinh Khôi, Trắng Kem, Champagne, Hồng Pastel..."
-                  value={editColor}
-                  onChange={(e) => setEditColor(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF5F2] border border-[#EFE5E1] text-[#2C2523] outline-none focus:border-[#B8737D]"
-                />
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {POPULAR_COLORS.map((c) => {
-                    const isSelected = (editColor || '')
-                      .split(',')
-                      .map((s) => s.trim())
-                      .some((s) => isColorMatch(s, c.name));
-                    return (
-                      <button
-                        key={c.name}
-                        type="button"
-                        onClick={() => handleToggleColorSelection(c.name, editColor, setEditColor)}
-                        className={`px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer border ${
-                          isSelected
-                            ? 'bg-[#B8737D] text-white border-[#B8737D] shadow-xs'
-                            : 'bg-white text-[#5F4E50] border-[#E5D7D0] hover:border-[#B8737D] hover:bg-[#FAF5F2]'
-                        }`}
-                      >
-                        <span
-                          className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
-                          style={{ backgroundColor: c.hex, border: `1px solid ${c.border}` }}
-                        />
-                        <span>{c.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 7. Ảnh Sản Phẩm (Tải lên từ máy, chọn được nhiều ảnh) */}
+              {/* Ảnh Sản Phẩm (Tải lên từ máy, chọn được nhiều ảnh) */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block font-bold text-[#5F4E50]">
@@ -2990,50 +2872,7 @@ export default function InventoryManagement() {
                 </div>
               </div>
 
-              {/* 5. Màu Sắc (Người dùng tự điền hoặc chọn nhanh) */}
-              <div>
-                <label className="block font-bold text-[#5F4E50] mb-1">
-                  Màu Sắc <span className="text-rose-500">*</span>
-                  <span className="text-[11px] font-normal text-[#8C7A7C] ml-2">
-                    (Gõ trực tiếp hoặc bấm chọn nhanh bên dưới)
-                  </span>
-                </label>
-                <input
-                  type="text"
-                  placeholder="VD: Trắng Tinh Khôi, Trắng Kem (Ivory), Champagne..."
-                  value={newColor}
-                  onChange={(e) => setNewColor(e.target.value)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF5F2] border border-[#EFE5E1] text-[#2C2523] outline-none focus:border-[#B8737D]"
-                />
-                <div className="flex flex-wrap gap-1.5 mt-2">
-                  {POPULAR_COLORS.map((c) => {
-                    const isSelected = (newColor || '')
-                      .split(',')
-                      .map((s) => s.trim())
-                      .some((s) => isColorMatch(s, c.name));
-                    return (
-                      <button
-                        key={c.name}
-                        type="button"
-                        onClick={() => handleToggleColorSelection(c.name, newColor, setNewColor)}
-                        className={`px-2.5 py-1 rounded-full text-xs font-medium flex items-center gap-1.5 transition-all cursor-pointer border ${
-                          isSelected
-                            ? 'bg-[#B8737D] text-white border-[#B8737D] shadow-xs'
-                            : 'bg-white text-[#5F4E50] border-[#E5D7D0] hover:border-[#B8737D] hover:bg-[#FAF5F2]'
-                        }`}
-                      >
-                        <span
-                          className="w-2.5 h-2.5 rounded-full inline-block shrink-0"
-                          style={{ backgroundColor: c.hex, border: `1px solid ${c.border}` }}
-                        />
-                        <span>{c.name}</span>
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-
-              {/* 6. Chọn Ảnh Cho Sản Phẩm (Tải lên nhiều ảnh từ máy tính) */}
+              {/* Chọn Ảnh Cho Sản Phẩm (Tải lên nhiều ảnh từ máy tính) */}
               <div>
                 <div className="flex items-center justify-between mb-1.5">
                   <label className="block font-bold text-[#5F4E50]">

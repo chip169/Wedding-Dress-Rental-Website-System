@@ -63,7 +63,6 @@ export function mapOrder(order) {
     imageAlt: order.imageAlt || item.name || 'Lễ phục',
     category: item.dressId?.silhouette || order.category || 'Haute Couture',
     size: item.size || order.size || '—',
-    color: item.color || item.fabric || order.color || 'Trắng Sữa',
     style: order.style || 'Theo đơn hàng',
     amount: order.totalRentPrice || order.amount || 0,
     deposit: order.totalDeposit || order.deposit || 0,
@@ -77,7 +76,6 @@ export function mapOrder(order) {
     shippingAddress: order.shippingAddress,
     items: (order.items || []).map((it) => ({
       ...it,
-      color: it.color || it.fabric || order.color || 'Trắng Sữa',
     })),
     inspection: order.inspection || null,
     customerName: order.customerName || '',

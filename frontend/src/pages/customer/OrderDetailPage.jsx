@@ -277,7 +277,6 @@ export default function OrderDetailPage() {
                       <div>
                         <h3 className="font-playfair text-xl">{item.name || 'Lễ phục'}</h3>
                         <p className="mt-2 text-sm">Kích cỡ: {item.size || 'Theo đơn hàng'}</p>
-                        <p className="mt-2 text-sm">Màu sắc: {item.color || item.fabric || order.color || 'Trắng Sữa'}</p>
                         <p className="mt-2 text-sm">Tiền thuê: {formatVnd(item.rentPrice)}</p>
                         <p className="mt-2 text-sm">Tiền cọc: {formatVnd(item.depositAmount)}</p>
                       </div>

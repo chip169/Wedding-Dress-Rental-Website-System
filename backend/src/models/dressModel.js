@@ -57,10 +57,6 @@ const dressSchema = new mongoose.Schema(
       type: String,
       default: '', // Vải ren Pháp, Lụa tơ tằm Ý, Satin
     },
-    color: {
-      type: String,
-      default: 'Trắng',
-    },
     sizes: {
       type: [dressSizeSchema],
       default: [
@@ -104,33 +100,6 @@ const dressSchema = new mongoose.Schema(
     collectionTag: {
       type: String,
       default: 'THE HAUTE COUTURE BRIDAL 2026',
-    },
-    highlights: [
-      {
-        icon: { type: String, default: 'diamond' },
-        label: { type: String, default: '' },
-        value: { type: String, default: '' },
-        sub: { type: String, default: '' },
-      },
-    ],
-    colorOptions: [
-      {
-        name: { type: String },
-        hex: { type: String },
-        border: { type: String },
-      },
-    ],
-    story: {
-      collectionName: { type: String, default: '' },
-      title: { type: String, default: '' },
-      content: [{ type: String }],
-      atelierImage: { type: String, default: '' },
-      stats: [
-        {
-          value: { type: String },
-          label: { type: String },
-        },
-      ],
     },
   },
   {

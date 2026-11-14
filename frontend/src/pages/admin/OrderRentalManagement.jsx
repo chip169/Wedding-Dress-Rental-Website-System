@@ -399,12 +399,6 @@ function OrderDetailModal({ order, onClose }) {
                           Size {sizeStr}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[#8C7D7E] shrink-0">Màu sắc:</span>
-                        <span className="font-semibold text-[#2C2523] text-[12px]">
-                          {it.color || it.fabric || order.color || 'Trắng Sữa'}
-                        </span>
-                      </div>
                     </div>
                   );
                 })}
@@ -2275,7 +2269,13 @@ export default function OrderRentalManagement() {
       }
 
       if (queryAction === 'inspect') {
-        if (canInspectOrder(found) || found.inspection) setInspectionOrder(found);
+        const isAlreadyDone =
+          ['completed', 'complete', 'returned', 'waiting_refund'].includes(
+            (found.status || '').toLowerCase()
+          ) || Boolean(found.actualReturnDate);
+        if (!isAlreadyDone && (canInspectOrder(found) || found.inspection)) {
+          setInspectionOrder(found);
+        }
       } else if (queryAction === 'negotiate') {
         if (isAdmin && !isStaffContext) setNegotiationOrder(found);
         else setInspectionOrder(found);
@@ -2313,7 +2313,13 @@ export default function OrderRentalManagement() {
             });
 
             if (queryAction === 'inspect') {
-              if (canInspectOrder(detail) || detail.inspection) setInspectionOrder(detail);
+              const isAlreadyDone =
+                ['completed', 'complete', 'returned', 'waiting_refund'].includes(
+                  (detail.status || '').toLowerCase()
+                ) || Boolean(detail.actualReturnDate);
+              if (!isAlreadyDone && (canInspectOrder(detail) || detail.inspection)) {
+                setInspectionOrder(detail);
+              }
             } else if (queryAction === 'negotiate') {
               if (isAdmin && !isStaffContext) setNegotiationOrder(detail);
               else setInspectionOrder(detail);

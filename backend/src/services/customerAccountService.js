@@ -43,7 +43,6 @@ export async function listOrders(userId) {
         const insp = inspectionRefundState(order, byOrder.get(id), refunds.get(id));
         const items = (order.items || []).map((it) => ({
             ...it,
-            color: it.color || it.fabric || order.color || 'Trắng Sữa',
         }));
         return { ...order, items, inspection: insp };
     });
@@ -60,7 +59,6 @@ export async function orderDetail(userId, identifier) {
     const orderObj = order.toObject();
     const items = (orderObj.items || []).map((it) => ({
         ...it,
-        color: it.color || it.fabric || orderObj.color || 'Trắng Sữa',
     }));
     return { ...orderObj, items, inspection, contract };
 }

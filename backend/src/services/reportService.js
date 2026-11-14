@@ -197,10 +197,26 @@ export async function dashboard(role, period = 'month', now = new Date()) {
 }
 
 export async function upcomingStaffAppointments(now = new Date()) {
-  return Appointment.find({
+  const apts = await Appointment.find({
     appointmentDate: { $gte: dayStart(now) },
     status: { $in: ['pending', 'confirmed'] },
   }).sort({ appointmentDate: 1, createdAt: 1, _id: 1 }).lean();
+
+  const getTimeMinutes = (timeSlot) => {
+    if (!timeSlot) return 9999;
+    const parts = String(timeSlot).split(/[\u2014\u2013-]/);
+    const start = (parts[0] || '').trim();
+    const match = start.match(/(\d{1,2}):(\d{2})/);
+    if (!match) return 9999;
+    return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+  };
+
+  return apts.sort((a, b) => {
+    const dateA = a.appointmentDate ? new Date(a.appointmentDate).getTime() : 0;
+    const dateB = b.appointmentDate ? new Date(b.appointmentDate).getTime() : 0;
+    if (dateA !== dateB) return dateA - dateB;
+    return getTimeMinutes(a.timeSlot) - getTimeMinutes(b.timeSlot);
+  });
 }
 
 export async function revenueReport(period = 'month') {

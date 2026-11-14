@@ -459,7 +459,6 @@ export async function seed25Dresses() {
         categoryId: categoriesInDb[item.categorySlug],
         silhouette: item.silhouette,
         material: item.material,
-        color: item.color,
         rentPrice: item.rentPrice,
         depositAmount: item.depositAmount,
         originalPrice: item.originalPrice,
@@ -550,44 +549,6 @@ export async function seed25Dresses() {
         isFeatured: index < 6,
         collectionTag: item.collectionTag,
         description: item.description,
-        highlights: [
-          {
-            icon: 'diamond',
-            label: 'Chất Liệu Thượng Hạng',
-            value: item.material.split('&')[0].trim(),
-            sub: 'Độc quyền Atelier UniBridal',
-          },
-          {
-            icon: 'sparkles',
-            label: 'Đính Kết Thủ Công',
-            value: 'Pha Lê và Chỉ Tơ Kim',
-            sub: '100% chế tác tay tỉ mỉ',
-          },
-          {
-            icon: 'shield',
-            label: 'Bảo Quản Chuẩn Atelier',
-            value: 'Hấp nhiệt và Tiệt trùng UV',
-            sub: 'Đóng gói vali chuyên dụng',
-          },
-        ],
-        colorOptions: [
-          { name: item.color, hex: '#FDFBF7', border: '#E7DEC8' },
-          { name: 'Trắng Kem Ivory', hex: '#F6EFEB', border: '#D8C3BE' },
-        ],
-        story: {
-          collectionName: item.collectionTag,
-          title: item.name,
-          content: [
-            `Mẫu thiết kế ${item.name} được lấy cảm hứng từ vẻ đẹp tinh tế của thời trang Haute Couture Paris kết hợp cùng kỹ thuật may đo tỉ mỉ của nghệ nhân UniBridal.`,
-            `Với chất liệu ${item.material}, chiếc váy giúp tôn vinh hoàn hảo đường nét yêu kiều của nàng dâu trong từng khoảnh khắc bước lên lễ đường thiêng liêng.`,
-          ],
-          atelierImage: item.image.replace('.jpg', '_mannequin.jpg'),
-          stats: [
-            { value: `${200 + index * 10}h`, label: 'CHẾ TÁC THỦ CÔNG' },
-            { value: '100%', label: 'CHẤT LIỆU CAO CẤP' },
-            { value: `${item.sizes.length} Size`, label: 'SỐ LƯỢNG KÍCH CỠ' },
-          ],
-        },
       };
     });
 

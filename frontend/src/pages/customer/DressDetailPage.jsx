@@ -121,7 +121,6 @@ export default function DressDetailPage() {
 
   // User interactive selections
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [selectedColor, setSelectedColor] = useState(null);
   const [selectedSize, setSelectedSize] = useState('S');
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -159,7 +158,6 @@ export default function DressDetailPage() {
           if (result.success && result.data) {
             setDress(result.data);
             setSelectedImageIndex(0);
-            setSelectedColor(result.data.colors?.[0] || null);
             setSelectedSize(result.data.sizes?.[0]?.id || 'S');
             setIsWishlisted(checkWishlisted(result.data.id));
           }
@@ -300,13 +298,9 @@ export default function DressDetailPage() {
       ...dress,
       selectedSize,
       size: selectedSize,
-      selectedColor,
-      color: selectedColor?.name,
-      fabric: selectedColor?.name,
       rentalDays: 1,
     });
-    const colorQuery = selectedColor?.name ? `&color=${encodeURIComponent(selectedColor.name)}` : '';
-    navigate(`/checkout?dressId=${dress.id}&size=${selectedSize}${colorQuery}`);
+    navigate(`/checkout?dressId=${dress.id}&size=${selectedSize}`);
   };
 
   const handleOnlineRent = () => {
@@ -319,9 +313,6 @@ export default function DressDetailPage() {
       ...dress,
       selectedSize,
       size: selectedSize,
-      selectedColor,
-      color: selectedColor?.name,
-      fabric: selectedColor?.name,
       rentalDays: 1,
     });
     setRentNotification(
@@ -507,43 +498,45 @@ export default function DressDetailPage() {
               })}
             </div>
 
-            {/* 3 Key Highlight Badges (Below Thumbnails) */}
-            <div className="mt-2 bg-white border border-[#EAE0DC] rounded-[20px] p-3.5 sm:p-4 xl:p-4.5 shadow-xs grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#EAE0DC] gap-2.5 sm:gap-2">
-              {dress.highlights?.map((hl, idx) => (
-                <div key={idx} className="flex items-start gap-2 xl:gap-2.5 px-1 sm:px-1.5 pt-2 sm:pt-0 min-w-0">
-                  <div className="w-8 h-8 rounded-full bg-[#FFF5F3] border border-[#F4DDD8] flex items-center justify-center text-[#B26B74] shrink-0">
-                    {hl.icon === 'diamond' && <Crown className="w-4 h-4" />}
-                    {hl.icon === 'ruler' && <Ruler className="w-4 h-4" />}
-                    {hl.icon === 'sparkles' && <Crown className="w-4 h-4" />}
-                    {hl.icon === 'shield' && <ShieldCheck className="w-4 h-4" />}
-                    {!['diamond', 'ruler', 'sparkles', 'shield'].includes(hl.icon) && <Crown className="w-4 h-4" />}
+            {/* 3 Key Highlight Badges (Below Thumbnails - chỉ hiển thị khi có dữ liệu) */}
+            {Array.isArray(dress.highlights) && dress.highlights.length > 0 && (
+              <div className="mt-2 bg-white border border-[#EAE0DC] rounded-[20px] p-3.5 sm:p-4 xl:p-4.5 shadow-xs grid grid-cols-1 sm:grid-cols-3 divide-y sm:divide-y-0 sm:divide-x divide-[#EAE0DC] gap-2.5 sm:gap-2">
+                {dress.highlights.map((hl, idx) => (
+                  <div key={idx} className="flex items-start gap-2 xl:gap-2.5 px-1 sm:px-1.5 pt-2 sm:pt-0 min-w-0">
+                    <div className="w-8 h-8 rounded-full bg-[#FFF5F3] border border-[#F4DDD8] flex items-center justify-center text-[#B26B74] shrink-0">
+                      {hl.icon === 'diamond' && <Crown className="w-4 h-4" />}
+                      {hl.icon === 'ruler' && <Ruler className="w-4 h-4" />}
+                      {hl.icon === 'sparkles' && <Crown className="w-4 h-4" />}
+                      {hl.icon === 'shield' && <ShieldCheck className="w-4 h-4" />}
+                      {!['diamond', 'ruler', 'sparkles', 'shield'].includes(hl.icon) && <Crown className="w-4 h-4" />}
+                    </div>
+                    <div className="min-w-0 flex-1 overflow-hidden">
+                      <span
+                        title={hl.label}
+                        style={{ whiteSpace: 'nowrap' }}
+                        className="block font-jakarta text-[10px] xl:text-[10.5px] font-medium uppercase tracking-wider text-[#8A7978] whitespace-nowrap truncate"
+                      >
+                        {hl.label}
+                      </span>
+                      <strong
+                        title={hl.value}
+                        style={{ whiteSpace: 'nowrap' }}
+                        className="block font-jakarta text-[11.5px] sm:text-[12px] xl:text-[12.5px] font-semibold text-[#231A19] leading-snug mt-0.5 whitespace-nowrap"
+                      >
+                        {hl.value}
+                      </strong>
+                      <span
+                        title={hl.sub}
+                        style={{ whiteSpace: 'nowrap' }}
+                        className="block font-jakarta text-[10.5px] xl:text-[11px] text-[#A08E8D] mt-0.5 whitespace-nowrap truncate"
+                      >
+                        {hl.sub}
+                      </span>
+                    </div>
                   </div>
-                  <div className="min-w-0 flex-1 overflow-hidden">
-                    <span
-                      title={hl.label}
-                      style={{ whiteSpace: 'nowrap' }}
-                      className="block font-jakarta text-[10px] xl:text-[10.5px] font-medium uppercase tracking-wider text-[#8A7978] whitespace-nowrap truncate"
-                    >
-                      {hl.label}
-                    </span>
-                    <strong
-                      title={hl.value}
-                      style={{ whiteSpace: 'nowrap' }}
-                      className="block font-jakarta text-[11.5px] sm:text-[12px] xl:text-[12.5px] font-semibold text-[#231A19] leading-snug mt-0.5 whitespace-nowrap"
-                    >
-                      {hl.value}
-                    </strong>
-                    <span
-                      title={hl.sub}
-                      style={{ whiteSpace: 'nowrap' }}
-                      className="block font-jakarta text-[10.5px] xl:text-[11px] text-[#A08E8D] mt-0.5 whitespace-nowrap truncate"
-                    >
-                      {hl.sub}
-                    </span>
-                  </div>
-                </div>
-              ))}
-            </div>
+                ))}
+              </div>
+            )}
           </div>
 
           {/* ================= RIGHT COLUMN: PRODUCT DETAILS VÀ BOOKING (Col 5) ================= */}
@@ -576,40 +569,6 @@ export default function DressDetailPage() {
                     </span>
                   )}
                 </div>
-              </div>
-            </div>
-
-            {/* Color selection */}
-            <div>
-              <div className="flex items-center justify-between mb-2.5">
-                <span className="text-[13.5px] font-medium text-[#231A19]">
-                  Màu sắc: <strong className="text-[#B26B74] font-semibold">{selectedColor?.name || 'Mặc định'}</strong>
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                {dress.colors?.map((col, idx) => {
-                  const isColorActive = selectedColor?.name === col.name;
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setSelectedColor(col)}
-                      title={col.name}
-                      className={`group flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all cursor-pointer ${isColorActive
-                        ? 'border-[#B26B74] bg-[#FFF5F3] shadow-xs'
-                        : 'border-[#EAE0DC] bg-white hover:border-[#C4A5AA]'
-                        }`}
-                    >
-                      <span
-                        className="w-5 h-5 rounded-full border border-black/10 shrink-0 shadow-xs"
-                        style={{ backgroundColor: col.hex }}
-                      />
-                      <span className={`text-[12.5px] font-medium ${isColorActive ? 'text-[#B26B74]' : 'text-[#5A4848]'}`}>
-                        {col.name}
-                      </span>
-                    </button>
-                  );
-                })}
               </div>
             </div>
 
@@ -833,8 +792,8 @@ export default function DressDetailPage() {
 
         </div>
 
-        {/* ================= SECTION 2: CÂU CHUYỆN THIẾT KẾ ================= */}
-        {dress.story && (
+        {/* ================= SECTION 2: CÂU CHUYỆN THIẾT KẾ (Chỉ hiển thị khi có dữ liệu) ================= */}
+        {dress.story && Array.isArray(dress.story.content) && dress.story.content.length > 0 && (
           <section className="mt-20 pt-14 border-t border-[#EAE0DC]">
             {/* Header Tab Title: Câu Chuyện Thiết Kế */}
             <div className="mb-10 border-b border-[#EAE0DC]">
@@ -1373,12 +1332,9 @@ export default function DressDetailPage() {
                       ...dress,
                       selectedSize,
                       size: selectedSize,
-                      selectedColor,
-                      color: selectedColor?.name,
                       rentalDays: 4,
                     });
-                    const colorQuery = selectedColor?.name ? `&color=${encodeURIComponent(selectedColor.name)}` : '';
-                    navigate(`/checkout?dressId=${dress.id}&size=${selectedSize}&startDate=${previewStartDate}${colorQuery}`);
+                    navigate(`/checkout?dressId=${dress.id}&size=${selectedSize}&startDate=${previewStartDate}`);
                   }}
                   className="px-5 py-2 rounded-lg bg-[#70484E] hover:bg-[#5D3B40] text-white text-[12px] font-semibold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border-0 flex items-center gap-1.5 transition-all"
                 >

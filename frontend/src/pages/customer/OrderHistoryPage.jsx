@@ -35,7 +35,7 @@ function OrderCard({ order, onOpenInspection, onOpenContract }) {
             <div>
               <h3 className="font-playfair text-xl">{order.dress}</h3>
               <p className="mt-1 text-xs text-[#766966]">
-                Phân loại: {order.category} • Size {order.size} • Màu {order.color || 'Trắng Sữa'} • Form {order.style}
+                Phân loại: {order.category} • Size {order.size} • Form {order.style}
               </p>
             </div>
             <strong className="text-base text-[#874e57]">{formatVnd(order.amount)}</strong>

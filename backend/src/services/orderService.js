@@ -86,7 +86,7 @@ export const createOrder = async (orderData, currentUser = null) => {
       code: item.code || item.dressCode || '',
       name: item.name || 'Váy cưới Haute Couture',
       size: item.size || 'S',
-      color: item.color || item.selectedColor?.name || item.fabric || orderData.color || orderData.selectedColor || 'Trắng Sữa',
+      color: item.color || item.selectedColor?.name || '',
       rentPrice: Number(item.rentPrice || item.price || 0),
       depositAmount: Number(item.depositAmount || item.deposit || 0),
       image: sanitizeImage(item.image || item.images?.[0]),
@@ -98,7 +98,7 @@ export const createOrder = async (orderData, currentUser = null) => {
         code: dress.code || '',
         name: dress.name || 'Váy cưới Haute Couture',
         size: orderData.selectedSize || dress.size || 'S',
-        color: orderData.selectedColor || orderData.color || dress.color || 'Trắng Sữa',
+        color: orderData.selectedColor || orderData.color || '',
         rentPrice: Number(dress.price || 0),
         depositAmount: Number(dress.depositAmount || dress.deposit || 0),
         image: sanitizeImage(dress.image || dress.images?.[0]),
@@ -284,7 +284,6 @@ export const createOrder = async (orderData, currentUser = null) => {
         name: it.name || '',
         code: it.code || '',
         size: it.size || 'S',
-        color: it.color || 'Trắng Sữa',
         rentPrice: it.rentPrice || 0,
         depositAmount: it.depositAmount || 0,
         image: it.image || '',
@@ -490,7 +489,6 @@ export const getAllOrders = async (filters = {}) => {
       return {
         ...it,
         code,
-        color: it.color || it.fabric || o.color || 'Trắng Sữa',
       };
     });
 
@@ -533,7 +531,6 @@ export const getOrderByIdOrCode = async (idOrCode) => {
   ]);
   const items = (order.items || []).map((it) => ({
     ...it,
-    color: it.color || it.fabric || order.color || 'Trắng Sữa',
   }));
   return {
     ...order,
@@ -554,9 +551,17 @@ export const updateOrderStatus = async (idOrCode, status) => {
   if (['returned', 'waiting_refund', 'disputed', ...CLOSED_ORDER_STATUSES].some((value) => value === order.status || value === status)) {
     throw returnError(409, 'Đơn đang hoặc đã xử lý trả váy. Vui lòng dùng thao tác trong biên bản.');
   }
+  const updateFields = { status };
+  if (status === 'renting') {
+    updateFields.actualDeliveryDate = order.actualDeliveryDate || new Date();
+  }
+  if (status === 'completed' || status === 'complete') {
+    updateFields.completedAt = order.completedAt || new Date();
+    updateFields.maintenanceUntil = new Date(Date.now() + 24 * 60 * 60 * 1000);
+  }
   const next = await Order.findOneAndUpdate(
     { _id: order._id, status: order.status },
-    { $set: { status } },
+    { $set: updateFields },
     { returnDocument: 'after', runValidators: true },
   );
   if (!next) throw returnError(409, 'Trạng thái đơn đã thay đổi. Vui lòng tải lại.');
