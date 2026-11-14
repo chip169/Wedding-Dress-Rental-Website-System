@@ -2158,7 +2158,13 @@ export default function OrderRentalManagement() {
       }
 
       if (queryAction === 'inspect') {
-        setInspectionOrder(found);
+        const isAlreadyDone =
+          ['completed', 'complete', 'returned', 'waiting_refund'].includes(
+            (found.status || '').toLowerCase()
+          ) || Boolean(found.actualReturnDate);
+        if (!isAlreadyDone) {
+          setInspectionOrder(found);
+        }
       }
 
       setTimeout(() => {
@@ -2193,7 +2199,13 @@ export default function OrderRentalManagement() {
             });
 
             if (queryAction === 'inspect') {
-              setInspectionOrder(detail);
+              const isAlreadyDone =
+                ['completed', 'complete', 'returned', 'waiting_refund'].includes(
+                  (detail.status || '').toLowerCase()
+                ) || Boolean(detail.actualReturnDate);
+              if (!isAlreadyDone) {
+                setInspectionOrder(detail);
+              }
             }
 
             setTimeout(() => {

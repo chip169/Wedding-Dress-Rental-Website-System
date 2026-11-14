@@ -2293,17 +2293,33 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                               )}
 
                               {isReturn && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const targetCode = item.code || item.id || '';
-                                    navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}&action=inspect`);
-                                  }}
-                                  className="w-full py-2 px-3 rounded-xl bg-[#FAF0EC] hover:bg-[#F2D8D4] text-[#733F49] text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer border border-[#F2D8D4]"
-                                >
-                                  <RotateCcw className="w-3.5 h-3.5" />
-                                  <span>Kiểm Định Trả Váy</span>
-                                </button>
+                                isReturnDone ? (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const targetCode = item.code || item.id || '';
+                                      navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}`);
+                                    }}
+                                    className="w-full py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer"
+                                    title="Xem chi tiết đơn thuê"
+                                  >
+                                    <PackageCheck className="w-3.5 h-3.5" />
+                                    <span>Đơn Thuê</span>
+                                  </button>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const targetCode = item.code || item.id || '';
+                                      navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}&action=inspect`);
+                                    }}
+                                    className="w-full py-2 px-3 rounded-xl bg-[#FAF0EC] hover:bg-[#F2D8D4] text-[#733F49] text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer border border-[#F2D8D4]"
+                                    title="Mở biên bản kiểm định tình trạng váy khi khách trả"
+                                  >
+                                    <RotateCcw className="w-3.5 h-3.5" />
+                                    <span>Kiểm Định Trả Váy</span>
+                                  </button>
+                                )
                               )}
 
                               {!isReturn && !isDelivery && (
@@ -2632,18 +2648,37 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
                 {selectedEvent.type === 'return' && (
                   <div className="pt-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDetailModalOpen(false);
-                        const targetCode = selectedEvent.code || selectedEvent.id || '';
-                        navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}&action=inspect`);
-                      }}
-                      className="w-full py-2.5 px-4 bg-[#733F49] hover:bg-[#5a3239] text-white font-bold rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
-                    >
-                      <span>Mở Quy Trình Kiểm Định &amp; Hoàn Cọc</span>
-                      <ArrowRight className="w-4 h-4" />
-                    </button>
+                    {!(
+                      ['completed', 'complete', 'returned', 'waiting_refund'].includes(
+                        (selectedEvent.status || '').toLowerCase()
+                      ) || Boolean(selectedEvent.actualReturnDate)
+                    ) ? (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDetailModalOpen(false);
+                          const targetCode = selectedEvent.code || selectedEvent.id || '';
+                          navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}&action=inspect`);
+                        }}
+                        className="w-full py-2.5 px-4 bg-[#733F49] hover:bg-[#5a3239] text-white font-bold rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                      >
+                        <span>Mở Quy Trình Kiểm Định &amp; Hoàn Cọc</span>
+                        <ArrowRight className="w-4 h-4" />
+                      </button>
+                    ) : (
+                      <button
+                        type="button"
+                        onClick={() => {
+                          setDetailModalOpen(false);
+                          const targetCode = selectedEvent.code || selectedEvent.id || '';
+                          navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}`);
+                        }}
+                        className="w-full py-2.5 px-4 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
+                      >
+                        <PackageCheck className="w-4 h-4" />
+                        <span>Quản Lý Đơn Thuê</span>
+                      </button>
+                    )}
                   </div>
                 )}
               </div>
