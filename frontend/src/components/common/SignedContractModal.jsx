@@ -21,7 +21,7 @@ import { HIEU_SIGNATURE_BASE64 } from '../../assets/images/signatureHieuBase64';
 import { DAMAGE_PRICE_CATALOG } from '../../data/damagePriceCatalog';
 
 // Danh sách các điều khoản pháp lý tiêu chuẩn Haute Couture
-const STANDARD_HAUTE_COUTURE_CLAUSES = [
+export const STANDARD_HAUTE_COUTURE_CLAUSES = [
   {
     title: 'ĐIỀU 1: ĐỐI TƯỢNG HỢP ĐỒNG VÀ TIÊU CHUẨN LỄ PHỤC CƯỚI',
     content:
@@ -64,7 +64,8 @@ const STANDARD_HAUTE_COUTURE_CLAUSES = [
       '   • Nhóm 6 (Hỏng khóa lưng - zipper): 300.000 VNĐ;\n' +
       '   • Nhóm 7 (Rách tùng voan lớn > 10cm, rách vải chính): 1.500.000 VNĐ;\n' +
       '   • Nhóm 8 (Mất phụ kiện đi kèm): 500.000 VNĐ / món;\n' +
-      '   • Nhóm 9 (Hỏng hoàn toàn - cháy vải, rách nát không thể phục hồi): Tịch thu 100% tiền cọc bảo lãnh.\n' +
+      '   • Nhóm 9 (Hỏng hoàn toàn - cháy vải, rách nát không thể phục hồi): Tịch thu 100% tiền cọc bảo lãnh;\n' +
+      '   • Nhóm 10 (Lỗi khác ngoài danh mục): Dựa trên quyết định giá của cả 2 thống nhất.\n' +
       '5.3. Chi phí đền bù (nếu có) được khấu trừ trực tiếp vào quỹ cọc bảo lãnh. Số tiền cọc còn lại được Bên A hoàn trả đầy đủ vào STK ngân hàng của Bên B.'
   },
   {
@@ -341,7 +342,7 @@ export default function SignedContractModal({ orderId, order: propOrder, contrac
                   Hợp Đồng Thuê Lễ Phục Cưới Cao Cấp (Haute Couture)
                 </h3>
                 <p className="text-xs text-[#8C7A6B]">
-                  Mã mẫu: <span className="font-mono font-bold text-[#733F49]">TPL-HC-01</span> • Mã HĐ:{' '}
+                  Mã đơn hàng: <span className="font-mono font-bold text-[#733F49]">#{effectiveData.orderCode}</span> • Mã HĐ:{' '}
                   <span className="font-mono font-bold text-[#733F49]">{effectiveData.contractCode}</span> • Trạng thái:{' '}
                   <span className={effectiveData.statusClass}>{effectiveData.statusLabel}</span>
                 </p>
@@ -393,7 +394,7 @@ export default function SignedContractModal({ orderId, order: propOrder, contrac
                     HỢP ĐỒNG THUÊ LỄ PHỤC CƯỚI CAO CẤP (HAUTE COUTURE)
                   </h2>
                   <p className="text-xs font-mono text-[#8C7A6B]">
-                    Số: HDDT/TPL-HC-01/{effectiveData.orderCode} • Mã HĐ: {effectiveData.contractCode}
+                    Số: HĐĐT/{effectiveData.orderCode} • Mã đơn hàng: #{effectiveData.orderCode} • Mã HĐ: {effectiveData.contractCode}
                   </p>
                   <p className="text-[11px] text-[#847374] italic mt-0.5 font-sans">
                     Ngày lập hợp đồng: {effectiveData.signedDateStr}
@@ -553,7 +554,7 @@ export default function SignedContractModal({ orderId, order: propOrder, contrac
                 {/* Khối chữ ký điện tử hai bên */}
                 <div className="pt-6 border-t border-[#EFE5E1] grid grid-cols-2 gap-6 text-center text-xs font-sans">
                   {/* Chữ ký Bên A */}
-                  <div className="p-4 rounded-2xl border border-[#EEDECF] bg-white flex flex-col items-center justify-between min-h-[190px] shadow-2xs">
+                  <div className="p-4 rounded-2xl border border-[#EEDECF] bg-white flex flex-col items-center justify-between min-h-[190px] shadow-2xs overflow-hidden">
                     <div>
                       <p className="font-bold uppercase text-[#733F49] tracking-wider text-[11px]">
                         ĐẠI DIỆN BÊN CHO THUÊ (BÊN A)
@@ -581,7 +582,7 @@ export default function SignedContractModal({ orderId, order: propOrder, contrac
                   </div>
 
                   {/* Chữ ký Bên B */}
-                  <div className="p-4 rounded-2xl border border-[#EEDECF] bg-white flex flex-col items-center justify-between min-h-[190px] shadow-2xs">
+                  <div className="p-4 rounded-2xl border border-[#EEDECF] bg-white flex flex-col items-center justify-between min-h-[190px] shadow-2xs overflow-hidden">
                     <div>
                       <p className="font-bold uppercase text-[#733F49] tracking-wider text-[11px]">
                         BÊN THUÊ LỄ PHỤC (BÊN B)
@@ -591,20 +592,31 @@ export default function SignedContractModal({ orderId, order: propOrder, contrac
                       </p>
                     </div>
 
-                    <div className="my-2 flex flex-col items-center justify-center min-h-[64px]">
-                      {effectiveData.signature && String(effectiveData.signature).startsWith('data:image') ? (
+                    <div className="my-2 flex flex-col items-center justify-center min-h-[64px] max-w-full">
+                      {effectiveData.signature && (String(effectiveData.signature).startsWith('data:image') || String(effectiveData.signature).startsWith('http') || String(effectiveData.signature).startsWith('/')) ? (
                         <img
                           src={effectiveData.signature}
                           alt="Chữ ký khách hàng"
-                          className="max-h-16 w-auto object-contain select-none"
+                          className="max-h-16 w-auto max-w-full object-contain select-none"
+                        />
+                      ) : effectiveData.signature && String(effectiveData.signature).startsWith('iVBORw0KGgo') ? (
+                        <img
+                          src={`data:image/png;base64,${effectiveData.signature}`}
+                          alt="Chữ ký khách hàng"
+                          className="max-h-16 w-auto max-w-full object-contain select-none"
                         />
                       ) : (
-                        <div className="font-serif italic text-xl sm:text-2xl text-[#733F49] font-bold tracking-wider px-4 py-1 border-b-2 border-[#733F49]/40 select-none">
-                          {effectiveData.signature || effectiveData.customerName}
+                        <div className="font-serif italic text-xl sm:text-2xl text-[#733F49] font-bold tracking-wider px-4 py-1 border-b-2 border-[#733F49]/40 select-none max-w-full truncate">
+                          {effectiveData.signature && effectiveData.signature.length < 50 && !/[+=\/]/.test(effectiveData.signature)
+                            ? effectiveData.signature
+                            : effectiveData.customerName}
                         </div>
                       )}
-                      <div className="mt-1.5 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-700 text-[9px] font-bold inline-flex items-center gap-1">
-                        <CheckCircle2 size={11} /> E-SIGNED BY {String(effectiveData.signature || effectiveData.customerName).toUpperCase()}
+                      <div className="mt-1.5 px-2.5 py-0.5 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-700 text-[9px] font-bold inline-flex items-center gap-1 max-w-[240px] overflow-hidden">
+                        <CheckCircle2 size={11} className="shrink-0" />
+                        <span className="truncate">
+                          E-SIGNED BY {String(effectiveData.customerName || 'KHÁCH HÀNG').toUpperCase()}
+                        </span>
                       </div>
                     </div>
 
