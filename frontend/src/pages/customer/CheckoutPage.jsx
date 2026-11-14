@@ -2474,11 +2474,10 @@ export default function CheckoutPage() {
                                   ? `Ngày bảo trì & khử trùng lễ phục (${toDisplayDateString(dateStr)}) sau khi cô dâu trả váy`
                                   : `Ngày đã có cô dâu đặt thuê: ${bookedInfo.bride || 'Kín lịch'}`
                               }
-                              className={`relative h-10 sm:h-12 rounded-xl flex flex-col items-center justify-center text-[12px] sm:text-[13px] font-bold transition-all border cursor-not-allowed opacity-90 hover:opacity-100 ${
-                                isMaintenance
+                              className={`relative h-10 sm:h-12 rounded-xl flex flex-col items-center justify-center text-[12px] sm:text-[13px] font-bold transition-all border cursor-not-allowed opacity-90 hover:opacity-100 ${isMaintenance
                                   ? 'border-[#FDE68A] bg-[#FFFBEB] text-[#B45309]'
                                   : 'border-[#F8D7DA] bg-[#FDF2F0] text-[#B91C1C]'
-                              }`}
+                                }`}
                             >
                               <span className={`line-through ${isMaintenance ? 'decoration-[#B45309]/60' : 'decoration-[#B91C1C]/60'}`}>{d}</span>
                               <span className={`text-[7px] font-extrabold leading-none tracking-tight uppercase ${isMaintenance ? 'text-[#B45309]' : 'text-[#B91C1C]'}`}>
@@ -2556,7 +2555,7 @@ export default function CheckoutPage() {
                             </div>
                             <div className="flex items-center gap-1.5">
                               <span className="w-3 h-3 rounded-md bg-[#FFFBEB] border border-[#FDE68A]" />
-                              <span className="text-[#B45309] font-semibold">Bảo trì (1 ngày sau trả)</span>
+                              <span className="text-[#B45309] font-semibold">Bảo trì</span>
                             </div>
                           </div>
                         </div>

@@ -115,9 +115,6 @@ const formatAddress = (addr) => {
 // Chuẩn hóa định dạng YYYY-MM-DD
 const toDateKey = (dateStr) => {
   if (!dateStr) return '';
-  if (typeof dateStr === 'string' && /^\d{4}-\d{2}-\d{2}/.test(dateStr)) {
-    return dateStr.slice(0, 10);
-  }
   const d = new Date(dateStr);
   if (isNaN(d.getTime())) return '';
   const y = d.getFullYear();
@@ -561,11 +558,11 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
   // Bộ lọc cho Tab Lịch Sử Thử Váy
   const [historySearch, setHistorySearch] = useState('');
-  const [historyBranch, setHistoryBranch] = useState('all');
+  const [historyBranch, setHistoryBranch] = useState('hcm-q1');
 
   // Sub-filter trong Tab Lịch Biểu: 'all' | 'fitting' (Thử váy) | 'delivery' (Giao váy) | 'return' (Trả váy)
   const [calendarFilterType, setCalendarFilterType] = useState('all');
-  const [calendarBranchFilter, setCalendarBranchFilter] = useState('all');
+  const [calendarBranchFilter, setCalendarBranchFilter] = useState('hcm-q1');
   // Lọc hình thức giao váy: 'all' (Tất cả) | 'showroom' (Khách đến lấy) | 'express' (Nhân viên ship tận nơi)
   const [deliveryMethodFilter, setDeliveryMethodFilter] = useState('all');
   // Lọc hình thức trả váy: 'all' (Tất cả) | 'showroom' (Khách đến trả) | 'express' (Nhân viên đến lấy)
@@ -1695,7 +1692,6 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                     onChange={(e) => setCalendarBranchFilter(e.target.value)}
                     className="px-3.5 py-1.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 font-bold outline-none cursor-pointer text-xs focus:border-[#733F49]"
                   >
-                    <option value="all">Toàn bộ chi nhánh</option>
                     <option value="hcm-q1">UniBridal Q.1 TP.HCM</option>
                     <option value="hn-hoankiem">UniBridal Hoàn Kiếm, HN</option>
                   </select>
@@ -2492,7 +2488,6 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                       onChange={(e) => setHistoryBranch(e.target.value)}
                       className="text-xs font-semibold bg-gray-50 border border-gray-200 text-gray-800 rounded-xl px-3 py-2 focus:outline-none focus:border-[#BA7A83] cursor-pointer"
                     >
-                      <option value="all">Toàn bộ chi nhánh</option>
                       <option value="hcm-q1">UniBridal Q.1 TP.HCM</option>
                       <option value="hn-hoankiem">UniBridal Hoàn Kiếm, HN</option>
                     </select>

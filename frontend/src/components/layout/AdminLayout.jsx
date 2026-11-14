@@ -22,7 +22,11 @@ import { LayoutDashboard,
   ExternalLink,
   Truck,
   RotateCcw,
-  AlertTriangle } from 'lucide-react';
+  AlertTriangle,
+  Bell,
+  Pause,
+  Play,
+  Check } from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import heroBride from '../../assets/hero_bride.jpg';
 import adminAvatarImg from '../../assets/admin_avatar.jpg';
@@ -86,6 +90,27 @@ export default function AdminLayout({
   const [isInitialLoading, setIsInitialLoading] = useState(() => cachedLiveNotifications === null);
   const [currentTickerIdx, setCurrentTickerIdx] = useState(0);
   const [isTickerPaused, setIsTickerPaused] = useState(false);
+  const [isTickerDismissed, setIsTickerDismissed] = useState(() => {
+    try {
+      return localStorage.getItem('unibridal_ticker_dismissed') === 'true';
+    } catch {
+      return false;
+    }
+  });
+
+  const handleDismissTicker = () => {
+    setIsTickerDismissed(true);
+    try {
+      localStorage.setItem('unibridal_ticker_dismissed', 'true');
+    } catch {}
+  };
+
+  const handleRestoreTicker = () => {
+    setIsTickerDismissed(false);
+    try {
+      localStorage.removeItem('unibridal_ticker_dismissed');
+    } catch {}
+  };
 
   const [readNotifIds, setReadNotifIds] = useState(() => {
     try {
@@ -112,10 +137,10 @@ export default function AdminLayout({
   const isStaff = role === 'staff' || user?.role === 'staff' || currentPath.startsWith('/staff');
 
   // Fetch Live Notifications: Chỉ hiển thị các sự kiện phát sinh trong ngày hôm nay:
-  // 1. Đơn vừa đặt / vừa cọc hôm nay (createdAt là hôm nay)
-  // 2. Lịch ship váy / giao váy cho khách hôm nay (rentalStartDate là hôm nay)
-  // 3. Lịch khách hẹn trả váy hôm nay (rentalEndDate là hôm nay)
-  // 4. Lịch hẹn thử váy hôm nay (appointmentDate là hôm nay)
+  // 1. Đơn vừa đặt / vừa cọc hôm nay (chưa giao, chưa hoàn tất)
+  // 2. Lịch ship váy / giao váy cho khách hôm nay (chưa giao)
+  // 3. Lịch khách hẹn trả váy hôm nay (đang thuê)
+  // 4. Lịch hẹn thử váy hôm nay (chưa hủy, chưa thử xong)
   const fetchLiveNotifications = async (force = false) => {
     const now = Date.now();
     // 1. Nếu cache còn mới (dưới 15s) và không bị ép buộc reload: Dùng ngay cache mà không gọi network
@@ -154,8 +179,10 @@ export default function AdminLayout({
             const customerName = o.customerName || 'Khách Hàng';
             const dressName = o.items?.[0]?.name || o.dress || 'Lễ phục cưới';
 
-            // A. Đơn vừa đặt / vừa cọc trong ngày hôm nay
-            if (isSameDayVietnam(o.createdAt)) {
+            // A. Đơn vừa đặt / vừa cọc trong ngày hôm nay:
+            // Chỉ thông báo nếu đơn CHƯA giao, chưa đang thuê, chưa hoàn tất (tránh nhắc lại đơn đã xong)
+            const isOrderPending = !['delivered', 'renting', 'waiting_refund', 'completed', 'complete', 'cancelled'].includes(rawSt);
+            if (isSameDayVietnam(o.createdAt) && isOrderPending) {
               const hasDeposit = (o.totalDeposit > 0 || o.depositAmount > 0);
               notifs.push({
                 id: `order-created-${orderIdStr}`,
@@ -169,8 +196,9 @@ export default function AdminLayout({
               });
             }
 
-            // B. Lịch ship váy / giao váy cho khách trong ngày hôm nay
-            if (isSameDayVietnam(o.rentalStartDate) && !['completed', 'complete'].includes(rawSt)) {
+            // B. Lịch ship váy / giao váy cho khách trong ngày hôm nay:
+            // Chỉ nhắc nếu hôm nay cần ship và váy CHƯA được giao
+            if (isSameDayVietnam(o.rentalStartDate) && !['delivered', 'renting', 'waiting_refund', 'completed', 'complete', 'cancelled'].includes(rawSt)) {
               notifs.push({
                 id: `order-ship-${orderIdStr}`,
                 type: 'ship',
@@ -225,7 +253,8 @@ export default function AdminLayout({
           if (Array.isArray(apts)) {
             apts.forEach((a) => {
               const aptDateStr = a.appointmentDate || a.date;
-              if (a.status === 'cancelled') return;
+              const aptSt = (a.status || '').toLowerCase();
+              if (['cancelled', 'completed'].includes(aptSt)) return;
 
               // Chỉ hiển thị lịch thử váy có ngày hẹn đúng hôm nay hoặc vừa đặt hôm nay
               const isForToday = isSameDayVietnam(aptDateStr);
@@ -289,21 +318,24 @@ export default function AdminLayout({
     };
   }, [isStaff]);
 
-  // Ticker Auto-rotation every 4.5s
+  // Lọc chỉ những thông báo chưa được đánh dấu đã đọc / đã xem
+  const activeNotifications = liveNotifications.filter((n) => !readNotifIds.includes(n.id));
+  const safeIdx = activeNotifications.length > 0 ? (currentTickerIdx % activeNotifications.length) : 0;
+  const currentNotif = activeNotifications[safeIdx];
+
+  // Ticker Auto-rotation every 8.5s (tốc độ chậm rãi, thoải mái đọc, không giật mắt)
   useEffect(() => {
-    if (isTickerPaused || liveNotifications.length <= 1) return;
+    if (isTickerPaused || activeNotifications.length <= 1) return;
     const interval = setInterval(() => {
-      setCurrentTickerIdx((prev) => (prev + 1) % liveNotifications.length);
-    }, 4500);
+      setCurrentTickerIdx((prev) => (prev + 1) % activeNotifications.length);
+    }, 8500);
     return () => clearInterval(interval);
-  }, [isTickerPaused, liveNotifications.length]);
+  }, [isTickerPaused, activeNotifications.length]);
 
   const handleSelectNotification = (item) => {
     markIdAsRead(item.id);
     navigate(item.url);
   };
-
-  const currentNotif = liveNotifications[currentTickerIdx % Math.max(liveNotifications.length, 1)];
 
   const getActiveKey = () => {
     if (activeMenu) {
@@ -540,7 +572,25 @@ export default function AdminLayout({
                 <span className="w-2 h-2 rounded-full bg-[#D6A498] shrink-0"></span>
                 <span className="w-48 h-3 bg-[#EFE5E0] rounded inline-block"></span>
               </div>
-            ) : liveNotifications.length > 0 && currentNotif ? (
+            ) : isTickerDismissed ? (
+              /* Nút thu gọn dạng Chuông thông báo khi người dùng đã bấm tắt/ẩn thanh xoay */
+              <button
+                type="button"
+                onClick={handleRestoreTicker}
+                className="flex items-center gap-2 py-1.5 px-3.5 rounded-full bg-[#FAF5F2] hover:bg-[#F3E7E3] border border-[#EFE5E0] hover:border-[#D6A498] text-[#733F49] text-[12px] font-medium transition-all cursor-pointer shadow-xs group"
+                title="Nhấn để mở lại thanh thông báo trực tiếp"
+              >
+                <Bell size={13} className={activeNotifications.length > 0 ? "text-[#BE4B5E] animate-pulse" : "text-[#8A797A]"} />
+                <span>Thông báo hôm nay</span>
+                {activeNotifications.length > 0 ? (
+                  <span className="px-1.5 py-0.2 rounded-full text-[10px] font-bold bg-[#BE4B5E] text-white">
+                    {activeNotifications.length}
+                  </span>
+                ) : (
+                  <span className="text-[10px] text-[#8A797A] font-mono">0</span>
+                )}
+              </button>
+            ) : activeNotifications.length > 0 && currentNotif ? (
               <div className={`w-full flex items-center justify-between gap-2 bg-gradient-to-r ${currentNotif.type === 'dispute' ? 'from-[#FFF5F5] via-[#FEF2F2] to-[#FFF5F5] border-red-200 hover:border-red-400' : 'from-[#FFFBF9] via-[#FAF3F0] to-[#FFFBF9] border-[#F2DFD8] hover:border-[#D6A498]'} border rounded-full py-1.5 px-3.5 shadow-xs transition-all duration-300`}>
                 <div
                   onClick={() => handleSelectNotification(currentNotif)}
@@ -591,40 +641,127 @@ export default function AdminLayout({
                 </div>
 
                 <div className="flex items-center gap-0.5 shrink-0 pl-1.5 border-l border-[#EFE2DC]">
+                  {/* Nút đánh dấu đã xem thông báo hiện tại */}
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setCurrentTickerIdx((prev) => (prev - 1 + liveNotifications.length) % liveNotifications.length);
+                      markIdAsRead(currentNotif.id);
+                    }}
+                    className="p-1 rounded-full text-[#8A797A] hover:bg-emerald-50 hover:text-emerald-700 transition-colors cursor-pointer"
+                    title="Đã xem (Ẩn thông báo này)"
+                  >
+                    <Check size={12} />
+                  </button>
+
+                  {/* Nút lùi */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setCurrentTickerIdx((prev) => (prev - 1 + activeNotifications.length) % activeNotifications.length);
                     }}
                     className="p-1 rounded-full text-[#8A797A] hover:bg-white hover:text-[#5F2B36] transition-colors cursor-pointer"
                     title="Thông báo trước"
                   >
-                    <ChevronLeft size={13} />
+                    <ChevronLeft size={12} />
                   </button>
-                  <span className="text-[10px] text-[#A89899] font-mono px-1">
-                    {currentTickerIdx + 1}/{liveNotifications.length}
+
+                  {/* Chỉ số */}
+                  <span className="text-[10px] text-[#A89899] font-mono px-1 select-none">
+                    {safeIdx + 1}/{activeNotifications.length}
                   </span>
+
+                  {/* Nút tiến */}
                   <button
                     type="button"
                     onClick={(e) => {
                       e.stopPropagation();
-                      setCurrentTickerIdx((prev) => (prev + 1) % liveNotifications.length);
+                      setCurrentTickerIdx((prev) => (prev + 1) % activeNotifications.length);
                     }}
                     className="p-1 rounded-full text-[#8A797A] hover:bg-white hover:text-[#5F2B36] transition-colors cursor-pointer"
                     title="Thông báo kế tiếp"
                   >
-                    <ChevronRight size={13} />
+                    <ChevronRight size={12} />
+                  </button>
+
+                  {/* Nút Tạm dừng / Tiếp tục tự động xoay */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      setIsTickerPaused((prev) => !prev);
+                    }}
+                    className={`p-1 rounded-full transition-colors cursor-pointer ${
+                      isTickerPaused ? 'text-[#BE4B5E] bg-[#FDECEE]' : 'text-[#8A797A] hover:bg-white hover:text-[#5F2B36]'
+                    }`}
+                    title={isTickerPaused ? 'Bấm để tiếp tục tự động xoay' : 'Bấm để dừng tự động xoay'}
+                  >
+                    {isTickerPaused ? <Play size={11} /> : <Pause size={11} />}
+                  </button>
+
+                  {/* Nút Thu gọn / Đóng thanh thông báo */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      handleDismissTicker();
+                    }}
+                    className="p-1 rounded-full text-[#8A797A] hover:bg-red-50 hover:text-red-600 transition-colors cursor-pointer ml-0.5"
+                    title="Thu gọn thanh thông báo (có thể mở lại từ icon Chuông)"
+                  >
+                    <X size={12} />
+                  </button>
+                </div>
+              </div>
+            ) : liveNotifications.length > 0 && activeNotifications.length === 0 ? (
+              /* Đã xem hết tất cả thông báo trong ngày */
+              <div className="w-full flex items-center justify-between gap-2 bg-[#FAF5F2] border border-[#EFE5E0] rounded-full py-1.5 px-3.5 shadow-xs text-[12px] text-[#8A797A]">
+                <div className="flex items-center gap-2">
+                  <Check size={13} className="text-emerald-600 shrink-0" />
+                  <span>Bạn đã xem hết các thông báo hôm nay</span>
+                </div>
+                <div className="flex items-center gap-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setReadNotifIds([]);
+                      try {
+                        localStorage.removeItem(READ_NOTIFS_STORAGE_KEY);
+                      } catch {}
+                    }}
+                    className="text-[11px] text-[#BE4B5E] hover:underline cursor-pointer font-medium"
+                  >
+                    Xem lại
+                  </button>
+                  <button
+                    type="button"
+                    onClick={handleDismissTicker}
+                    className="p-1 rounded-full text-[#8A797A] hover:text-[#5F2B36] cursor-pointer"
+                    title="Thu gọn"
+                  >
+                    <X size={12} />
                   </button>
                 </div>
               </div>
             ) : (
-              <div className="flex items-center gap-2 py-1.5 px-4 rounded-full bg-[#FAF5F2] border border-[#EFE5E0] text-[12px] text-[#8A797A]">
-                <span className="relative flex h-2 w-2">
-                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
-                  <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
-                </span>
-                <span>Hôm nay chưa có đơn mới hoặc lịch ship/trả váy trong ngày</span>
+              /* Chưa có thông báo mới nào phát sinh */
+              <div className="w-full flex items-center justify-between gap-2 bg-[#FAF5F2] border border-[#EFE5E0] rounded-full py-1.5 px-3.5 text-[12px] text-[#8A797A]">
+                <div className="flex items-center gap-2">
+                  <span className="relative flex h-2 w-2">
+                    <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-emerald-400 opacity-75"></span>
+                    <span className="relative inline-flex rounded-full h-2 w-2 bg-emerald-500"></span>
+                  </span>
+                  <span>Hôm nay chưa có đơn mới hoặc việc cần xử lý</span>
+                </div>
+                <button
+                  type="button"
+                  onClick={handleDismissTicker}
+                  className="p-1 rounded-full text-[#8A797A] hover:text-[#5F2B36] cursor-pointer"
+                  title="Thu gọn"
+                >
+                  <X size={12} />
+                </button>
               </div>
             )}
           </div>
