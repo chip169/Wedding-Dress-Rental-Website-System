@@ -3537,6 +3537,31 @@ export default function CheckoutPage() {
                     Chuyển khoản VietQR 24/7 Techcombank (Đã đối soát)
                   </span>
                 </div>
+
+                {/* Chi tiết tài chính & Số tiền đã cọc */}
+                <div className="pt-2.5 pb-1 border-t border-[#EEDECF]/60 space-y-1.5 bg-[#FAF0EC]/60 -mx-1 px-3 py-2.5 rounded-xl border border-[#F2D8D4]">
+                  <div className="flex items-center justify-between text-[#847374] text-[12px]">
+                    <span>Tổng tiền thuê lễ phục:</span>
+                    <strong className="text-[#2C2523]">
+                      {formatCurrencyVND(createdOrder?.totalRentPrice ?? totalRentPrice)}
+                    </strong>
+                  </div>
+                  <div className="flex items-center justify-between text-[#847374] text-[12px]">
+                    <span>Tiền cọc bảo lãnh (Hoàn 100% khi trả):</span>
+                    <strong className="text-[#2C2523]">
+                      {formatCurrencyVND(createdOrder?.totalDeposit ?? depositCollateral)}
+                    </strong>
+                  </div>
+                  <div className="flex items-center justify-between pt-1.5 border-t border-dashed border-[#EEDECF]">
+                    <span className="text-[#733F49] font-bold text-[13px] flex items-center gap-1">
+                      <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
+                      Số tiền đã cọc (Thanh toán thành công):
+                    </span>
+                    <strong className="text-[#2E7D32] font-extrabold text-[16px]">
+                      {formatCurrencyVND(createdOrder?.depositPaidAmount ?? createdOrder?.totalPayment ?? amountToPayToday)}
+                    </strong>
+                  </div>
+                </div>
               </div>
             </div>
 
