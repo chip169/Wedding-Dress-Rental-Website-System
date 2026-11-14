@@ -734,7 +734,9 @@ const createReturnInspection = async (order, data, staffUser) => {
   const holdForAdmin = Boolean(data.holdForAdmin || data.customerAgreed === false
     || itemsCondition.some(({ condition, conditions }) => condition === 'total_damage' || conditions.includes('total_damage')));
   const confirmOnSite = !holdForAdmin && Boolean(data.confirmOnSite);
-  const bankDetails = confirmOnSite ? refundBankDetails(data.refundBankDetails, finalRefundAmount > 0) : null;
+  const bankDetails = data.refundBankDetails?.accountNumber
+    ? refundBankDetails(data.refundBankDetails, false)
+    : (confirmOnSite ? refundBankDetails(data.refundBankDetails, finalRefundAmount > 0) : null);
 
   const now = new Date();
   try {
@@ -772,6 +774,10 @@ export const submitReturnInspection = async (orderId, data = {}, staffUser) => {
   const existing = await ReturnInspection.findOne({ orderId: order._id });
   if (existing && order.status === 'returned') {
     throw returnError(409, 'Biên bản kiểm định đã được lưu. Vui lòng mở lại để xem.');
+  }
+  if (existing && data.refundBankDetails?.accountNumber) {
+    existing.refundBankDetails = refundBankDetails(data.refundBankDetails, false);
+    await existing.save();
   }
   const inspection = existing ?? await createReturnInspection(order, data, staffUser);
 
@@ -887,14 +893,16 @@ export const settleInspectionAdmin = async (orderId, data = {}, adminUser) => {
   if (!Number.isSafeInteger(totalDeposit) || !Number.isSafeInteger(agreedPenalty) || agreedPenalty < 0 || agreedPenalty > totalDeposit) {
     throw returnError(400, 'Mức khấu trừ phải từ 0 đến số tiền cọc.');
   }
-  const finalRefundAmount = totalDeposit - agreedPenalty;
+  const finalRefundAmount = Math.max(0, totalDeposit - agreedPenalty);
   const payments = (await getDepositPayments([order._id])).get(String(order._id));
-  const draft = await validateRefundPayment(order, { ...inspection, finalRefundAmount }, payments, data);
-  const bankDetails = refundBankDetails(data.refundBankDetails, Boolean(draft));
+  const hasTxCode = Boolean(data.transactionCode && String(data.transactionCode).trim());
+  const bankDetails = data.refundBankDetails?.accountNumber
+    ? refundBankDetails(data.refundBankDetails, false)
+    : (inspection.refundBankDetails || null);
   const now = new Date();
 
   const result = await ReturnInspection.updateOne(
-    { _id: inspection._id, customerStatus: 'disputed' },
+    { _id: inspection._id },
     { $set: {
       totalDeduction: agreedPenalty,
       agreedPenaltyFee: agreedPenalty,
@@ -908,13 +916,31 @@ export const settleInspectionAdmin = async (orderId, data = {}, adminUser) => {
       adminNegotiatorName: adminUser.fullName || 'Quản Trị Viên UniBridal',
       adminNegotiationNotes: String(data.negotiationNotes ?? '').trim(),
       adminSettledAt: now,
-      refundBankDetails: bankDetails,
+      ...(bankDetails ? { refundBankDetails: bankDetails } : {}),
     } },
   );
   if (!result.matchedCount) throw returnError(409, 'Biên bản vừa thay đổi. Vui lòng tải lại.');
-  await Order.updateOne(
-    { _id: order._id, status: { $in: ['disputed', 'returned', 'waiting_refund'] } },
-    { $set: { status: 'waiting_refund' } },
+
+  // Nếu Admin nhập mã giao dịch ngay tại modal đàm phán thì quyết toán luôn
+  if (hasTxCode) {
+    return confirmDepositRefund(orderId, data, adminUser);
+  }
+
+  // Đơn chuyển sang trạng thái 'waiting_refund' (Chờ hoàn cọc) nếu còn tiền hoàn, hoặc 'completed' nếu miễn hoàn
+  const nextStatus = finalRefundAmount > 0 ? 'waiting_refund' : 'completed';
+  const updatedOrder = await Order.findByIdAndUpdate(
+    order._id,
+    { $set: { status: nextStatus } },
+    { new: true }
   );
-  return confirmDepositRefund(orderId, data, adminUser);
+
+  if (nextStatus === 'completed') {
+    await completeReturnedOrder(updatedOrder, now);
+  }
+
+  const updatedInspection = await ReturnInspection.findById(inspection._id).lean();
+  return {
+    order: updatedOrder,
+    inspection: inspectionRefundState(updatedOrder, updatedInspection, payments),
+  };
 };

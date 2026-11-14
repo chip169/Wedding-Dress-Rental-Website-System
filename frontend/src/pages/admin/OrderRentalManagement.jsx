@@ -923,10 +923,10 @@ function InspectionModal({ order, onClose, onSuccess }) {
       holdForAdmin: isHoldCase,
       confirmOnSite: !isHoldCase && confirmOnSite,
       disputeReason: isHoldCase ? (customerDisputeNote || itemsCondition.map((ic) => ic.damageNotes).filter(Boolean).join('; ') || 'Biên bản tạm giữ chuyển Admin thẩm định xử lý').trim() : '',
-      refundBankDetails: !isHoldCase && confirmOnSite && finalRefund > 0 ? {
-        bankName: onSiteBankName,
-        accountNumber: onSiteAccountNum,
-        accountHolder: onSiteAccountHolder,
+      refundBankDetails: onSiteAccountNum?.trim() ? {
+        bankName: onSiteBankName.trim(),
+        accountNumber: onSiteAccountNum.trim(),
+        accountHolder: onSiteAccountHolder.trim(),
       } : null,
     });
   };
@@ -1524,9 +1524,8 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
       message.error(`Mức phạt không được vượt quá số tiền cọc (${fmtVnd(totalDeposit)})!`);
       return;
     }
-    if (remaining > 0 && (!bankName.trim() || !/^\d{6,30}$/.test(accountNumber.trim()) ||
-      !accountHolder.trim() || !transactionCode.trim())) {
-      message.error('Vui lòng kiểm tra tài khoản nhận tiền và nhập mã giao dịch đã chuyển.');
+    if (remaining > 0 && (!bankName.trim() || !/^\d{6,30}$/.test(accountNumber.trim()) || !accountHolder.trim())) {
+      message.warning('Vui lòng kiểm tra ngân hàng, số tài khoản và tên chủ tài khoản nhận hoàn cọc.');
       return;
     }
 
@@ -1534,18 +1533,22 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
     try {
       const result = await settleInspectionAdmin(order._id, {
         agreedPenaltyFee: agreedPenalty,
-        transactionCode,
+        transactionCode: transactionCode.trim(),
         expectedAmount: remaining,
         negotiationNotes,
         refundBankDetails: {
-          bankName,
-          accountNumber,
-          accountHolder,
+          bankName: bankName.trim(),
+          accountNumber: accountNumber.trim(),
+          accountHolder: accountHolder.trim(),
           notes: negotiationNotes,
         },
       });
 
-      message.success('Đã lưu kết quả đàm phán và quyết toán cọc.');
+      message.success(
+        transactionCode.trim()
+          ? 'Đã lưu kết quả đàm phán và hoàn tất quyết toán cọc.'
+          : 'Đã hoàn tất đàm phán. Đơn đã chuyển sang trạng thái Chờ Hoàn Cọc.'
+      );
       onSuccess(result);
     } catch (err) {
       message.error(err?.response?.data?.message || err.message || 'Xác nhận đàm phán thất bại. Vui lòng thử lại.');
@@ -1805,11 +1808,17 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
                   />
                 </div>
               </div>
-              <label htmlFor="negotiation-refund-reference" className="mt-2 block">
-                Mã giao dịch sau khi đã chuyển {fmtVnd(remaining)} <span className="text-red-600">*</span>
+              <label htmlFor="negotiation-refund-reference" className="mt-2 block text-stone-600 font-medium">
+                Mã giao dịch sau khi đã chuyển {fmtVnd(remaining)} (hoặc để trống để chuyển đơn sang Chờ hoàn cọc):
               </label>
-              <Input id="negotiation-refund-reference" size="small" value={transactionCode} maxLength={100}
-                onChange={(event) => setTransactionCode(event.target.value)} />
+              <Input
+                id="negotiation-refund-reference"
+                size="small"
+                placeholder="Nhập mã giao dịch nếu đã chuyển tiền (không bắt buộc)..."
+                value={transactionCode}
+                maxLength={100}
+                onChange={(event) => setTransactionCode(event.target.value)}
+              />
             </div>}
 
             {/* Ghi chú kết quả đàm phán */}
@@ -1839,12 +1848,12 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
             </button>
             <button
               type="button"
-              disabled={submitting || loading || Boolean(loadError) || !inspection || invalidRefund || (remaining > 0 && !transactionCode.trim())}
+              disabled={submitting || loading || Boolean(loadError) || !inspection || invalidRefund}
               onClick={handleSubmitAdminSettle}
               className="flex-1 py-2.5 rounded-xl bg-[#1E8347] hover:bg-[#166534] text-white text-[12.5px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-2 shadow-xs"
             >
               {submitting ? <RefreshCw size={14} className="animate-spin" /> : <CheckCircle2 size={15} />}
-              <span>{remaining > 0 ? 'LƯU ĐÀM PHÁN VÀ GIAO DỊCH HOÀN CỌC' : 'LƯU KẾT QUẢ ĐÀM PHÁN'}</span>
+              <span>{transactionCode.trim() ? 'LƯU ĐÀM PHÁN VÀ HOÀN TẤT QUYẾT TOÁN' : 'HOÀN THÀNH ĐÀM PHÁN (CHUYỂN CHỜ HOÀN CỌC)'}</span>
             </button>
           </div>
         </div>
