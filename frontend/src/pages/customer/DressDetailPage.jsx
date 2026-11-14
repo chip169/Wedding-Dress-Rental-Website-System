@@ -1332,11 +1332,7 @@ export default function DressDetailPage() {
                     ))}
                   </div>
                 </div>
-              ) : (
-                <div className="p-3 bg-[#F0FDF4] rounded-xl border border-[#DCFCE7] text-[12px] text-[#15803D]">
-                  ✦ Toàn bộ các ngày trong tháng hiện đang trống lịch sẵn sàng cho nàng đặt thuê!
-                </div>
-              )}
+              ) : null}
             </div>
 
             {/* Footer */}
