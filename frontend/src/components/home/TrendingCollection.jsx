@@ -120,8 +120,6 @@ const TrendingCollection = ({ onBookProduct, onToggleWishlist, wishlistedIds: pr
               ? `Size: ${d.sizes.map((s) => (typeof s === 'string' ? s : s?.size || s?.id || s?.label)).filter(Boolean).join(' - ')}`
               : 'Size: S - M',
             sizes: d.sizes,
-            colors: d.colors || d.colorOptions,
-            color: d.color,
             price: d.price || d.rentPrice || 5000000,
             depositAmount: d.depositAmount || 15000000,
             image: dressImage(d) || card1Img,

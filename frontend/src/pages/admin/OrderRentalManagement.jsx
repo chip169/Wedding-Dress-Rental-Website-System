@@ -388,12 +388,6 @@ function OrderDetailModal({ order, onClose }) {
                           Size {sizeStr}
                         </span>
                       </div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-[#8C7D7E] shrink-0">Màu sắc:</span>
-                        <span className="font-semibold text-[#2C2523] text-[12px]">
-                          {it.color || it.fabric || order.color || 'Trắng Sữa'}
-                        </span>
-                      </div>
                     </div>
                   );
                 })}

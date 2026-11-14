@@ -144,20 +144,6 @@ const normalizeSilhouette = (sil = '') => {
   return 'Other';
 };
 
-const COLOR_PALETTE = {
-  'trắng tinh khôi': { hex: '#FFFFFF', border: '#D9D9D9' },
-  'trắng ngọc tinh khôi': { hex: '#FFFFFF', border: '#D9D9D9' },
-  'trắng kem (ivory)': { hex: '#FDFBF7', border: '#E7DEC8' },
-  'trắng kem ivory': { hex: '#FDFBF7', border: '#E7DEC8' },
-  'trắng kem': { hex: '#FDFBF7', border: '#E7DEC8' },
-  'champagne': { hex: '#F7E7CE', border: '#DEC8A6' },
-  'hồng pastel': { hex: '#F5D6D8', border: '#E8B6BC' },
-  'hồng nude': { hex: '#EED9D1', border: '#D8BCB2' },
-  'đỏ ruby': { hex: '#9B111E', border: '#780B15' },
-  'xanh khói (dusty blue)': { hex: '#8CA4B8', border: '#6E8B9E' },
-  'xanh khói': { hex: '#8CA4B8', border: '#6E8B9E' },
-};
-
 function normalizeDressSizes(rawSizes) {
   if (!Array.isArray(rawSizes) || rawSizes.length === 0) {
     return [
@@ -185,7 +171,6 @@ export async function createDress(data) {
   if (!data?.name?.trim()) fail(400, 'Tên váy cưới không được để trống.');
   if (!data?.rentPrice || Number(data.rentPrice) <= 0) fail(400, 'Đơn giá thuê váy cưới không được để trống và phải lớn hơn 0.');
   if (!data?.depositAmount || Number(data.depositAmount) <= 0) fail(400, 'Tiền đặt cọc váy cưới không được để trống và phải lớn hơn 0.');
-  if (!data?.color?.trim()) fail(400, 'Màu sắc váy cưới không được để trống.');
   if (!Array.isArray(data?.images) || data.images.length === 0) fail(400, 'Váy cưới bắt buộc phải có ít nhất một hình ảnh sản phẩm.');
   const count = await Dress.countDocuments();
   const code = data.code || `UB-${(count + 1).toString().padStart(3, '0')}`;
@@ -216,20 +201,6 @@ export async function createDress(data) {
 
   const silhouette = data.silhouette ? normalizeSilhouette(data.silhouette) : 'Ballgown';
 
-  let colorOptions = [];
-  if (typeof data.color === 'string' && data.color.trim()) {
-    const colorNames = data.color.split(',').map((c) => c.trim()).filter(Boolean);
-    colorOptions = colorNames.map((cName) => {
-      const key = cName.toLowerCase();
-      const matched = COLOR_PALETTE[key];
-      return {
-        name: cName,
-        hex: matched ? matched.hex : '#FDFBF7',
-        border: matched ? matched.border : '#E7DEC8',
-      };
-    });
-  }
-
   const dress = await Dress.create({
     code,
     name: data.name,
@@ -237,8 +208,6 @@ export async function createDress(data) {
     categoryId,
     silhouette,
     material: data.material || 'Lụa Mikado Ý',
-    color: data.color || 'Trắng Tinh Khôi',
-    colorOptions: colorOptions.length > 0 ? colorOptions : undefined,
     sizes: normalizeDressSizes(data.sizes),
     rentPrice: Number(data.rentPrice || data.price || 5000000),
     depositAmount: Number(data.depositAmount || 15000000),
@@ -256,6 +225,11 @@ export async function createDress(data) {
 export async function updateDress(id, data) {
   const updateData = { ...data };
 
+  // Xóa bỏ các trường color / colorOptions nếu có gửi lên
+  delete updateData.color;
+  delete updateData.colorOptions;
+  delete updateData.colors;
+
   // 1. Chuẩn hóa silhouette nếu có (khớp enum schema)
   if (updateData.silhouette || updateData.category) {
     updateData.silhouette = normalizeSilhouette(updateData.silhouette || updateData.category);
@@ -267,21 +241,7 @@ export async function updateDress(id, data) {
     delete updateData.categoryId;
   }
 
-  // 2. Tự động cập nhật colorOptions đồng bộ khi thay đổi color
-  if (typeof updateData.color === 'string' && updateData.color.trim()) {
-    const colorNames = updateData.color.split(',').map((c) => c.trim()).filter(Boolean);
-    updateData.colorOptions = colorNames.map((cName) => {
-      const key = cName.toLowerCase();
-      const matched = COLOR_PALETTE[key];
-      return {
-        name: cName,
-        hex: matched ? matched.hex : '#FDFBF7',
-        border: matched ? matched.border : '#E7DEC8',
-      };
-    });
-  }
-
-  // 3. Chuẩn hóa sizes thành mảng Object { size, quantity }
+  // 2. Chuẩn hóa sizes thành mảng Object { size, quantity }
   if (Array.isArray(updateData.sizes)) {
     updateData.sizes = normalizeDressSizes(updateData.sizes);
   }

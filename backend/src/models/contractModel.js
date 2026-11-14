@@ -8,7 +8,7 @@ const contractItemSchema = new mongoose.Schema({
   name: { type: String, default: '' },
   code: { type: String, default: '' },
   size: { type: String, default: '' },
-  color: { type: String, default: 'Trắng Sữa' },
+  color: { type: String, default: '' },
   rentPrice: { type: Number, default: 0 },
   depositAmount: { type: Number, default: 0 },
   image: { type: String, default: '' },

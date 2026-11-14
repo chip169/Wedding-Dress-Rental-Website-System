@@ -729,9 +729,8 @@ export default function CheckoutPage() {
   };
 
 
-  // Selected dress size & color
+  // Selected dress size
   const [selectedSize, setSelectedSize] = useState(sizeParam || 'S');
-  const [selectedColor, setSelectedColor] = useState(colorParam || 'Trắng Sữa');
 
   // Measurements: Nếu tài khoản chưa lưu số đo thì BẮT BUỘC để trống ('')
   const [measurements, setMeasurements] = useState(() => {
@@ -838,7 +837,6 @@ export default function CheckoutPage() {
         name: activeDress.name || 'Váy cưới Haute Couture',
         code: activeDress.code || 'UB-HC-2026',
         size: selectedSize || 'S',
-        color: activeDress.color || 'Trắng Sữa',
         rentPrice: totalRentPrice,
         depositAmount: depositCollateral,
         startDate: rentalSchedule?.startDate || '',
@@ -1470,7 +1468,6 @@ export default function CheckoutPage() {
             name: item.name,
             code: item.code || `UB-HC-2026-0${idx + 1}`,
             size: item.size || selectedSize,
-            color: item.color || selectedColor || 'Trắng Sữa',
             rentPrice: itemDailyPrice * Math.max(1, Number(rentalDays) || 1),
             dailyPrice: itemDailyPrice,
             rentalDays,
@@ -1652,7 +1649,6 @@ export default function CheckoutPage() {
             name: item.name,
             code: item.code || `UB-HC-2026-0${idx + 1}`,
             size: item.size || selectedSize,
-            color: item.color || selectedColor || 'Trắng Sữa',
             rentPrice: itemDailyPrice * Math.max(1, Number(rentalDays) || 1),
             dailyPrice: itemDailyPrice,
             rentalDays,
@@ -3315,7 +3311,7 @@ export default function CheckoutPage() {
                               {item.name}
                             </div>
                             <div className="text-[10.5px] text-[#847374] mt-0.5">
-                              Mã: <span className="font-mono text-[#733F49] font-bold">{item.code || `UB-HC-2026-0${idx + 1}`}</span> • Size: <strong>{item.size || selectedSize}</strong> • Màu: <strong>{item.color || selectedColor || 'Trắng Sữa'}</strong>
+                              Mã: <span className="font-mono text-[#733F49] font-bold">{item.code || `UB-HC-2026-0${idx + 1}`}</span> • Size: <strong>{item.size || selectedSize}</strong>
                             </div>
                             <div className="flex items-center justify-between mt-0.5 text-[11px]">
                               <span className="text-[#847374]">Thuê ({rentalDays} ngày): <strong className="text-[#733F49] font-bold">{formatCurrencyVND((Number(item.price || item.rentPrice) || 0) * rentalDays)}</strong></span>
@@ -3347,8 +3343,6 @@ export default function CheckoutPage() {
                       </div>
                       <div className="inline-flex items-center gap-1.5 mt-1 px-2 py-0.5 rounded-md bg-[#FAF4EE] border border-[#F0E5DC] text-[10.5px] text-[#6B5C5D] flex-wrap">
                         <span>Size: <strong>{selectedSize}</strong></span>
-                        <span>•</span>
-                        <span>Màu: <strong>{selectedColor || activeDress?.color || 'Trắng Sữa'}</strong></span>
                         <span>•</span>
                         <span>Gói <strong>{rentalDays} ngày</strong></span>
                       </div>

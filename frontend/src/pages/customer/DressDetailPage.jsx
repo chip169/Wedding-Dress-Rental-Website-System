@@ -121,7 +121,6 @@ export default function DressDetailPage() {
 
   // User interactive selections
   const [selectedImageIndex, setSelectedImageIndex] = useState(0);
-  const [selectedColor, setSelectedColor] = useState(null);
   const [selectedSize, setSelectedSize] = useState('S');
   const [isWishlisted, setIsWishlisted] = useState(false);
   const [isBookingOpen, setIsBookingOpen] = useState(false);
@@ -159,7 +158,6 @@ export default function DressDetailPage() {
           if (result.success && result.data) {
             setDress(result.data);
             setSelectedImageIndex(0);
-            setSelectedColor(result.data.colors?.[0] || null);
             setSelectedSize(result.data.sizes?.[0]?.id || 'S');
             setIsWishlisted(checkWishlisted(result.data.id));
           }
@@ -293,13 +291,9 @@ export default function DressDetailPage() {
       ...dress,
       selectedSize,
       size: selectedSize,
-      selectedColor,
-      color: selectedColor?.name,
-      fabric: selectedColor?.name,
       rentalDays: 1,
     });
-    const colorQuery = selectedColor?.name ? `&color=${encodeURIComponent(selectedColor.name)}` : '';
-    navigate(`/checkout?dressId=${dress.id}&size=${selectedSize}${colorQuery}`);
+    navigate(`/checkout?dressId=${dress.id}&size=${selectedSize}`);
   };
 
   const handleOnlineRent = () => {
@@ -307,9 +301,6 @@ export default function DressDetailPage() {
       ...dress,
       selectedSize,
       size: selectedSize,
-      selectedColor,
-      color: selectedColor?.name,
-      fabric: selectedColor?.name,
       rentalDays: 1,
     });
     setRentNotification(
@@ -553,40 +544,6 @@ export default function DressDetailPage() {
                 <div className="text-[#8A7978] tracking-wider text-[12px] font-medium">
                   MÃ SẢN PHẨM: <span className="text-[#231A19] font-bold">{dress.code}</span>
                 </div>
-              </div>
-            </div>
-
-            {/* Color selection */}
-            <div>
-              <div className="flex items-center justify-between mb-2.5">
-                <span className="text-[13.5px] font-medium text-[#231A19]">
-                  Màu sắc: <strong className="text-[#B26B74] font-semibold">{selectedColor?.name || 'Mặc định'}</strong>
-                </span>
-              </div>
-              <div className="flex items-center gap-3">
-                {dress.colors?.map((col, idx) => {
-                  const isColorActive = selectedColor?.name === col.name;
-                  return (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setSelectedColor(col)}
-                      title={col.name}
-                      className={`group flex items-center gap-2 px-3 py-1.5 rounded-full border transition-all cursor-pointer ${isColorActive
-                        ? 'border-[#B26B74] bg-[#FFF5F3] shadow-xs'
-                        : 'border-[#EAE0DC] bg-white hover:border-[#C4A5AA]'
-                        }`}
-                    >
-                      <span
-                        className="w-5 h-5 rounded-full border border-black/10 shrink-0 shadow-xs"
-                        style={{ backgroundColor: col.hex }}
-                      />
-                      <span className={`text-[12.5px] font-medium ${isColorActive ? 'text-[#B26B74]' : 'text-[#5A4848]'}`}>
-                        {col.name}
-                      </span>
-                    </button>
-                  );
-                })}
               </div>
             </div>
 
@@ -1306,12 +1263,9 @@ export default function DressDetailPage() {
                       ...dress,
                       selectedSize,
                       size: selectedSize,
-                      selectedColor,
-                      color: selectedColor?.name,
                       rentalDays: 4,
                     });
-                    const colorQuery = selectedColor?.name ? `&color=${encodeURIComponent(selectedColor.name)}` : '';
-                    navigate(`/checkout?dressId=${dress.id}&size=${selectedSize}&startDate=${previewStartDate}${colorQuery}`);
+                    navigate(`/checkout?dressId=${dress.id}&size=${selectedSize}&startDate=${previewStartDate}`);
                   }}
                   className="px-5 py-2 rounded-lg bg-[#70484E] hover:bg-[#5D3B40] text-white text-[12px] font-semibold disabled:opacity-40 disabled:cursor-not-allowed cursor-pointer border-0 flex items-center gap-1.5 transition-all"
                 >

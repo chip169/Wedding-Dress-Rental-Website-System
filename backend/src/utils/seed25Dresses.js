@@ -459,7 +459,6 @@ export async function seed25Dresses() {
         categoryId: categoriesInDb[item.categorySlug],
         silhouette: item.silhouette,
         material: item.material,
-        color: item.color,
         rentPrice: item.rentPrice,
         depositAmount: item.depositAmount,
         originalPrice: item.originalPrice,
@@ -550,10 +549,6 @@ export async function seed25Dresses() {
         isFeatured: index < 6,
         collectionTag: item.collectionTag,
         description: item.description,
-        colorOptions: [
-          { name: item.color, hex: '#FDFBF7', border: '#E7DEC8' },
-          { name: 'Trắng Kem Ivory', hex: '#F6EFEB', border: '#D8C3BE' },
-        ],
       };
     });
 

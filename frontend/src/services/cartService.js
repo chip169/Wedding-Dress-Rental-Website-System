@@ -107,7 +107,6 @@ export function addToCart(dress) {
   const id = String(dress._id ?? dress.id);
   const current = getCart();
   const selectedSize = dress.selectedSize || dress.size || dress.sizes?.[0]?.label || 'Theo tư vấn';
-  const selectedColor = dress.selectedColor?.name || (typeof dress.selectedColor === 'string' ? dress.selectedColor : null) || dress.color || 'Trắng Sữa';
 
   const existingIndex = current.findIndex(
     (item) => String(item.id) === id || (item.code && item.code === dress.code) ||
@@ -119,8 +118,6 @@ export function addToCart(dress) {
     updated[existingIndex] = {
       ...updated[existingIndex],
       size: selectedSize,
-      color: selectedColor,
-      fabric: selectedColor,
     };
     saveCart(updated);
     return true;
@@ -135,8 +132,6 @@ export function addToCart(dress) {
     image: dressImage(dress),
     code: dress.code,
     size: selectedSize,
-    color: selectedColor,
-    fabric: selectedColor,
     collection: dress.collectionTag ?? dress.collection ?? 'HAUTE COUTURE',
     detailHref: Object.hasOwn(dress, 'detailHref') ? dress.detailHref : `/dresses/${id}`,
   };

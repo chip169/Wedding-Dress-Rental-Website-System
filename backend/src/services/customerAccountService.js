@@ -52,7 +52,6 @@ export async function listOrders(userId) {
         }
         const items = (order.items || []).map((it) => ({
             ...it,
-            color: it.color || it.fabric || order.color || 'Trắng Sữa',
         }));
         return { ...order, items, status, inspection: insp };
     });
@@ -74,7 +73,6 @@ export async function orderDetail(userId, identifier) {
     }
     const items = (orderObj.items || []).map((it) => ({
         ...it,
-        color: it.color || it.fabric || orderObj.color || 'Trắng Sữa',
     }));
     return { ...orderObj, items, inspection, contract };
 }
