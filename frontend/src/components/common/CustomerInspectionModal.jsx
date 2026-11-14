@@ -427,20 +427,52 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
                     ) : (
                       <div className="space-y-2 max-h-[190px] overflow-y-auto pr-1">
                         {itemsCondition.map((item, idx) => {
-                          const cond = getConditionLabel(item.condition);
                           const fee = Number(item.repairFee || 0);
+                          const condList = Array.isArray(item.conditions) && item.conditions.length > 0
+                            ? item.conditions
+                            : (item.condition ? [item.condition] : ['good']);
+                          const realDamages = condList.filter((c) => c !== 'normal_wear' && c !== 'good');
+
                           return (
                             <div key={idx} className="p-2.5 rounded-xl border border-[#F2E5E0] bg-[#FFFDFC] space-y-1.5 text-[11.5px]">
                               <div className="flex items-center justify-between gap-2">
                                 <span className="font-bold text-[12.5px] text-[#5F2B36] truncate">
                                   {order.items?.[idx]?.name || order.dress || `Lễ phục #${idx + 1}`}
                                 </span>
-                                <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${cond.color}`}>
-                                  {cond.label}
-                                </span>
+                                {realDamages.length === 0 ? (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 text-emerald-700 bg-emerald-50 border-emerald-200">
+                                    1. Hao mòn tự nhiên (Miễn phí)
+                                  </span>
+                                ) : realDamages.length === 1 ? (
+                                  <span className={`inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 ${getConditionLabel(realDamages[0]).color}`}>
+                                    {getConditionLabel(realDamages[0]).label}
+                                  </span>
+                                ) : (
+                                  <span className="inline-flex items-center px-2 py-0.5 rounded-full text-[10px] font-bold border shrink-0 text-amber-800 bg-amber-50 border-amber-200">
+                                    {realDamages.length} lỗi hư hại ghi nhận
+                                  </span>
+                                )}
                               </div>
+
+                              {/* Hiển thị danh sách các lỗi khi có nhiều hơn 1 lỗi */}
+                              {realDamages.length > 1 && (
+                                <div className="flex flex-wrap gap-1 pt-0.5">
+                                  {realDamages.map((cid) => {
+                                    const cl = getConditionLabel(cid);
+                                    return (
+                                      <span
+                                        key={cid}
+                                        className={`inline-flex items-center px-2 py-0.5 rounded-md text-[10px] font-semibold border ${cl.color}`}
+                                      >
+                                        {cl.label}
+                                      </span>
+                                    );
+                                  })}
+                                </div>
+                              )}
+
                               {item.note && (
-                                <p className="text-[11px] text-[#5F4E50] bg-[#FAF5F2] px-2 py-1.5 rounded-lg border border-[#F0E6E2] m-0 leading-snug">
+                                <p className="text-[11px] text-[#5F4E50] bg-[#FAF5F2] px-2 py-1.5 rounded-lg border border-[#F0E6E2] m-0 leading-snug whitespace-pre-line">
                                   <strong className="text-[#8C7D7E]">Ghi chú:</strong> {item.note}
                                 </p>
                               )}
