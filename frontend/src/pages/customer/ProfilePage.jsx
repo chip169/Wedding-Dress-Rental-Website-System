@@ -274,7 +274,7 @@ export default function ProfilePage() {
                   name="phone"
                   rules={[{ required: true, whitespace: true, message: 'Vui lòng nhập số điện thoại liên lạc.' }]}
                 >
-                  <Input placeholder="Nhập số điện thoại liên hệ..." size="large" />
+                  <Input placeholder="Nhập số điện thoại liên hệ" size="large" />
                 </Form.Item>
               </div>
 

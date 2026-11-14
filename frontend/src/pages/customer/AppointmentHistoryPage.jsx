@@ -43,12 +43,6 @@ const SHOWROOM_ADDRESSES = {
     phone: '028 3888 9999',
     mapUrl: 'https://maps.google.com/?q=88+Dong+Khoi+Quan+1+Ho+Chi+Minh',
   },
-  'dn-haichau': {
-    name: 'UniBridal Hải Châu, Đà Nẵng',
-    address: '45 Bạch Đằng, P. Hải Châu 1, Q. Hải Châu, TP. Đà Nẵng',
-    phone: '0236 3777 888',
-    mapUrl: 'https://maps.google.com/?q=45+Bach+Dang+Hai+Chau+Da+Nang',
-  },
 };
 
 export default function AppointmentHistoryPage() {
