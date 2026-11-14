@@ -131,6 +131,20 @@ export const DAMAGE_PRICE_CATALOG = [
     isAdminOnly: true,
     color: '#991B1B',
   },
+  {
+    id: 'custom_agreement',
+    code: '10',
+    name: '10. Lỗi khác ngoài danh mục',
+    shortName: 'Thỏa thuận 2 bên',
+    description: 'Đối với các lỗi hư hại không có ở trên',
+    feeType: 'agreement',
+    fixedFee: 0,
+    feeLabel: 'Dựa trên quyết định giá của cả 2 thống nhất',
+    authority: 'mutual_agreement',
+    authorityLabel: 'Thỏa thuận 2 bên',
+    isAdminOnly: false,
+    color: '#733F49',
+  },
 ];
 
 export function getDamageCatalogItem(conditionId) {
@@ -144,7 +158,7 @@ export function getDamageCatalogItem(conditionId) {
   return found || DAMAGE_PRICE_CATALOG[0];
 }
 
-export function computeCompensation(conditionId, _optionValue, maxDeposit = 0) {
+export function computeCompensation(conditionId, _optionValue, maxDeposit = 0, agreedAmount = 0) {
   const item = getDamageCatalogItem(conditionId);
   if (!item) return 0;
   if (item.feeType === 'fixed') {
@@ -153,6 +167,10 @@ export function computeCompensation(conditionId, _optionValue, maxDeposit = 0) {
   if (item.feeType === 'deposit_100') {
     return Math.max(0, maxDeposit);
   }
+  if (item.feeType === 'agreement') {
+    const val = Number(agreedAmount || 0);
+    return maxDeposit > 0 ? Math.min(val, maxDeposit) : val;
+  }
   return 0;
 }
 
@@ -160,9 +178,10 @@ export function computeCompensation(conditionId, _optionValue, maxDeposit = 0) {
  * Tính tổng chi phí bồi thường cho danh sách nhiều lỗi trên 1 váy
  * @param {string[]} conditionIds - Mảng các ID lỗi
  * @param {number} maxDeposit - Tiền cọc tối đa của váy / đơn hàng
+ * @param {number} agreedAmount - Mức phí thỏa thuận nếu có chọn mục 10
  * @returns {number}
  */
-export function computeMultipleCompensation(conditionIds = [], maxDeposit = 0) {
+export function computeMultipleCompensation(conditionIds = [], maxDeposit = 0, agreedAmount = 0) {
   if (!Array.isArray(conditionIds) || conditionIds.length === 0) return 0;
   if (conditionIds.includes('total_damage')) {
     return Math.max(0, maxDeposit);
@@ -173,6 +192,8 @@ export function computeMultipleCompensation(conditionIds = [], maxDeposit = 0) {
     const cat = getDamageCatalogItem(cid);
     if (cat && cat.feeType === 'fixed') {
       sum += Number(cat.fixedFee || 0);
+    } else if (cat && cat.feeType === 'agreement') {
+      sum += Number(agreedAmount || 0);
     }
   }
   return maxDeposit > 0 ? Math.min(sum, maxDeposit) : sum;

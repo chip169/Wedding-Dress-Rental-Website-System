@@ -2,7 +2,7 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import { useSearchParams, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import AdminLayout from '../../components/layout/AdminLayout';
-import { message, Modal, Radio, Input, Dropdown, notification, Select, Tag } from 'antd';
+import { message, Modal, Radio, Input, InputNumber, Dropdown, notification, Select, Tag } from 'antd';
 import {
   Search,
   ChevronDown,
@@ -485,21 +485,21 @@ function DamagePriceCatalogModal({ open, onClose }) {
             <table className="w-full min-w-[650px] text-left text-xs border-collapse">
               <thead>
                 <tr className="bg-[#FAF5F2] text-[#5F2B36] border-b border-[#EFE5E1] text-[10.5px] font-bold uppercase tracking-wider sticky top-0 z-10">
-                  <th className="py-2 px-3 w-[26%] whitespace-nowrap bg-[#FAF5F2]">Nhóm Lỗi Hư Hại</th>
-                  <th className="py-2 px-3 w-[46%] bg-[#FAF5F2]">Hiện Trạng Thực Tế</th>
-                  <th className="py-2 px-3 w-[28%] whitespace-nowrap bg-[#FAF5F2]">Mức Phí Niêm Yết</th>
+                  <th className="py-2 px-3 w-[28%] whitespace-nowrap bg-[#FAF5F2]">Nhóm Lỗi Hư Hại</th>
+                  <th className="py-2 px-3 w-[42%] bg-[#FAF5F2]">Hiện Trạng Thực Tế</th>
+                  <th className="py-2 px-3 w-[30%] bg-[#FAF5F2]">Mức Phí Niêm Yết</th>
                 </tr>
               </thead>
               <tbody className="divide-y divide-[#F2E5E0] text-[11px]">
                 {DAMAGE_PRICE_CATALOG.map((row) => (
                   <tr key={row.id} className="hover:bg-[#FFF9F6] transition-colors">
-                    <td className="py-1 px-3 font-bold text-[#2C2523] align-middle whitespace-nowrap">
+                    <td className="py-1.5 px-3 font-bold text-[#2C2523] align-middle">
                       {row.name}
                     </td>
-                    <td className="py-1 px-3 text-[#5C4D4D] leading-snug align-middle">
+                    <td className="py-1.5 px-3 text-[#5C4D4D] leading-snug align-middle">
                       {row.description}
                     </td>
-                    <td className="py-1 px-3 font-bold align-middle whitespace-nowrap" style={{ color: row.color }}>
+                    <td className="py-1.5 px-3 font-bold align-middle" style={{ color: row.color }}>
                       {row.feeLabel}
                     </td>
                   </tr>
@@ -700,7 +700,8 @@ function InspectionModal({ order, onClose, onSuccess }) {
     }
 
     const maxLimit = itemsCondition[idx]?.maxDeposit || itemsCondition[idx]?.depositAmount || order.totalDeposit || 0;
-    const comp = computeMultipleCompensation(sanitized, maxLimit);
+    const currentAgreed = itemsCondition[idx]?.agreedAmount || 0;
+    const comp = computeMultipleCompensation(sanitized, maxLimit, currentAgreed);
 
     // Xác định condition chính để tương thích ngược
     const primaryCond = sanitized.includes('total_damage')
@@ -727,6 +728,24 @@ function InspectionModal({ order, onClose, onSuccess }) {
         setCustomerDisputeNote('Váy bị hư hại nghiêm trọng / lỗi nặng không thể may lại, chuyển Quản lý & Admin trực tiếp thẩm định xử lý.');
       }
     }
+  };
+
+  // Cập nhật mức phí thỏa thuận thống nhất cho Mục 10 (Lỗi khác ngoài danh mục)
+  const updateAgreedAmount = (idx, amount) => {
+    if (isReadOnly) return;
+    const sanitized = itemsCondition[idx]?.conditions || [itemsCondition[idx]?.condition || 'normal_wear'];
+    const maxLimit = itemsCondition[idx]?.maxDeposit || itemsCondition[idx]?.depositAmount || order.totalDeposit || 0;
+    const agreed = Math.max(0, Number(amount || 0));
+    const comp = computeMultipleCompensation(sanitized, maxLimit, agreed);
+    setItemsCondition((prev) => {
+      const next = [...prev];
+      next[idx] = {
+        ...next[idx],
+        agreedAmount: agreed,
+        compensation: comp,
+      };
+      return next;
+    });
   };
 
   // Toggle nhanh 1 lỗi qua button chip
@@ -1059,7 +1078,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
                                   : 'bg-white text-[#5F4E50] border-[#E5D7D0] hover:bg-[#FAF0EC]'
                               }`}
                             >
-                              {cat.shortName} ({cat.feeType === 'deposit_100' ? '100% Cọc' : cat.feeLabel})
+                              {cat.shortName} ({cat.feeType === 'deposit_100' ? '100% Cọc' : cat.feeType === 'agreement' ? 'Thỏa thuận' : cat.feeLabel})
                             </button>
                           );
                         })}
@@ -1093,7 +1112,11 @@ function InspectionModal({ order, onClose, onSuccess }) {
                                   </div>
                                   <div className="flex items-center gap-2 shrink-0">
                                     <span className="font-bold text-red-700">
-                                      {cat.feeType === 'deposit_100' ? 'Tịch thu 100% Cọc' : cat.feeLabel}
+                                      {cat.feeType === 'deposit_100'
+                                        ? 'Tịch thu 100% Cọc'
+                                        : cat.feeType === 'agreement'
+                                        ? (ic.agreedAmount ? `${fmtVnd(ic.agreedAmount)} (Thỏa thuận)` : 'Thỏa thuận 2 bên')
+                                        : cat.feeLabel}
                                     </span>
                                     {!isReadOnly && (
                                       <button
@@ -1111,6 +1134,33 @@ function InspectionModal({ order, onClose, onSuccess }) {
                             })}
                         </div>
                       </div>
+
+                      {/* Nhập mức phí đền bù thỏa thuận nếu chọn Mục 10 (Lỗi khác ngoài danh mục) */}
+                      {(ic.conditions || [ic.condition]).includes('custom_agreement') && (
+                        <div className="p-2.5 rounded-xl bg-white border border-[#EFE2DC] space-y-1.5 animate-fadeIn">
+                          <div className="flex items-center justify-between flex-wrap gap-1">
+                            <label className="text-[11.5px] font-bold text-[#733F49] flex items-center gap-1.5">
+                              <span>🤝 Mức phí đền bù thỏa thuận thống nhất (Mục 10):</span>
+                            </label>
+                            <span className="text-[10px] text-[#8C7D7E] italic">
+                              * Dựa trên quyết định thống nhất giữa 2 bên
+                            </span>
+                          </div>
+                          <InputNumber
+                            disabled={isReadOnly}
+                            min={0}
+                            max={ic.maxDeposit || 50000000}
+                            step={50000}
+                            formatter={(value) => `${value}`.replace(/\B(?=(\d{3})+(?!\d))/g, ',')}
+                            parser={(value) => value.replace(/\$\s?|(,*)/g, '')}
+                            value={ic.agreedAmount || 0}
+                            onChange={(val) => updateAgreedAmount(idx, val)}
+                            addonAfter="VNĐ"
+                            className="w-full text-xs font-bold"
+                            placeholder="Nhập mức phí 2 bên đã thỏa thuận..."
+                          />
+                        </div>
+                      )}
 
                       {/* Hiện trạng thực tế (Cho phép nhân viên trực tiếp điền / chỉnh sửa) */}
                       <div>

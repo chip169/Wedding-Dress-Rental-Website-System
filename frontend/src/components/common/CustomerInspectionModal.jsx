@@ -662,17 +662,17 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
                 <table className="w-full text-left text-xs border-collapse">
                   <thead>
                     <tr className="bg-[#FAF5F2] text-[#5F2B36] border-b border-[#EFE5E1] text-[11.5px] font-bold">
-                      <th className="py-2.5 px-3 w-[26%] whitespace-nowrap">Nhóm Lỗi Hư Hại</th>
-                      <th className="py-2.5 px-3 w-[46%]">Hiện Trạng Thực Tế</th>
-                      <th className="py-2.5 px-3 w-[28%] whitespace-nowrap">Mức Phí Đền Bù Niêm Yết</th>
+                      <th className="py-2.5 px-3 w-[28%] whitespace-nowrap">Nhóm Lỗi Hư Hại</th>
+                      <th className="py-2.5 px-3 w-[42%]">Hiện Trạng Thực Tế</th>
+                      <th className="py-2.5 px-3 w-[30%]">Mức Phí Đền Bù Niêm Yết</th>
                     </tr>
                   </thead>
                   <tbody className="divide-y divide-[#F2E5E0] text-[11.5px]">
                     {DAMAGE_PRICE_CATALOG.map((row) => (
                       <tr key={row.id} className="hover:bg-[#FFF9F6]">
-                        <td className="py-2.5 px-3 font-bold text-[#2C2523] whitespace-nowrap">{row.name}</td>
-                        <td className="py-2.5 px-3 text-[#5C4D4D]">{row.description}</td>
-                        <td className="py-2.5 px-3 font-bold whitespace-nowrap" style={{ color: row.color }}>{row.feeLabel}</td>
+                        <td className="py-2.5 px-3 font-bold text-[#2C2523] align-middle">{row.name}</td>
+                        <td className="py-2.5 px-3 text-[#5C4D4D] align-middle">{row.description}</td>
+                        <td className="py-2.5 px-3 font-bold align-middle" style={{ color: row.color }}>{row.feeLabel}</td>
                       </tr>
                     ))}
                   </tbody>
