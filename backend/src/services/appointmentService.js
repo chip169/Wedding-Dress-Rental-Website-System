@@ -128,25 +128,28 @@ export const createAppointment = async (appointmentData, currentUser = null) => 
 
   const randomCode = `APT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
 
-  // Kiểm tra tình trạng tồn kho của mẫu váy đăng ký thử
+  // Kiểm tra tình trạng tồn kho của mẫu váy đăng ký thử (Nếu là khách đã đặt thuê đơn thành công thì cho phép thử mẫu váy của đơn đó)
+  const hasLinkedOrder = Boolean(appointmentData?.orderCode || (notes && /UB-2026-\d+/i.test(notes)));
   const dressListToCheck = interestedDresses || selectedDresses || [];
-  for (const item of dressListToCheck) {
-    const dressId = item.id || item._id || item.dressId;
-    let dressDoc = null;
-    if (dressId && mongoose.Types.ObjectId.isValid(dressId)) {
-      dressDoc = await Dress.findById(dressId);
-    } else if (item.code) {
-      dressDoc = await Dress.findOne({ code: String(item.code).toUpperCase() });
-    }
-    if (dressDoc) {
-      const isOutOfStock =
-        dressDoc.status === 'out_of_stock' ||
-        dressDoc.status === 'retired' ||
-        dressDoc.status === 'unavailable' ||
-        (Array.isArray(dressDoc.sizes) &&
-          dressDoc.sizes.reduce((s, sz) => s + (sz.quantity || 0), 0) === 0);
-      if (isOutOfStock) {
-        throw new Error(`Mẫu váy "${dressDoc.name}" hiện đã hết hàng trong kho, không thể đặt lịch thử.`);
+  if (!hasLinkedOrder) {
+    for (const item of dressListToCheck) {
+      const dressId = item.id || item._id || item.dressId;
+      let dressDoc = null;
+      if (dressId && mongoose.Types.ObjectId.isValid(dressId)) {
+        dressDoc = await Dress.findById(dressId);
+      } else if (item.code) {
+        dressDoc = await Dress.findOne({ code: String(item.code).toUpperCase() });
+      }
+      if (dressDoc) {
+        const isOutOfStock =
+          dressDoc.status === 'out_of_stock' ||
+          dressDoc.status === 'retired' ||
+          dressDoc.status === 'unavailable' ||
+          (Array.isArray(dressDoc.sizes) &&
+            dressDoc.sizes.reduce((s, sz) => s + (sz.quantity || 0), 0) === 0);
+        if (isOutOfStock) {
+          throw new Error(`Mẫu váy "${dressDoc.name}" hiện đã hết hàng trong kho, không thể đặt lịch thử.`);
+        }
       }
     }
   }

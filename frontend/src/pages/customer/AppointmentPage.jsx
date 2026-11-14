@@ -46,6 +46,16 @@ export default function AppointmentPage() {
   const navigate = useNavigate();
   const [searchParams] = useSearchParams();
   const initialDressId = searchParams.get('dressId');
+  const orderCode = searchParams.get('orderCode');
+  const rentalStartDate = searchParams.get('rentalStartDate');
+  const rentalEndDate = searchParams.get('rentalEndDate');
+  const weddingDateParam = searchParams.get('weddingDate');
+  const sizeParam = searchParams.get('size');
+  const dressNameParam = searchParams.get('dressName');
+  const suggestedDateParam = searchParams.get('suggestedDate');
+  const fullNameParam = searchParams.get('fullName');
+  const phoneParam = searchParams.get('phone');
+  const emailParam = searchParams.get('email');
 
   // Step 1: Branch selection
   const [selectedBranchId, setSelectedBranchId] = useState('hcm-q1');
@@ -60,7 +70,39 @@ export default function AppointmentPage() {
     return `${y}-${m}-${day}`;
   }, []);
 
-  const [selectedDate, setSelectedDate] = useState(tomorrowStr);
+  // Tính ngày hẹn thử váy hợp lý (trước ngày nhận váy 3 ngày, tối thiểu từ ngày mai)
+  const initialSelectedDate = useMemo(() => {
+    if (suggestedDateParam && suggestedDateParam >= tomorrowStr) {
+      return suggestedDateParam;
+    }
+    if (rentalStartDate) {
+      const str = String(rentalStartDate).trim();
+      let iso = '';
+      if (str.includes('/')) {
+        const parts = str.split('/');
+        if (parts.length === 3) iso = `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      } else if (str.includes('-')) {
+        iso = str.split('T')[0];
+      }
+      if (iso) {
+        const parts = iso.split('-').map(Number);
+        if (parts.length === 3) {
+          const d = new Date(parts[0], parts[1] - 1, parts[2] - 3);
+          const tDate = new Date();
+          tDate.setDate(tDate.getDate() + 1);
+          tDate.setHours(0, 0, 0, 0);
+          const finalD = d < tDate ? tDate : d;
+          const y = finalD.getFullYear();
+          const m = String(finalD.getMonth() + 1).padStart(2, '0');
+          const day = String(finalD.getDate()).padStart(2, '0');
+          return `${y}-${m}-${day}`;
+        }
+      }
+    }
+    return tomorrowStr;
+  }, [suggestedDateParam, rentalStartDate, tomorrowStr]);
+
+  const [selectedDate, setSelectedDate] = useState(initialSelectedDate);
   const [selectedTimeSlotId, setSelectedTimeSlotId] = useState('t1');
   const [periodFilter, setPeriodFilter] = useState('all');
   const [slotsAvailability, setSlotsAvailability] = useState(TIME_SLOTS);
@@ -107,21 +149,36 @@ export default function AppointmentPage() {
 
   const { user, isLoggedIn } = useAuth();
 
-  // Step 5: Bride Contact Info (Tự động điền nếu đã đăng nhập, để trống nếu chưa đăng nhập)
-  const [fullName, setFullName] = useState(() => (isLoggedIn ? (user?.fullName || user?.name || '') : ''));
-  const [phone, setPhone] = useState(() => (isLoggedIn ? (user?.phone || '') : ''));
-  const [email, setEmail] = useState(() => (isLoggedIn ? (user?.email || '') : ''));
+  // Step 5: Bride Contact Info (Tự động điền nếu đã có param hoặc đã đăng nhập, để trống nếu chưa đăng nhập)
+  const [fullName, setFullName] = useState(() => fullNameParam || (isLoggedIn ? (user?.fullName || user?.name || '') : ''));
+  const [phone, setPhone] = useState(() => phoneParam || (isLoggedIn ? (user?.phone || '') : ''));
+  const [email, setEmail] = useState(() => emailParam || (isLoggedIn ? (user?.email || '') : ''));
   const [guestsCount, setGuestsCount] = useState(1);
-  const [weddingDate, setWeddingDate] = useState(() => (isLoggedIn ? (user?.weddingDate || '') : ''));
-  const [notes, setNotes] = useState('');
+  const [weddingDate, setWeddingDate] = useState(() => {
+    if (weddingDateParam) {
+      const str = String(weddingDateParam).trim();
+      if (str.includes('/')) {
+        const parts = str.split('/');
+        if (parts.length === 3) return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+      return str.split('T')[0];
+    }
+    return isLoggedIn ? (user?.weddingDate || '') : '';
+  });
+  const [notes, setNotes] = useState(() => {
+    if (orderCode) {
+      return `Thử và căn chỉnh phom váy cho đơn thuê #${orderCode}${dressNameParam ? ` (Lễ phục: ${dressNameParam})` : ''}${sizeParam ? ` - Size: ${sizeParam}` : ''}${rentalStartDate && rentalEndDate ? ` - Thời gian thuê: ${rentalStartDate} đến ${rentalEndDate}` : ''}`;
+    }
+    return '';
+  });
 
   // Tự động đồng bộ nếu user đăng nhập sau khi load
   useEffect(() => {
     if (isLoggedIn && user) {
-      if (user.fullName || user.name) setFullName(user.fullName || user.name);
-      if (user.phone) setPhone(user.phone);
-      if (user.email) setEmail(user.email);
-      if (user.weddingDate) setWeddingDate(user.weddingDate);
+      if (!fullNameParam && (user.fullName || user.name)) setFullName(user.fullName || user.name);
+      if (!phoneParam && user.phone) setPhone(user.phone);
+      if (!emailParam && user.email) setEmail(user.email);
+      if (!weddingDateParam && user.weddingDate) setWeddingDate(user.weddingDate);
     }
   }, [isLoggedIn, user]);
 
@@ -154,18 +211,18 @@ export default function AppointmentPage() {
       const list = res?.data || [];
       if (Array.isArray(list) && list.length > 0) {
         setAvailableDresses(list);
-        if (initialDressId) {
+        if (initialDressId || dressNameParam) {
           const matched = list.find(
             (d) => String(d.id) === String(initialDressId) ||
               String(d._id) === String(initialDressId) ||
-              String(d.code) === String(initialDressId) ||
-              Number(d.id) === Number(initialDressId)
+              String(d.code).toUpperCase() === String(initialDressId).toUpperCase() ||
+              (dressNameParam && String(d.name).trim().toLowerCase() === String(dressNameParam).trim().toLowerCase())
           );
           if (matched) {
-            if (isDressOutOfStock(matched)) {
+            if (isDressOutOfStock(matched) && !orderCode) {
               message.warning(`Mẫu váy "${matched.name}" hiện đang hết hàng trong kho nên không thể chọn thử. Quý khách vui lòng chọn mẫu váy khác.`);
             } else {
-              setSelectedDressIds([matched.id]);
+              setSelectedDressIds([matched._id || matched.id]);
             }
           }
         }
@@ -714,6 +771,45 @@ export default function AppointmentPage() {
                 Không gian Atelier chuẩn bị riêng cho nàng và người thân, cùng chuyên viên tư vấn phục trang cao cấp hoàn toàn miễn phí.
               </p>
             </div>
+
+            {/* THẺ THÔNG TIN ĐƠN THUÊ LIÊN KẾT (NẾU ĐẶT TỪ BILL THUÊ THÀNH CÔNG) */}
+            {orderCode && (
+              <div className="bg-gradient-to-r from-[#FAF0EC] via-[#FFF8F5] to-[#FAF0EC] border-2 border-[#E8C5BE] rounded-2xl p-5 shadow-xs flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div className="flex items-start sm:items-center gap-3.5">
+                  <div className="w-12 h-12 rounded-xl bg-[#733F49] text-white flex items-center justify-center shrink-0 shadow-xs">
+                    <Sparkles className="w-6 h-6 text-[#E6C687]" />
+                  </div>
+                  <div>
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-[11px] font-bold text-[#733F49] uppercase tracking-wider bg-white px-2.5 py-0.5 rounded-full border border-[#F2D8D4]">
+                        ✦ Đặt Lịch Thử & Đo Chỉnh Phom Váy Cho Đơn Thuê
+                      </span>
+                      <span className="font-mono font-black text-[13.5px] text-[#733F49]">
+                        #{orderCode}
+                      </span>
+                    </div>
+                    <div className="font-jakarta font-extrabold text-[16px] text-[#2C2523] mt-1">
+                      {primaryDress?.name || dressNameParam || 'Lễ phục cưới'} {sizeParam && <span className="font-semibold text-[#733F49]">(Kích cỡ đã thuê: {sizeParam})</span>}
+                    </div>
+                    <div className="text-[12px] text-[#6B5C5D] mt-0.5 flex flex-wrap items-center gap-x-2 gap-y-0.5">
+                      <span>Thời gian nhận và trả váy: <strong className="text-[#733F49]">{rentalStartDate || 'Chưa chọn'} — {rentalEndDate || 'Chưa chọn'}</strong></span>
+                      <span>•</span>
+                      <span className="text-[#2E7D32] font-semibold">✓ Đã thanh toán cọc giữ lịch</span>
+                    </div>
+                  </div>
+                </div>
+
+                <div className="sm:text-right shrink-0 bg-white/90 sm:bg-transparent p-3 sm:p-0 rounded-xl border border-[#F2D8D4] sm:border-0">
+                  <div className="text-[11px] text-[#847374] font-medium">Lịch thử gợi ý trước ngày nhận váy:</div>
+                  <div className="text-[13.5px] font-bold text-[#733F49] mt-0.5">
+                    {formatVietnameseDate(selectedDate)}
+                  </div>
+                  <div className="text-[10.5px] text-[#2E7D32] font-medium mt-0.5">
+                    (Để Atelier kịp may đo căn chỉnh eo & hấp ủi trước ngày giao)
+                  </div>
+                </div>
+              </div>
+            )}
 
             {/* Main Form Content */}
             <form onSubmit={handleSubmitBooking} className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">

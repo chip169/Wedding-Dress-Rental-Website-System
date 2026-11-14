@@ -129,6 +129,24 @@ function getTomorrowIsoString() {
   return `${y}-${m}-${day}`;
 }
 
+// Helper: Tính ngày hẹn thử váy hợp lý trước ngày nhận váy 3 ngày (tối thiểu từ ngày mai)
+function calculateSuggestedFittingDate(rentalStartDate) {
+  const iso = toIsoDateString(rentalStartDate);
+  if (!iso) return '';
+  const parts = iso.split('-').map(Number);
+  if (parts.length !== 3) return '';
+  const d = new Date(parts[0], parts[1] - 1, parts[2] - 3);
+  const tomorrow = new Date();
+  tomorrow.setDate(tomorrow.getDate() + 1);
+  tomorrow.setHours(0, 0, 0, 0);
+
+  const finalDate = d < tomorrow ? tomorrow : d;
+  const y = finalDate.getFullYear();
+  const m = String(finalDate.getMonth() + 1).padStart(2, '0');
+  const day = String(finalDate.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+}
+
 // Helper: Kiểm tra một size cụ thể của mẫu váy có bị hết hàng hay không
 function checkIsSizeOutOfStock(sz, dress) {
   const sClean = String(typeof sz === 'string' ? sz : sz?.size || sz?.label || sz?.id || '')
@@ -3779,9 +3797,26 @@ export default function CheckoutPage() {
                   type="button"
                   onClick={() => {
                     setIsSuccessModalOpen(false);
-                    navigate('/appointment');
+                    const params = new URLSearchParams();
+                    const targetDress = (orderItems && orderItems[0]) || activeDress;
+                    const dressId = targetDress?._id || targetDress?.id || targetDress?.code || dressIdParam || '';
+                    if (dressId) params.set('dressId', dressId);
+                    if (targetDress?.name) params.set('dressName', targetDress.name);
+                    if (effectiveOrderCode) params.set('orderCode', effectiveOrderCode);
+                    if (rentalSchedule?.startDate) {
+                      params.set('rentalStartDate', rentalSchedule.startDate);
+                      const suggested = calculateSuggestedFittingDate(rentalSchedule.startDate);
+                      if (suggested) params.set('suggestedDate', suggested);
+                    }
+                    if (rentalSchedule?.endDate) params.set('rentalEndDate', rentalSchedule.endDate);
+                    if (rentalSchedule?.weddingDate) params.set('weddingDate', rentalSchedule.weddingDate);
+                    if (selectedSize) params.set('size', selectedSize);
+                    if (brideName) params.set('fullName', brideName);
+                    if (phone) params.set('phone', phone);
+                    if (email) params.set('email', email);
+                    navigate(`/appointment?${params.toString()}`);
                   }}
-                  className="w-full sm:w-auto px-3.5 py-2 rounded-lg bg-[#733F49] hover:bg-[#5F323B] text-white text-[11px] font-bold shrink-0 transition-colors cursor-pointer border-0 shadow-2xs whitespace-nowrap text-center"
+                  className="w-full sm:w-auto px-4 py-2.5 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white text-[12px] font-bold shrink-0 transition-colors cursor-pointer border-0 shadow-sm whitespace-nowrap text-center"
                 >
                   Đặt Lịch Thử Váy Ngay
                 </button>
