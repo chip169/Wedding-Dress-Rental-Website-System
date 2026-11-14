@@ -2422,7 +2422,7 @@ export default function OrderRentalManagement() {
     const qRaw = searchTerm.trim().toLowerCase();
     const cleanQ = qRaw.replace(/^[#\s]+/, '');
 
-    return orders.filter((o) => {
+    const list = orders.filter((o) => {
       const matchSearch =
         !cleanQ ||
         (o.orderCode || '').toLowerCase().includes(cleanQ) ||
@@ -2442,7 +2442,7 @@ export default function OrderRentalManagement() {
           : statusFilter === 'disputed'
             ? isDisputed
             : (statusFilter === 'waiting_refund' || statusFilter === 'returned')
-              ? o.inspection?.canConfirmRefund || o.inspection?.refundConflict
+              ? (o.status === 'waiting_refund' || o.status === 'returned' || o.inspection?.canConfirmRefund || o.inspection?.refundConflict)
               : o.status === statusFilter;
 
       // Khi người dùng đang tìm kiếm cụ thể: Hiển thị ngay kết quả kể cả đơn nằm ở Kho Lưu Trữ
@@ -2450,7 +2450,7 @@ export default function OrderRentalManagement() {
         return matchSearch && matchStatus;
       }
 
-      // Khi lọc đơn khiếu nại: Hiển thị luôn không phân biệt active/archived
+      // Khi lọc đơn khiếu nại hoặc chờ hoàn cọc: Hiển thị luôn không phân biệt active/archived
       if (['disputed', 'waiting_refund', 'returned'].includes(statusFilter)) {
         return matchSearch && matchStatus;
       }
