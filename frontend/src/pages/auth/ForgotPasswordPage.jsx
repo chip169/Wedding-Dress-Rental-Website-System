@@ -76,19 +76,6 @@ export default function ForgotPasswordPage() {
     return () => clearInterval(timer);
   }, [step, otpExpiresIn]);
 
-  // General Back Handler: Goes to previous step, or back to login if at Step 1 or 4
-  const handleBack = () => {
-    if (step === 2) {
-      setStep(1);
-      setFeedback({ type: '', text: '' });
-    } else if (step === 3) {
-      setStep(2);
-      setFeedback({ type: '', text: '' });
-    } else {
-      navigate('/login');
-    }
-  };
-
   // Mask email for privacy
   const getMaskedEmail = (raw) => {
     if (!raw) return '***@gmail.com';
@@ -336,20 +323,7 @@ export default function ForgotPasswordPage() {
 
         {/* Top Action Bar (Mobile và Right Panel Header) */}
         <div className="flex items-center justify-between mb-4 xl:mb-6 relative z-10">
-          <button
-            type="button"
-            onClick={handleBack}
-            className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/95 hover:bg-white text-xs font-semibold tracking-wider text-[#685355] hover:text-[#B8737D] border border-[#EADBDA] shadow-[0_2px_8px_rgba(184,115,125,0.06)] hover:shadow-md transition-all duration-200 cursor-pointer group select-none"
-          >
-            <ArrowLeft className="w-3.5 h-3.5 text-[#B8737D] transition-transform group-hover:-translate-x-0.5" />
-            <span>
-              {step === 2
-                ? 'QUAY LẠI BƯỚC 1'
-                : step === 3
-                ? 'QUAY LẠI BƯỚC 2'
-                : 'VỀ ĐĂNG NHẬP'}
-            </span>
-          </button>
+          <div />
 
           {/* Mobile Brand Label */}
           <div className="lg:hidden flex items-center gap-2">
