@@ -26,6 +26,7 @@ export default function ForgotPasswordPage() {
   const [email, setEmail] = useState('');
   const [otp, setOtp] = useState('');
   const [devOtp, setDevOtp] = useState('');
+  const [verifiedOtp, setVerifiedOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -206,6 +207,7 @@ export default function ForgotPasswordPage() {
     try {
       const res = await verifyResetOtp({ email: email.trim(), otp: code });
       setIsLoading(false);
+      setVerifiedOtp(code);
       setStep(3);
       setFeedback({ type: 'success', text: res.message || 'Xác thực OTP thành công. Hãy thiết lập mật khẩu mới.' });
     } catch (err) {
@@ -230,7 +232,7 @@ export default function ForgotPasswordPage() {
     setFeedback({ type: '', text: '' });
 
     try {
-      const code = otp.join('');
+      const code = verifiedOtp || (typeof otp === 'string' ? otp : (Array.isArray(otp) ? otp.join('') : '')).trim();
       await resetPassword({ email: email.trim(), otp: code, newPassword });
       setIsLoading(false);
       setStep(4);
