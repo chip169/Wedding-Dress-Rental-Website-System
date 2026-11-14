@@ -29,7 +29,7 @@ export const createAppointment = async (req, res, next) => {
 
 export const getMyAppointments = async (req, res, next) => {
   try {
-    const appointments = await appointmentService.getMyAppointments(req.user._id);
+    const appointments = await appointmentService.getMyAppointments(req.user);
     res.status(200).json({
       success: true,
       message: 'Lấy danh sách lịch hẹn cá nhân thành công',

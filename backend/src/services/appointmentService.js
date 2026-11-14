@@ -185,8 +185,22 @@ export const createAppointment = async (appointmentData, currentUser = null) => 
   return responseObj;
 };
 
-export const getMyAppointments = async (userId) => {
-  return await Appointment.find({ customerId: userId }).sort({ createdAt: -1 });
+export const getMyAppointments = async (user) => {
+  const userId = user?._id || user?.id || user;
+  const conditions = [];
+  if (userId) conditions.push({ customerId: userId });
+  if (user && typeof user === 'object') {
+    if (user.email) {
+      conditions.push({ customerEmail: String(user.email).trim().toLowerCase() });
+    }
+    if (user.phone) {
+      const cleanPhone = String(user.phone).replace(/[\s.-]/g, '');
+      if (cleanPhone) conditions.push({ customerPhone: cleanPhone });
+    }
+  }
+
+  const query = conditions.length > 0 ? { $or: conditions } : { customerId: userId };
+  return await Appointment.find(query).sort({ appointmentDate: -1, createdAt: -1 });
 };
 
 export const getAllAppointments = async (filters = {}) => {

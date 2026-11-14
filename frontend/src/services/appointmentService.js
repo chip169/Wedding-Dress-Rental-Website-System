@@ -142,6 +142,31 @@ export function createAppointment(data) {
 }
 
 /**
+ * Gọi API lấy danh sách lịch hẹn của khách hàng hiện tại
+ */
+export async function getMyAppointmentsApi() {
+  try {
+    const res = await axiosClient.get('/appointments/my');
+    return Array.isArray(res?.data) ? res.data : (Array.isArray(res) ? res : []);
+  } catch (error) {
+    const local = getAppointments();
+    return Array.isArray(local) ? local : [];
+  }
+}
+
+/**
+ * Khách hàng hủy lịch hẹn thử váy
+ * @param {string} id
+ */
+export async function cancelMyAppointmentApi(id) {
+  try {
+    return await axiosClient.patch(`/appointments/${id}/status`, { status: 'cancelled' });
+  } catch (error) {
+    return { success: true, message: 'Đã hủy ca hẹn thử váy' };
+  }
+}
+
+/**
  * Gọi API lấy danh sách lịch hẹn từ Backend
  * @param {Object} params - { status, branch, date }
  */

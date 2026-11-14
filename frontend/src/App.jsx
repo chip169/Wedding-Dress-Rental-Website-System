@@ -5,6 +5,7 @@ import ProfilePage from './pages/customer/ProfilePage';
 import OrderHistoryPage from './pages/customer/OrderHistoryPage';
 import OrderDetailPage from './pages/customer/OrderDetailPage';
 import ChangePasswordPage from './pages/customer/ChangePasswordPage';
+import AppointmentHistoryPage from './pages/customer/AppointmentHistoryPage';
 import CollectionPage from './pages/customer/CollectionPage';
 import WishlistPage from './pages/customer/WishlistPage';
 import AboutUsPage from './pages/customer/AboutUsPage';
@@ -83,8 +84,8 @@ export default function App() {
               <Route path="/profile/orders" element={<ProtectedRoute allowedRoles={['customer', 'staff', 'admin']}><OrderHistoryPage /></ProtectedRoute>} />
               <Route path="/profile/orders/:orderId" element={<ProtectedRoute allowedRoles={['customer', 'staff', 'admin']}><OrderDetailPage /></ProtectedRoute>} />
               <Route path="/profile/password" element={<ProtectedRoute allowedRoles={['customer', 'staff', 'admin']}><ChangePasswordPage /></ProtectedRoute>} />
-              <Route path="/profile/appointments" element={<Navigate to="/profile" replace />} />
-              <Route path="/tai-khoan/lich-hen" element={<Navigate to="/profile" replace />} />
+              <Route path="/profile/appointments" element={<ProtectedRoute allowedRoles={['customer', 'staff', 'admin']}><AppointmentHistoryPage /></ProtectedRoute>} />
+              <Route path="/tai-khoan/lich-hen" element={<Navigate to="/profile/appointments" replace />} />
 
               {/* Auth Routes */}
               <Route path="/login" element={<LoginPage />} />

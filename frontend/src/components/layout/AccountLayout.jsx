@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link, NavLink, useNavigate } from 'react-router-dom';
-import { ClipboardPenLine, History, LogOut, ReceiptText } from 'lucide-react';
+import { ClipboardPenLine, History, LogOut, ReceiptText, CalendarDays } from 'lucide-react';
 import Header from './Header';
 import Footer from './Footer';
 import { useAuth } from '../../contexts/AuthContext';
@@ -45,6 +45,7 @@ const accountLayoutStyles = `
 const items = [
   { to: '/profile', label: 'Chỉnh sửa hồ sơ', Icon: ClipboardPenLine, end: true },
   { to: '/profile/orders', label: 'Lịch sử đơn hàng', Icon: ReceiptText },
+  { to: '/profile/appointments', label: 'Lịch sử hẹn thử váy', Icon: CalendarDays },
   { to: '/profile/password', label: 'Đổi mật khẩu', Icon: History },
 ];
 

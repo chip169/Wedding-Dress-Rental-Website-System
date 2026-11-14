@@ -87,8 +87,13 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
     },
     {
       title: 'Lịch sử đơn hàng',
-      subtitle: 'Tiến độ thuê và thử váy cưới',
+      subtitle: 'Tiến độ thuê và kiểm định',
       href: '/profile/orders',
+    },
+    {
+      title: 'Lịch sử hẹn thử váy',
+      subtitle: 'Xem ca hẹn Private Suite 1:1',
+      href: '/profile/appointments',
     },
     ...(isAdmin
       ? [
