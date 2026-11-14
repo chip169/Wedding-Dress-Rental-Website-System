@@ -364,36 +364,32 @@ export default function InventoryManagement() {
     });
 
     // 2. Phân loại các đơn thuê liên quan:
-    // a) Đơn ĐANG THUÊ THỰC TẾ (chiếc váy đang rời khỏi showroom hoặc đã bàn giao cho khách):
-    //    - Trạng thái 'renting', 'delivered' (khách đang giữ váy)
-    //    - Hoặc 'preparing', 'deposit_paid' nhưng đã đến ngày nhận/giao váy (rentalStartDate <= hôm nay)
-    const todayEnd = new Date();
-    todayEnd.setHours(23, 59, 59, 999);
-    const todayEndMs = todayEnd.getTime();
-
+    // a) Đơn ĐANG THUÊ THỰC TẾ (chiếc váy ĐÃ GIAO cho khách / khách đang giữ váy):
+    //    Chỉ tính khi nhân viên đã xác nhận giao váy, đơn đã chuyển sang 'renting' hoặc 'delivered'.
     const rentingOrders = matchedOrders.filter((o) => {
       const st = String(o.rawStatus || o.status || '').toLowerCase();
-      if (['renting', 'delivered'].includes(st)) return true;
-      if (['preparing', 'deposit_paid'].includes(st)) {
-        if (!o.rentalStartDate) return true;
-        const startMs = new Date(o.rentalStartDate).getTime();
-        return !isNaN(startMs) && startMs <= todayEndMs;
-      }
-      return false;
+      return ['renting', 'delivered'].includes(st);
     });
 
-    // b) Đơn ĐẶT CỌC GIỮ LỊCH TRONG TƯƠNG LAI (đã cọc nhưng chưa đến ngày nhận, chiếc váy vẫn đang ở showroom):
-    const futureBookedOrders = matchedOrders.filter((o) => {
+    // b) Đơn ĐÃ ĐẶT CỌC GIỮ VÁY (khách đã cọc thành công nhưng chưa giao váy, váy vẫn đang ở showroom):
+    //    Bao gồm các đơn mới đặt cọc ('deposit_paid', 'preparing', 'confirmed' mà chưa giao váy)
+    const bookedOrders = matchedOrders.filter((o) => {
       const st = String(o.rawStatus || o.status || '').toLowerCase();
-      if (!['preparing', 'deposit_paid'].includes(st)) return false;
-      if (!o.rentalStartDate) return false;
-      const startMs = new Date(o.rentalStartDate).getTime();
-      return !isNaN(startMs) && startMs > todayEndMs;
+      if (['renting', 'delivered', 'returned', 'completed', 'complete', 'cancelled'].includes(st)) return false;
+      return ['deposit_paid', 'preparing', 'confirmed', 'active', 'pending_delivery'].includes(st) || (o.totalDeposit > 0 && st !== 'cancelled');
     });
 
-    // 3. Phân bổ chi tiết theo từng Size: Khả dụng / Đang kiểm định / Đang thuê
+    // Chuẩn hóa tên size để so khớp chuẩn xác (ví dụ "Size L", "L", "l " đều thành "L")
+    const normalizeSize = (sz) =>
+      String(sz || '')
+        .replace(/^size\s*/i, '')
+        .trim()
+        .toUpperCase();
+
+    // 3. Phân bổ chi tiết theo từng Size: Khả dụng / Đang kiểm định / Đang thuê / Đã cọc
     const detailedSizes = sizeList.map((sz) => {
       const sName = String(sz.size || '').trim();
+      const sCleanName = normalizeSize(sName);
       const sQty = Math.max(1, Number(sz.totalQuantity ?? sz.quantity) || 1);
 
       // a) Bảo dưỡng từ đơn thuê (kiểm định sau thuê hoặc hoàn tất trong vòng 1 ngày)
@@ -408,26 +404,27 @@ export default function InventoryManagement() {
             (itCleanName && dressCleanName && itCleanName === dressCleanName && dressCleanName.length >= 2)
           );
         });
-        const itemSize = String(matchedItem?.size || o.size || '').replace(/^size\s*/i, '').trim();
-        return itemSize.toUpperCase() === sName.toUpperCase();
+        const itemSize = normalizeSize(matchedItem?.size || o.size || o.selectedSize || '');
+        return itemSize === sCleanName;
       }).length;
 
       // b) Bảo dưỡng từ bản ghi lưu trữ completed records
       const existingOrderIds = new Set(maintenanceOrders.map((o) => String(o._id || o.id || o.orderCode || '')));
       const storageMaintCount = completedStorageItemsForThisDress.filter((it) => {
         if (existingOrderIds.has(String(it.orderId))) return false;
-        return it.size.toUpperCase() === sName.toUpperCase();
+        return normalizeSize(it.size) === sCleanName;
       }).length;
 
       // c) Bảo dưỡng thủ công do Staff/Admin chủ động chọn theo size
       const manualMaintCount = Number(
         override.maintenanceSizes?.[sName] ??
-        override.maintenanceSizes?.[sName.toUpperCase()] ??
+        override.maintenanceSizes?.[sCleanName] ??
         0
       );
 
       const sMaint = Math.min(sQty, orderMaintCount + storageMaintCount + manualMaintCount);
 
+      // d) Đơn đang thuê thực tế (đã giao váy)
       const rawRented = rentingOrders.filter((o) => {
         const matchedItem = (o.items || []).find((it) => {
           const itId = it.dressId?._id || it.dressId || it.id || it._id;
@@ -439,11 +436,12 @@ export default function InventoryManagement() {
             (itCleanName && dressCleanName && itCleanName === dressCleanName && dressCleanName.length >= 2)
           );
         });
-        const itemSize = matchedItem?.size || o.size || '';
-        return String(itemSize).trim().toUpperCase() === sName.toUpperCase();
+        const itemSize = normalizeSize(matchedItem?.size || o.size || o.selectedSize || '');
+        return itemSize === sCleanName;
       }).length;
 
-      const rawBooked = futureBookedOrders.filter((o) => {
+      // e) Đơn mới đặt cọc giữ váy (chưa giao váy)
+      const rawBooked = bookedOrders.filter((o) => {
         const matchedItem = (o.items || []).find((it) => {
           const itId = it.dressId?._id || it.dressId || it.id || it._id;
           const itCleanName = cleanStr(it.name);
@@ -454,8 +452,8 @@ export default function InventoryManagement() {
             (itCleanName && dressCleanName && itCleanName === dressCleanName && dressCleanName.length >= 2)
           );
         });
-        const itemSize = matchedItem?.size || o.size || '';
-        return String(itemSize).trim().toUpperCase() === sName.toUpperCase();
+        const itemSize = normalizeSize(matchedItem?.size || o.size || o.selectedSize || '');
+        return itemSize === sCleanName;
       }).length;
 
       // CHẶN TRẦN: Số lượng đang thuê không thể vượt quá tổng số lượng tồn kho của size (sQty)
