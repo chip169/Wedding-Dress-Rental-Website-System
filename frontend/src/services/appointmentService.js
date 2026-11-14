@@ -184,7 +184,11 @@ export async function getAppointmentsApi(params = {}) {
  */
 export async function createAppointmentApi(data) {
   try {
-    return await axiosClient.post('/appointments', data);
+    const res = await axiosClient.post('/appointments', data);
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event(APPOINTMENT_EVENT));
+    }
+    return res;
   } catch (error) {
     const local = createAppointment(data);
     return { success: true, message: 'Đặt lịch hẹn thành công (Offline Demo)', data: local };
