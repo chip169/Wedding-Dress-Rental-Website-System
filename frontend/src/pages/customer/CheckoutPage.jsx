@@ -3375,21 +3375,7 @@ export default function CheckoutPage() {
                       </div>
                     </div>
 
-                    {/* 3 Steps Instruction */}
-                    <div className="p-4 rounded-xl bg-[#FAF6F2] border border-[#EEDECF] grid grid-cols-1 sm:grid-cols-3 gap-3 text-[12px]">
-                      <div className="flex items-start gap-2.5">
-                        <span className="w-5 h-5 rounded-full bg-[#733F49] text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">1</span>
-                        <span className="text-[#6B5C5D]">Mở ứng dụng Mobile Banking của ngân hàng bạn sử dụng</span>
-                      </div>
-                      <div className="flex items-start gap-2.5">
-                        <span className="w-5 h-5 rounded-full bg-[#733F49] text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">2</span>
-                        <span className="text-[#6B5C5D]">Chọn tính năng <strong>Quét mã QR</strong> và quét mã hiển thị ở trên</span>
-                      </div>
-                      <div className="flex items-start gap-2.5">
-                        <span className="w-5 h-5 rounded-full bg-[#733F49] text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</span>
-                        <span className="text-[#6B5C5D]">Xác nhận giao dịch chuyển khoản trên ứng dụng ngân hàng</span>
-                      </div>
-                    </div>
+
 
                     {/* VietQR Test Sandbox Card */}
                     <div className="p-5 rounded-2xl bg-gradient-to-r from-[#FAF0EC] via-[#FFF8F6] to-[#FAF0EC] border-2 border-dashed border-[#D4AF37] relative overflow-hidden shadow-xs animate-fade-in">
@@ -3437,15 +3423,7 @@ export default function CheckoutPage() {
                     <span>Quay lại Bước 2: Xem Hợp đồng</span>
                   </button>
 
-                  <button
-                    type="button"
-                    disabled={isSubmitting || isVerifyingPayment}
-                    onClick={handleConfirmFinalPayment}
-                    className="w-full sm:w-auto px-7 py-3.5 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white font-jakarta text-[13.5px] font-bold tracking-wider uppercase transition-all shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer border-0 flex items-center justify-center gap-2 active:scale-[0.98]"
-                  >
-                    <Lock className="w-4 h-4" />
-                    <span>Xác Nhận Đặt Cọc và Khóa Lịch</span>
-                  </button>
+
                 </div>
 
               </div>
@@ -3554,10 +3532,10 @@ export default function CheckoutPage() {
                                 }}
                                 title={isOutOfStock ? `Size ${sClean} hiện đã hết hàng trong kho` : `Đổi sang size ${sClean}`}
                                 className={`px-2 py-0.5 rounded text-[10.5px] font-bold border transition-all ${isOutOfStock
-                                    ? 'bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed opacity-40 line-through decoration-stone-400 select-none'
-                                    : isSzActive
-                                      ? 'bg-[#733F49] text-white border-[#733F49] cursor-pointer shadow-xs'
-                                      : 'bg-white text-[#733F49] border-[#EEDECF] hover:border-[#733F49] cursor-pointer'
+                                  ? 'bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed opacity-40 line-through decoration-stone-400 select-none'
+                                  : isSzActive
+                                    ? 'bg-[#733F49] text-white border-[#733F49] cursor-pointer shadow-xs'
+                                    : 'bg-white text-[#733F49] border-[#EEDECF] hover:border-[#733F49] cursor-pointer'
                                   }`}
                               >
                                 {sClean}

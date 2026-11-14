@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
-import { QrCode,
+import {
+  QrCode,
   ShieldCheck,
   CheckCircle2,
   Copy,
@@ -14,7 +15,8 @@ import { QrCode,
   Building2,
   AlertCircle,
   Zap,
-  Lock } from 'lucide-react';
+  Lock
+} from 'lucide-react';
 import { message } from 'antd';
 import { formatCurrencyVND } from '../../utils/formatCurrency';
 import { checkPaymentStatusApi, simulateVietQRPaymentApi } from '../../services/paymentService';
@@ -276,7 +278,7 @@ export default function VietQRGatewayPage() {
         ) : (
           /* ACTIVE PAYMENT GATEWAY INTERFACE */
           <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 items-start">
-            
+
             {/* CỘT TRÁI: KHUNG MÃ VIETQR ĐỘNG CHÍNH THỨC */}
             <div className="lg:col-span-7 bg-white rounded-3xl border border-[#EEDECF] shadow-[0_8px_30px_rgba(115,63,73,0.06)] overflow-hidden">
               <div className="bg-gradient-to-r from-[#733F49] to-[#5C2B35] text-white p-5 sm:p-6 flex items-center justify-between">
@@ -338,27 +340,13 @@ export default function VietQRGatewayPage() {
                   </a>
                 </div>
 
-                {/* Hướng dẫn 3 bước */}
-                <div className="w-full mt-6 pt-5 border-t border-[#F5EBE8] text-[12px] text-[#6B5C5D] space-y-2">
-                  <div className="flex items-start gap-2">
-                    <strong className="text-[#733F49]">Bước 1:</strong>
-                    <span>Mở ứng dụng Mobile Banking của bất kỳ ngân hàng nào (Techcombank, VCB, MB, ACB, BIDV...).</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <strong className="text-[#733F49]">Bước 2:</strong>
-                    <span>Chọn tính năng <strong>Quét mã QR</strong> và lia camera vào mã phía trên.</span>
-                  </div>
-                  <div className="flex items-start gap-2">
-                    <strong className="text-[#733F49]">Bước 3:</strong>
-                    <span>Kiểm tra số tiền chính xác và bấm xác nhận chuyển khoản.</span>
-                  </div>
-                </div>
+
               </div>
             </div>
 
             {/* CỘT PHẢI: THÔNG TIN TÀI KHOẢN VÀ ĐỐI SOÁT */}
             <div className="lg:col-span-5 space-y-5">
-              
+
               {/* Thẻ đếm ngược phiên thanh toán */}
               <div className="bg-white p-5 rounded-2xl border border-[#EEDECF] shadow-xs flex items-center justify-between">
                 <div className="flex items-center gap-2.5">

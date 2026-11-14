@@ -205,8 +205,9 @@ export const createOrder = async (orderData, currentUser = null) => {
       dressConditions.push({ 'items.name': item.name });
     }
 
+    let dressDoc = null;
     try {
-      const dressDoc = await Dress.findOne({
+      dressDoc = await Dress.findOne({
         $or: [
           ...(mongoose.Types.ObjectId.isValid(dressIdStr) ? [{ _id: dressIdStr }] : []),
           { code: dressIdStr },
@@ -654,8 +655,9 @@ export const getDressBookedDates = async (dressId) => {
       conditions.push({ 'items.dressId': num });
     }
 
+    let dressDoc = null;
     try {
-      const dressDoc = await Dress.findOne({
+      dressDoc = await Dress.findOne({
         $or: [
           ...(mongoose.Types.ObjectId.isValid(dressIdStr) ? [{ _id: dressIdStr }] : []),
           { code: dressIdStr },
