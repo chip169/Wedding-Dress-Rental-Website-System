@@ -2311,8 +2311,9 @@ export default function OrderRentalManagement() {
 
   const notifiedDisputesRef = useRef(new Set());
 
-  // Hiển thị thông báo nổi lên (pop-up notification) ngay khi phát hiện đơn hàng có khiếu nại
+  // Hiển thị thông báo nổi lên (pop-up notification) ngay khi phát hiện đơn hàng có khiếu nại (CHỈ HIỂN THỊ CHO ADMIN)
   useEffect(() => {
+    if (isStaffContext || !isAdmin) return;
     if (disputedOrders.length > 0) {
       disputedOrders.forEach((ord) => {
         const key = `dispute_${ord._id || ord.orderCode}`;
@@ -2340,7 +2341,7 @@ export default function OrderRentalManagement() {
                     type="button"
                     onClick={() => {
                       notification.destroy(key);
-                      if (isAdmin) setNegotiationOrder(ord); else setInspectionOrder(ord);
+                      if (isAdmin && !isStaffContext) setNegotiationOrder(ord); else setInspectionOrder(ord);
                     }}
                     className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold border-0 cursor-pointer shadow-xs transition-colors"
                   >
@@ -2355,7 +2356,7 @@ export default function OrderRentalManagement() {
         }
       });
     }
-  }, [disputedOrders, isAdmin]);
+  }, [disputedOrders, isAdmin, isStaffContext]);
 
   // ── Client-side filter (for demo fallback và search) ───────────────────────
   const filteredOrders = useMemo(() => {
@@ -2504,8 +2505,8 @@ export default function OrderRentalManagement() {
         </div>
       </div>
 
-      {/* Banner thông báo nổi bật khi có đơn khiếu nại */}
-      {disputedOrders.length > 0 && (
+      {/* Banner thông báo nổi bật khi có đơn khiếu nại - CHỈ HIỂN THỊ CHO ADMIN */}
+      {!isStaffContext && isAdmin && disputedOrders.length > 0 && (
         <div className="mb-8 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#FEF2F2] via-[#FFF1F2] to-[#FEF2F2] border-2 border-red-300 shadow-md space-y-3 font-jakarta animate-fadeIn">
           <div className="flex items-center justify-between flex-wrap gap-2">
             <div className="flex items-center gap-2.5">
@@ -3006,12 +3007,14 @@ export default function OrderRentalManagement() {
                           ) : isDisputed ? (
                             <button
                               type="button"
-                              onClick={() => isAdmin ? setNegotiationOrder(order) : setInspectionOrder(order)}
-                              title="Admin trực tiếp gọi điện đàm phán mức phạt & hoàn tất đơn"
-                              className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-red-600 text-white hover:bg-red-700 border border-red-600 shadow-xs text-[12px] font-bold transition-all cursor-pointer"
+                              onClick={() => (isAdmin && !isStaffContext) ? setNegotiationOrder(order) : setInspectionOrder(order)}
+                              title={(isAdmin && !isStaffContext) ? "Admin trực tiếp gọi điện đàm phán mức phạt & hoàn tất đơn" : "Xem biên bản đã gửi Admin thẩm định"}
+                              className={`inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-[12px] font-bold shadow-xs transition-all cursor-pointer ${(isAdmin && !isStaffContext)
+                                ? 'bg-red-600 text-white hover:bg-red-700 border border-red-600'
+                                : 'bg-[#FAF0EB] text-[#733F49] hover:bg-[#F3E2DB] border border-[#ECD9D3]'}`}
                             >
-                              <PhoneCall size={13} />
-                              <span>{isAdmin ? 'Đàm Phán & Xử Lý' : 'Xem Biên Bản'}</span>
+                              {(isAdmin && !isStaffContext) ? <PhoneCall size={13} /> : <Eye size={13} />}
+                              <span>{(isAdmin && !isStaffContext) ? 'Đàm Phán & Xử Lý' : 'Xem Biên Bản'}</span>
                             </button>
                           ) : (order.status === 'returned' || order.status === 'waiting_refund' || order.inspection) ? (
                             <div className="inline-flex items-center gap-1.5">
