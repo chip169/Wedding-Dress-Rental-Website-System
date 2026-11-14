@@ -813,7 +813,7 @@ const createReturnInspection = async (order, data, staffUser) => {
   const finalRefundAmount = Math.max(0, totalDeposit - totalDeduction);
   const holdForAdmin = Boolean(data.holdForAdmin || data.customerAgreed === false
     || itemsCondition.some(({ condition, conditions }) => condition === 'total_damage' || conditions.includes('total_damage')));
-  const confirmOnSite = !holdForAdmin && Boolean(data.confirmOnSite);
+  const confirmOnSite = !holdForAdmin;
   const bankDetails = data.refundBankDetails?.accountNumber
     ? refundBankDetails(data.refundBankDetails, false)
     : (confirmOnSite ? refundBankDetails(data.refundBankDetails, finalRefundAmount > 0) : null);
@@ -831,8 +831,8 @@ const createReturnInspection = async (order, data, staffUser) => {
       totalDeduction,
       initialDeposit: totalDeposit,
       finalRefundAmount,
-      customerStatus: holdForAdmin ? 'disputed' : confirmOnSite ? 'approved' : 'pending',
-      customerConfirmedAt: confirmOnSite ? now : null,
+      customerStatus: holdForAdmin ? 'disputed' : 'approved',
+      customerConfirmedAt: holdForAdmin ? null : now,
       disputeReason: holdForAdmin ? (data.disputeReason || 'Showroom chuyển Admin rà soát biên bản') : '',
       disputeCreatedAt: holdForAdmin ? now : null,
       refundBankDetails: bankDetails || undefined,
@@ -847,12 +847,12 @@ const createReturnInspection = async (order, data, staffUser) => {
 export const submitReturnInspection = async (orderId, data = {}, staffUser) => {
   const order = await Order.findById(orderId);
   if (!order) throw returnError(404, 'Không tìm thấy đơn thuê.');
-  if (!['renting', 'delivered', 'returned'].includes(order.status)) {
-    throw returnError(409, 'Đơn thuê hiện không đủ điều kiện lập biên bản kiểm định.');
+  if (!['renting', 'returned', 'waiting_refund'].includes(order.status)) {
+    throw returnError(409, 'Đơn thuê hiện không đủ điều kiện lập biên bản kiểm định. Vui lòng chuyển sang trạng thái Đang Thuê trước khi kiểm định.');
   }
 
   const existing = await ReturnInspection.findOne({ orderId: order._id });
-  if (existing && order.status === 'returned') {
+  if (existing && (order.status === 'returned' || order.status === 'waiting_refund')) {
     throw returnError(409, 'Biên bản kiểm định đã được lưu. Vui lòng mở lại để xem.');
   }
   if (existing && data.refundBankDetails?.accountNumber) {
@@ -862,8 +862,7 @@ export const submitReturnInspection = async (orderId, data = {}, staffUser) => {
   const inspection = existing ?? await createReturnInspection(order, data, staffUser);
 
   const inspectionStatus = inspection.customerStatus;
-  const status = inspectionStatus === 'disputed' ? 'disputed'
-    : inspectionStatus === 'approved' ? 'waiting_refund' : 'returned';
+  const status = inspectionStatus === 'disputed' ? 'disputed' : 'waiting_refund';
   const returnedOrder = await Order.findOneAndUpdate(
     { _id: order._id, status: order.status },
     { $set: { status, actualReturnDate: inspection.returnedAt || order.actualReturnDate || new Date() } },

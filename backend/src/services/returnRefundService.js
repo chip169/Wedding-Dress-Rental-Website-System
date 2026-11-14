@@ -47,8 +47,10 @@ function depositCollected(order, inspection, payments) {
 
 export function inspectionRefundState(order, inspection, payments) {
   if (!inspection) return null;
+  const isReviewStatus = ['waiting_refund', 'returned'].includes(order.status);
   const approved = inspection.customerStatus === 'approved'
-    || (!inspection.customerStatus && inspection.customerConfirmed === true);
+    || (!inspection.customerStatus && inspection.customerConfirmed === true)
+    || isReviewStatus;
   const amount = Number(inspection.finalRefundAmount);
   const expected = inspection.finalRefundAmount != null && Number.isSafeInteger(amount) && amount >= 0 ? amount : null;
   const paid = payments?.refunded ?? 0;
@@ -63,7 +65,7 @@ export function inspectionRefundState(order, inspection, payments) {
   else if (approved && conflict) refundStatus = 'reconciliation_required';
   else if (approved && expected === 0) refundStatus = 'not_required';
   else if (isRefunded) refundStatus = 'refunded';
-  else if (approved && expected > 0) refundStatus = 'pending';
+  else if (approved && (expected > 0 || isReviewStatus)) refundStatus = 'pending';
 
   return {
     ...inspection,

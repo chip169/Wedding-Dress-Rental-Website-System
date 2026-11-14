@@ -42,6 +42,7 @@ import {
   FileCheck,
   ArrowUp,
   ArrowDown,
+  Truck,
 } from 'lucide-react';
 import HangerIcon from '../../components/common/HangerIcon';
 import {
@@ -121,8 +122,8 @@ const NEXT_STATUSES = {
   cancelled: [],
 };
 
-const canRecordReturn = (order) => ['renting', 'delivered'].includes(order.status);
-const canInspectOrder = (order) => canRecordReturn(order) || (order.status === 'returned' && !order.inspection);
+const canRecordReturn = (order) => order.status === 'renting';
+const canInspectOrder = (order) => order.status === 'renting';
 const hasDisputedInspection = (order) => order.status === 'disputed'
   || (order.inspection?.customerStatus || order.inspectionCustomerStatus) === 'disputed';
 
@@ -1457,31 +1458,31 @@ function InspectionModal({ order, onClose, onSuccess }) {
                   Hủy
                 </button>
 
-                {/* Nút Tạm Giữ Biên Bản Gửi Admin: CHỈ hiển thị cho STAFF, KHÔNG hiển thị cho ADMIN */}
+                {/* Nút 1: Tạm Giữ Chờ Admin: CHỈ hiển thị cho STAFF, KHÔNG hiển thị cho ADMIN */}
                 {!isCurrentAdmin && (
                   <button
                     type="button"
                     disabled={submitting || inspectionLoading || Boolean(inspectionError)}
                     onClick={() => handleSubmit('hold')}
                     className="flex-1 py-2.5 rounded-xl bg-[#8B2635] hover:bg-[#701E2A] text-white text-[12.5px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-1.5 shadow-xs"
-                    title="Chuyển Admin khi cần thỏa thuận hoặc thẩm định xử lý"
+                    title="Tạm giữ đơn và chuyển Admin trực tiếp thẩm định & đàm phán"
                   >
                     {submitting ? <RefreshCw size={13} className="animate-spin" /> : <ShieldAlert size={14} />}
-                    <span>Tạm Giữ Biên Bản Gửi Admin</span>
+                    <span>Tạm Giữ Chờ Admin</span>
                   </button>
                 )}
 
-                {/* Nút Khách Đồng Ý Tại Quầy: ẨN khi Staff chọn Thỏa thuận 2 bên hoặc Hư hỏng nặng */}
+                {/* Nút 2: Kiểm Định Thành Công: Chuyển sang trạng thái Chờ Hoàn Cọc */}
                 {!isStaffEscalationRequired && (
                   <button
                     type="button"
                     disabled={submitting || inspectionLoading || Boolean(inspectionError)}
                     onClick={() => handleSubmit('complete')}
                     className="flex-1 py-2.5 rounded-xl bg-[#1E8347] hover:bg-[#166534] text-white text-[12.5px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-1.5 shadow-xs"
-                    title="Hoàn tất kiểm định và chuyển đơn sang trạng thái Chờ Hoàn Cọc"
+                    title="Xác nhận kiểm định thành công và chuyển đơn sang trạng thái Chờ Hoàn Cọc"
                   >
                     {submitting ? <RefreshCw size={13} className="animate-spin" /> : <CheckCircle2 size={14} />}
-                    <span>Khách Đồng Ý Tại Quầy</span>
+                    <span>Kiểm Định Thành Công</span>
                   </button>
                 )}
 
@@ -1937,9 +1938,12 @@ function RefundModal({ order, onClose, onSuccess }) {
   const lateFee = Math.min(inspectionData?.latePenaltyFee ?? 0, totalDeduction ?? 0);
   const compensation = (totalDeduction ?? 0) - lateFee;
   const finalRefund = inspectionData?.finalRefundAmount;
-  const remaining = inspectionData?.refundRemaining;
+  const remaining = inspectionData?.refundRemaining ?? Math.max(0, (finalRefund ?? order.totalDeposit ?? 0) - (inspectionData?.refundedAmount ?? 0));
   const refundConflict = inspectionData?.refundConflict;
-  const canConfirm = inspectionData?.canConfirmRefund && !loading && !loadError;
+  const canConfirm = !loading && !submitting && !loadError && (
+    inspectionData?.canConfirmRefund ||
+    ['waiting_refund', 'returned'].includes(order.status)
+  );
   const handleConfirmRefund = async () => {
     if (!canConfirm || submitting) return;
     setSubmitting(true);
@@ -2947,17 +2951,17 @@ export default function OrderRentalManagement() {
                               {(isAdmin && !isStaffContext) ? <PhoneCall size={13} /> : <Eye size={13} />}
                               <span>{(isAdmin && !isStaffContext) ? 'Đàm Phán & Xử Lý' : 'Xem Biên Bản'}</span>
                             </button>
-                          ) : (order.status === 'returned' || order.status === 'waiting_refund' || order.inspection) ? (
+                          ) : (order.status === 'returned' || order.status === 'waiting_refund') ? (
                             <div className="inline-flex items-center gap-1.5">
-                              {(order.inspection?.canConfirmRefund || order.inspection?.refundConflict) && <button
+                              <button
                                 type="button"
                                 onClick={() => setRefundOrder(order)}
                                 title="Mở biên bản để ghi nhận giao dịch hoàn cọc"
                                 className="inline-flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#1E8347] hover:bg-[#166534] text-white text-[12px] font-bold shadow-xs transition-all cursor-pointer"
                               >
                                 <Banknote size={14} />
-                                <span>{order.inspection.refundConflict ? 'Đối Soát Cọc' : order.inspection.refundRemaining > 0 ? 'Hoàn Cọc' : 'Quyết Toán'}</span>
-                              </button>}
+                                <span>{order.inspection?.refundConflict ? 'Đối Soát Cọc' : 'Hoàn Cọc'}</span>
+                              </button>
                               <button
                                 type="button"
                                 onClick={() => setInspectionOrder(order)}
@@ -2969,10 +2973,50 @@ export default function OrderRentalManagement() {
                               </button>
                             </div>
                           ) : (
-                            <UpdateStatusDropdown
-                              order={order}
-                              onUpdated={handleOrderUpdated}
-                            />
+                            <div className="inline-flex items-center gap-1.5">
+                              {order.status === 'deposit_paid' && (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    try {
+                                      await updateOrderStatus(order._id, 'delivered');
+                                      message.success('Đã cập nhật trạng thái thành "Đã Giao Váy"');
+                                      handleOrderUpdated(order._id, 'delivered');
+                                    } catch {
+                                      message.error('Cập nhật trạng thái thất bại. Vui lòng thử lại.');
+                                    }
+                                  }}
+                                  title="Chuyển sang trạng thái Đã Giao Váy cho khách"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#FFEDD5] border border-[#FED7AA] text-[#C2410C] text-[12px] font-bold hover:bg-[#FDBA74] transition-all cursor-pointer shadow-2xs"
+                                >
+                                  <Truck size={13} />
+                                  <span>Giao Váy</span>
+                                </button>
+                              )}
+                              {order.status === 'delivered' && (
+                                <button
+                                  type="button"
+                                  onClick={async () => {
+                                    try {
+                                      await updateOrderStatus(order._id, 'renting');
+                                      message.success('Đã cập nhật trạng thái thành "Đang Thuê"');
+                                      handleOrderUpdated(order._id, 'renting');
+                                    } catch {
+                                      message.error('Cập nhật trạng thái thất bại. Vui lòng thử lại.');
+                                    }
+                                  }}
+                                  title="Chuyển sang trạng thái Đang Thuê"
+                                  className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#EDE9FE] border border-[#DDD6FE] text-[#6D28D9] text-[12px] font-bold hover:bg-[#DDD6FE] transition-all cursor-pointer shadow-2xs"
+                                >
+                                  <Clock size={13} />
+                                  <span>Đang Thuê</span>
+                                </button>
+                              )}
+                              <UpdateStatusDropdown
+                                order={order}
+                                onUpdated={handleOrderUpdated}
+                              />
+                            </div>
                           )}
                         </div>
                       </td>
