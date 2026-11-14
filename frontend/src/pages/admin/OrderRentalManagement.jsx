@@ -1068,15 +1068,14 @@ function InspectionModal({ order, onClose, onSuccess }) {
                               key={cat.id}
                               type="button"
                               onClick={() => toggleCondition(idx, cat.id)}
-                              className={`text-[10.5px] px-2 py-0.5 rounded-lg border font-medium transition-all cursor-pointer ${
-                                isSelected
-                                  ? cat.id === 'total_damage'
-                                    ? 'bg-red-600 text-white border-red-700 shadow-2xs font-bold'
-                                    : cat.id === 'normal_wear'
+                              className={`text-[10.5px] px-2 py-0.5 rounded-lg border font-medium transition-all cursor-pointer ${isSelected
+                                ? cat.id === 'total_damage'
+                                  ? 'bg-red-600 text-white border-red-700 shadow-2xs font-bold'
+                                  : cat.id === 'normal_wear'
                                     ? 'bg-emerald-700 text-white border-emerald-800 shadow-2xs font-bold'
                                     : 'bg-[#733F49] text-white border-[#5C323A] shadow-2xs font-bold'
-                                  : 'bg-white text-[#5F4E50] border-[#E5D7D0] hover:bg-[#FAF0EC]'
-                              }`}
+                                : 'bg-white text-[#5F4E50] border-[#E5D7D0] hover:bg-[#FAF0EC]'
+                                }`}
                             >
                               {cat.shortName} ({cat.feeType === 'deposit_100' ? '100% Cọc' : cat.feeType === 'agreement' ? 'Thỏa thuận' : cat.feeLabel})
                             </button>
@@ -1223,13 +1222,13 @@ function InspectionModal({ order, onClose, onSuccess }) {
                   const conds = ic.conditions || [ic.condition];
                   return conds.some((c) => c !== 'normal_wear' && c !== 'good') || Number(ic.compensation || 0) > 0;
                 }) && (
-                  <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${evidencePhotos.length > 0
-                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
-                    : 'bg-red-100 text-red-700 border border-red-200 animate-pulse'
-                    }`}>
-                    {evidencePhotos.length > 0 ? '✓ Đã đính kèm ảnh đối soát' : '⚠️ Bắt buộc chụp ảnh lỗi'}
-                  </span>
-                )}
+                    <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${evidencePhotos.length > 0
+                      ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                      : 'bg-red-100 text-red-700 border border-red-200 animate-pulse'
+                      }`}>
+                      {evidencePhotos.length > 0 ? '✓ Đã đính kèm ảnh đối soát' : '⚠️ Bắt buộc chụp ảnh lỗi'}
+                    </span>
+                  )}
               </div>
               {!isReadOnly && (
                 <label className="inline-flex items-center gap-1.5 px-3 py-1 rounded-xl bg-[#733F49] text-white text-[11px] font-bold cursor-pointer hover:bg-[#5C3038] transition-colors shadow-2xs">

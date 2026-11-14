@@ -48,11 +48,11 @@ async function seedData() {
       { name: 'Lê Nguyễn Thảo My', phone: '0938128899', email: 'thaomy.le@gmail.com', address: '124 Nguyễn Huệ, P. Bến Nghé, Quận 1, TP. HCM' },
       { name: 'Trần Bích Ngọc', phone: '0903889123', email: 'bichngoc.tran@yahoo.com', address: '45 Lê Duẩn, P. Bến Nghé, Quận 1, TP. HCM' },
       { name: 'Nguyễn Quỳnh Mai', phone: '0912456789', email: 'quynhmai.nguyen@gmail.com', address: '78 Hai Bà Trưng, Phường Tràng Tiền, Quận Hoàn Kiếm, Hà Nội' },
-      { name: 'Đỗ Tiến Mạnh', phone: '0987654321', email: 'tienmanh.do@hotmail.com', address: '12 Bạch Đằng, P. Hải Châu 1, Quận Hải Châu, Đà Nẵng' },
+      { name: 'Đỗ Tiến Mạnh', phone: '0987654321', email: 'tienmanh.do@hotmail.com', address: '12 Lê Thánh Tôn, P. Bến Nghé, Quận 1, TP. HCM' },
       { name: 'Phạm Hương Ly', phone: '0978112233', email: 'huongly.pham@outlook.com', address: '360 Pasteur, Phường Võ Thị Sáu, Quận 3, TP. HCM' },
       { name: 'Vũ Minh Anh', phone: '0945667788', email: 'minhanh.vu@gmail.com', address: '18 Lý Thường Kiệt, Quận Hoàn Kiếm, Hà Nội' },
       { name: 'Hoàng Kim Xuân', phone: '0918223344', email: 'hieuxuan@gmail.com', address: '22 Bis Phan Đăng Lưu, Phường 6, Bình Thạnh, TP. HCM' },
-      { name: 'Đặng Thảo Vy', phone: '0933445566', email: 'thaovy.dang@gmail.com', address: '55 Trần Hưng Đạo, Quận Sơn Trà, Đà Nẵng' },
+      { name: 'Đặng Thảo Vy', phone: '0933445566', email: 'thaovy.dang@gmail.com', address: '55 Phố Huế, Quận Hai Bà Trưng, Hà Nội' },
     ];
 
     const statuses = [
@@ -175,7 +175,7 @@ async function seedData() {
       '15:00 — 16:30',
       '18:30 — 20:00',
     ];
-    const branches = ['hcm-q1', 'hn-hoankiem', 'dn-haichau'];
+    const branches = ['hcm-q1', 'hn-hoankiem'];
     const aptStatuses = ['confirmed', 'confirmed', 'confirmed', 'completed', 'confirmed', 'confirmed', 'completed', 'confirmed', 'confirmed', 'completed'];
 
     const appointmentsData = [];

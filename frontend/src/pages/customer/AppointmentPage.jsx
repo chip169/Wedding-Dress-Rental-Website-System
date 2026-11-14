@@ -85,7 +85,7 @@ export default function AppointmentPage() {
           }
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     return () => {
       isCancelled = true;
@@ -410,7 +410,7 @@ export default function AppointmentPage() {
       message.success('Đặt lịch hẹn Private Suite thành công!');
       getSlotAvailabilityApi(selectedDate, selectedBranch.id).then((res) => {
         if (Array.isArray(res?.data || res)) setSlotsAvailability(res?.data || res);
-      }).catch(() => {});
+      }).catch(() => { });
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
   };
@@ -1251,7 +1251,7 @@ export default function AppointmentPage() {
                           }}
                           className={`w-full bg-[#FCF9F6] border rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:bg-white ${errors.phone ? 'border-red-500' : 'border-[#EEDECF] focus:border-[#733F49]'
                             }`}
-                          placeholder="Nhập số điện thoại liên hệ (10 số)"
+                          placeholder="Nhập số điện thoại liên hệ "
                         />
                         {errors.phone && (
                           <span className="text-[11px] text-red-600 mt-1 block">{errors.phone}</span>
