@@ -460,9 +460,10 @@ export default function InventoryManagement() {
 
       // CHẶN TRẦN: Số lượng đang thuê không thể vượt quá tổng số lượng tồn kho của size (sQty)
       const sRented = Math.min(sQty, rawRented);
-      const sBooked = rawBooked;
+      const sBooked = Math.min(Math.max(0, sQty - sRented), rawBooked);
 
-      const sAvail = Math.max(0, sQty - sMaint - sRented);
+      // Cả đơn đang thuê lẫn đơn đã cọc giữ lịch ĐỀU TRỪ vào số lượng khả dụng của size:
+      const sAvail = Math.max(0, sQty - sMaint - sRented - sBooked);
       return {
         ...sz,
         size: sName,
@@ -474,10 +475,11 @@ export default function InventoryManagement() {
       };
     });
 
-    // 4. Số lượng khả dụng tính chính xác từ tổng số lượng khả dụng của từng Size
+    // 4. Số lượng khả dụng tính chính xác từ tổng số lượng khả dụng của từng Size (đã trừ cả đang thuê & đã cọc)
     const availableStock = detailedSizes.reduce((sum, sz) => sum + (Number(sz.available) || 0), 0);
     const maintenanceCount = detailedSizes.reduce((sum, sz) => sum + (Number(sz.maintenance) || 0), 0);
     const rentedCount = detailedSizes.reduce((sum, sz) => sum + (Number(sz.rented) || 0), 0);
+    const bookedCount = detailedSizes.reduce((sum, sz) => sum + (Number(sz.booked) || 0), 0);
 
     // Xử lý trạng thái: Tự động vs Thủ công
     const manualStatus = override.statusType || null;
@@ -487,24 +489,25 @@ export default function InventoryManagement() {
 
     const computeStoredSubNote = () => {
       if (totalStock === 0) return 'Chưa nhập kho';
-      if (rentedCount > 0 || maintenanceCount > 0) {
-        const parts = [`Sẵn sàng: ${availableStock}/${totalStock} bộ`];
-        if (maintenanceCount > 0) parts.push(`Bảo dưỡng: ${maintenanceCount}`);
-        if (rentedCount > 0) parts.push(`Đang thuê: ${rentedCount}`);
-        return parts.join(' • ');
-      }
-      return `Sẵn sàng phục vụ (${availableStock}/${totalStock} bộ)`;
+      const parts = [`Sẵn sàng: ${availableStock}/${totalStock} bộ`];
+      if (rentedCount > 0) parts.push(`Đang thuê: ${rentedCount}`);
+      if (bookedCount > 0) parts.push(`Đã cọc: ${bookedCount}`);
+      if (maintenanceCount > 0) parts.push(`Bảo dưỡng: ${maintenanceCount}`);
+      return parts.join(' • ');
     };
 
     if (statusType === 'auto') {
-      if (maintenanceCount > 0 && availableStock === 0) {
-        statusType = 'drying';
-        statusText = 'ĐANG BẢO DƯỠNG';
-        statusSubNote = `Đang kiểm định và bảo dưỡng (${maintenanceCount} bộ)`;
-      } else if (availableStock <= 0 && totalStock > 0) {
+      // Khi khả dụng = 0 (tất cả các bộ đã được thuê hoặc đã cọc), hệ thống tự động hiển thị HẾT HÀNG
+      if (availableStock <= 0) {
         statusType = 'out_of_stock';
         statusText = 'HẾT HÀNG';
-        statusSubNote = `Đã xuất thuê toàn bộ (${totalStock} bộ)`;
+        const reasons = [];
+        if (rentedCount > 0) reasons.push(`${rentedCount} đang thuê`);
+        if (bookedCount > 0) reasons.push(`${bookedCount} đã cọc`);
+        if (maintenanceCount > 0) reasons.push(`${maintenanceCount} bảo dưỡng`);
+        statusSubNote = totalStock > 0
+          ? `Tạm hết khả dụng (${reasons.length > 0 ? reasons.join(' • ') : `${totalStock} bộ`})`
+          : 'Tạm hết mẫu này trong kho';
       } else {
         statusType = 'stored';
         statusText = 'CÒN HÀNG';
@@ -540,6 +543,7 @@ export default function InventoryManagement() {
       availableStock,
       rentedCount,
       maintenanceCount,
+      bookedCount,
       relatedOrderCodes,
       customerNames: matchedOrders.map((o) => (o.customerName || '').toLowerCase()),
       customerPhones: matchedOrders.map((o) => (o.customerPhone || '').toLowerCase()),
@@ -640,7 +644,6 @@ export default function InventoryManagement() {
     { value: 'all', label: 'Tất cả', icon: Layers },
     { value: 'stored', label: 'Còn Hàng', icon: Crown, color: 'text-[#1D4ED8]' },
     { value: 'ready', label: 'Đã Cho Thuê', icon: CheckCircle2, color: 'text-[#1E8347]' },
-    { value: 'drying', label: 'Đang Bảo Dưỡng', icon: Wrench, color: 'text-[#D97706]' },
     { value: 'out_of_stock', label: 'Hết Hàng', icon: AlertTriangle, color: 'text-[#DC2626]' },
   ];
 
@@ -658,16 +661,14 @@ export default function InventoryManagement() {
 
       const matchStatus =
         statusFilter === 'all' ||
-        item.statusType === statusFilter ||
-        (statusFilter === 'drying' &&
-          (item.statusType === 'drying' || (item.maintenanceCount && item.maintenanceCount > 0))) ||
         (statusFilter === 'stored' &&
-          (item.statusType === 'stored' || item.statusType === 'partially_rented' || (item.availableStock && item.availableStock > 0))) ||
+          ((item.statusType === 'stored' || item.statusType === 'partially_rented') && item.availableStock > 0)) ||
         (statusFilter === 'ready' &&
-          (item.statusType === 'out_of_stock' ||
-            item.statusType === 'ready' ||
+          (item.statusType === 'ready' ||
             item.statusType === 'partially_rented' ||
-            (item.rentedCount && item.rentedCount > 0)));
+            (item.rentedCount && item.rentedCount > 0))) ||
+        (statusFilter === 'out_of_stock' &&
+          (item.statusType === 'out_of_stock' || item.availableStock <= 0));
 
       return matchSearch && matchStatus;
     });
@@ -1366,7 +1367,11 @@ export default function InventoryManagement() {
       i.statusType === 'out_of_stock'
   ).length;
 
-  // 4. Tổng số mẫu đang bảo dưỡng (giặt khô, là hơi hoặc váy của các đơn đang kiểm định sau thuê)
+  // 4. Tổng số mẫu hết hàng (khả dụng <= 0 hoặc statusType === 'out_of_stock')
+  const outOfStockModelsCount = items.filter(
+    (i) => i.statusType === 'out_of_stock' || (i.availableStock !== undefined && i.availableStock <= 0)
+  ).length;
+
   const maintenanceCount = items.filter(
     (i) => i.statusType === 'drying' || (i.maintenanceCount && i.maintenanceCount > 0)
   ).length;
@@ -1575,33 +1580,33 @@ export default function InventoryManagement() {
           </div>
         </div>
 
-        {/* Card 4: VÁY ĐANG BẢO DƯỠNG (Ánh vàng cam) */}
+        {/* Card 4: VÁY HẾT HÀNG (Ánh đỏ nhạt cảnh báo) */}
         <div
           role="button"
           tabIndex={0}
-          onClick={() => handleMetricCardClick('drying')}
-          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleMetricCardClick('drying')}
-          title="Nhấn để lọc các mẫu có váy đang bảo dưỡng / sửa chữa"
-          className={`bg-white bg-[radial-gradient(ellipse_at_top_right,_#FEF3C7_0%,_transparent_70%)] rounded-2xl border py-4 px-5 transition-all cursor-pointer select-none active:scale-[0.98] ${
-            statusFilter === 'drying'
-              ? 'ring-2 ring-[#D97706] border-[#D97706] shadow-md -translate-y-0.5'
-              : 'border-[#FDE68A] shadow-xs hover:border-[#D97706]/50 hover:shadow-md hover:-translate-y-0.5'
+          onClick={() => handleMetricCardClick('out_of_stock')}
+          onKeyDown={(e) => (e.key === 'Enter' || e.key === ' ') && handleMetricCardClick('out_of_stock')}
+          title="Nhấn để lọc các mẫu đã hết hàng / hết khả dụng"
+          className={`bg-white bg-[radial-gradient(ellipse_at_top_right,_#FEE2E2_0%,_transparent_70%)] rounded-2xl border py-4 px-5 transition-all cursor-pointer select-none active:scale-[0.98] ${
+            statusFilter === 'out_of_stock'
+              ? 'ring-2 ring-[#DC2626] border-[#DC2626] shadow-md -translate-y-0.5'
+              : 'border-[#FECACA] shadow-xs hover:border-[#DC2626]/50 hover:shadow-md hover:-translate-y-0.5'
           }`}
         >
           <div>
             <div className="flex items-center justify-between mb-1.5">
-              <span className="text-[11px] font-bold tracking-[1.2px] text-[#92400E] uppercase">
-                VÁY ĐANG BẢO DƯỠNG
+              <span className="text-[11px] font-bold tracking-[1.2px] text-[#991B1B] uppercase">
+                VÁY HẾT HÀNG
               </span>
-              <div className="w-9 h-9 rounded-xl bg-[#FEF2E6] flex items-center justify-center text-[#D97706]">
-                <Wrench size={17} strokeWidth={2} />
+              <div className="w-9 h-9 rounded-xl bg-[#FEF2F2] flex items-center justify-center text-[#DC2626]">
+                <AlertTriangle size={17} strokeWidth={2} />
               </div>
             </div>
             <div className="flex items-baseline">
-              <span className="text-[28px] font-bold text-[#78350F] leading-none">
-                {maintenanceCount}
+              <span className="text-[28px] font-bold text-[#991B1B] leading-none">
+                {outOfStockModelsCount}
               </span>
-              <span className="text-[12px] font-medium text-[#D97706] ml-2">chiếc</span>
+              <span className="text-[12px] font-medium text-[#DC2626] ml-2">mẫu</span>
             </div>
           </div>
         </div>
@@ -1903,8 +1908,8 @@ export default function InventoryManagement() {
                         <div className="flex flex-col items-center">
                           <div className="text-[13.5px] font-bold text-[#2C2523] leading-tight">
                             Khả dụng:{' '}
-                            <span className={item.availableStock < item.totalStock ? 'text-[#D97706]' : 'text-[#1E8347]'}>
-                              {String(item.availableStock).padStart(2, '0')}
+                            <span className={item.availableStock <= 0 ? 'text-[#DC2626] font-extrabold' : item.availableStock < item.totalStock ? 'text-[#D97706]' : 'text-[#1E8347]'}>
+                              {String(Math.max(0, item.availableStock)).padStart(2, '0')}
                             </span>
                             <span className="text-[11.5px] font-medium text-[#8C7D7E]"> / {String(item.totalStock || 0).padStart(2, '0')} bộ</span>
                           </div>
@@ -1938,19 +1943,22 @@ export default function InventoryManagement() {
                                 <span
                                   key={idx}
                                   title={titleText}
-                                  className={`inline-flex items-center px-1.5 py-0.5 rounded-md border font-semibold text-[10.5px] ${sMaint > 0
-                                    ? 'bg-[#FEF2E6] text-[#B45309] border-[#FED7AA]'
-                                    : sRented > 0
+                                  className={`inline-flex items-center px-1.5 py-0.5 rounded-md border font-semibold text-[10.5px] ${
+                                    sAvail === 0
+                                      ? 'bg-[#FEF2F2] text-[#991B1B] border-[#FECACA]'
+                                      : sRented > 0
                                       ? 'bg-[#EFF6FF] text-[#1D4ED8] border-[#BFDBFE]'
                                       : sBooked > 0
                                       ? 'bg-[#F0FDF4] text-[#15803D] border-[#BBF7D0]'
+                                      : sMaint > 0
+                                      ? 'bg-[#FEF2E6] text-[#B45309] border-[#FED7AA]'
                                       : 'bg-[#FAF5F2] text-[#733F49] border-[#EFE2DC]'
                                     }`}
                                 >
                                   {sName}: <span className="font-bold ml-1 text-[#2C2523]">{sAvail}/{sQty}</span>
+                                  {sRented > 0 && <span className="ml-1 text-[9px] text-[#1D4ED8] font-bold">({sRented} đang thuê)</span>}
+                                  {sBooked > 0 && <span className="ml-1 text-[9px] text-[#15803D] font-bold">({sBooked} đã cọc)</span>}
                                   {sMaint > 0 && <span className="ml-1 text-[9px] text-[#D97706] font-bold">({sMaint} bảo dưỡng)</span>}
-                                  {sMaint === 0 && sRented > 0 && <span className="ml-1 text-[9px] text-[#1D4ED8] font-bold">({sRented} đang thuê)</span>}
-                                  {sMaint === 0 && sRented === 0 && sBooked > 0 && <span className="ml-1 text-[9px] text-[#15803D] font-bold">({sBooked} đã cọc)</span>}
                                 </span>
                               );
                             })}
@@ -2215,9 +2223,10 @@ export default function InventoryManagement() {
                     const sName = sz.size;
                     const total = sz.quantity || 0;
                     const rented = sz.rented || 0;
-                    const maxAllowed = Math.max(0, total - rented);
+                    const booked = sz.booked || 0;
+                    const maxAllowed = Math.max(0, total - rented - booked);
                     const count = maintenanceSizesMap[sName] ?? (sz.maintenance || 0);
-                    const remainingAvail = Math.max(0, total - rented - count);
+                    const remainingAvail = Math.max(0, total - rented - booked - count);
 
                     return (
                       <div
@@ -2244,7 +2253,7 @@ export default function InventoryManagement() {
                               <span className="font-bold text-xs text-[#2C2523]">Size {sName}</span>
                               {count > 0 ? (
                                 <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#FEF3C7] text-[#B45309] border border-[#FDE68A]">
-                                  <Wrench size={10} />
+                                <Wrench size={10} />
                                   {count} bộ bảo dưỡng
                                 </span>
                               ) : (
@@ -2253,14 +2262,19 @@ export default function InventoryManagement() {
                                 </span>
                               )}
                             </div>
-                            <div className="text-[11px] text-[#8C7D7E] mt-0.5 flex items-center gap-2">
+                            <div className="text-[11px] text-[#8C7D7E] mt-0.5 flex items-center gap-2 flex-wrap">
                               <span>Tổng: <strong>{total}</strong></span>
                               {rented > 0 && (
                                 <span className="text-[#1D4ED8]">
                                   • Đang thuê: <strong>{rented}</strong>
                                 </span>
                               )}
-                              <span className="text-emerald-700">
+                              {booked > 0 && (
+                                <span className="text-[#15803D]">
+                                  • Đã cọc: <strong>{booked}</strong>
+                                </span>
+                              )}
+                              <span className={remainingAvail === 0 ? 'text-[#DC2626] font-bold' : 'text-emerald-700'}>
                                 • Khả dụng: <strong>{remainingAvail}</strong>
                               </span>
                             </div>
