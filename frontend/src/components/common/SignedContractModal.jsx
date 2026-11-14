@@ -1,8 +1,6 @@
 import { useEffect, useState, useMemo } from 'react';
 import {
   FileText,
-  ExternalLink,
-  Printer,
   ShieldCheck,
   CheckCircle2,
   Building2,
@@ -621,16 +619,7 @@ export default function SignedContractModal({ orderId, order: propOrder, contrac
           </div>
 
           {/* Modal Footer */}
-          <div className="p-4 bg-white border-t border-[#EFE5E1] flex items-center justify-between no-print">
-            <button
-              onClick={handlePrint}
-              disabled={loading || Boolean(error)}
-              className="inline-flex items-center gap-1.5 px-4 py-2 text-xs font-semibold text-[#733F49] hover:bg-[#FAF0EC] bg-white rounded-xl border border-[#E8DFD8] transition-colors cursor-pointer shadow-2xs disabled:opacity-50"
-              title="Mở hộp thoại in ấn / lưu bản PDF chuẩn khổ A4"
-            >
-              <ExternalLink className="w-4 h-4" />
-              Mở Bản In PDF (Chuẩn A4)
-            </button>
+          <div className="p-4 bg-white border-t border-[#EFE5E1] flex items-center justify-end no-print">
             <button
               onClick={onClose}
               className="px-6 py-2 text-xs font-bold text-white bg-[#733F49] hover:bg-[#5C323A] rounded-xl transition-all cursor-pointer shadow-xs"
