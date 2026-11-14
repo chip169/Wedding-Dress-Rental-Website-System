@@ -730,6 +730,9 @@ export async function sendAppointmentSuccessEmail({
 
         <!-- Lời dặn dò cô dâu -->
         <div style="background: #FFF5F2; border-radius: 10px; padding: 14px 18px; margin: 22px 0; font-size: 12.5px; line-height: 1.6; color: #733F49;">
+          <div style="color: #C0392B; font-weight: 700; margin-bottom: 8px;">
+            ⚠️ Lưu ý quan trọng: Quá 30 phút sau giờ bắt đầu ca hẹn nếu nàng chưa đến, lịch hẹn sẽ được tính là vắng mặt để đảm bảo khung giờ cho lượt khách kế tiếp.
+          </div>
           <strong>✦ Mẹo nhỏ dành cho nàng:</strong> Nàng nên mang theo giày cao gót có độ cao dự kiến mang trong hôn lễ và trang điểm nhẹ nhàng để chuyên viên tư vấn tạo kiểu voan cài tóc hài hòa nhất.
         </div>
 

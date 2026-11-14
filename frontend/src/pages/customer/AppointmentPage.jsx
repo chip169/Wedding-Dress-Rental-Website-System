@@ -613,13 +613,16 @@ export default function AppointmentPage() {
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-[#EEDECF]/60 space-y-1">
+                    <div className="pt-2 border-t border-[#EEDECF]/60 space-y-1.5">
                       <div className="text-[12px] text-[#2E7D32] font-semibold flex items-center gap-1.5">
                         <Check className="w-3.5 h-3.5 stroke-[2.5]" />
                         <span>Phòng thử Suite riêng tư 90 phút trọn vẹn</span>
                       </div>
                       <div className="text-[11px] text-[#847374]">
                         ✦ Váy được hấp sấy tiệt trùng và ủi phẳng trước 2 giờ
+                      </div>
+                      <div className="text-[11px] text-[#C0392B] font-semibold flex items-center gap-1 pt-0.5">
+                        <span>⚠️ Lưu ý: Quá 30 phút sau giờ bắt đầu ca hẹn nếu chưa đến, lịch hẹn sẽ được tính là vắng mặt.</span>
                       </div>
                     </div>
                   </div>

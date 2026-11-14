@@ -309,6 +309,9 @@ export default function AppointmentHistoryPage() {
                         <Clock className="w-4 h-4 text-[#8C4654]" />
                         <span>{apt.timeSlot || '09:00 — 10:30'} (Ca 90 phút)</span>
                       </div>
+                      <div className="text-[11px] text-[#C0392B] font-medium pt-1.5 border-t border-[#F0E5DC] leading-tight">
+                        ⚠️ Quá 30 phút sau giờ bắt đầu ca hẹn nếu chưa đến, lịch hẹn sẽ được tính là vắng mặt.
+                      </div>
                     </div>
 
                     {/* Cột 2: Showroom đón tiếp */}
