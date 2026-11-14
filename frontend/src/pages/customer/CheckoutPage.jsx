@@ -2136,11 +2136,7 @@ export default function CheckoutPage() {
                               ✓ Cập nhật theo đơn thực tế
                             </span>
                           </div>
-                          {bookedIntervals.length > 0 ? (
-                            <span className="text-[11px] text-[#B91C1C] font-medium block mt-1">
-                              ⚠ Đang có {bookedIntervals.length} đợt thuê đã khóa lịch cho mẫu váy này
-                            </span>
-                          ) : (
+                          {bookedIntervals.length === 0 && (
                             <span className="text-[11px] text-[#2E7D32] font-medium block mt-1">
                               ✦ Toàn bộ các ngày trong tháng đang trống lịch sẵn sàng cho nàng đặt thuê
                             </span>
@@ -3238,7 +3234,7 @@ export default function CheckoutPage() {
                       </div>
                       <div className="flex items-start gap-2.5">
                         <span className="w-5 h-5 rounded-full bg-[#733F49] text-white flex items-center justify-center text-[10px] font-bold shrink-0 mt-0.5">3</span>
-                        <span className="text-[#6B5C5D]">Xác nhận chuyển khoản và bấm nút <strong>Xác nhận</strong> bên dưới</span>
+                        <span className="text-[#6B5C5D]">Xác nhận giao dịch chuyển khoản trên ứng dụng ngân hàng</span>
                       </div>
                     </div>
 
@@ -3288,32 +3284,6 @@ export default function CheckoutPage() {
                     <span>Quay lại Bước 2: Xem Hợp đồng</span>
                   </button>
 
-                  <button
-                    type="button"
-                    disabled={isSubmitting || isVerifyingPayment}
-                    onClick={handleConfirmFinalPayment}
-                    className={`w-full sm:w-auto px-8 py-4 rounded-xl text-white font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer border-0 flex items-center justify-center gap-2 ${!isContractSigned
-                      ? 'bg-[#B08968] hover:bg-[#8D6E63] ring-2 ring-amber-400'
-                      : 'bg-[#733F49] hover:bg-[#5F323B]'
-                      }`}
-                  >
-                    {isVerifyingPayment ? (
-                      <>
-                        <RefreshCw className="w-4 h-4 animate-spin" />
-                        <span>Đang kiểm tra giao dịch Techcombank...</span>
-                      </>
-                    ) : !isContractSigned ? (
-                      <>
-                        <AlertCircle className="w-4 h-4 text-amber-200" />
-                        <span>CHƯA KÝ HỢP ĐỒNG (BẤM ĐỂ QUAY LẠI BƯỚC 2 KÝ)</span>
-                      </>
-                    ) : (
-                      <>
-                        <Lock className="w-4 h-4" />
-                        <span>XÁC NHẬN ĐÃ CHUYỂN KHOẢN VÀ KHÓA LỊCH ĐẶT THUÊ</span>
-                      </>
-                    )}
-                  </button>
                 </div>
 
               </div>
@@ -3503,64 +3473,6 @@ export default function CheckoutPage() {
 
       </main>
 
-      {/* ================= FLOATING STICKY BOTTOM BAR (LUÔN CỐ ĐỊNH HIỂN THỊ TỔNG GIÁ KHI LƯỚT CHƯA TỚI ĐÁY) ================= */}
-      <aside aria-label="Thanh tổng thanh toán nhanh" className="fixed bottom-0 left-0 right-0 z-40 bg-white/95 backdrop-blur-md border-t border-[#EEDECF] shadow-[0_-8px_30px_rgba(115,63,73,0.12)] py-3 px-4 sm:px-8 transition-all print:hidden">
-        <div className="max-w-[1320px] mx-auto flex items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-[#FAF0EC] border border-[#F2D8D4] flex items-center justify-center text-[#733F49] shrink-0">
-              <Crown className="w-5 h-5" />
-            </div>
-            <div>
-              <div className="text-[11px] font-semibold text-[#847374] uppercase tracking-wider flex items-center gap-1.5">
-                <span>Tổng thanh toán ({orderItems.length || 1} tác phẩm)</span>
-                <span className="text-[#2E7D32] font-bold hidden sm:inline">• Hoàn cọc 100% khi trả váy</span>
-              </div>
-              <div className="font-jakarta font-extrabold text-[18px] sm:text-[22px] text-[#733F49] leading-tight">
-                {formatCurrencyVND(amountToPayToday)}
-              </div>
-            </div>
-          </div>
-
-          <div className="flex items-center gap-2">
-            {currentStep === 1 && (
-              <button
-                type="button"
-                disabled={hasOutOfStockItem}
-                onClick={handleProceedToContract}
-                className={`px-5 sm:px-7 py-2.5 sm:py-3 rounded-xl text-white text-[12.5px] sm:text-[13.5px] font-bold flex items-center gap-2 shadow-md transition-all border-0 ${
-                  hasOutOfStockItem
-                    ? 'bg-stone-300 text-stone-500 cursor-not-allowed'
-                    : 'bg-[#733F49] hover:bg-[#5F323B] cursor-pointer active:scale-[0.98]'
-                }`}
-              >
-                <span>{hasOutOfStockItem ? 'Hết Hàng Trong Kho' : 'Xem Trước và Ký Hợp Đồng'}</span>
-                {!hasOutOfStockItem && <ArrowRight className="w-4 h-4" />}
-              </button>
-            )}
-            {currentStep === 2 && (
-              <button
-                type="button"
-                onClick={handleSignAndProceedToPayment}
-                className="px-5 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white text-[12.5px] sm:text-[13.5px] font-bold flex items-center gap-2 shadow-md transition-all cursor-pointer border-0 active:scale-[0.98]"
-              >
-                <span>Chuyển Sang Bước 3: Đặt Cọc</span>
-                <ArrowRight className="w-4 h-4" />
-              </button>
-            )}
-            {currentStep === 3 && (
-              <button
-                type="button"
-                disabled={isSubmitting || isVerifyingPayment}
-                onClick={handleConfirmFinalPayment}
-                className="px-5 sm:px-7 py-2.5 sm:py-3 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white text-[12.5px] sm:text-[13.5px] font-bold flex items-center gap-2 shadow-md transition-all cursor-pointer border-0 active:scale-[0.98]"
-              >
-                <Lock className="w-4 h-4" />
-                <span>Xác Nhận và Khóa Lịch</span>
-              </button>
-            )}
-          </div>
-        </div>
-      </aside>
 
 
 
