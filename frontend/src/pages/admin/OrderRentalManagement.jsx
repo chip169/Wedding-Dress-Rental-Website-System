@@ -536,6 +536,11 @@ function DamagePriceCatalogModal({ open, onClose }) {
 }
 
 function InspectionModal({ order, onClose, onSuccess }) {
+  const { user, isAdmin } = useAuth();
+  const location = useLocation();
+  const isStaffPath = location.pathname.startsWith('/staff');
+  const isCurrentAdmin = (user?.role === 'admin' || isAdmin) && !isStaffPath;
+
   const isCompletedOrder = order.status === 'completed' || order.status === 'complete';
   const isReturnedOrder = order.status === 'waiting_refund' || order.status === 'returned';
   const isGuestOrder = !order.hasAccount && !order.customerId && !order.userId;
@@ -697,6 +702,14 @@ function InspectionModal({ order, onClose, onSuccess }) {
     return conds.includes('total_damage');
   });
 
+  const hasCustomAgreement = itemsCondition.some((ic) => {
+    const conds = ic.conditions || [ic.condition];
+    return conds.includes('custom_agreement');
+  });
+
+  const hasAdminEscalation = hasSevereDamage || hasCustomAgreement;
+  const isStaffEscalationRequired = !isCurrentAdmin && hasAdminEscalation;
+
   // Thay đổi nhóm lỗi theo Bảng giá niêm yết (Hỗ trợ chọn nhiều lỗi trên cùng 1 váy)
   const updateConditions = (idx, newCondIds) => {
     if (isReadOnly) return;
@@ -740,10 +753,19 @@ function InspectionModal({ order, onClose, onSuccess }) {
     });
 
     const hasAdminOnly = sanitized.some((cid) => getDamageCatalogItem(cid).isAdminOnly);
+    const hasCustomAgreed = sanitized.includes('custom_agreement');
+
     if (hasAdminOnly) {
-      message.warning(`Có lỗi cần [Cần Admin xác nhận]. Hệ thống kích hoạt nút [Tạm Giữ Kiểm Định] để chuyển Admin.`);
+      if (!isCurrentAdmin) {
+        message.warning(`Có lỗi [Cần Admin xác nhận]. Vui lòng bấm [Tạm Giữ Biên Bản Gửi Admin] để chuyển Admin.`);
+      }
       if (!customerDisputeNote) {
         setCustomerDisputeNote('Váy bị hư hại nghiêm trọng / lỗi nặng không thể may lại, chuyển Quản lý & Admin trực tiếp thẩm định xử lý.');
+      }
+    } else if (hasCustomAgreed && !isCurrentAdmin) {
+      message.info('Đã chọn [Thỏa thuận 2 bên]. Lỗi này cần chuyển Admin phê duyệt, vui lòng bấm [Tạm Giữ Biên Bản Gửi Admin].');
+      if (!customerDisputeNote) {
+        setCustomerDisputeNote('Lỗi ngoài danh mục cần thỏa thuận 2 bên, chuyển Admin trực tiếp thẩm định và phê duyệt mức bồi thường.');
       }
     }
   };
@@ -837,10 +859,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
       return;
     }
 
-    const isHoldCase = actionType === 'hold' || itemsCondition.some((ic) => {
-      const conds = ic.conditions || [ic.condition];
-      return conds.includes('total_damage');
-    });
+    const isHoldCase = (!isCurrentAdmin && actionType === 'hold') || isStaffEscalationRequired;
 
     // 1. Kiểm tra tình trạng váy & BẮT BUỘC CHỤP ẢNH LỖI ĐẦY ĐỦ
     const hasDamage = itemsCondition.some((ic) => {
@@ -870,7 +889,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
     // Nếu hoàn tất kiểm định và có tiền hoàn trả thì bắt buộc nhập STK
     const confirmOnSite = isGuestOrder || actionType === 'complete';
     if (!isHoldCase && confirmOnSite && finalRefund > 0 &&
-        (!onSiteBankName.trim() || !/^\d{6,30}$/.test(onSiteAccountNum.trim()) || !onSiteAccountHolder.trim())) {
+      (!onSiteBankName.trim() || !/^\d{6,30}$/.test(onSiteAccountNum.trim()) || !onSiteAccountHolder.trim())) {
       message.warning('Vui lòng kiểm tra ngân hàng, số tài khoản và tên chủ tài khoản.');
       return;
     }
@@ -1130,8 +1149,8 @@ function InspectionModal({ order, onClose, onSuccess }) {
                                       {cat.feeType === 'deposit_100'
                                         ? 'Tịch thu 100% Cọc'
                                         : cat.feeType === 'agreement'
-                                        ? (ic.agreedAmount ? `${fmtVnd(ic.agreedAmount)} (Thỏa thuận)` : 'Thỏa thuận 2 bên')
-                                        : cat.feeLabel}
+                                          ? (ic.agreedAmount ? `${fmtVnd(ic.agreedAmount)} (Thỏa thuận)` : 'Thỏa thuận 2 bên')
+                                          : cat.feeLabel}
                                     </span>
                                     {!isReadOnly && (
                                       <button
@@ -1214,11 +1233,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
                         </span>
                       </div>
 
-                      {/* Đối chiếu hợp đồng */}
-                      <div className="text-[11px] text-[#5C4D4D] bg-[#F7F2EF] p-2 rounded-lg border border-[#EDE0D8] flex items-center gap-1.5">
-                        <FileCheck size={13} className="text-[#1E8347] shrink-0" />
-                        <span>Đối chiếu: Mức phí được quy định cố định tại <strong>Điều 5 & Phụ lục Hợp đồng thuê váy</strong> để đối soát cùng khách hàng.</span>
-                      </div>
+
                     </div>
                   )}
                 </div>
@@ -1372,11 +1387,11 @@ function InspectionModal({ order, onClose, onSuccess }) {
               {/* Ghi chú phản hồi / Lý do tạm giữ nếu có */}
               <div>
                 <span className="text-[11px] font-semibold text-[#662020] block mb-1">
-                  Ghi chú kiểm định / Lý do tạm giữ (nếu có khiếu nại hoặc lỗi nặng cần chuyển Admin):
+                  {isCurrentAdmin ? 'Ghi chú kiểm định / Ghi nhận thỏa thuận với khách:' : 'Ghi chú kiểm định / Lý do tạm giữ (nếu có khiếu nại hoặc lỗi nặng cần chuyển Admin):'}
                 </span>
                 <Input.TextArea
                   rows={2}
-                  placeholder="Ghi nhận chi tiết phản hồi của khách hoặc mô tả khi tạm giữ chuyển Quản lý / Admin..."
+                  placeholder={isCurrentAdmin ? 'Ghi nhận chi tiết phản hồi của khách hoặc mô tả hiện trạng / thỏa thuận...' : 'Ghi nhận chi tiết phản hồi của khách hoặc mô tả khi tạm giữ chuyển Quản lý / Admin...'}
                   value={customerDisputeNote}
                   onChange={(e) => setCustomerDisputeNote(e.target.value)}
                   className="text-xs rounded-xl"
@@ -1415,17 +1430,23 @@ function InspectionModal({ order, onClose, onSuccess }) {
                 >
                   Hủy
                 </button>
-                <button
+
+                {/* Nút Tạm Giữ Biên Bản Gửi Admin: CHỈ hiển thị cho STAFF, KHÔNG hiển thị cho ADMIN */}
+                {!isCurrentAdmin && (
+                  <button
                     type="button"
                     disabled={submitting || inspectionLoading || Boolean(inspectionError)}
                     onClick={() => handleSubmit('hold')}
                     className="flex-1 py-2.5 rounded-xl bg-[#8B2635] hover:bg-[#701E2A] text-white text-[12.5px] font-bold transition-all border-0 cursor-pointer disabled:opacity-60 flex items-center justify-center gap-1.5 shadow-xs"
-                    title="Chuyển Admin khi cần thẩm định hoặc khách chưa đồng ý"
+                    title="Chuyển Admin khi cần thỏa thuận hoặc thẩm định xử lý"
                   >
                     {submitting ? <RefreshCw size={13} className="animate-spin" /> : <ShieldAlert size={14} />}
-                    <span>Tạm Giữ Kiểm Định (Chuyển Admin)</span>
-                </button>
-                {!hasSevereDamage && (
+                    <span>Tạm Giữ Biên Bản Gửi Admin</span>
+                  </button>
+                )}
+
+                {/* Nút Khách Đồng Ý Tại Quầy: ẨN khi Staff chọn Thỏa thuận 2 bên hoặc Hư hỏng nặng */}
+                {!isStaffEscalationRequired && (
                   <button
                     type="button"
                     disabled={submitting || inspectionLoading || Boolean(inspectionError)}
@@ -1437,10 +1458,15 @@ function InspectionModal({ order, onClose, onSuccess }) {
                     <span>Khách Đồng Ý Tại Quầy</span>
                   </button>
                 )}
-                {!isGuestOrder && !hasSevereDamage && (
-                  <button type="button" disabled={submitting || inspectionLoading || Boolean(inspectionError)}
+
+                {/* Nút Gửi Khách Duyệt: ẨN khi Staff chọn Thỏa thuận 2 bên hoặc Hư hỏng nặng */}
+                {!isGuestOrder && !isStaffEscalationRequired && (
+                  <button
+                    type="button"
+                    disabled={submitting || inspectionLoading || Boolean(inspectionError)}
                     onClick={() => handleSubmit('online')}
-                    className="rounded-xl border border-[#EFE5E1] px-4 py-2 text-xs font-semibold text-[#733F49] disabled:opacity-60">
+                    className="rounded-xl border border-[#EFE5E1] px-4 py-2 text-xs font-semibold text-[#733F49] disabled:opacity-60 cursor-pointer hover:bg-[#FAF5F2]"
+                  >
                     Gửi Khách Duyệt
                   </button>
                 )}
@@ -1521,7 +1547,7 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
       return;
     }
     if (remaining > 0 && (!bankName.trim() || !/^\d{6,30}$/.test(accountNumber.trim()) ||
-        !accountHolder.trim() || !transactionCode.trim())) {
+      !accountHolder.trim() || !transactionCode.trim())) {
       message.error('Vui lòng kiểm tra tài khoản nhận tiền và nhập mã giao dịch đã chuyển.');
       return;
     }
@@ -2001,11 +2027,11 @@ function RefundModal({ order, onClose, onSuccess }) {
             )}
             <div className="flex justify-between items-baseline pt-2.5 mt-2 border-t border-[#ECDCD6]">
               <div>
-                  <span className="font-bold text-[13px] text-[#2C2523] block">SỐ TIỀN CHƯA GHI NHẬN HOÀN</span>
-                  <span className="text-[11px] text-[#8C7D7E]">Theo biên bản: {fmtVnd(finalRefund)} · Đã ghi nhận: {fmtVnd(inspectionData.refundedAmount)}</span>
+                <span className="font-bold text-[13px] text-[#2C2523] block">SỐ TIỀN CHƯA GHI NHẬN HOÀN</span>
+                <span className="text-[11px] text-[#8C7D7E]">Theo biên bản: {fmtVnd(finalRefund)} · Đã ghi nhận: {fmtVnd(inspectionData.refundedAmount)}</span>
               </div>
               <span className="font-sans text-[20px] font-bold text-[#1E8347]">
-                 {remaining == null ? '—' : fmtVnd(remaining)}
+                {remaining == null ? '—' : fmtVnd(remaining)}
               </span>
             </div>
           </div>}
@@ -2324,7 +2350,7 @@ export default function OrderRentalManagement() {
             description: (
               <div className="space-y-1.5 text-xs font-jakarta">
                 <p className="m-0 text-[#2C2523]">
-                    Biên bản đơn <strong>#{ord.orderCode}</strong> đang chờ xử lý. Khách hàng <strong>{ord.customerName}</strong> ({ord.customerPhone || 'Chưa có SĐT'}).
+                  Biên bản đơn <strong>#{ord.orderCode}</strong> đang chờ xử lý. Khách hàng <strong>{ord.customerName}</strong> ({ord.customerPhone || 'Chưa có SĐT'}).
                 </p>
                 {ord.inspection?.disputeReason && (
                   <p className="m-0 text-red-700 italic bg-red-50 p-2 rounded-lg border border-red-200">
