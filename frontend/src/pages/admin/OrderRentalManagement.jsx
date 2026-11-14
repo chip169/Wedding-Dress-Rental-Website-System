@@ -1824,9 +1824,7 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
                   />
                 </div>
               </div>
-              <label htmlFor="negotiation-refund-reference" className="mt-2 block text-stone-600 font-medium">
-                Mã giao dịch sau khi đã chuyển {fmtVnd(remaining)} (hoặc để trống để chuyển đơn sang Chờ hoàn cọc):
-              </label>
+
               <Input
                 id="negotiation-refund-reference"
                 size="small"
@@ -2266,6 +2264,9 @@ export default function OrderRentalManagement() {
 
       if (queryAction === 'inspect') {
         if (canInspectOrder(found) || found.inspection) setInspectionOrder(found);
+      } else if (queryAction === 'negotiate') {
+        if (isAdmin && !isStaffContext) setNegotiationOrder(found);
+        else setInspectionOrder(found);
       }
 
       setTimeout(() => {
@@ -2301,6 +2302,9 @@ export default function OrderRentalManagement() {
 
             if (queryAction === 'inspect') {
               if (canInspectOrder(detail) || detail.inspection) setInspectionOrder(detail);
+            } else if (queryAction === 'negotiate') {
+              if (isAdmin && !isStaffContext) setNegotiationOrder(detail);
+              else setInspectionOrder(detail);
             }
 
             setTimeout(() => {
@@ -2330,58 +2334,6 @@ export default function OrderRentalManagement() {
       cancelled: globalStats.cancelled || orders.filter((o) => o.status === 'cancelled').length,
     };
   }, [globalStats, orders]);
-
-  // ── Đơn hàng có khiếu nại từ khách hàng ─────────────────────────────────
-  const disputedOrders = useMemo(() => orders.filter(hasDisputedInspection), [orders]);
-
-  const notifiedDisputesRef = useRef(new Set());
-
-  // Hiển thị thông báo nổi lên (pop-up notification) ngay khi phát hiện đơn hàng có khiếu nại (CHỈ HIỂN THỊ CHO ADMIN)
-  useEffect(() => {
-    if (isStaffContext || !isAdmin) return;
-    if (disputedOrders.length > 0) {
-      disputedOrders.forEach((ord) => {
-        const key = `dispute_${ord._id || ord.orderCode}`;
-        if (!notifiedDisputesRef.current.has(key)) {
-          notifiedDisputesRef.current.add(key);
-          notification.error({
-            key,
-            message: (
-              <span className="font-bold text-red-900 text-[13.5px]">
-                ⚠️ CÓ ĐƠN KHIẾU NẠI CẦN XỬ LÝ GẤP
-              </span>
-            ),
-            description: (
-              <div className="space-y-1.5 text-xs font-jakarta">
-                <p className="m-0 text-[#2C2523]">
-                  Biên bản đơn <strong>#{ord.orderCode}</strong> đang chờ xử lý. Khách hàng <strong>{ord.customerName}</strong> ({ord.customerPhone || 'Chưa có SĐT'}).
-                </p>
-                {ord.inspection?.disputeReason && (
-                  <p className="m-0 text-red-700 italic bg-red-50 p-2 rounded-lg border border-red-200">
-                    "{ord.inspection.disputeReason}"
-                  </p>
-                )}
-                <div className="pt-1.5 flex items-center justify-end">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      notification.destroy(key);
-                      if (isAdmin && !isStaffContext) setNegotiationOrder(ord); else setInspectionOrder(ord);
-                    }}
-                    className="px-3.5 py-1.5 bg-red-600 hover:bg-red-700 text-white rounded-lg text-xs font-bold border-0 cursor-pointer shadow-xs transition-colors"
-                  >
-                    Xem và Xử Lý Ngay →
-                  </button>
-                </div>
-              </div>
-            ),
-            duration: 12,
-            placement: 'topRight',
-          });
-        }
-      });
-    }
-  }, [disputedOrders, isAdmin, isStaffContext]);
 
   // ── Client-side filter (for demo fallback và search) ───────────────────────
   const filteredOrders = useMemo(() => {
@@ -2529,70 +2481,6 @@ export default function OrderRentalManagement() {
           </button>
         </div>
       </div>
-
-      {/* Banner thông báo nổi bật khi có đơn khiếu nại - CHỈ HIỂN THỊ CHO ADMIN */}
-      {!isStaffContext && isAdmin && disputedOrders.length > 0 && (
-        <div className="mb-8 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#FEF2F2] via-[#FFF1F2] to-[#FEF2F2] border-2 border-red-300 shadow-md space-y-3 font-jakarta animate-fadeIn">
-          <div className="flex items-center justify-between flex-wrap gap-2">
-            <div className="flex items-center gap-2.5">
-              <span className="flex h-3 w-3 relative">
-                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-red-500 opacity-75"></span>
-                <span className="relative inline-flex rounded-full h-3 w-3 bg-red-600"></span>
-              </span>
-              <span className="font-bold text-red-900 text-[14px] sm:text-[15.5px] flex items-center gap-2">
-                <AlertTriangle className="w-5 h-5 text-red-600 shrink-0" />
-                <span>{disputedOrders.length} ĐƠN TRÊN TRANG NÀY CẦN XỬ LÝ BIÊN BẢN</span>
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={() => {
-                setStatusFilter('disputed');
-                setActivePage(1);
-              }}
-              className="text-xs font-bold text-red-700 hover:text-red-900 underline cursor-pointer bg-transparent border-0"
-            >
-              Xem danh sách cần xử lý →
-            </button>
-          </div>
-
-          <div className="space-y-2">
-            {disputedOrders.map((ord) => (
-              <div
-                key={ord._id || ord.orderCode}
-                className="p-3.5 bg-white/95 rounded-xl border border-red-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs shadow-2xs"
-              >
-                <div className="space-y-1">
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <span className="font-mono font-bold text-red-800 bg-red-100 px-2.5 py-0.5 rounded-md border border-red-200">
-                      #{ord.orderCode}
-                    </span>
-                    <strong className="text-gray-900 text-[13px]">{ord.customerName}</strong>
-                    <span className="text-gray-500 font-medium">({ord.customerPhone || 'Không có SĐT'})</span>
-                    <span className="text-stone-300">•</span>
-                    <span className="text-stone-700 font-medium">
-                      {ord.items?.[0]?.name || ord.dress || 'Lễ phục'}
-                    </span>
-                  </div>
-                  {ord.inspection?.disputeReason && (
-                    <p className="text-red-700 italic m-0 bg-red-50/80 p-2 rounded-lg border border-red-100">
-                      <strong>Lý do khiếu nại:</strong> "{ord.inspection.disputeReason}"
-                    </p>
-                  )}
-                </div>
-                <button
-                  type="button"
-                  onClick={() => isAdmin ? setNegotiationOrder(ord) : setInspectionOrder(ord)}
-                  className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-red-600 to-rose-700 hover:from-red-700 hover:to-rose-800 text-white font-bold text-xs shrink-0 cursor-pointer shadow-xs transition-all flex items-center justify-center gap-1.5 border-0"
-                >
-                  <PhoneCall size={14} />
-                  <span>{isAdmin ? 'Đàm Phán & Xử Lý' : 'Xem Biên Bản'}</span>
-                </button>
-              </div>
-            ))}
-          </div>
-        </div>
-      )}
 
       {/* 4 Metric Cards */}
       <div className="grid grid-cols-1 sm:grid-cols-2 xl:grid-cols-4 gap-4 mb-6">
