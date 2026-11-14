@@ -74,6 +74,15 @@ const extractStartTime = (timeSlot) => {
   return (parts[0] || '').trim();
 };
 
+// Chuyển đổi khung giờ (timeSlot) thành số phút trong ngày để so sánh và sắp xếp thứ tự thời gian tăng dần
+const getTimeMinutes = (timeSlot) => {
+  const startTime = extractStartTime(timeSlot);
+  if (!startTime) return 9999;
+  const match = startTime.match(/(\d{1,2}):(\d{2})/);
+  if (!match) return 9999;
+  return parseInt(match[1], 10) * 60 + parseInt(match[2], 10);
+};
+
 // Trích xuất tên ngắn gọn hiển thị trên thẻ lịch (ví dụ: "Phạm Hương Ly" -> "Hương Ly")
 const extractDisplayName = (fullName) => {
   if (!fullName) return 'Cô dâu';
@@ -219,7 +228,7 @@ function CalendarDateCellEvents({
   const [canScrollDown, setCanScrollDown] = React.useState(false);
   const [canScrollUp, setCanScrollUp] = React.useState(false);
 
-  // Gộp tất cả các sự kiện hợp lệ hiển thị trong ô ngày
+  // Gộp tất cả các sự kiện hợp lệ hiển thị trong ô ngày (sắp xếp lịch thử váy theo khung giờ tăng dần)
   const items = React.useMemo(() => {
     const list = [];
     if (showApts) {
@@ -231,7 +240,12 @@ function CalendarDateCellEvents({
     if (showReturns) {
       dayReturns.forEach((item) => list.push({ ...item, eventCategory: 'return' }));
     }
-    return list;
+    return list.sort((a, b) => {
+      if (a.eventCategory === 'apt' && b.eventCategory === 'apt') {
+        return getTimeMinutes(a.timeSlot) - getTimeMinutes(b.timeSlot);
+      }
+      return 0;
+    });
   }, [dayApts, dayDeliveries, dayReturns, showApts, showDeliveries, showReturns]);
 
   const total = items.length;
@@ -836,6 +850,12 @@ export default function ScheduleOverviewPage({ defaultTab }) {
         date: key,
       });
     });
+
+    // Sắp xếp các ca thử váy trong từng ngày theo thứ tự thời gian tăng dần (sáng đến tối)
+    Object.keys(map).forEach((k) => {
+      map[k].sort((a, b) => getTimeMinutes(a.timeSlot) - getTimeMinutes(b.timeSlot));
+    });
+
     return map;
   }, [appointments]);
 
@@ -1058,7 +1078,8 @@ export default function ScheduleOverviewPage({ defaultTab }) {
       .sort((a, b) => {
         const dateA = a.appointmentDate ? new Date(a.appointmentDate).getTime() : 0;
         const dateB = b.appointmentDate ? new Date(b.appointmentDate).getTime() : 0;
-        return dateB - dateA;
+        if (dateB !== dateA) return dateB - dateA;
+        return getTimeMinutes(a.timeSlot) - getTimeMinutes(b.timeSlot);
       });
   }, [appointments, historySearch, historyBranch]);
 
@@ -1260,9 +1281,11 @@ export default function ScheduleOverviewPage({ defaultTab }) {
     const deliveries = deliveriesByDate[selectedDateKey] || [];
     const returns = returnsByDate[selectedDateKey] || [];
 
-    const filteredApts = apts.filter(
-      (a) => calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
-    );
+    const filteredApts = apts
+      .filter(
+        (a) => calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
+      )
+      .sort((a, b) => getTimeMinutes(a.timeSlot) - getTimeMinutes(b.timeSlot));
 
     const filteredDeliveries = deliveries.filter((d) => {
       const matchBranch =
