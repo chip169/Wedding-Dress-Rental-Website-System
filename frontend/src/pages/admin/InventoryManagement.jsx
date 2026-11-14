@@ -1927,7 +1927,7 @@ export default function InventoryManagement() {
                               const sBooked = typeof s === 'object' ? (s.booked ?? 0) : 0;
 
                               const titleText = sMaint > 0
-                                ? `Đang có ${sMaint} bộ size ${sName} kiểm định sau thuê`
+                                ? `Đang có ${sMaint} bộ size ${sName} kiểm định / bảo dưỡng sau thuê${sBooked > 0 ? ` (Có ${sBooked} đơn đã cọc giữ lịch sắp tới)` : ''}`
                                 : sRented > 0
                                 ? `Đang có ${sRented} bộ size ${sName} đang được khách thuê${sBooked > 0 ? ` (${sBooked} đơn đã cọc giữ lịch sắp tới)` : ''}`
                                 : sBooked > 0
@@ -1949,8 +1949,8 @@ export default function InventoryManagement() {
                                 >
                                   {sName}: <span className="font-bold ml-1 text-[#2C2523]">{sAvail}/{sQty}</span>
                                   {sMaint > 0 && <span className="ml-1 text-[9px] text-[#D97706] font-bold">({sMaint} bảo dưỡng)</span>}
-                                  {sRented > 0 && <span className="ml-1 text-[9px] text-[#1D4ED8] font-bold">({sRented} đang thuê)</span>}
-                                  {sRented === 0 && sBooked > 0 && <span className="ml-1 text-[9px] text-[#15803D] font-bold">({sBooked} đã cọc)</span>}
+                                  {sMaint === 0 && sRented > 0 && <span className="ml-1 text-[9px] text-[#1D4ED8] font-bold">({sRented} đang thuê)</span>}
+                                  {sMaint === 0 && sRented === 0 && sBooked > 0 && <span className="ml-1 text-[9px] text-[#15803D] font-bold">({sBooked} đã cọc)</span>}
                                 </span>
                               );
                             })}
