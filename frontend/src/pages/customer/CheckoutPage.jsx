@@ -224,6 +224,45 @@ export default function CheckoutPage() {
   const daysParam = parseInt(searchParams.get('days'), 10);
   const [rentalDays, setRentalDays] = useState(!isNaN(daysParam) && daysParam >= 1 && daysParam <= 30 ? daysParam : 4);
 
+  // Selected dress size & color (định nghĩa sớm để tránh lỗi Temporal Dead Zone)
+  const [selectedSize, setSelectedSize] = useState(sizeParam || 'S');
+  const [selectedColor, setSelectedColor] = useState(colorParam || 'Trắng Sữa');
+
+  // Measurements: Nếu tài khoản chưa lưu số đo thì BẮT BUỘC để trống ('')
+  const [measurements, setMeasurements] = useState(() => {
+    if (user?.measurements) {
+      return {
+        height: user.measurements.height ? String(user.measurements.height) : '',
+        weight: user.measurements.weight ? String(user.measurements.weight) : '',
+        bust: user.measurements.bust ? String(user.measurements.bust) : '',
+        waist: user.measurements.waist ? String(user.measurements.waist) : '',
+        hips: user.measurements.hips ? String(user.measurements.hips) : '',
+        heel: user.measurements.heel ? String(user.measurements.heel) : '',
+      };
+    }
+    return {
+      height: '',
+      weight: '',
+      bust: '',
+      waist: '',
+      hips: '',
+      heel: '',
+    };
+  });
+
+  // Tự động đồng bộ size & color khi query params thay đổi
+  useEffect(() => {
+    if (sizeParam && sizeParam !== selectedSize) {
+      setSelectedSize(sizeParam);
+    }
+  }, [sizeParam]);
+
+  useEffect(() => {
+    if (colorParam && colorParam !== selectedColor) {
+      setSelectedColor(colorParam);
+    }
+  }, [colorParam]);
+
   // 1. Đếm ngược tạm giữ váy 5 phút (Hold Timer: 300s) - Tự động ngắt ngay khi thoát khỏi hệ thống
   const [holdSeconds, setHoldSeconds] = useState(5 * 60);
   React.useEffect(() => {
@@ -856,32 +895,6 @@ export default function CheckoutPage() {
       `Đã chọn ngày bắt đầu thuê: ${toDisplayDateString(dateStr)} (Tự động hoàn trả ngày ${endStr} - Gói ${rentalDays} ngày)`
     );
   };
-
-
-  // Selected dress size
-  const [selectedSize, setSelectedSize] = useState(sizeParam || 'S');
-
-  // Measurements: Nếu tài khoản chưa lưu số đo thì BẮT BUỘC để trống ('')
-  const [measurements, setMeasurements] = useState(() => {
-    if (user?.measurements) {
-      return {
-        height: user.measurements.height ? String(user.measurements.height) : '',
-        weight: user.measurements.weight ? String(user.measurements.weight) : '',
-        bust: user.measurements.bust ? String(user.measurements.bust) : '',
-        waist: user.measurements.waist ? String(user.measurements.waist) : '',
-        hips: user.measurements.hips ? String(user.measurements.hips) : '',
-        heel: user.measurements.heel ? String(user.measurements.heel) : '',
-      };
-    }
-    return {
-      height: '',
-      weight: '',
-      bust: '',
-      waist: '',
-      hips: '',
-      heel: '',
-    };
-  });
 
   // Tăng giảm số đo nhanh bằng nút bấm lên / xuống
   const handleStepMeasurement = (field, delta) => {
