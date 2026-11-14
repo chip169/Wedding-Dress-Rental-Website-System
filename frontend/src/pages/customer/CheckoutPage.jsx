@@ -218,6 +218,8 @@ export default function CheckoutPage() {
           if (!active) return;
           if (res?.data) {
             const d = res.data;
+            const chosenSize = sizeParam || selectedSize || d.sizes?.[0]?.size || d.sizes?.[0]?.label || (typeof d.sizes?.[0] === 'string' ? d.sizes[0] : 'S');
+            const chosenColor = colorParam || selectedColor || d.color || 'Trắng Sữa';
             const singleItem = {
               ...d,
               id: String(d._id || d.id),
@@ -226,10 +228,19 @@ export default function CheckoutPage() {
               deposit: Number(d.depositAmount || d.deposit) || 15000000,
               image: d.images?.[0] || d.image || '/assets/dresses/dress_01.jpg',
               code: d.code || 'UB-HC-2026',
-              size: d.sizes?.[0]?.size || d.sizes?.[0]?.label || (typeof d.sizes?.[0] === 'string' ? d.sizes[0] : 'S'),
+              size: chosenSize,
+              selectedSize: chosenSize,
+              color: chosenColor,
+              selectedColor: chosenColor,
             };
             setOrderItems([singleItem]);
             setActiveDress(singleItem);
+            if (chosenSize && chosenSize !== selectedSize) {
+              setSelectedSize(chosenSize);
+            }
+            if (chosenColor && chosenColor !== selectedColor) {
+              setSelectedColor(chosenColor);
+            }
           } else if (res?.success === false) {
             setDbError(res.message || 'Lỗi kết nối cơ sở dữ liệu.');
           }
@@ -852,8 +863,8 @@ export default function CheckoutPage() {
         return {
           name: item.name || `Váy cưới Haute Couture #${idx + 1}`,
           code: item.code || `UB-HC-0${idx + 1}`,
-          size: item.size || selectedSize || 'S',
-          color: item.color || selectedColor || 'Trắng Sữa',
+          size: (dressIdParam && selectedSize) ? selectedSize : (item.size || selectedSize || 'S'),
+          color: (dressIdParam && selectedColor) ? selectedColor : (item.color || selectedColor || 'Trắng Sữa'),
           rentPrice: itemTotalRent,
           dailyPrice: itemDailyPrice,
           depositAmount: Number(item.deposit || item.depositAmount || 0),
@@ -867,8 +878,8 @@ export default function CheckoutPage() {
       return [{
         name: activeDress.name || 'Váy cưới Haute Couture',
         code: activeDress.code || 'UB-HC-2026',
-        size: selectedSize || 'S',
-        color: selectedColor || activeDress.color || 'Trắng Sữa',
+        size: selectedSize || sizeParam || activeDress.size || 'S',
+        color: selectedColor || colorParam || activeDress.color || 'Trắng Sữa',
         rentPrice: totalRentPrice,
         dailyPrice: itemDailyPrice,
         depositAmount: depositCollateral,
@@ -1509,14 +1520,16 @@ export default function CheckoutPage() {
         rentalStartDate: toIsoDateString(rentalSchedule?.startDate) || new Date().toISOString().split('T')[0],
         rentalEndDate: toIsoDateString(rentalSchedule?.endDate) || new Date(Date.now() + (Number(rentalDays) || 4) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         rentalDays,
+        selectedSize: (dressIdParam && selectedSize) ? selectedSize : (orderItems?.[0]?.size || selectedSize || 'S'),
+        selectedColor: (dressIdParam && selectedColor) ? selectedColor : (orderItems?.[0]?.color || selectedColor || 'Trắng Sữa'),
         items: (orderItems && orderItems.length > 0 ? orderItems : [activeDress]).filter(Boolean).map((item, idx) => {
           const itemDailyPrice = Number(item.price || item.rentPrice) || 0;
           return {
             dressId: item.id || item._id,
             name: item.name,
             code: item.code || `UB-HC-2026-0${idx + 1}`,
-            size: item.size || selectedSize,
-            color: item.color || selectedColor || 'Trắng Sữa',
+            size: (dressIdParam && selectedSize) ? selectedSize : (item.size || selectedSize || 'S'),
+            color: (dressIdParam && selectedColor) ? selectedColor : (item.color || selectedColor || 'Trắng Sữa'),
             rentPrice: itemDailyPrice * Math.max(1, Number(rentalDays) || 1),
             dailyPrice: itemDailyPrice,
             rentalDays,
@@ -1607,13 +1620,16 @@ export default function CheckoutPage() {
       rentalStartDate: toIsoDateString(rentalSchedule?.startDate) || new Date().toISOString().split('T')[0],
       rentalEndDate: toIsoDateString(rentalSchedule?.endDate) || new Date(Date.now() + (Number(rentalDays) || 4) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
       rentalDays,
+      selectedSize: (dressIdParam && selectedSize) ? selectedSize : (orderItems?.[0]?.size || selectedSize || 'S'),
+      selectedColor: (dressIdParam && selectedColor) ? selectedColor : (orderItems?.[0]?.color || selectedColor || 'Trắng Sữa'),
       items: (orderItems && orderItems.length > 0 ? orderItems : [activeDress]).filter(Boolean).map((item, idx) => {
         const itemDailyPrice = Number(item.price || item.rentPrice) || 0;
         return {
           dressId: item.id || item._id,
           name: item.name,
           code: item.code || `UB-HC-2026-0${idx + 1}`,
-          size: item.size || selectedSize,
+          size: (dressIdParam && selectedSize) ? selectedSize : (item.size || selectedSize || 'S'),
+          color: (dressIdParam && selectedColor) ? selectedColor : (item.color || selectedColor || 'Trắng Sữa'),
           rentPrice: itemDailyPrice * Math.max(1, Number(rentalDays) || 1),
           dailyPrice: itemDailyPrice,
           rentalDays,
@@ -1691,14 +1707,16 @@ export default function CheckoutPage() {
         rentalStartDate: toIsoDateString(rentalSchedule?.startDate) || new Date().toISOString().split('T')[0],
         rentalEndDate: toIsoDateString(rentalSchedule?.endDate) || new Date(Date.now() + (Number(rentalDays) || 4) * 24 * 60 * 60 * 1000).toISOString().split('T')[0],
         rentalDays,
+        selectedSize: (dressIdParam && selectedSize) ? selectedSize : (orderItems?.[0]?.size || selectedSize || 'S'),
+        selectedColor: (dressIdParam && selectedColor) ? selectedColor : (orderItems?.[0]?.color || selectedColor || 'Trắng Sữa'),
         items: (orderItems && orderItems.length > 0 ? orderItems : [activeDress]).filter(Boolean).map((item, idx) => {
           const itemDailyPrice = Number(item.price || item.rentPrice) || 0;
           return {
             dressId: item.id || item._id,
             name: item.name,
             code: item.code || `UB-HC-2026-0${idx + 1}`,
-            size: item.size || selectedSize,
-            color: item.color || selectedColor || 'Trắng Sữa',
+            size: (dressIdParam && selectedSize) ? selectedSize : (item.size || selectedSize || 'S'),
+            color: (dressIdParam && selectedColor) ? selectedColor : (item.color || selectedColor || 'Trắng Sữa'),
             rentPrice: itemDailyPrice * Math.max(1, Number(rentalDays) || 1),
             dailyPrice: itemDailyPrice,
             rentalDays,
@@ -3438,6 +3456,36 @@ export default function CheckoutPage() {
                         <span>•</span>
                         <span>Gói <strong>{rentalDays} ngày</strong></span>
                       </div>
+                      {Array.isArray(activeDress?.sizes) && activeDress.sizes.length > 1 && (
+                        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[11px] font-semibold text-[#847374]">Đổi size:</span>
+                          {activeDress.sizes.map((sz, sIdx) => {
+                            const sVal = typeof sz === 'string' ? sz : sz.size || sz.label;
+                            const sClean = String(sVal).replace(/^size\s*/i, '').trim();
+                            const isSzActive = (selectedSize || '').toUpperCase() === sClean.toUpperCase();
+                            return (
+                              <button
+                                key={sIdx}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedSize(sClean);
+                                  setOrderItems((prev) => prev.map((it) => ({ ...it, size: sClean })));
+                                  if (activeDress) {
+                                    setActiveDress((prev) => ({ ...prev, size: sClean }));
+                                  }
+                                }}
+                                className={`px-2 py-0.5 rounded text-[10.5px] font-bold border cursor-pointer transition-all ${
+                                  isSzActive
+                                    ? 'bg-[#733F49] text-white border-[#733F49]'
+                                    : 'bg-white text-[#733F49] border-[#EEDECF] hover:border-[#733F49]'
+                                }`}
+                              >
+                                {sClean}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
                       <div className="font-jakarta font-extrabold text-[17px] text-[#733F49] mt-1 tabular-nums tracking-tight">
                         {formatCurrencyVND(totalRentPrice)}
                       </div>
