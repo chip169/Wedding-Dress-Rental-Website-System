@@ -821,32 +821,40 @@ export default function CheckoutPage() {
 
   // Danh mục trang phục thuê chuẩn hóa hiển thị đồng bộ trong Hợp Đồng Điện Tử
   const contractItems = useMemo(() => {
+    const days = Math.max(1, Number(rentalDays) || 1);
     if (orderItems && orderItems.length > 0) {
-      return orderItems.map((item, idx) => ({
-        name: item.name || `Váy cưới Haute Couture #${idx + 1}`,
-        code: item.code || `UB-HC-0${idx + 1}`,
-        size: item.size || selectedSize || 'S',
-        color: item.color || 'Trắng Sữa',
-        rentPrice: Number(item.price || item.rentPrice || 0),
-        depositAmount: Number(item.deposit || item.depositAmount || 0),
-        startDate: rentalSchedule?.startDate || '',
-        endDate: rentalSchedule?.endDate || '',
-      }));
+      return orderItems.map((item, idx) => {
+        const itemDailyPrice = Number(item.dailyPrice || item.price || item.rentPrice || 0);
+        const itemTotalRent = itemDailyPrice * days;
+        return {
+          name: item.name || `Váy cưới Haute Couture #${idx + 1}`,
+          code: item.code || `UB-HC-0${idx + 1}`,
+          size: item.size || selectedSize || 'S',
+          color: item.color || selectedColor || 'Trắng Sữa',
+          rentPrice: itemTotalRent,
+          dailyPrice: itemDailyPrice,
+          depositAmount: Number(item.deposit || item.depositAmount || 0),
+          startDate: rentalSchedule?.startDate || '',
+          endDate: rentalSchedule?.endDate || '',
+        };
+      });
     }
     if (activeDress) {
+      const itemDailyPrice = Number(activeDress.price || activeDress.rentPrice || 0);
       return [{
         name: activeDress.name || 'Váy cưới Haute Couture',
         code: activeDress.code || 'UB-HC-2026',
         size: selectedSize || 'S',
-        color: activeDress.color || 'Trắng Sữa',
+        color: selectedColor || activeDress.color || 'Trắng Sữa',
         rentPrice: totalRentPrice,
+        dailyPrice: itemDailyPrice,
         depositAmount: depositCollateral,
         startDate: rentalSchedule?.startDate || '',
         endDate: rentalSchedule?.endDate || '',
       }];
     }
     return [];
-  }, [orderItems, activeDress, selectedSize, totalRentPrice, depositCollateral, rentalSchedule]);
+  }, [orderItems, activeDress, selectedSize, selectedColor, rentalDays, totalRentPrice, depositCollateral, rentalSchedule]);
 
   // Validation chi tiết Step 1 (Thông tin người đại diện thuê)
   const validateCustomerInfo = () => {
@@ -2755,7 +2763,7 @@ export default function CheckoutPage() {
                               <th className="p-3">Mã Số</th>
                               <th className="p-3">Kích Cỡ</th>
                               <th className="p-3 text-center">Thời Gian Thuê</th>
-                              <th className="p-3 text-right">Tiền Thuê</th>
+                              <th className="p-3 text-right">Tổng Tiền Thuê</th>
                               <th className="p-3 text-right">Tiền Cọc Bảo Lãnh</th>
                             </tr>
                           </thead>
@@ -2773,13 +2781,18 @@ export default function CheckoutPage() {
                                     {rentalDays} ngày
                                   </span>
                                   <div className="text-xs">
-                                    <span className="font-semibold text-emerald-800">{it.startDate}</span>
+                                    <span className="font-semibold text-[#733F49]">{it.startDate}</span>
                                     <span className="text-[#A39192] mx-1">→</span>
-                                    <span className="font-semibold text-[#87565C]">{it.endDate}</span>
+                                    <span className="font-semibold text-[#733F49]">{it.endDate}</span>
                                   </div>
                                 </td>
-                                <td className="p-3 text-right font-bold text-emerald-800">
-                                  {formatCurrencyVND(it.rentPrice)}
+                                <td className="p-3 text-right font-bold text-[#733F49]">
+                                  <div>{formatCurrencyVND(it.rentPrice)}</div>
+                                  {Number(rentalDays) > 1 && (
+                                    <div className="text-[10px] font-normal text-[#8A7978]">
+                                      ({formatCurrencyVND(it.dailyPrice || Math.round(it.rentPrice / Number(rentalDays)))}/ngày)
+                                    </div>
+                                  )}
                                 </td>
                                 <td className="p-3 text-right font-bold text-[#733F49]">
                                   {formatCurrencyVND(it.depositAmount)}

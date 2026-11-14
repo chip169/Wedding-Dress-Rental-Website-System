@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useMemo, useRef } from 'react';
 import { useNavigate, useSearchParams } from 'react-router-dom';
-import { Search, SlidersHorizontal, Heart,
+import {
+  Search, SlidersHorizontal, Heart,
   Crown, Scissors, ShieldCheck, ChevronLeft, ChevronRight,
-  Check, X, Calendar, LayoutGrid, Grid3X3, Filter } from 'lucide-react';
+  Check, X, Calendar, LayoutGrid, Grid3X3, Filter
+} from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useAuth } from '../../contexts/AuthContext';
@@ -149,7 +151,7 @@ export default function CollectionPage() {
           setSilhouetteOptions(loaded);
         }
       })
-      .catch(() => {});
+      .catch(() => { });
 
     // 2. Tải toàn bộ mẫu váy cưới từ MongoDB Atlas
     getAllDresses()
@@ -392,7 +394,7 @@ export default function CollectionPage() {
 
             {/* Subtext 2 lines */}
             <p className="font-jakarta text-[13.5px] sm:text-[14.5px] leading-[22px] text-[#514344] max-w-[880px] mx-auto mb-6">
-              Hòa quyện giữa kỹ thuật corsetry siết eo quý tộc và chất liệu lụa Mikado tơ tằm thượng hạng Ý VÀ Pháp.
+              Hòa quyện giữa kỹ thuật corsetry siết eo quý tộc và chất liệu lụa Mikado tơ tằm thượng hạng Ý và Pháp.
               <br className="hidden sm:inline" />
               Mỗi thiết kế là một độc bản tôn vinh trọn vẹn đường nét thuần khiết, rạng ngời của nàng dâu trong ngày trọng đại nhất cuộc đời.
             </p>
@@ -550,9 +552,8 @@ export default function CollectionPage() {
 
             {/* SIDEBAR BỘ LỌC TUYỂN CHỌN */}
             <aside
-              className={`lg:col-span-4 xl:col-span-3 bg-white rounded-[28px] border border-[#EEDECF] p-6 shadow-[0px_4px_24px_rgba(201,138,144,0.08)] lg:sticky lg:top-24 ${
-                isMobileFilterOpen ? 'block mb-6' : 'hidden lg:block'
-              }`}
+              className={`lg:col-span-4 xl:col-span-3 bg-white rounded-[28px] border border-[#EEDECF] p-6 shadow-[0px_4px_24px_rgba(201,138,144,0.08)] lg:sticky lg:top-24 ${isMobileFilterOpen ? 'block mb-6' : 'hidden lg:block'
+                }`}
             >
               {/* Header Sidebar */}
               <div className="flex items-center justify-between pb-4 border-b border-[#E6DAC8]/60 mb-6">
@@ -582,16 +583,14 @@ export default function CollectionPage() {
                           setSelectedSilhouette(opt.id);
                           setCurrentPage(1);
                         }}
-                        className={`w-full py-2.5 px-4 rounded-[14px] border flex items-center justify-between cursor-pointer transition-all text-left ${
-                          isSelected
+                        className={`w-full py-2.5 px-4 rounded-[14px] border flex items-center justify-between cursor-pointer transition-all text-left ${isSelected
                             ? 'bg-[#FFF9F6] border-[#BA7A83] shadow-xs'
                             : 'bg-white border-[#EEDECF] hover:border-[#BA7A83] hover:bg-[#FFFDFC]'
-                        }`}
+                          }`}
                       >
                         <span
-                          className={`font-jakarta text-[12.5px] transition-colors ${
-                            isSelected ? 'text-[#804E55] font-semibold' : 'text-[#2C2523] font-normal'
-                          }`}
+                          className={`font-jakarta text-[12.5px] transition-colors ${isSelected ? 'text-[#804E55] font-semibold' : 'text-[#2C2523] font-normal'
+                            }`}
                         >
                           {opt.label}
                         </span>
@@ -617,11 +616,10 @@ export default function CollectionPage() {
                         key={mat}
                         type="button"
                         onClick={() => handleToggleMaterial(mat)}
-                        className={`px-3.5 py-1.5 rounded-full font-jakarta text-[12px] transition-all cursor-pointer flex items-center gap-1.5 ${
-                          isSelected
+                        className={`px-3.5 py-1.5 rounded-full font-jakarta text-[12px] transition-all cursor-pointer flex items-center gap-1.5 ${isSelected
                             ? 'bg-[#BA7A83] text-white border border-[#BA7A83] font-medium shadow-xs'
                             : 'bg-white text-[#2C2523] border border-[#EEDECF] hover:border-[#BA7A83] hover:text-[#BA7A83]'
-                        }`}
+                          }`}
                       >
                         <span>{mat}</span>
                         {isSelected && <Check className="w-3 h-3 text-white stroke-[2.5]" />}
@@ -701,9 +699,8 @@ export default function CollectionPage() {
                     <button
                       type="button"
                       onClick={() => setGridCols(2)}
-                      className={`p-1.5 rounded transition-all cursor-pointer border-0 ${
-                        gridCols === 2 ? 'bg-[#FAF0EC] text-[#B8737D]' : 'bg-transparent text-[#847374] hover:text-[#2C2523]'
-                      }`}
+                      className={`p-1.5 rounded transition-all cursor-pointer border-0 ${gridCols === 2 ? 'bg-[#FAF0EC] text-[#B8737D]' : 'bg-transparent text-[#847374] hover:text-[#2C2523]'
+                        }`}
                       title="Xem ảnh lớn (2 cột)"
                     >
                       <LayoutGrid className="w-4 h-4" />
@@ -711,9 +708,8 @@ export default function CollectionPage() {
                     <button
                       type="button"
                       onClick={() => setGridCols(3)}
-                      className={`p-1.5 rounded transition-all cursor-pointer border-0 ${
-                        gridCols === 3 ? 'bg-[#FAF0EC] text-[#B8737D]' : 'bg-transparent text-[#847374] hover:text-[#2C2523]'
-                      }`}
+                      className={`p-1.5 rounded transition-all cursor-pointer border-0 ${gridCols === 3 ? 'bg-[#FAF0EC] text-[#B8737D]' : 'bg-transparent text-[#847374] hover:text-[#2C2523]'
+                        }`}
                       title="Xem lưới chuẩn (3 cột)"
                     >
                       <Grid3X3 className="w-4 h-4" />
@@ -800,18 +796,16 @@ export default function CollectionPage() {
                                 e.stopPropagation();
                                 handleToggleWishlist(dress.id);
                               }}
-                              className={`absolute top-3.5 right-3.5 w-[34px] h-[34px] rounded-[8px] bg-white flex items-center justify-center border shadow-[0px_2px_8px_rgba(0,0,0,0.06)] cursor-pointer z-10 transition-all duration-200 active:scale-90 p-0 ${
-                                isWishlisted
+                              className={`absolute top-3.5 right-3.5 w-[34px] h-[34px] rounded-[8px] bg-white flex items-center justify-center border shadow-[0px_2px_8px_rgba(0,0,0,0.06)] cursor-pointer z-10 transition-all duration-200 active:scale-90 p-0 ${isWishlisted
                                   ? 'border-[#B8737D]/40 bg-[#FFF5F6] text-[#B8737D]'
                                   : 'border-[#EEDECF] text-[#4A3E3F] hover:text-[#B8737D] hover:border-[#B8737D]/40'
-                              }`}
+                                }`}
                               style={{ borderRadius: '8px' }}
                               title={isWishlisted ? 'Bỏ yêu thích' : 'Yêu thích'}
                             >
                               <Heart
-                                className={`w-4 h-4 transition-all duration-200 ${
-                                  isWishlisted ? 'fill-[#B8737D] text-[#B8737D] scale-110' : 'text-[#4A3E3F]'
-                                }`}
+                                className={`w-4 h-4 transition-all duration-200 ${isWishlisted ? 'fill-[#B8737D] text-[#B8737D] scale-110' : 'text-[#4A3E3F]'
+                                  }`}
                               />
                             </button>
                           )}
@@ -939,11 +933,10 @@ export default function CollectionPage() {
                   <button
                     type="button"
                     onClick={() => handlePageChange(1)}
-                    className={`w-[34px] h-[34px] rounded-[10px] font-jakarta text-[13px] flex items-center justify-center cursor-pointer transition-all ${
-                      currentPage === 1
+                    className={`w-[34px] h-[34px] rounded-[10px] font-jakarta text-[13px] flex items-center justify-center cursor-pointer transition-all ${currentPage === 1
                         ? 'bg-[#BA7A83] text-white font-bold shadow-xs border-0'
                         : 'bg-white text-[#2C2523] font-medium border border-[#E6DAC8] hover:border-[#BA7A83] hover:text-[#BA7A83]'
-                    }`}
+                      }`}
                     style={{ borderRadius: '10px' }}
                   >
                     1
@@ -954,11 +947,10 @@ export default function CollectionPage() {
                     <button
                       type="button"
                       onClick={() => handlePageChange(2)}
-                      className={`w-[34px] h-[34px] rounded-[10px] font-jakarta text-[13px] flex items-center justify-center cursor-pointer transition-all ${
-                        currentPage === 2
+                      className={`w-[34px] h-[34px] rounded-[10px] font-jakarta text-[13px] flex items-center justify-center cursor-pointer transition-all ${currentPage === 2
                           ? 'bg-[#BA7A83] text-white font-bold shadow-xs border-0'
                           : 'bg-white text-[#2C2523] font-medium border border-[#E6DAC8] hover:border-[#BA7A83] hover:text-[#BA7A83]'
-                      }`}
+                        }`}
                       style={{ borderRadius: '10px' }}
                     >
                       2
@@ -970,11 +962,10 @@ export default function CollectionPage() {
                     <button
                       type="button"
                       onClick={() => handlePageChange(3)}
-                      className={`w-[34px] h-[34px] rounded-[10px] font-jakarta text-[13px] flex items-center justify-center cursor-pointer transition-all ${
-                        currentPage === 3
+                      className={`w-[34px] h-[34px] rounded-[10px] font-jakarta text-[13px] flex items-center justify-center cursor-pointer transition-all ${currentPage === 3
                           ? 'bg-[#BA7A83] text-white font-bold shadow-xs border-0'
                           : 'bg-white text-[#2C2523] font-medium border border-[#E6DAC8] hover:border-[#BA7A83] hover:text-[#BA7A83]'
-                      }`}
+                        }`}
                       style={{ borderRadius: '10px' }}
                     >
                       3
@@ -1011,11 +1002,10 @@ export default function CollectionPage() {
                     <button
                       type="button"
                       onClick={() => handlePageChange(totalPages)}
-                      className={`w-[34px] h-[34px] rounded-[10px] font-jakarta text-[13px] flex items-center justify-center cursor-pointer transition-all ${
-                        currentPage === totalPages
+                      className={`w-[34px] h-[34px] rounded-[10px] font-jakarta text-[13px] flex items-center justify-center cursor-pointer transition-all ${currentPage === totalPages
                           ? 'bg-[#BA7A83] text-white font-bold shadow-xs border-0'
                           : 'bg-white text-[#2C2523] font-medium border border-[#E6DAC8] hover:border-[#BA7A83] hover:text-[#BA7A83]'
-                      }`}
+                        }`}
                       style={{ borderRadius: '10px' }}
                     >
                       {totalPages}
