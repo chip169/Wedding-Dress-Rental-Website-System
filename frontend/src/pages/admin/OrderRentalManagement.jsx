@@ -1447,17 +1447,7 @@ function InspectionModal({ order, onClose, onSuccess }) {
                   </button>
                 )}
 
-                {/* Nút Gửi Khách Duyệt: ẨN khi Staff chọn Thỏa thuận 2 bên hoặc Hư hỏng nặng */}
-                {!isGuestOrder && !isStaffEscalationRequired && (
-                  <button
-                    type="button"
-                    disabled={submitting || inspectionLoading || Boolean(inspectionError)}
-                    onClick={() => handleSubmit('online')}
-                    className="rounded-xl border border-[#EFE5E1] px-4 py-2 text-xs font-semibold text-[#733F49] disabled:opacity-60 cursor-pointer hover:bg-[#FAF5F2]"
-                  >
-                    Gửi Khách Duyệt
-                  </button>
-                )}
+
               </>
             )}
           </div>
