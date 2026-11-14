@@ -359,7 +359,7 @@ export function getWishlistDresses(customCatalog = null) {
         _id: found._id || found.id || strId,
         name: found.name,
         categoryBadge: found.categoryBadge || (found.categoryName ? found.categoryName.toUpperCase() : (found.silhouette ? found.silhouette.toUpperCase() : 'VÁY CƯỚI CAO CẤP')),
-        size: found.size || (found.sizes?.length ? `SIZE: ${found.sizes.join(' - ')}` : 'SIZE S / M'),
+        size: found.size || (found.sizes?.length ? `SIZE: ${found.sizes.map((s) => (typeof s === 'string' ? s : s?.size || s?.label)).filter(Boolean).join(' - ')}` : 'SIZE S / M'),
         priceNumber: pNum,
         priceFormatted: displayPrice,
         price: displayPrice,

@@ -53,7 +53,10 @@ const DRESS_OPTIONS = Array.isArray(DRESS_CATALOG) && DRESS_CATALOG.length > 0
         : (d.depositAmount || 15000000),
       image: d.image || d.images?.[0] || 'https://images.unsplash.com/photo-1594552072238-b8a33785b261?auto=format&fit=crop&w=600&q=80',
       sizes: (d.sizes && d.sizes.length > 0)
-        ? d.sizes.map((s) => (String(s).startsWith('Size') ? s : `Size ${s}`))
+        ? d.sizes.map((s) => {
+            const szName = typeof s === 'string' ? s : (s?.size || s?.label || 'S');
+            return String(szName).startsWith('Size') ? szName : `Size ${szName}`;
+          })
         : ['Size S', 'Size M', 'Size L']
     }))
   : [

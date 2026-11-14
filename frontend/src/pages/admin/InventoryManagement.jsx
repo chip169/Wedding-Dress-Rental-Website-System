@@ -276,18 +276,29 @@ export default function InventoryManagement() {
     const rawLoc = override.location || cabinets[index % cabinets.length];
     const location = (rawLoc || '').replace(/^Tủ\s*/i, '');
 
-    // Xử lý sizes và số lượng tồn kho
+    // Xử lý sizes và số lượng tồn kho (Ưu tiên cấu trúc { size, quantity } từ MongoDB Atlas)
     let sizeList = [];
-    if (override.sizes && Array.isArray(override.sizes) && override.sizes.length > 0) {
+    const dbHasStructuredSizes = Array.isArray(d.sizes) && d.sizes.length > 0 && typeof d.sizes[0] === 'object' && d.sizes[0]?.size !== undefined;
+    if (dbHasStructuredSizes) {
+      sizeList = d.sizes.map((sz) => {
+        const q = Number(sz.quantity ?? 1);
+        return {
+          size: sz.size,
+          quantity: q,
+          label: `Size ${sz.size} (${String(q).padStart(2, '0')} bộ)`,
+        };
+      });
+    } else if (override.sizes && Array.isArray(override.sizes) && override.sizes.length > 0) {
       sizeList = override.sizes;
     } else {
       const defaultSizes = Array.isArray(d.sizes) && d.sizes.length > 0 ? d.sizes : ['S', 'M'];
       sizeList = defaultSizes.map((sz) => {
         if (typeof sz === 'object' && sz.size) {
-          return { size: sz.size, quantity: sz.quantity ?? 2, label: `Size ${sz.size} (${sz.quantity ?? 2} bộ)` };
+          const q = Number(sz.quantity ?? 1);
+          return { size: sz.size, quantity: q, label: `Size ${sz.size} (${String(q).padStart(2, '0')} bộ)` };
         }
         const sName = typeof sz === 'object' ? (sz.label || 'S') : sz;
-        return { size: sName, quantity: 2, label: `Size ${sName} (2 bộ)` };
+        return { size: sName, quantity: 1, label: `Size ${sName} (01 bộ)` };
       });
     }
 
@@ -887,14 +898,18 @@ export default function InventoryManagement() {
     setEditImages(imgs);
 
     const sizeMap = { XS: 0, S: 0, M: 0, L: 0 };
-    (item.sizes || []).forEach((sz) => {
+    const sourceSizes = (Array.isArray(rawDress.sizes) && rawDress.sizes.length > 0)
+      ? rawDress.sizes
+      : (Array.isArray(item.sizes) ? item.sizes : []);
+
+    sourceSizes.forEach((sz) => {
       const sName = typeof sz === 'object' ? sz.size : sz;
-      const qty = typeof sz === 'object' ? (sz.quantity ?? 2) : 2;
+      const qty = typeof sz === 'object' ? (Number(sz.quantity) || 0) : 1;
       if (sizeMap[sName] !== undefined) sizeMap[sName] = qty;
     });
     if (Object.values(sizeMap).every((v) => v === 0)) {
-      sizeMap.S = 2;
-      sizeMap.M = 2;
+      sizeMap.S = 1;
+      sizeMap.M = 1;
     }
     setEditSizes(sizeMap);
   };
@@ -968,18 +983,17 @@ export default function InventoryManagement() {
       const qtyL = Math.max(0, Number(editSizes.L || 0));
 
       const activeSizes = [];
-      if (qtyXS > 0) activeSizes.push('XS');
-      if (qtyS > 0) activeSizes.push('S');
-      if (qtyM > 0) activeSizes.push('M');
-      if (qtyL > 0) activeSizes.push('L');
-      if (activeSizes.length === 0) activeSizes.push('S', 'M');
+      if (qtyXS > 0) activeSizes.push({ size: 'XS', quantity: qtyXS });
+      if (qtyS > 0) activeSizes.push({ size: 'S', quantity: qtyS });
+      if (qtyM > 0) activeSizes.push({ size: 'M', quantity: qtyM });
+      if (qtyL > 0) activeSizes.push({ size: 'L', quantity: qtyL });
+      if (activeSizes.length === 0) activeSizes.push({ size: 'S', quantity: 1 }, { size: 'M', quantity: 1 });
 
-      const sizeList = [
-        { size: 'XS', quantity: qtyXS, label: `Size XS (${String(qtyXS).padStart(2, '0')} bộ)` },
-        { size: 'S', quantity: qtyS, label: `Size S (${String(qtyS).padStart(2, '0')} bộ)` },
-        { size: 'M', quantity: qtyM, label: `Size M (${String(qtyM).padStart(2, '0')} bộ)` },
-        { size: 'L', quantity: qtyL, label: `Size L (${String(qtyL).padStart(2, '0')} bộ)` },
-      ];
+      const sizeList = activeSizes.map((sz) => ({
+        size: sz.size,
+        quantity: sz.quantity,
+        label: `Size ${sz.size} (${String(sz.quantity).padStart(2, '0')} bộ)`,
+      }));
 
       // Ánh xạ trạng thái UI sang status MongoDB
       let mongoStatus = 'available';
@@ -1186,12 +1200,19 @@ export default function InventoryManagement() {
         (c) => c.name === newSilhouette || c.slug === newSilhouette || c._id === newSilhouette || c.id === newSilhouette
       );
 
-      // 2. Tính toán các size khả dụng
+      // 2. Tính toán các size khả dụng dạng { size, quantity } đồng bộ MongoDB Atlas
       const activeSizes = [];
-      if (qtyXS > 0) activeSizes.push('XS');
-      if (qtyS > 0) activeSizes.push('S');
-      if (qtyM > 0) activeSizes.push('M');
-      if (qtyL > 0) activeSizes.push('L');
+      if (qtyXS > 0) activeSizes.push({ size: 'XS', quantity: qtyXS });
+      if (qtyS > 0) activeSizes.push({ size: 'S', quantity: qtyS });
+      if (qtyM > 0) activeSizes.push({ size: 'M', quantity: qtyM });
+      if (qtyL > 0) activeSizes.push({ size: 'L', quantity: qtyL });
+      if (activeSizes.length === 0) activeSizes.push({ size: 'S', quantity: 1 }, { size: 'M', quantity: 1 });
+
+      const sizeList = activeSizes.map((sz) => ({
+        size: sz.size,
+        quantity: sz.quantity,
+        label: `Size ${sz.size} (${String(sz.quantity).padStart(2, '0')} bộ)`,
+      }));
 
       const payload = {
         name: newName.trim(),
@@ -1215,13 +1236,6 @@ export default function InventoryManagement() {
       const createdId = createdDress?._id || createdDress?.id || `new_${Date.now()}`;
 
       // 4. Lưu cấu hình phân bổ số lượng tồn kho từng size vào manualOverrides
-      const sizeList = [
-        { size: 'XS', quantity: qtyXS, label: `Size XS (${String(qtyXS).padStart(2, '0')} bộ)` },
-        { size: 'S', quantity: qtyS, label: `Size S (${String(qtyS).padStart(2, '0')} bộ)` },
-        { size: 'M', quantity: qtyM, label: `Size M (${String(qtyM).padStart(2, '0')} bộ)` },
-        { size: 'L', quantity: qtyL, label: `Size L (${String(qtyL).padStart(2, '0')} bộ)` },
-      ];
-
       const overrideObj = {
         name: newName.trim(),
         material: newMaterial.trim(),

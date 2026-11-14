@@ -158,6 +158,29 @@ const COLOR_PALETTE = {
   'xanh khói': { hex: '#8CA4B8', border: '#6E8B9E' },
 };
 
+function normalizeDressSizes(rawSizes) {
+  if (!Array.isArray(rawSizes) || rawSizes.length === 0) {
+    return [
+      { size: 'S', quantity: 1 },
+      { size: 'M', quantity: 1 },
+    ];
+  }
+  return rawSizes
+    .map((s) => {
+      if (typeof s === 'string') {
+        const clean = s.replace(/^size\s*/i, '').trim().toUpperCase();
+        return clean ? { size: clean, quantity: 1 } : null;
+      }
+      if (typeof s === 'object' && s && (s.size || s.label)) {
+        const clean = String(s.size || s.label).replace(/^size\s*/i, '').trim().toUpperCase();
+        const qty = Math.max(0, Number(s.quantity ?? 1));
+        return clean ? { size: clean, quantity: qty } : null;
+      }
+      return null;
+    })
+    .filter((s) => s && s.quantity > 0);
+}
+
 export async function createDress(data) {
   if (!data?.name?.trim()) fail(400, 'Tên váy cưới không được để trống.');
   if (!data?.rentPrice || Number(data.rentPrice) <= 0) fail(400, 'Đơn giá thuê váy cưới không được để trống và phải lớn hơn 0.');
@@ -216,7 +239,7 @@ export async function createDress(data) {
     material: data.material || 'Lụa Mikado Ý',
     color: data.color || 'Trắng Tinh Khôi',
     colorOptions: colorOptions.length > 0 ? colorOptions : undefined,
-    sizes: Array.isArray(data.sizes) && data.sizes.length > 0 ? data.sizes : ['XS', 'S', 'M', 'L'],
+    sizes: normalizeDressSizes(data.sizes),
     rentPrice: Number(data.rentPrice || data.price || 5000000),
     depositAmount: Number(data.depositAmount || 15000000),
     originalPrice: Number(data.originalPrice || (Number(data.rentPrice || 5000000) * 5)),
@@ -258,7 +281,12 @@ export async function updateDress(id, data) {
     });
   }
 
-  // 3. Cho phép tìm theo cả _id ObjectId hoặc mã SKU (UB-012) hoặc slug
+  // 3. Chuẩn hóa sizes thành mảng Object { size, quantity }
+  if (Array.isArray(updateData.sizes)) {
+    updateData.sizes = normalizeDressSizes(updateData.sizes);
+  }
+
+  // 4. Cho phép tìm theo cả _id ObjectId hoặc mã SKU (UB-012) hoặc slug
   const filter = mongoose.isValidObjectId(id)
     ? { _id: id }
     : { $or: [{ code: String(id).toUpperCase() }, { slug: String(id).toLowerCase() }] };

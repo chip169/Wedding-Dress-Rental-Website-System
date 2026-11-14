@@ -185,16 +185,22 @@ export const calculateInventoryMaintenanceSummary = async () => {
       });
 
       let sizeList = [];
-      if (override.sizes && Array.isArray(override.sizes) && override.sizes.length > 0) {
+      const dbHasStructuredSizes = Array.isArray(d.sizes) && d.sizes.length > 0 && typeof d.sizes[0] === 'object' && d.sizes[0]?.size !== undefined;
+      if (dbHasStructuredSizes) {
+        sizeList = d.sizes.map((sz) => ({
+          size: sz.size,
+          quantity: Number(sz.quantity ?? 1),
+        }));
+      } else if (override.sizes && Array.isArray(override.sizes) && override.sizes.length > 0) {
         sizeList = override.sizes;
       } else {
         const defaultSizes = Array.isArray(d.sizes) && d.sizes.length > 0 ? d.sizes : ['S', 'M'];
         sizeList = defaultSizes.map((sz) => {
           if (typeof sz === 'object' && sz.size) {
-            return { size: sz.size, quantity: sz.quantity ?? 2 };
+            return { size: sz.size, quantity: Number(sz.quantity ?? 1) };
           }
           const sName = typeof sz === 'object' ? (sz.label || 'S') : sz;
-          return { size: sName, quantity: 2 };
+          return { size: sName, quantity: 1 };
         });
       }
 

@@ -67,7 +67,7 @@ export default function WishlistPage() {
       pool.slice(0, 4).map((d) => ({
         ...d,
         categoryBadge: d.categoryName ? d.categoryName.toUpperCase() : (d.silhouette || 'VÁY CƯỚI CAO CẤP').toUpperCase(),
-        sizeDisplay: d.badgeSub || d.size || (Array.isArray(d.sizes) ? `SIZE: ${d.sizes.join(' - ')}` : 'SIZE: S - M'),
+        sizeDisplay: d.badgeSub || d.size || (Array.isArray(d.sizes) ? `SIZE: ${d.sizes.map((s) => (typeof s === 'string' ? s : s?.size || s?.label)).filter(Boolean).join(' - ')}` : 'SIZE: S - M'),
         priceFormatted: d.price ? (typeof d.price === 'string' && d.price.includes('₫') ? d.price : formatCurrencyVND(d.price)) : (d.priceNumber ? formatCurrencyVND(d.priceNumber) : '5.200.000₫'),
       }))
     );

@@ -133,8 +133,10 @@ const SIZE_MAP = {
 function formatDressSizes(rawSizes) {
   if (Array.isArray(rawSizes) && rawSizes.length > 0) {
     return rawSizes.map(s => {
-      const key = typeof s === 'string' ? s : s?.id || s?.label;
-      return SIZE_MAP[key] || { id: key, label: key, note: 'Chuẩn dáng UniBridal' };
+      const key = typeof s === 'string' ? s : s?.size || s?.id || s?.label;
+      const baseObj = SIZE_MAP[key] || { id: key, label: key, note: 'Chuẩn dáng UniBridal' };
+      const qty = typeof s === 'object' && s?.quantity !== undefined ? s.quantity : 1;
+      return { ...baseObj, quantity: qty };
     });
   }
   return [SIZE_MAP.S, SIZE_MAP.M];
@@ -347,8 +349,12 @@ export async function getAllDresses(params = {}) {
         priceCategory: pCat,
         image: (d.images && d.images[0]) || d.image || '/assets/dresses/dress_01.jpg',
         badgeMain: d.collectionTag || (pCat === 'vip' ? 'HAUTE COUTURE VIP' : 'HAUTE COUTURE'),
-        badgeSub: d.sizes?.length ? `Size: ${d.sizes.join(' - ')}` : 'Đủ size',
-        size: d.sizes?.length ? `Size: ${d.sizes.join(' - ')}` : 'Size: S - M',
+        badgeSub: (d.sizes && d.sizes.length)
+          ? `Size: ${d.sizes.map((s) => (typeof s === 'string' ? s : s?.size || s?.label)).filter(Boolean).join(' - ')}`
+          : 'Đủ size',
+        size: (d.sizes && d.sizes.length)
+          ? `Size: ${d.sizes.map((s) => (typeof s === 'string' ? s : s?.size || s?.label)).filter(Boolean).join(' - ')}`
+          : 'Size: S - M',
         sizes: d.sizes,
         material: d.material || 'Lụa Mikado Ý VÀ Ren Pháp',
         silhouette: d.silhouette || 'Ballgown',

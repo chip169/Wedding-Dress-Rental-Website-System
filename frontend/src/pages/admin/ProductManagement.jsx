@@ -642,7 +642,7 @@ export default function ProductManagement() {
                                   key={idx}
                                   className="inline-block bg-[#F6ECE8] text-[#5F333B] text-[11px] font-medium px-2 py-0.5 rounded-md leading-none"
                                 >
-                                  {s.label}
+                                  {s?.label || s?.size || (typeof s === 'string' ? s : 'Size S')}
                                 </span>
                               ))}
                             </div>
@@ -1160,7 +1160,7 @@ export default function ProductManagement() {
                                 key={idx}
                                 className="bg-[#F6ECE8] text-[#5F333B] text-[11.5px] font-bold px-2.5 py-1 rounded-lg"
                               >
-                                {s.label}
+                                {s?.label || s?.size || (typeof s === 'string' ? s : 'Size S')}
                               </span>
                             ))
                           ) : (
