@@ -140,7 +140,13 @@ export async function getOrder(idOrCode) {
  */
 export async function createOrder(orderData) {
   try {
-    return await axiosClient.post('/orders', orderData);
+    const res = await axiosClient.post('/orders', orderData);
+    clearAdminOrdersCache();
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new Event('unibridal_order_created'));
+      window.dispatchEvent(new Event('unibridal_order_updated'));
+    }
+    return res;
   } catch (error) {
     throw new Error(error.response?.data?.message || error.message || 'Không thể tạo đơn thuê, vui lòng thử lại.');
   }

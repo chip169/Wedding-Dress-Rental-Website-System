@@ -679,13 +679,13 @@ export default function ScheduleOverviewPage({ defaultTab }) {
     document.addEventListener('mouseup', handleMouseUp);
   };
 
-  // Lấy dữ liệu cả Lịch Hẹn Thử Váy và Đơn Thuê
+  // Lấy dữ liệu cả Lịch Hẹn Thử Váy và Đơn Thuê (Luôn ép buộc lấy mới nhất từ server)
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [resApt, resOrd] = await Promise.all([
         getAppointmentsApi({ limit: 1000 }).catch(() => ({ data: [] })),
-        getAllOrdersAdmin({ limit: 1000 }).catch(() => ({ orders: [] })),
+        getAllOrdersAdmin({ limit: 1000 }, true).catch(() => ({ orders: [] })),
       ]);
 
       const aptList = Array.isArray(resApt?.data)
@@ -693,13 +693,26 @@ export default function ScheduleOverviewPage({ defaultTab }) {
         : resApt?.data?.data || [];
       setAppointments(aptList);
 
-      const ordList = Array.isArray(resOrd?.orders)
+      let ordList = Array.isArray(resOrd?.orders)
         ? resOrd.orders
         : Array.isArray(resOrd?.data)
         ? resOrd.data
         : Array.isArray(resOrd)
         ? resOrd
         : [];
+
+      // Đồng bộ đơn hàng mới cọc từ localStorage nếu API chưa trả về kịp
+      try {
+        const lastOrder = JSON.parse(localStorage.getItem('unibridal-last-order') || 'null');
+        if (lastOrder && (lastOrder.orderCode || lastOrder._id || lastOrder.id)) {
+          const lastCode = String(lastOrder.orderCode || lastOrder._id || lastOrder.id);
+          const exists = ordList.some((o) => String(o.orderCode || o._id || o.id) === lastCode);
+          if (!exists) {
+            ordList = [lastOrder, ...ordList];
+          }
+        }
+      } catch (_) {}
+
       setOrders(ordList);
     } catch (err) {
       console.error('Lỗi tải dữ liệu lịch:', err);
@@ -710,8 +723,19 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
   useEffect(() => {
     fetchData();
-    window.addEventListener(APPOINTMENT_EVENT, fetchData);
-    return () => window.removeEventListener(APPOINTMENT_EVENT, fetchData);
+    const handleUpdate = () => fetchData();
+    window.addEventListener(APPOINTMENT_EVENT, handleUpdate);
+    window.addEventListener('unibridal_order_created', handleUpdate);
+    window.addEventListener('unibridal_order_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    const interval = setInterval(() => fetchData(), 10000);
+    return () => {
+      clearInterval(interval);
+      window.removeEventListener(APPOINTMENT_EVENT, handleUpdate);
+      window.removeEventListener('unibridal_order_created', handleUpdate);
+      window.removeEventListener('unibridal_order_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+    };
   }, [fetchData]);
 
   // Tự động nhảy đến ngày và mở modal chi tiết lịch hẹn khi điều hướng từ thanh Ticker Header
@@ -877,8 +901,9 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
   const highlightStartDateKey = useMemo(() => {
     if (!activeHighlightOrder?.rentalStartDate) return null;
-    const d = new Date(activeHighlightOrder.rentalStartDate);
-    d.setDate(d.getDate() - 1);
+    const d = activeHighlightOrder.deliveryDate
+      ? new Date(activeHighlightOrder.deliveryDate)
+      : new Date(activeHighlightOrder.rentalStartDate);
     return toDateKey(d);
   }, [activeHighlightOrder]);
   const highlightEndDateKey = activeHighlightOrder ? toDateKey(activeHighlightOrder.rentalEndDate) : null;
@@ -975,8 +1000,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
     );
   }, [calendarBranchOrders, deliveryMethodFilter]);
 
-  // Danh sách sự kiện bàn giao / nhận váy: LÙI 1 NGÀY trước ngày khách bắt đầu thuê
-  // (Do showroom giao sớm 1 ngày hoặc khách đến showroom lấy sớm 1 ngày để thử và chuẩn bị)
+  // Danh sách sự kiện bàn giao / nhận váy theo ngày bắt đầu thuê (hoặc ngày giao hẹn trước)
   const deliveriesByDate = useMemo(() => {
     const map = {};
     orders.forEach((ord) => {
@@ -986,9 +1010,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
       const startDate = ord.rentalStartDate ? new Date(ord.rentalStartDate) : null;
       if (!startDate || isNaN(startDate.getTime())) return;
 
-      // Lùi về 1 ngày trước khi khách bắt đầu thuê
-      const deliveryDate = new Date(startDate);
-      deliveryDate.setDate(deliveryDate.getDate() - 1);
+      const deliveryDate = ord.deliveryDate ? new Date(ord.deliveryDate) : startDate;
 
       const key = toDateKey(deliveryDate);
       if (!key) return;
@@ -1011,6 +1033,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
         notes: ord.notes,
         date: key,
         branch: ord.branch || ord.branchId || 'hn-hoankiem',
+        rawOrder: ord,
       });
     });
     return map;
@@ -1045,6 +1068,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
         notes: ord.notes,
         date: key,
         branch: ord.branch || ord.branchId || 'hn-hoankiem',
+        rawOrder: ord,
       });
     });
     return map;

@@ -1713,6 +1713,8 @@ export default function CheckoutPage() {
           localStorage.removeItem('unibridal_cart');
           localStorage.removeItem('unibridal-rental-cart');
           window.dispatchEvent(new Event('unibridal-cart-updated'));
+          window.dispatchEvent(new Event('unibridal_order_created'));
+          window.dispatchEvent(new Event('unibridal_order_updated'));
         } catch (err) {
           // ignore
         }
@@ -1901,6 +1903,8 @@ export default function CheckoutPage() {
           localStorage.removeItem('unibridal_cart');
           localStorage.removeItem('unibridal-rental-cart');
           window.dispatchEvent(new Event('unibridal-cart-updated'));
+          window.dispatchEvent(new Event('unibridal_order_created'));
+          window.dispatchEvent(new Event('unibridal_order_updated'));
         } catch { }
 
         setIsSuccessModalOpen(true);

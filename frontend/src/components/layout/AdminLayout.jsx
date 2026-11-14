@@ -1,6 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, NavLink, useNavigate, useLocation } from 'react-router-dom';
-import { LayoutDashboard,
+import {
+  LayoutDashboard,
   Crown,
   CalendarCheck,
   CalendarDays,
@@ -26,7 +27,8 @@ import { LayoutDashboard,
   Bell,
   Pause,
   Play,
-  Check } from 'lucide-react';
+  Check
+} from 'lucide-react';
 import logoImg from '../../assets/logo.png';
 import heroBride from '../../assets/hero_bride.jpg';
 import adminAvatarImg from '../../assets/admin_avatar.jpg';
@@ -106,7 +108,7 @@ export default function AdminLayout({
       const updated = [id, ...prev].slice(0, 100);
       try {
         localStorage.setItem(READ_NOTIFS_STORAGE_KEY, JSON.stringify(updated));
-      } catch {}
+      } catch { }
       return updated;
     });
   };
@@ -137,7 +139,7 @@ export default function AdminLayout({
           setLiveNotifications(sharedData);
           setIsInitialLoading(false);
         }
-      } catch {}
+      } catch { }
       return;
     }
 
@@ -430,9 +432,8 @@ export default function AdminLayout({
 
       {/* Left Sidebar */}
       <aside
-        className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#FCF7F4] border-r border-[#EFE5E1] flex flex-col justify-between py-6 px-4 transition-transform duration-300 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 shrink-0 overflow-y-auto ${
-          sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
-        }`}
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-[#FCF7F4] border-r border-[#EFE5E1] flex flex-col justify-between py-6 px-4 transition-transform duration-300 lg:sticky lg:top-0 lg:h-screen lg:translate-x-0 shrink-0 overflow-y-auto ${sidebarOpen ? 'translate-x-0 shadow-2xl' : '-translate-x-full'
+          }`}
       >
         <div>
           {/* Top Logo */}
@@ -481,11 +482,10 @@ export default function AdminLayout({
                   key={item.key}
                   to={item.to}
                   onClick={() => setSidebarOpen(false)}
-                  className={`flex items-center gap-3 px-3.5 py-3 rounded-xl text-[13.5px] font-medium transition-all ${
-                    isActive
-                      ? 'bg-[#F2E4DE] text-[#5F333B] font-bold shadow-xs'
-                      : 'text-[#6D5D5E] hover:bg-[#F8EFEA] hover:text-[#5F333B]'
-                  }`}
+                  className={`flex items-center gap-3 px-3.5 py-3 rounded-xl text-[13.5px] font-medium transition-all ${isActive
+                    ? 'bg-[#F2E4DE] text-[#5F333B] font-bold shadow-xs'
+                    : 'text-[#6D5D5E] hover:bg-[#F8EFEA] hover:text-[#5F333B]'
+                    }`}
                 >
                   <Icon
                     size={18}
@@ -650,7 +650,7 @@ export default function AdminLayout({
                     setReadNotifIds([]);
                     try {
                       localStorage.removeItem(READ_NOTIFS_STORAGE_KEY);
-                    } catch {}
+                    } catch { }
                   }}
                   className="text-[11px] text-[#BE4B5E] hover:underline cursor-pointer font-medium"
                 >
@@ -676,9 +676,8 @@ export default function AdminLayout({
                 <div className="text-[13.5px] font-bold text-[#2C2523] leading-tight">
                   {userName}
                 </div>
-                <div className={`inline-block mt-0.5 px-2 py-0.5 rounded-sm text-[9.5px] font-bold tracking-wider uppercase ${
-                  isStaff ? 'bg-[#FDECEE] text-[#B8737D]' : 'bg-[#EBF5EE] text-[#2F6F4E]'
-                }`}>
+                <div className={`inline-block mt-0.5 px-2 py-0.5 rounded-sm text-[9.5px] font-bold tracking-wider uppercase ${isStaff ? 'bg-[#FDECEE] text-[#B8737D]' : 'bg-[#EBF5EE] text-[#2F6F4E]'
+                  }`}>
                   {userRoleText}
                 </div>
               </div>
