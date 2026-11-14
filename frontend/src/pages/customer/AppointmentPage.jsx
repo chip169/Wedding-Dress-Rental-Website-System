@@ -2,7 +2,8 @@ import { formatCurrencyVND } from '../../utils/formatCurrency';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import { Calendar,
+import {
+  Calendar,
   Clock,
   MapPin,
   Check,
@@ -25,9 +26,8 @@ import { Calendar,
   ArrowRight,
   Star,
   Crown,
-  ExternalLink,
-  Printer,
-  CalendarPlus } from 'lucide-react';
+  ExternalLink
+} from 'lucide-react';
 import { message } from 'antd';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
@@ -450,11 +450,7 @@ export default function AppointmentPage() {
               <h1 className="font-jakarta text-[26px] sm:text-[34px] font-extrabold text-[#2C2523] mt-2 mb-2 leading-tight tracking-tight">
                 Hẹn Gặp Nàng Tại UniBridal Private Suite
               </h1>
-              <p className="text-[14px] sm:text-[15px] text-[#6B5C5D] max-w-[620px] mx-auto leading-relaxed">
-                Đặc quyền phòng thử riêng tư 1:1 đã được chuẩn bị sẵn sàng để chào đón quý cô{' '}
-                <span className="font-bold text-[#733F49] whitespace-nowrap">{confirmedBooking.fullName}</span>{' '}
-                cùng người thân.
-              </p>
+
               <div className="mt-3.5 inline-flex items-center gap-2 bg-[#F0FDF4] text-[#166534] border border-[#BBF7D0] px-4 py-2 rounded-xl text-[13px] font-medium shadow-xs">
                 <Mail className="w-4 h-4 text-[#16a34a] shrink-0" />
                 <span>Toàn bộ thông tin lịch hẹn đã được gửi tới email <strong>{confirmedBooking.email}</strong></span>
@@ -482,9 +478,28 @@ export default function AppointmentPage() {
                     <h2 className="font-jakarta text-[20px] sm:text-[24px] font-extrabold text-[#2C2523] m-0 tracking-tight">
                       GIẤY MỜI DANH DỰ THỬ LỄ PHỤC CƯỚI
                     </h2>
-                    <p className="text-[12px] text-[#847374] m-0">
-                      Hệ thống phòng thử váy cô dâu tiêu chuẩn Haute Couture độc bản
-                    </p>
+                  </div>
+                </div>
+
+                {/* MÃ ĐƠN LỊCH HẸN THỬ VÁY ĐƯỢC ĐẶT NỔI BẬT LÊN ĐẦU */}
+                <div className="p-5 sm:p-6 rounded-2xl bg-gradient-to-r from-[#FFF5F2] via-[#FFF9F6] to-[#FFF5F2] border-2 border-[#E8C5BE] shadow-xs flex items-center justify-between gap-4">
+                  <div className="flex items-center gap-4 text-center sm:text-left w-full">
+                    <div className="w-13 h-13 bg-white rounded-2xl border border-[#EEDECF] flex items-center justify-center shrink-0 shadow-xs text-[#733F49]">
+                      <Sparkles className="w-6 h-6 text-[#D4AF37]" />
+                    </div>
+                    <div className="flex-1">
+                      <span className="text-[11px] font-extrabold uppercase tracking-[2px] text-[#8C7D7E] block mb-1">
+                        MÃ ĐƠN HẸN THỬ VÁY CỦA NÀNG
+                      </span>
+                      <div className="flex items-center gap-2 justify-center sm:justify-start">
+                        <span className="font-mono text-[22px] sm:text-[26px] font-black text-[#733F49] bg-white px-4 py-1 rounded-xl border border-[#F2D8D4] shadow-xs tracking-wider">
+                          {confirmedBooking.appointmentCode || confirmedBooking.id || 'APT-2026-8888'}
+                        </span>
+                      </div>
+                      <div className="text-[12.5px] text-[#6B5C5D] mt-2 leading-relaxed">
+                        Quý cô chỉ cần đọc mã này tại quầy tiếp tân để chuyên viên hướng dẫn nàng bước thẳng vào <strong>Private Suite</strong>.
+                      </div>
+                    </div>
                   </div>
                 </div>
 
@@ -495,7 +510,7 @@ export default function AppointmentPage() {
                   <div className="bg-[#FCF9F6] p-5 rounded-2xl border border-[#EEDECF]/90 flex flex-col justify-between space-y-3">
                     <div>
                       <span className="text-[10.5px] font-bold text-[#847374] tracking-wider uppercase block mb-1">
-                        CÔ DÂU VINH DỰ VÀ ĐOÀN ĐỒNG HÀNH
+                        CÔ DÂU ĐẶT LỊCH
                       </span>
                       <div className="font-jakarta font-bold text-[18px] text-[#2C2523] leading-snug">
                         {confirmedBooking.fullName}
@@ -582,9 +597,7 @@ export default function AppointmentPage() {
                     <span className="text-[11px] font-bold uppercase tracking-wider text-[#847374]">
                       DANH SÁCH {confirmedBooking.selectedDresses?.length || 0} MẪU VÁY CƯỚI CHUẨN BỊ SẴN TRONG PHÒNG THỬ:
                     </span>
-                    <span className="text-[11px] text-[#733F49] font-semibold">
-                      Chuẩn bị đúng số đo
-                    </span>
+
                   </div>
 
                   <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
@@ -651,53 +664,6 @@ export default function AppointmentPage() {
                     <p className="m-0 italic">"{confirmedBooking.notes}"</p>
                   </div>
                 )}
-
-                {/* Check-in Pass Strip (Đã xóa ô QR, hiển thị mã đơn rõ ràng) */}
-                <div className="p-4 sm:p-5 rounded-2xl bg-[#FCF9F6] border border-[#EEDECF] flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-3.5 text-center sm:text-left">
-                    <div className="w-11 h-11 bg-white rounded-xl border border-[#EEDECF] flex items-center justify-center shrink-0 shadow-xs text-[#733F49]">
-                      <Sparkles className="w-5 h-5 text-[#D4AF37]" />
-                    </div>
-                    <div>
-                      <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
-                        <span className="font-bold text-[13.5px] text-[#2C2523]">
-                          Mã Đơn Lịch Hẹn:
-                        </span>
-                        <span className="font-mono text-[16px] font-extrabold text-[#733F49] bg-white px-3 py-0.5 rounded-lg border border-[#F2D8D4] shadow-2xs">
-                          {confirmedBooking.appointmentCode || confirmedBooking.id || 'APT-2026-8888'}
-                        </span>
-                      </div>
-                      <div className="text-[12px] text-[#847374] leading-relaxed mt-1 max-w-[420px]">
-                        Quý cô chỉ cần đọc mã này tại quầy tiếp tân để chuyên viên hướng dẫn nàng bước thẳng vào Private Suite.
-                      </div>
-                    </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 shrink-0 print:hidden">
-                    {/* Add to Google Calendar Button */}
-                    <a
-                      href={buildGoogleCalendarUrl(confirmedBooking)}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="px-3.5 py-2.5 rounded-xl bg-white border border-[#EEDECF] hover:bg-[#FAF0EC] text-[#2C2523] text-[12px] font-bold flex items-center gap-1.5 transition-colors no-underline shadow-2xs"
-                      title="Thêm lịch hẹn vào Google Calendar"
-                    >
-                      <CalendarPlus className="w-4 h-4 text-[#733F49]" />
-                      <span>Thêm Calendar</span>
-                    </a>
-
-                    {/* Print / Save Invitation */}
-                    <button
-                      type="button"
-                      onClick={handlePrintInvitation}
-                      className="px-4 py-2.5 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white text-[12px] font-bold flex items-center gap-1.5 transition-all cursor-pointer shadow-xs"
-                      title="In hoặc tải thiệp mời PDF"
-                    >
-                      <Printer className="w-4 h-4" />
-                      <span>Lưu Thiệp Mời</span>
-                    </button>
-                  </div>
-                </div>
 
               </div>
 
