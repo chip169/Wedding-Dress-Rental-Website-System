@@ -601,7 +601,7 @@ export default function AdminLayout({
                   </span>
                 </div>
 
-                <div className="flex items-center gap-0.5 shrink-0 pl-1.5 border-l border-[#EFE2DC]">
+                <div className="flex items-center gap-1 shrink-0 pl-1.5 border-l border-[#EFE2DC]">
                   {/* Nút lùi */}
                   <button
                     type="button"
@@ -616,7 +616,7 @@ export default function AdminLayout({
                   </button>
 
                   {/* Chỉ số */}
-                  <span className="text-[10px] text-[#A89899] font-mono px-1 select-none">
+                  <span className="text-[10px] text-[#A89899] font-mono px-0.5 select-none">
                     {safeIdx + 1}/{activeNotifications.length}
                   </span>
 
@@ -631,6 +631,21 @@ export default function AdminLayout({
                     title="Thông báo kế tiếp"
                   >
                     <ChevronRight size={13} />
+                  </button>
+
+                  {/* Nút tích xác nhận đã đọc -> Tự ẩn thông báo này */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      if (currentNotif?.id) {
+                        markIdAsRead(currentNotif.id);
+                      }
+                    }}
+                    className="ml-0.5 p-1 rounded-full text-[#8A797A] hover:text-emerald-700 hover:bg-emerald-50 transition-colors cursor-pointer border border-transparent hover:border-emerald-200"
+                    title="Xác nhận đã đọc (tự động ẩn)"
+                  >
+                    <Check size={13} className="stroke-[2.5]" />
                   </button>
                 </div>
               </div>
