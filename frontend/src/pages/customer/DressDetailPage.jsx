@@ -632,22 +632,29 @@ export default function DressDetailPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {dress.sizes?.map((sz) => {
                   const isSizeActive = selectedSize === sz.id;
+                  const isOutOfStock = sz.quantity !== undefined && Number(sz.quantity) <= 0;
                   return (
                     <button
                       key={sz.id}
                       type="button"
-                      onClick={() => setSelectedSize(sz.id)}
-                      className={`py-2.5 px-3 rounded-[12px] border text-center transition-all cursor-pointer flex flex-col items-center justify-center ${isSizeActive
-                        ? 'border-[#B26B74] bg-[#B26B74] text-white shadow-xs'
-                        : 'border-[#EAE0DC] bg-white text-[#231A19] hover:border-[#B26B74]'
-                        }`}
+                      disabled={isOutOfStock}
+                      onClick={() => !isOutOfStock && setSelectedSize(sz.id)}
+                      title={isOutOfStock ? `Size ${sz.label} hiện đã hết hàng trong kho` : undefined}
+                      className={`py-2.5 px-3 rounded-[12px] border text-center transition-all flex flex-col items-center justify-center ${
+                        isOutOfStock
+                          ? 'border-stone-200 bg-stone-100 text-stone-400 cursor-not-allowed opacity-40 line-through decoration-stone-400 select-none'
+                          : isSizeActive
+                            ? 'border-[#B26B74] bg-[#B26B74] text-white shadow-xs cursor-pointer'
+                            : 'border-[#EAE0DC] bg-white text-[#231A19] hover:border-[#B26B74] cursor-pointer'
+                      }`}
                     >
                       <span className="font-semibold text-[13.5px] leading-tight">{sz.label}</span>
                       <span
-                        className={`text-[10.5px] leading-tight mt-0.5 ${isSizeActive ? 'text-white/80' : 'text-[#8A7978]'
-                          }`}
+                        className={`text-[10.5px] leading-tight mt-0.5 ${
+                          isOutOfStock ? 'text-stone-400 font-medium' : isSizeActive ? 'text-white/80' : 'text-[#8A7978]'
+                        }`}
                       >
-                        {sz.note}
+                        {isOutOfStock ? 'Tạm hết hàng' : sz.note}
                       </span>
                     </button>
                   );

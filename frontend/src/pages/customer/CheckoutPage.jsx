@@ -129,6 +129,75 @@ function getTomorrowIsoString() {
   return `${y}-${m}-${day}`;
 }
 
+// Helper: Kiểm tra một size cụ thể của mẫu váy có bị hết hàng hay không
+function checkIsSizeOutOfStock(sz, dress) {
+  const sClean = String(typeof sz === 'string' ? sz : sz?.size || sz?.label || sz?.id || '')
+    .replace(/^size\s*/i, '')
+    .trim()
+    .toUpperCase();
+
+  // 1. Kiểm tra trong kho override (localStorage)
+  try {
+    const rawOverrides = localStorage.getItem('unibridal_inventory_overrides');
+    if (rawOverrides) {
+      const overrides = JSON.parse(rawOverrides);
+      const dressId = String(dress?._id || dress?.id || '');
+      const dressCode = String(dress?.code || '').toUpperCase();
+      const ov =
+        overrides[dressId] ||
+        overrides[dressCode] ||
+        Object.values(overrides).find(
+          (o) =>
+            (o?.code && o.code.toUpperCase() === dressCode) ||
+            (o?.id && String(o.id) === dressId)
+        );
+
+      if (ov?.statusType === 'out_of_stock') {
+        return true;
+      }
+
+      if (Array.isArray(ov?.sizes)) {
+        const matchOv = ov.sizes.find((s) => {
+          const val = String(typeof s === 'string' ? s : s?.size || s?.label || s?.id || '')
+            .replace(/^size\s*/i, '')
+            .trim()
+            .toUpperCase();
+          return val === sClean;
+        });
+        if (matchOv && typeof matchOv === 'object' && matchOv?.quantity !== undefined) {
+          const q = Number(matchOv.quantity);
+          if (!isNaN(q) && q <= 0) return true;
+        }
+      }
+    }
+  } catch {
+    // ignore
+  }
+
+  // 2. Kiểm tra trực tiếp trên đối tượng sz
+  if (typeof sz === 'object' && sz !== null && sz?.quantity !== undefined) {
+    const q = Number(sz.quantity);
+    if (!isNaN(q) && q <= 0) return true;
+  }
+
+  // 3. Kiểm tra trong dress.sizes
+  if (Array.isArray(dress?.sizes)) {
+    const matchDress = dress.sizes.find((s) => {
+      const val = String(typeof s === 'string' ? s : s?.size || s?.label || s?.id || '')
+        .replace(/^size\s*/i, '')
+        .trim()
+        .toUpperCase();
+      return val === sClean;
+    });
+    if (matchDress && typeof matchDress === 'object' && matchDress?.quantity !== undefined) {
+      const q = Number(matchDress.quantity);
+      if (!isNaN(q) && q <= 0) return true;
+    }
+  }
+
+  return false;
+}
+
 // Chữ ký nghệ thuật đại diện Bên A (Ông Kim Xuân Hiếu - Tổng Giám Đốc)
 function DirectorSignatureAndStamp({ className = "h-28", isSmall = false }) {
   return (
@@ -3459,53 +3528,32 @@ export default function CheckoutPage() {
                         <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                           <span className="text-[11px] font-semibold text-[#847374]">Đổi size:</span>
                           {activeDress.sizes.map((sz, sIdx) => {
-                            const sVal = typeof sz === 'string' ? sz : sz.size || sz.label;
+                            const sVal = typeof sz === 'string' ? sz : sz.size || sz.label || sz.id;
                             const sClean = String(sVal).replace(/^size\s*/i, '').trim();
                             const isSzActive = (selectedSize || '').toUpperCase() === sClean.toUpperCase();
+                            const isOutOfStock = checkIsSizeOutOfStock(sz, activeDress);
+
                             return (
                               <button
                                 key={sIdx}
                                 type="button"
+                                disabled={isOutOfStock}
                                 onClick={() => {
+                                  if (isOutOfStock) return;
                                   setSelectedSize(sClean);
                                   setOrderItems((prev) => prev.map((it) => ({ ...it, size: sClean })));
                                   if (activeDress) {
                                     setActiveDress((prev) => ({ ...prev, size: sClean }));
                                   }
                                 }}
-                                className={`px-2 py-0.5 rounded text-[10.5px] font-bold border cursor-pointer transition-all ${isSzActive
-                                  ? 'bg-[#733F49] text-white border-[#733F49]'
-                                  : 'bg-white text-[#733F49] border-[#EEDECF] hover:border-[#733F49]'
-                                  }`}
-                              >
-                                {sClean}
-                              </button>
-                            );
-                          })}
-                        </div>
-                      )}
-                      {Array.isArray(activeDress?.sizes) && activeDress.sizes.length > 1 && (
-                        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
-                          <span className="text-[11px] font-semibold text-[#847374]">Đổi size:</span>
-                          {activeDress.sizes.map((sz, sIdx) => {
-                            const sVal = typeof sz === 'string' ? sz : sz.size || sz.label;
-                            const sClean = String(sVal).replace(/^size\s*/i, '').trim();
-                            const isSzActive = (selectedSize || '').toUpperCase() === sClean.toUpperCase();
-                            return (
-                              <button
-                                key={sIdx}
-                                type="button"
-                                onClick={() => {
-                                  setSelectedSize(sClean);
-                                  setOrderItems((prev) => prev.map((it) => ({ ...it, size: sClean })));
-                                  if (activeDress) {
-                                    setActiveDress((prev) => ({ ...prev, size: sClean }));
-                                  }
-                                }}
-                                className={`px-2 py-0.5 rounded text-[10.5px] font-bold border cursor-pointer transition-all ${isSzActive
-                                  ? 'bg-[#733F49] text-white border-[#733F49]'
-                                  : 'bg-white text-[#733F49] border-[#EEDECF] hover:border-[#733F49]'
-                                  }`}
+                                title={isOutOfStock ? `Size ${sClean} hiện đã hết hàng trong kho` : `Đổi sang size ${sClean}`}
+                                className={`px-2 py-0.5 rounded text-[10.5px] font-bold border transition-all ${
+                                  isOutOfStock
+                                    ? 'bg-stone-100 text-stone-400 border-stone-200 cursor-not-allowed opacity-40 line-through decoration-stone-400 select-none'
+                                    : isSzActive
+                                      ? 'bg-[#733F49] text-white border-[#733F49] cursor-pointer shadow-xs'
+                                      : 'bg-white text-[#733F49] border-[#EEDECF] hover:border-[#733F49] cursor-pointer'
+                                }`}
                               >
                                 {sClean}
                               </button>
