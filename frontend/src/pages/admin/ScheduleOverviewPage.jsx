@@ -307,7 +307,7 @@ function CalendarDateCellEvents({
             const statusText = isCompleted ? 'Có mặt' : isCancelled ? 'Vắng mặt' : 'Đã xác nhận';
 
             return (
-              <Tooltip key={item.id || `apt-${idx}`} title={`👗 Thử váy: ${item.customerName} (${item.timeSlot}) — ${statusText}`}>
+              <Tooltip key={item.id || `apt-${idx}`} title={`👗 Thử váy: ${item.customerName} (${item.timeSlot}) — ${statusText}${item.code ? ` — Mã hẹn: #${item.code.replace(/^#/, '')}` : ''}`}>
                 <div
                   onClick={(e) => {
                     e.stopPropagation();
@@ -361,6 +361,9 @@ function CalendarDateCellEvents({
                 title={
                   <div className="text-xs space-y-1">
                     <div>Khách hàng: <strong>{item.customerName}</strong></div>
+                    {item.code && (
+                      <div>Mã lịch thuê: <strong className="font-mono text-amber-300">#{item.code.replace(/^#/, '')}</strong></div>
+                    )}
                     <div>
                       Trạng thái: <strong>{isDone ? (isExpress ? 'Ship đã giao' : 'Khách đã lấy') : isFutureOrToday ? (isExpress ? 'Sắp giao' : 'Khách sắp lấy') : (isExpress ? 'Chưa giao' : 'Chưa đến lấy')}</strong>
                     </div>
@@ -397,7 +400,7 @@ function CalendarDateCellEvents({
                       isHighlight ? 'text-white' : deliveryTextColor
                     }`}
                   >
-                    {isExpress ? 'NV SHIP' : 'KHÁCH LẤY'}
+                    {isExpress ? 'NV SHIP' : 'KHÁCH LẤY'}{item.code ? ` • #${item.code.replace(/^UB-(202\d-)?/i, '')}` : ''}
                   </span>
                 </div>
               </Tooltip>
@@ -441,6 +444,9 @@ function CalendarDateCellEvents({
               title={
                 <div className="text-xs space-y-1">
                   <div>Khách hàng: <strong>{item.customerName}</strong></div>
+                  {item.code && (
+                    <div>Mã lịch thuê: <strong className="font-mono text-amber-300">#{item.code.replace(/^#/, '')}</strong></div>
+                  )}
                   <div>
                     Trạng thái: <strong>{isDone ? 'Đã trả' : isFutureOrToday ? 'Sắp đến hạn' : 'Chưa trả'}</strong>
                   </div>
@@ -472,7 +478,7 @@ function CalendarDateCellEvents({
                     isHighlight ? 'text-white' : returnTextColor
                   }`}
                 >
-                  {isExpress ? 'NV LẤY' : 'KHÁCH TRẢ'}
+                  {isExpress ? 'NV LẤY' : 'KHÁCH TRẢ'}{item.code ? ` • #${item.code.replace(/^UB-(202\d-)?/i, '')}` : ''}
                 </span>
               </div>
             </Tooltip>
@@ -2066,6 +2072,11 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                                   <>
                                     <Clock className="w-3.5 h-3.5 text-[#733F49]" />
                                     <span className="font-mono text-sm">{item.timeSlot}</span>
+                                    {item.code && (
+                                      <span className="font-mono text-[11px] text-[#733F49] font-bold bg-[#FAF0EC] px-2 py-0.5 rounded-md border border-[#F2D8D4] ml-1">
+                                        #{item.code.replace(/^#/, '')}
+                                      </span>
+                                    )}
                                   </>
                                 ) : isDelivery ? (
                                   <>
@@ -2085,7 +2096,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                                             ? 'text-amber-900'
                                             : 'text-rose-900'
                                         }`}>
-                                          SHIP VÁY: {item.code}
+                                          SHIP VÁY: #{item.code ? item.code.replace(/^#/, '') : ''}
                                         </span>
                                       </>
                                     ) : (
@@ -2104,7 +2115,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                                             ? 'text-amber-900'
                                             : 'text-rose-900'
                                         }`}>
-                                          KHÁCH LẤY: {item.code}
+                                          KHÁCH LẤY: #{item.code ? item.code.replace(/^#/, '') : ''}
                                         </span>
                                       </>
                                     )}
@@ -2125,7 +2136,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                                         ? 'text-amber-900'
                                         : 'text-rose-900'
                                     }`}>
-                                      HẠN TRẢ: {item.code}
+                                      HẠN TRẢ: #{item.code ? item.code.replace(/^#/, '') : ''}
                                     </span>
                                   </>
                                 )}
@@ -2428,19 +2439,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                                 )
                               )}
 
-                              {!isReturn && !isDelivery && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    setSelectedEvent(item);
-                                    setDetailModalOpen(true);
-                                  }}
-                                  className="p-2 rounded-xl bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 text-xs font-medium transition cursor-pointer"
-                                  title="Xem chi tiết đầy đủ"
-                                >
-                                  <Eye className="w-4 h-4" />
-                                </button>
-                              )}
+
                             </div>
                           </div>
                         );                      })
@@ -2558,9 +2557,11 @@ export default function ScheduleOverviewPage({ defaultTab }) {
               <div className="space-y-4 py-2 text-xs sm:text-sm">
                 <div className="bg-gray-50 p-4 rounded-xl border border-gray-200 space-y-2.5">
                   <div className="flex justify-between items-center">
-                    <span className="text-gray-500 font-medium">Mã tham chiếu:</span>
+                    <span className="text-gray-500 font-medium">
+                      {selectedEvent.type === 'fitting' ? 'Mã lịch hẹn thử:' : 'Mã lịch thuê váy:'}
+                    </span>
                     <span className="font-mono font-bold text-gray-900 bg-white px-2 py-0.5 rounded border border-gray-200">
-                      {selectedEvent.code}
+                      #{selectedEvent.code ? selectedEvent.code.replace(/^#/, '') : ''}
                     </span>
                   </div>
                   <div className="flex justify-between items-center">
