@@ -161,7 +161,7 @@ export const calculateInventoryMaintenanceSummary = async () => {
       };
 
       const maintenanceOrders = matchedOrders.filter((o) => {
-        const isDirectMaint = ['returned', 'inspecting', 'maintenance'].includes(o.rawStatus || o.status);
+        const isDirectMaint = ['returned', 'waiting_refund', 'disputed', 'inspecting', 'maintenance'].includes(o.rawStatus || o.status);
         const isCompleted1Day = isOrderIn1DayMaintenance(o);
         return isDirectMaint || isCompleted1Day;
       });

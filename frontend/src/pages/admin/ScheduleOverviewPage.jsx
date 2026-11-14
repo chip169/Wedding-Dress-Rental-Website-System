@@ -114,6 +114,12 @@ const toDateKey = (dateStr) => {
   return `${y}-${m}-${day}`;
 };
 
+const hasReturned = (order) => Boolean(order.actualReturnDate)
+  || ['returned', 'waiting_refund', 'disputed', 'complete', 'completed'].includes(order.status);
+const canOpenInspection = (order) => Boolean(order.inspection)
+  || order.status === 'returned'
+  || (['delivered', 'renting'].includes(order.status) && !hasReturned(order));
+
 // Trợ giúp định dạng nhãn trạng thái chính xác theo nghiệp vụ database
 const getEventBadge = (item) => {
   if (!item) return { label: 'ĐANG XỬ LÝ', className: 'bg-gray-100 text-gray-700 border-gray-300' };
@@ -133,7 +139,7 @@ const getEventBadge = (item) => {
 
   // Sự kiện Giao Váy: Vàng (khách sắp lấy / sắp giao), Xanh (khách đã lấy / ship đã giao), Đỏ (chưa đến lấy / chưa giao)
   if (item.type === 'delivery') {
-    const isDone = ['delivered', 'renting', 'returned', 'completed', 'waiting_refund'].includes((item.status || '').toLowerCase()) || Boolean(item.actualDeliveryDate);
+    const isDone = ['delivered', 'renting', 'returned', 'completed', 'complete', 'waiting_refund', 'disputed'].includes((item.status || '').toLowerCase()) || Boolean(item.actualDeliveryDate);
     const deliveryDateKey = item.deliveryDate || item.date;
     const todayKey = toDateKey(new Date());
     const isExpress = item.deliveryMethod === 'express';
@@ -158,7 +164,7 @@ const getEventBadge = (item) => {
 
   // Sự kiện Trả Váy: Vàng (sắp đến hạn / tương lai), Xanh (đã trả), Đỏ (quá hạn chưa trả)
   if (item.type === 'return') {
-    const isDone = item.status === 'completed' || item.status === 'returned' || item.status === 'waiting_refund' || Boolean(item.actualReturnDate);
+    const isDone = hasReturned(item);
     const returnDateKey = item.date || toDateKey(item.rentalEndDate);
     const todayKey = toDateKey(new Date());
 
@@ -304,7 +310,7 @@ function CalendarDateCellEvents({
           }
 
           if (item.eventCategory === 'delivery') {
-            const isDone = ['delivered', 'renting', 'returned', 'completed', 'waiting_refund'].includes((item.status || '').toLowerCase()) || Boolean(item.actualDeliveryDate);
+            const isDone = ['delivered', 'renting', 'returned', 'completed', 'complete', 'waiting_refund', 'disputed'].includes((item.status || '').toLowerCase()) || Boolean(item.actualDeliveryDate);
             const isHighlight = Boolean(activeOrderCode && (item.code === activeOrderCode || item.id === activeOrderCode));
             const isExpress = item.deliveryMethod === 'express';
             const deliveryDateKey = item.deliveryDate || item.date;
@@ -384,7 +390,7 @@ function CalendarDateCellEvents({
           }
 
           // Trả Váy (return)
-          const isDone = item.status === 'completed' || item.status === 'returned' || item.status === 'waiting_refund' || Boolean(item.actualReturnDate);
+          const isDone = hasReturned(item);
           const isHighlight = Boolean(activeOrderCode && (item.code === activeOrderCode || item.id === activeOrderCode));
           const isExpress = item.deliveryMethod === 'express';
           const returnDateKey = item.date || toDateKey(item.rentalEndDate);
@@ -1914,13 +1920,13 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                         const badge = getEventBadge(item);
 
                         // Trạng thái Giao Váy: Vàng (khách sắp lấy), Xanh (khách đã lấy/ship đã giao), Đỏ (chưa đến lấy/chưa giao)
-                        const isDeliveryDone = isDelivery && (['delivered', 'renting', 'returned', 'completed', 'waiting_refund'].includes((item.status || '').toLowerCase()) || Boolean(item.actualDeliveryDate));
+                        const isDeliveryDone = isDelivery && (['delivered', 'renting', 'returned', 'completed', 'complete', 'waiting_refund', 'disputed'].includes((item.status || '').toLowerCase()) || Boolean(item.actualDeliveryDate));
                         const deliveryDateKey = isDelivery ? (item.deliveryDate || item.date) : '';
                         const isDeliveryOverdue = isDelivery && !isDeliveryDone && Boolean(deliveryDateKey && deliveryDateKey < todayKey);
                         const isDeliveryFutureOrToday = isDelivery && !isDeliveryDone && (!deliveryDateKey || deliveryDateKey >= todayKey);
 
                         // Trạng thái Trả Váy: Vàng (sắp đến hạn/tương lai), Xanh (đã trả), Đỏ (chưa trả)
-                        const isReturnDone = isReturn && (item.status === 'completed' || item.status === 'returned' || item.status === 'waiting_refund' || Boolean(item.actualReturnDate));
+                        const isReturnDone = isReturn && hasReturned(item);
                         const returnDateKey = isReturn ? (item.date || toDateKey(item.rentalEndDate)) : '';
                         const isReturnOverdue = isReturn && !isReturnDone && Boolean(returnDateKey && returnDateKey < todayKey);
                         const isReturnFutureOrToday = isReturn && !isReturnDone && (!returnDateKey || returnDateKey >= todayKey);
@@ -2213,7 +2219,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                                 </button>
                               )}
 
-                              {isReturn && (
+                              {isReturn && canOpenInspection(item) && (
                                 <button
                                   type="button"
                                   onClick={() => {
@@ -2223,7 +2229,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                                   className="w-full py-2 px-3 rounded-xl bg-[#FAF0EC] hover:bg-[#F2D8D4] text-[#733F49] text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer border border-[#F2D8D4]"
                                 >
                                   <RotateCcw className="w-3.5 h-3.5" />
-                                  <span>Kiểm Định Trả Váy</span>
+                                  <span>{item.inspection ? 'Xem Biên Bản' : 'Kiểm Định Trả Váy'}</span>
                                 </button>
                               )}
 
@@ -2525,18 +2531,6 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                       onClick={() => {
                         setDetailModalOpen(false);
                         const targetCode = selectedEvent.code || selectedEvent.id || '';
-                        navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}&action=inspect`);
-                      }}
-                      className="flex-1 py-2.5 px-3 bg-[#733F49] hover:bg-[#5a3239] text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      <span>Mở Quy Trình Kiểm Định &amp; Hoàn Cọc</span>
-                    </button>
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDetailModalOpen(false);
-                        const targetCode = selectedEvent.code || selectedEvent.id || '';
                         navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}`);
                       }}
                       className="py-2.5 px-4 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
@@ -2554,11 +2548,11 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                       onClick={() => {
                         setDetailModalOpen(false);
                         const targetCode = selectedEvent.code || selectedEvent.id || '';
-                        navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}&action=inspect`);
+                        navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}${canOpenInspection(selectedEvent) ? '&action=inspect' : ''}`);
                       }}
                       className="w-full py-2.5 px-4 bg-[#733F49] hover:bg-[#5a3239] text-white font-bold rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
                     >
-                      <span>Mở Quy Trình Kiểm Định &amp; Hoàn Cọc</span>
+                      <span>{selectedEvent.inspection ? 'Xem Biên Bản' : canOpenInspection(selectedEvent) ? 'Kiểm Định Trả Váy' : 'Quản Lý Đơn Thuê'}</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>

@@ -348,7 +348,7 @@ export default function InventoryManagement() {
     // 1. Các đơn đang trong chu trình kiểm định và bảo dưỡng sau thuê:
     // Bao gồm các đơn đang trả/kiểm định VÀ các đơn đã hoàn tất trong vòng 1 ngày (24 giờ)
     const maintenanceOrders = matchedOrders.filter((o) => {
-      const isDirectMaint = ['returned', 'inspecting', 'maintenance'].includes(o.rawStatus || o.status);
+      const isDirectMaint = ['returned', 'waiting_refund', 'disputed', 'inspecting', 'maintenance'].includes(o.rawStatus || o.status);
       const isCompleted1Day = isOrderIn1DayMaintenance(o);
       return isDirectMaint || isCompleted1Day;
     });

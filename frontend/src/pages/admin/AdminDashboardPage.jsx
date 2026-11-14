@@ -4,12 +4,14 @@ import { PackageCheck,
   TrendingUp,
   Crown,
   ArrowRight,
+  Banknote,
   Users,
   Layers,
   ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
 import { getAdminDashboard } from '../../services/reportService';
+import { getAllOrdersAdmin } from '../../services/orderService';
 
 const PERIODS = { week: '7 ngày qua', month: 'Tháng này', quarter: 'Quý này', year: 'Năm nay' };
 
@@ -17,6 +19,7 @@ export default function AdminDashboardPage() {
   const [period, setPeriod] = useState('month');
   const [reload, setReload] = useState(0);
   const [data, setData] = useState(null);
+  const [refundQueueCount, setRefundQueueCount] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
 
@@ -43,6 +46,19 @@ export default function AdminDashboardPage() {
       active = false;
     };
   }, [period, reload]);
+
+  useEffect(() => {
+    let active = true;
+    setRefundQueueCount(null);
+    getAllOrdersAdmin({ status: 'waiting_refund', limit: 1 }, true, { throwOnError: true })
+      .then(({ total }) => {
+        if (active) setRefundQueueCount(total);
+      })
+      .catch(() => {
+        if (active) setRefundQueueCount(null);
+      });
+    return () => { active = false; };
+  }, [reload]);
 
   const controls = (
     <div className="ub-dashboard-periods is-heading" role="group" aria-label="Khoảng thời gian thống kê">
@@ -74,13 +90,12 @@ export default function AdminDashboardPage() {
         </div>
       )}
       {loading && <p role="status" className="mb-4 text-sm text-stone-500">Đang tải thống kê...</p>}
-      {/* Tổng đơn thuê, lịch hẹn và người dùng */}
-      <section className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Chỉ số kinh doanh trọng yếu">
+      <section className="grid grid-cols-1 gap-4 sm:grid-cols-2 xl:grid-cols-4" aria-label="Chỉ số kinh doanh trọng yếu">
         {[
           {
             title: 'TỔNG ĐƠN THUÊ',
             value: data?.totalOrders ?? '—',
-            note: `${data?.completedOrders ?? 0} đơn đã hoàn tất và quyết toán`,
+            note: `${data?.completedOrders ?? 0} đơn đã hoàn tất`,
             Icon: PackageCheck,
             color: 'rose',
           },
@@ -98,7 +113,15 @@ export default function AdminDashboardPage() {
             Icon: Users,
             color: 'gold',
           },
-        ].map(({ title, value, note, Icon, color }) => (
+          {
+            title: 'ĐƠN CẦN XỬ LÝ CỌC',
+            value: refundQueueCount ?? '—',
+            note: 'Xem đơn chờ hoàn và đối soát',
+            to: '/admin/don-thue?status=waiting_refund',
+            Icon: Banknote,
+            color: 'rose',
+          },
+        ].map(({ title, value, note, to, Icon, color }) => (
           <article
             key={title}
             className="min-w-0 rounded-2xl border border-[#EFE5E1] bg-white px-5 py-4 shadow-sm transition-shadow hover:shadow-md"
@@ -112,7 +135,13 @@ export default function AdminDashboardPage() {
                 <Icon size={19} />
               </span>
             </div>
-            <p className="mb-0 mt-3 border-t border-[#F5EAE6] pt-2 text-xs leading-relaxed text-[#786663]">{note}</p>
+            <p className="mb-0 mt-3 border-t border-[#F5EAE6] pt-2 text-xs leading-relaxed text-[#786663]">
+              {to ? (
+                <Link to={to} className="inline-flex items-center gap-1 font-semibold text-[#733F49] hover:underline focus-visible:underline">
+                  {note} <ArrowRight size={13} className="shrink-0" aria-hidden="true" />
+                </Link>
+              ) : note}
+            </p>
           </article>
         ))}
       </section>
@@ -143,7 +172,7 @@ export default function AdminDashboardPage() {
             { label: 'Đã Đặt Cọc', count: data?.ordersPipeline?.deposit_paid ?? '—', color: 'border-amber-200 bg-amber-50 text-amber-800' },
             { label: 'Đã Giao Váy', count: data?.ordersPipeline?.delivered ?? '—', color: 'border-purple-200 bg-purple-50 text-purple-800' },
             { label: 'Khách Đang Thuê', count: data?.ordersPipeline?.renting ?? '—', color: 'border-indigo-200 bg-indigo-50 text-indigo-800' },
-            { label: 'Chờ Kiểm Định', count: data?.ordersPipeline?.returned ?? '—', color: 'border-rose-200 bg-rose-50 text-rose-800' },
+            { label: 'Đang Xử Lý Trả Váy', count: data?.ordersPipeline?.returned ?? '—', color: 'border-rose-200 bg-rose-50 text-rose-800' },
             { label: 'Đã Hoàn Tất', count: data?.ordersPipeline?.completed ?? '—', color: 'border-emerald-200 bg-emerald-50 text-emerald-800' },
           ].map((step, idx) => (
             <div key={step.label} className={`rounded-xl border p-3 flex flex-col justify-between ${step.color}`}>

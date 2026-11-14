@@ -3,10 +3,11 @@ import Payment from '../models/paymentModel.js';
 import Dress from '../models/dressModel.js';
 import User from '../models/userModel.js';
 import Appointment from '../models/appointmentModel.js';
-import { reportBounds, reportBuckets } from '../utils/adminReportMetrics.js';
+import { isInPeriod, reportBounds, reportBuckets } from '../utils/adminReportMetrics.js';
+import { CLOSED_ORDER_STATUSES, CLOSED_ORDER_STATUS_FILTER } from './returnRefundService.js';
 
 const REVENUE_TYPES = ['rental_payment', 'damage_compensation'];
-const ACTIVE_ORDER_STATUSES = ['deposit_paid', 'preparing', 'delivered', 'renting', 'returned', 'completed'];
+const ACTIVE_ORDER_STATUSES = ['deposit_paid', 'preparing', 'delivered', 'renting', 'returned', 'waiting_refund', 'disputed', ...CLOSED_ORDER_STATUSES];
 const amount = (rows, predicate = () => true) => rows.filter(predicate).reduce((sum, row) => sum + (row.amount || 0), 0);
 const dayStart = (date) => new Date(date.getFullYear(), date.getMonth(), date.getDate());
 
@@ -113,13 +114,14 @@ function buckets(period, start, end) {
 export async function dashboard(role, period = 'month', now = new Date()) {
   if (!['today', 'week', 'month', 'quarter', 'year'].includes(period)) period = 'month';
   const { start, end } = reportBounds(period, now);
-  const [orders, payments, maintenanceOrdersDressIds, appointments, members] = await Promise.all([
+  const [orders, completions, payments, maintenanceOrdersDressIds, appointments, members] = await Promise.all([
     Order.find({ createdAt: { $gte: start, $lt: end } }).select('status createdAt rentalStartDate rentalEndDate totalRentPrice totalDeposit items customerName orderCode').lean(),
+    Order.find({ status: { $in: CLOSED_ORDER_STATUS_FILTER }, completedAt: { $gte: start, $lt: end } }).select('completedAt').lean(),
     Payment.find({ status: 'success', paidAt: { $gte: start, $lt: end } }).select('transactionType amount paidAt').lean(),
     Order.distinct('items.dressId', {
       $or: [
-        { status: { $in: ['returned', 'inspecting', 'maintenance'] } },
-        { status: 'completed', maintenanceUntil: { $gt: now } },
+        { status: { $in: ['returned', 'waiting_refund', 'disputed', 'inspecting', 'maintenance'] } },
+        { status: { $in: CLOSED_ORDER_STATUS_FILTER }, maintenanceUntil: { $gt: now } },
       ],
     }),
     Appointment.find({ appointmentDate: { $gte: start, $lt: end } }).select('status appointmentDate customerName phone serviceType').lean(),
@@ -162,14 +164,14 @@ export async function dashboard(role, period = 'month', now = new Date()) {
     preparing: orders.filter((o) => o.status === 'preparing').length,
     delivered: orders.filter((o) => o.status === 'delivered').length,
     renting: orders.filter((o) => o.status === 'renting').length,
-    returned: orders.filter((o) => ['returned', 'inspecting'].includes(o.status)).length,
-    completed: orders.filter((o) => o.status === 'completed').length,
+    returned: orders.filter((o) => ['returned', 'waiting_refund', 'disputed', 'inspecting'].includes(o.status)).length,
+    completed: orders.filter((o) => CLOSED_ORDER_STATUSES.includes(o.status)).length,
   };
 
   const chart = reportBuckets(period, start, end).map((bucket) => ({
     label: bucket.label,
     orders: orders.filter((order) => order.createdAt >= bucket.start && order.createdAt < bucket.end).length,
-    completed: orders.filter((order) => order.createdAt >= bucket.start && order.createdAt < bucket.end && order.status === 'completed').length,
+    completed: completions.filter((order) => isInPeriod(order.completedAt, bucket.start, bucket.end)).length,
     revenue: amount(payments, (payment) => payment.paidAt >= bucket.start && payment.paidAt < bucket.end && REVENUE_TYPES.includes(payment.transactionType)),
     orderValue: orders
       .filter((order) => order.createdAt >= bucket.start && order.createdAt < bucket.end && ACTIVE_ORDER_STATUSES.includes(order.status))
@@ -179,7 +181,7 @@ export async function dashboard(role, period = 'month', now = new Date()) {
   return {
     period,
     totalOrders: orders.length,
-    completedOrders: orders.filter((item) => item.status === 'completed').length,
+    completedOrders: completions.length,
     todayDeliveries,
     todayAppointments,
     totalAppointments: (appointments || []).length,
