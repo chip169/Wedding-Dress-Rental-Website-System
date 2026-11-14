@@ -591,7 +591,7 @@ export default function CategoryManagement() {
               dataSource={filteredCategories}
               columns={columns}
               rowKey={(r) => r._id || r.id || r.slug}
-              pagination={{ pageSize: 10, showTotal: (total) => `Tổng cộng ${total} danh mục` }}
+              pagination={{ pageSize: 5, showTotal: (total) => `Tổng cộng ${total} danh mục` }}
               className="unibridal-admin-table"
             />
           </div>

@@ -33,7 +33,7 @@ import {
 } from '../../services/userService';
 import { useAuth } from '../../contexts/AuthContext';
 
-const DEFAULT_PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 5;
 
 const ROLE_CONFIG = {
   ADMIN: {
@@ -450,9 +450,9 @@ export default function AccountManagement() {
                   }}
                   className="py-1 px-2 rounded-lg bg-white border border-[#EFE5E1] text-xs font-semibold text-[#2C2523] outline-none cursor-pointer focus:border-[#733F49]"
                 >
+                  <option value={5}>5</option>
                   <option value={10}>10</option>
                   <option value={20}>20</option>
-                  <option value={50}>50</option>
                 </select>
               </div>
             </div>

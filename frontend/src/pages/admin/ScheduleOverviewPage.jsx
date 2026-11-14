@@ -2308,9 +2308,9 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                   rowKey={(record) => record._id || record.id || record.appointmentCode}
                   scroll={{ x: 1000 }}
                   pagination={{
-                    pageSize: 10,
+                    pageSize: 5,
                     showSizeChanger: true,
-                    pageSizeOptions: ['10', '20', '50'],
+                    pageSizeOptions: ['5', '10', '20'],
                     showTotal: (total, range) => (
                       <span className="text-xs text-gray-500">
                         Hiển thị {range[0]}-{range[1]} trên tổng số {total} ca hẹn

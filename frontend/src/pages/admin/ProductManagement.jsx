@@ -149,12 +149,15 @@ const INITIAL_PRODUCTS = [
   }
 ];
 
+const PAGE_SIZE = 5;
+
 export default function ProductManagement() {
   const [products, setProducts] = useState(INITIAL_PRODUCTS);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState('all'); // all, in_stock, bespoke, out_of_stock, visible, hidden
   const [filterDropdownOpen, setFilterDropdownOpen] = useState(false);
   const [activeMenuId, setActiveMenuId] = useState(null);
+  const [currentPage, setCurrentPage] = useState(1);
 
   // Modals state
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
@@ -207,6 +210,12 @@ export default function ProductManagement() {
       return true;
     });
   }, [products, searchQuery, statusFilter]);
+
+  const totalPages = Math.max(1, Math.ceil(filteredProducts.length / PAGE_SIZE));
+  const paginatedProducts = useMemo(() => {
+    const start = (currentPage - 1) * PAGE_SIZE;
+    return filteredProducts.slice(start, start + PAGE_SIZE);
+  }, [filteredProducts, currentPage]);
 
   // Toggle Status
   const handleToggleStatus = (id) => {
@@ -565,7 +574,7 @@ export default function ProductManagement() {
                     </td>
                   </tr>
                 ) : (
-                  filteredProducts.map((item) => (
+                  paginatedProducts.map((item) => (
                     <tr
                       key={item.id}
                       className="hover:bg-[#FAF7F5] transition-colors group"
@@ -759,61 +768,55 @@ export default function ProductManagement() {
           {/* ===================== 4. FOOTER VÀ PAGINATION ===================== */}
           <div className="flex flex-col sm:flex-row items-center justify-between gap-4 mt-6 pt-5 border-t border-[#F6ECE8] text-[12.5px] text-[#8C7A7B]">
             <div>
-              Hiển thị <strong className="text-[#2C2523] font-bold">1 - 6</strong> trong tổng số{' '}
-              <strong className="text-[#2C2523] font-bold">128</strong> mẫu váy cưới Haute Couture và Lễ Phục Bán Sẵn
+              Hiển thị{' '}
+              <strong className="text-[#2C2523] font-bold">
+                {filteredProducts.length === 0
+                  ? 0
+                  : `${(currentPage - 1) * PAGE_SIZE + 1} - ${Math.min(currentPage * PAGE_SIZE, filteredProducts.length)}`}
+              </strong>{' '}
+              trong tổng số{' '}
+              <strong className="text-[#2C2523] font-bold">{filteredProducts.length}</strong> mẫu váy cưới
             </div>
 
             {/* Pagination Controls */}
-            <div className="flex items-center gap-1.5 select-none">
-              <button
-                type="button"
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-[#8C7A7B] hover:text-[#733F49] hover:bg-[#F6ECE8] transition-colors border-0 bg-transparent cursor-pointer disabled:opacity-40"
-                disabled
-              >
-                <ChevronLeft size={16} />
-              </button>
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5 select-none">
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[#8C7A7B] hover:text-[#733F49] hover:bg-[#F6ECE8] transition-colors border-0 bg-transparent cursor-pointer disabled:opacity-40"
+                  disabled={currentPage === 1}
+                  title="Trang trước"
+                >
+                  <ChevronLeft size={16} />
+                </button>
 
-              <button
-                type="button"
-                className="w-8 h-8 rounded-lg bg-[#733F49] text-white font-bold flex items-center justify-center shadow-xs cursor-pointer border-0 text-[12.5px]"
-              >
-                1
-              </button>
+                {Array.from({ length: totalPages }, (_, i) => i + 1).map((page) => (
+                  <button
+                    key={page}
+                    type="button"
+                    onClick={() => setCurrentPage(page)}
+                    className={`w-8 h-8 rounded-lg font-bold flex items-center justify-center transition-colors cursor-pointer border-0 text-[12.5px] ${
+                      currentPage === page
+                        ? 'bg-[#733F49] text-white shadow-xs'
+                        : 'text-[#2C2523] hover:bg-[#F6ECE8] font-medium bg-transparent'
+                    }`}
+                  >
+                    {page}
+                  </button>
+                ))}
 
-              <button
-                type="button"
-                onClick={() => showToast('Chuyển trang 2')}
-                className="w-8 h-8 rounded-lg text-[#2C2523] hover:bg-[#F6ECE8] font-medium flex items-center justify-center transition-colors cursor-pointer border-0 bg-transparent text-[12.5px]"
-              >
-                2
-              </button>
-
-              <button
-                type="button"
-                onClick={() => showToast('Chuyển trang 3')}
-                className="w-8 h-8 rounded-lg text-[#2C2523] hover:bg-[#F6ECE8] font-medium flex items-center justify-center transition-colors cursor-pointer border-0 bg-transparent text-[12.5px]"
-              >
-                3
-              </button>
-
-              <span className="px-1 text-[#A39192]">...</span>
-
-              <button
-                type="button"
-                onClick={() => showToast('Chuyển trang 15')}
-                className="w-8 h-8 rounded-lg text-[#2C2523] hover:bg-[#F6ECE8] font-medium flex items-center justify-center transition-colors cursor-pointer border-0 bg-transparent text-[12.5px]"
-              >
-                15
-              </button>
-
-              <button
-                type="button"
-                onClick={() => showToast('Chuyển trang kế tiếp')}
-                className="w-8 h-8 rounded-lg flex items-center justify-center text-[#8C7A7B] hover:text-[#733F49] hover:bg-[#F6ECE8] transition-colors border-0 bg-transparent cursor-pointer"
-              >
-                <ChevronRight size={16} />
-              </button>
-            </div>
+                <button
+                  type="button"
+                  onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
+                  disabled={currentPage === totalPages}
+                  className="w-8 h-8 rounded-lg flex items-center justify-center text-[#8C7A7B] hover:text-[#733F49] hover:bg-[#F6ECE8] transition-colors border-0 bg-transparent cursor-pointer disabled:opacity-40"
+                  title="Trang kế tiếp"
+                >
+                  <ChevronRight size={16} />
+                </button>
+              </div>
+            )}
           </div>
         </div>
 

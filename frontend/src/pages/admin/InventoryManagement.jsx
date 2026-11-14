@@ -35,7 +35,7 @@ const fmtVnd = (v) => formatCurrencyVND(v ?? 0);
 
 import card1Elysian from '../../assets/card1_elysian.jpg';
 
-const PAGE_SIZE = 6;
+const PAGE_SIZE = 5;
 
 // Danh mục Phom Dáng chuẩn từ MongoDB Atlas
 const DEFAULT_CATEGORIES = [
