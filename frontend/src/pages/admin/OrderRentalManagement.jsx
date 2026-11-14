@@ -2662,23 +2662,8 @@ export default function OrderRentalManagement() {
           <table className="w-full text-left border-collapse min-w-[960px]">
             <thead>
               <tr className="border-b border-[#F2E5E0] bg-[#FFF6F3]">
-                <th
-                  onClick={() => handleSort('orderCode')}
-                  className="py-4 px-5 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase cursor-pointer hover:text-[#733F49] transition-colors select-none group"
-                  title="Nhấp để sắp xếp theo Mã đơn (Mới nhất / Cũ nhất)"
-                >
-                  <div className="flex items-center gap-1.5">
-                    <span>MÃ ĐƠN</span>
-                    {sortField === 'orderCode' && (
-                      <span className="inline-flex items-center">
-                        {sortOrder === 'desc' ? (
-                          <ArrowDown size={13} className="text-[#733F49]" />
-                        ) : (
-                          <ArrowUp size={13} className="text-[#733F49]" />
-                        )}
-                      </span>
-                    )}
-                  </div>
+                <th className="py-4 px-5 text-[11px] font-bold tracking-[1px] text-[#7A696B] uppercase select-none">
+                  MÃ ĐƠN
                 </th>
                 <th
                   onClick={() => handleSort('customer')}
