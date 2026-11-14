@@ -114,11 +114,111 @@ export async function changePassword(user, { currentPassword, newPassword }) {
   return { token: tokenFor(account) };
 }
 
+const ACTIVE_RENTAL_STATUSES = [
+  'deposit_paid',
+  'active',
+  'confirmed',
+  'preparing',
+  'delivered',
+  'renting',
+  'returned',
+  'waiting_refund',
+  'disputed',
+];
+
+function cleanMatchStr(s) {
+  return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+}
+
+/**
+ * Tự động tính toán số lượng tồn kho khả dụng thực tế của từng size
+ * sau khi trừ đi các đơn thuê đang hoạt động hoặc trong chu trình kiểm định.
+ */
+export async function attachAvailabilityToDresses(dresses) {
+  if (!dresses || dresses.length === 0) return dresses;
+
+  try {
+    const activeOrders = await Order.find({
+      status: { $in: ACTIVE_RENTAL_STATUSES },
+    }).select('items status').lean();
+
+    return dresses.map((d) => {
+      const dressId = String(d._id || d.id || '');
+      const dressCode = cleanMatchStr(d.code);
+      const dressName = cleanMatchStr(d.name);
+
+      const relatedSizes = [];
+      activeOrders.forEach((o) => {
+        (o.items || []).forEach((it) => {
+          const itId = String(it.dressId?._id || it.dressId || it.id || it._id || '');
+          const itCode = cleanMatchStr(it.code);
+          const itName = cleanMatchStr(it.name);
+
+          const idMatch = itId && (itId === dressId);
+          const codeMatch = itCode && dressCode && (itCode === dressCode);
+          const nameMatch = itName && dressName && (itName === dressName && dressName.length >= 2);
+
+          if (idMatch || codeMatch || nameMatch) {
+            const rawSize = String(it.size || '').replace(/^size\s*/i, '').trim().toUpperCase();
+            relatedSizes.push(rawSize);
+          }
+        });
+      });
+
+      const rentedBySize = {};
+      relatedSizes.forEach((sz) => {
+        rentedBySize[sz] = (rentedBySize[sz] || 0) + 1;
+      });
+
+      let totalAvailable = 0;
+      const updatedSizes = (d.sizes || []).map((s) => {
+        const sName = typeof s === 'string' ? s : s?.size || s?.label || '';
+        const cleanSName = String(sName).replace(/^size\s*/i, '').trim().toUpperCase();
+        const originalQty = typeof s === 'object' && s?.quantity !== undefined ? Number(s.quantity) : 1;
+        const rented = rentedBySize[cleanSName] || 0;
+        const available = Math.max(0, originalQty - rented);
+        totalAvailable += available;
+
+        if (typeof s === 'object' && s !== null) {
+          return {
+            ...s,
+            size: sName,
+            quantity: available,
+            available,
+            totalQuantity: originalQty,
+            rented,
+          };
+        }
+        return {
+          size: sName,
+          quantity: available,
+          available,
+          totalQuantity: 1,
+          rented,
+        };
+      });
+
+      return {
+        ...d,
+        sizes: updatedSizes,
+        availableStock: totalAvailable,
+        totalStock: totalAvailable,
+        isOutOfStock: totalAvailable === 0,
+      };
+    });
+  } catch (err) {
+    console.error('Lỗi khi tính toán số lượng khả dụng cho váy:', err);
+    return dresses;
+  }
+}
+
 export async function listDresses() {
-  return Dress.find({ status: { $ne: 'retired' } })
+  const dresses = await Dress.find({ status: { $ne: 'retired' } })
     .populate('categoryId', 'name slug')
     .sort({ code: 1 })
     .lean();
+
+  return attachAvailabilityToDresses(dresses);
 }
 
 export async function getDressDetail(idOrSlug) {
@@ -131,7 +231,9 @@ export async function getDressDetail(idOrSlug) {
     .lean();
 
   if (!dress) fail(404, 'Không tìm thấy thông tin sản phẩm yêu cầu.');
-  return dress;
+
+  const [enriched] = await attachAvailabilityToDresses([dress]);
+  return enriched;
 }
 
 const normalizeSilhouette = (sil = '') => {

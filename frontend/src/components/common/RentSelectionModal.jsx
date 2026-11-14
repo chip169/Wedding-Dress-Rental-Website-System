@@ -80,9 +80,12 @@ function checkIsSizeOutOfStock(sz, dress) {
   }
 
   // 3. Kiểm tra trực tiếp trên đối tượng sz
-  if (typeof sz === 'object' && sz !== null && sz?.quantity !== undefined) {
-    const q = Number(sz.quantity);
-    if (!isNaN(q) && q <= 0) return true;
+  if (typeof sz === 'object' && sz !== null) {
+    if (sz.available !== undefined && Number(sz.available) <= 0) return true;
+    if (sz.quantity !== undefined) {
+      const q = Number(sz.quantity);
+      if (!isNaN(q) && q <= 0) return true;
+    }
   }
 
   // 4. Kiểm tra trong dress.sizes
@@ -94,9 +97,12 @@ function checkIsSizeOutOfStock(sz, dress) {
         .toUpperCase();
       return val === sClean;
     });
-    if (matchDress && typeof matchDress === 'object' && matchDress?.quantity !== undefined) {
-      const q = Number(matchDress.quantity);
-      if (!isNaN(q) && q <= 0) return true;
+    if (matchDress && typeof matchDress === 'object') {
+      if (matchDress.available !== undefined && Number(matchDress.available) <= 0) return true;
+      if (matchDress.quantity !== undefined) {
+        const q = Number(matchDress.quantity);
+        if (!isNaN(q) && q <= 0) return true;
+      }
     }
   }
 
@@ -126,17 +132,23 @@ export default function RentSelectionModal({
         const clean = String(rawKey).replace(/^size\s*/i, '').trim().toUpperCase();
         const mapKey = clean === 'FREESIZE' ? 'FreeSize' : clean;
         const matched = SIZE_MAP[mapKey];
+        const sQty = typeof s === 'object' && s?.available !== undefined
+          ? Number(s.available)
+          : (typeof s === 'object' && s?.quantity !== undefined ? Number(s.quantity) : 1);
+
         if (matched) {
           return {
             ...matched,
-            quantity: typeof s === 'object' && s?.quantity !== undefined ? s.quantity : 1,
+            quantity: sQty,
+            available: sQty,
           };
         }
         return {
           id: mapKey || 'S',
           label: mapKey || 'S',
           note: s?.note || 'Chuẩn dáng UniBridal',
-          quantity: typeof s === 'object' && s?.quantity !== undefined ? s.quantity : 1,
+          quantity: sQty,
+          available: sQty,
         };
       });
     }

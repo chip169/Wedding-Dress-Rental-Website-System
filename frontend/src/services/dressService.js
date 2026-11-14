@@ -135,8 +135,10 @@ function formatDressSizes(rawSizes) {
     return rawSizes.map(s => {
       const key = typeof s === 'string' ? s : s?.size || s?.id || s?.label;
       const baseObj = SIZE_MAP[key] || { id: key, label: key, note: 'Chuẩn dáng UniBridal' };
-      const qty = typeof s === 'object' && s?.quantity !== undefined ? s.quantity : 1;
-      return { ...baseObj, quantity: qty };
+      const qty = typeof s === 'object' && s?.available !== undefined
+        ? Number(s.available)
+        : (typeof s === 'object' && s?.quantity !== undefined ? Number(s.quantity) : 1);
+      return { ...baseObj, quantity: qty, available: qty, totalQuantity: s?.totalQuantity };
     });
   }
   return [SIZE_MAP.S, SIZE_MAP.M];

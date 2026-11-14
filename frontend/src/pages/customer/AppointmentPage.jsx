@@ -972,11 +972,10 @@ export default function AppointmentPage() {
                               <div
                                 key={dress.id}
                                 onClick={() => handleSelectPrimaryDress(dress.id)}
-                                className={`rounded-xl border p-2.5 flex flex-col justify-between group transition-all ${
-                                  isOutOfStock
+                                className={`rounded-xl border p-2.5 flex flex-col justify-between group transition-all ${isOutOfStock
                                     ? 'border-stone-200 bg-stone-50 opacity-60 cursor-not-allowed'
                                     : 'border-[#EEDECF] bg-white cursor-pointer hover:border-[#733F49] hover:shadow-xs'
-                                }`}
+                                  }`}
                               >
                                 <div className="aspect-[3/4] w-full rounded-lg overflow-hidden relative mb-2">
                                   <img
@@ -1005,11 +1004,10 @@ export default function AppointmentPage() {
                                 <button
                                   type="button"
                                   disabled={isOutOfStock}
-                                  className={`mt-2.5 w-full py-1.5 rounded-lg text-[11px] font-bold transition-colors border ${
-                                    isOutOfStock
+                                  className={`mt-2.5 w-full py-1.5 rounded-lg text-[11px] font-bold transition-colors border ${isOutOfStock
                                       ? 'bg-stone-200 text-stone-500 border-stone-300 cursor-not-allowed'
                                       : 'bg-[#FAF0EC] text-[#733F49] group-hover:bg-[#733F49] group-hover:text-white cursor-pointer border-[#F2D8D4]'
-                                  }`}
+                                    }`}
                                 >
                                   {isOutOfStock ? 'Hết hàng trong kho' : '+ Chọn thử mẫu này'}
                                 </button>
@@ -1108,13 +1106,12 @@ export default function AppointmentPage() {
                                 <div
                                   key={dress.id}
                                   onClick={() => handleSelectPrimaryDress(dress.id)}
-                                  className={`rounded-xl border p-2 transition-all flex flex-col justify-between ${
-                                    isOutOfStock
+                                  className={`rounded-xl border p-2 transition-all flex flex-col justify-between ${isOutOfStock
                                       ? 'border-stone-200 bg-stone-50 opacity-60 cursor-not-allowed'
                                       : isSelected
-                                      ? 'border-[#733F49] ring-2 ring-[#733F49]/30 bg-white cursor-pointer'
-                                      : 'border-[#EEDECF] bg-white hover:border-[#B8737D] cursor-pointer'
-                                  }`}
+                                        ? 'border-[#733F49] ring-2 ring-[#733F49]/30 bg-white cursor-pointer'
+                                        : 'border-[#EEDECF] bg-white hover:border-[#B8737D] cursor-pointer'
+                                    }`}
                                 >
                                   <div className="aspect-[3/4] w-full rounded-lg overflow-hidden relative mb-1.5">
                                     <img src={dress.images?.[0] || dress.image} alt={dress.name} className={`w-full h-full object-cover ${isOutOfStock ? 'grayscale-[30%]' : ''}`} />
@@ -1166,13 +1163,12 @@ export default function AppointmentPage() {
                             <div
                               key={dress.id}
                               onClick={() => handleToggleSecondaryDress(dress.id)}
-                              className={`rounded-xl border overflow-hidden transition-all flex flex-col justify-between relative group ${
-                                isOutOfStock
+                              className={`rounded-xl border overflow-hidden transition-all flex flex-col justify-between relative group ${isOutOfStock
                                   ? 'border-stone-200 bg-stone-50 opacity-60 cursor-not-allowed'
                                   : isChosenAsSecondary
-                                  ? 'border-[#733F49] ring-2 ring-[#733F49]/30 bg-[#FAF4EE] shadow-sm cursor-pointer'
-                                  : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white hover:border-[#D8C7B8] cursor-pointer'
-                              }`}
+                                    ? 'border-[#733F49] ring-2 ring-[#733F49]/30 bg-[#FAF4EE] shadow-sm cursor-pointer'
+                                    : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white hover:border-[#D8C7B8] cursor-pointer'
+                                }`}
                             >
                               <div className="aspect-[3/4] w-full overflow-hidden relative">
                                 <img
@@ -1205,13 +1201,12 @@ export default function AppointmentPage() {
                                 <button
                                   type="button"
                                   disabled={isOutOfStock}
-                                  className={`w-full py-1 text-[10.5px] font-bold rounded-lg border transition-colors ${
-                                    isOutOfStock
+                                  className={`w-full py-1 text-[10.5px] font-bold rounded-lg border transition-colors ${isOutOfStock
                                       ? 'bg-stone-200 text-stone-500 border-stone-300 cursor-not-allowed'
                                       : isChosenAsSecondary
-                                      ? 'bg-[#733F49] text-white border-[#733F49] cursor-pointer'
-                                      : 'bg-white text-[#733F49] border-[#EEDECF] hover:bg-[#FAF0EC] cursor-pointer'
-                                  }`}
+                                        ? 'bg-[#733F49] text-white border-[#733F49] cursor-pointer'
+                                        : 'bg-white text-[#733F49] border-[#EEDECF] hover:bg-[#FAF0EC] cursor-pointer'
+                                    }`}
                                 >
                                   {isOutOfStock ? 'Hết hàng trong kho' : isChosenAsSecondary ? '✓ Đang chọn thử kèm' : '+ Thử mẫu này'}
                                 </button>
@@ -1274,7 +1269,7 @@ export default function AppointmentPage() {
                           }}
                           className={`w-full bg-[#FCF9F6] border rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:bg-white ${errors.fullName ? 'border-red-500' : 'border-[#EEDECF] focus:border-[#733F49]'
                             }`}
-                          placeholder="Nhập họ tên cô dâu (không chứa số)"
+                          placeholder="Nhập họ tên cô dâu"
                         />
                         {errors.fullName && (
                           <span className="text-[11px] text-red-600 mt-1 block">{errors.fullName}</span>
