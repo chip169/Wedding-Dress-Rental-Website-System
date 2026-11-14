@@ -1486,8 +1486,8 @@ function InspectionModal({ order, onClose, onSuccess }) {
                   Hủy
                 </button>
 
-                {/* Nút 1: Tạm Giữ Chờ Admin: CHỈ hiển thị cho STAFF, KHÔNG hiển thị cho ADMIN */}
-                {!isCurrentAdmin && (
+                {/* Nút 1: Tạm Giữ Chờ Admin: CHỈ hiển thị khi có lỗi nặng hoặc cần thỏa thuận (hasAdminEscalation) cho tài khoản STAFF */}
+                {!isCurrentAdmin && hasAdminEscalation && (
                   <button
                     type="button"
                     disabled={submitting || inspectionLoading || Boolean(inspectionError)}
