@@ -1,7 +1,8 @@
 import { formatCurrencyVND, formatNumberDots } from '../../utils/formatCurrency';
 import React, { useState, useMemo, useEffect } from 'react';
 import { Link, useNavigate, useSearchParams, useLocation } from 'react-router-dom';
-import { ShieldCheck,
+import {
+  ShieldCheck,
   Calendar,
   MapPin,
   Check,
@@ -41,7 +42,8 @@ import { ShieldCheck,
   Plus,
   Minus,
   Sparkles,
-  Zap } from 'lucide-react';
+  Zap
+} from 'lucide-react';
 import { message } from 'antd';
 import { useAuth } from '../../contexts/AuthContext';
 import Header from '../../components/layout/Header';
@@ -1654,7 +1656,7 @@ export default function CheckoutPage() {
         localStorage.removeItem('unibridal_cart');
         localStorage.removeItem('unibridal-rental-cart');
         window.dispatchEvent(new Event('unibridal-cart-updated'));
-      } catch {}
+      } catch { }
 
       navigate(`/thanh-toan-vietqr/${savedOrder.orderCode}`);
     } catch (err) {
@@ -1747,14 +1749,14 @@ export default function CheckoutPage() {
 
         try {
           localStorage.setItem('unibridal-last-order', JSON.stringify(savedOrder));
-        } catch {}
+        } catch { }
 
         try {
           clearCart();
           localStorage.removeItem('unibridal_cart');
           localStorage.removeItem('unibridal-rental-cart');
           window.dispatchEvent(new Event('unibridal-cart-updated'));
-        } catch {}
+        } catch { }
 
         setIsSuccessModalOpen(true);
         message.success({
@@ -2719,8 +2721,7 @@ export default function CheckoutPage() {
                     type="button"
                     onClick={handleProceedToContract}
                     disabled={Boolean(scheduleConflict) || hasOutOfStockItem}
-                    className={`w-full py-4 rounded-xl font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-2 border-0 ${
-                      scheduleConflict || hasOutOfStockItem
+                    className={`w-full py-4 rounded-xl font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-2 border-0 ${scheduleConflict || hasOutOfStockItem
                         ? 'bg-stone-300 text-stone-500 cursor-not-allowed shadow-none'
                         : 'bg-[#733F49] hover:bg-[#5F323B] text-white shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer active:scale-[0.99]'
                       }`}
@@ -3000,11 +3001,10 @@ export default function CheckoutPage() {
                               <button
                                 type="button"
                                 onClick={() => setSignatureMode('draw')}
-                                className={`px-2.5 py-1 rounded-md transition-colors border-0 cursor-pointer ${
-                                  signatureMode === 'draw'
+                                className={`px-2.5 py-1 rounded-md transition-colors border-0 cursor-pointer ${signatureMode === 'draw'
                                     ? 'bg-[#733F49] text-white shadow-2xs'
                                     : 'bg-transparent text-[#733F49] hover:bg-white/60'
-                                }`}
+                                  }`}
                               >
                                 ✍️ Vẽ chữ ký
                               </button>
@@ -3015,11 +3015,10 @@ export default function CheckoutPage() {
                                   const existing = contractSignature && !contractSignature.startsWith('data:image') ? contractSignature : brideName;
                                   if (existing) setContractSignature(existing);
                                 }}
-                                className={`px-2.5 py-1 rounded-md transition-colors border-0 cursor-pointer ${
-                                  signatureMode === 'type'
+                                className={`px-2.5 py-1 rounded-md transition-colors border-0 cursor-pointer ${signatureMode === 'type'
                                     ? 'bg-[#733F49] text-white shadow-2xs'
                                     : 'bg-transparent text-[#733F49] hover:bg-white/60'
-                                }`}
+                                  }`}
                               >
                                 ⌨️ Gõ họ tên
                               </button>
@@ -3474,11 +3473,10 @@ export default function CheckoutPage() {
                                     setActiveDress((prev) => ({ ...prev, size: sClean }));
                                   }
                                 }}
-                                className={`px-2 py-0.5 rounded text-[10.5px] font-bold border cursor-pointer transition-all ${
-                                  isSzActive
+                                className={`px-2 py-0.5 rounded text-[10.5px] font-bold border cursor-pointer transition-all ${isSzActive
                                     ? 'bg-[#733F49] text-white border-[#733F49]'
                                     : 'bg-white text-[#733F49] border-[#EEDECF] hover:border-[#733F49]'
-                                }`}
+                                  }`}
                               >
                                 {sClean}
                               </button>
@@ -3613,11 +3611,10 @@ export default function CheckoutPage() {
                 type="button"
                 disabled={hasOutOfStockItem}
                 onClick={handleProceedToContract}
-                className={`px-5 sm:px-7 py-2.5 sm:py-3 rounded-xl text-white text-[12.5px] sm:text-[13.5px] font-bold flex items-center gap-2 shadow-md transition-all border-0 ${
-                  hasOutOfStockItem
+                className={`px-5 sm:px-7 py-2.5 sm:py-3 rounded-xl text-white text-[12.5px] sm:text-[13.5px] font-bold flex items-center gap-2 shadow-md transition-all border-0 ${hasOutOfStockItem
                     ? 'bg-stone-300 text-stone-500 cursor-not-allowed'
                     : 'bg-[#733F49] hover:bg-[#5F323B] cursor-pointer active:scale-[0.98]'
-                }`}
+                  }`}
               >
                 <span>{hasOutOfStockItem ? 'Hết Hàng Trong Kho' : 'Xem Trước và Ký Hợp Đồng'}</span>
                 {!hasOutOfStockItem && <ArrowRight className="w-4 h-4" />}
