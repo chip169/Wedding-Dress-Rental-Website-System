@@ -158,7 +158,9 @@ export default function DressDetailPage() {
           if (result.success && result.data) {
             setDress(result.data);
             setSelectedImageIndex(0);
-            setSelectedSize(result.data.sizes?.[0]?.id || 'S');
+            const availableSizes = result.data.sizes?.filter((s) => (s.available !== undefined ? Number(s.available) > 0 : Number(s.quantity) > 0));
+            const initialSize = availableSizes?.[0]?.id || result.data.sizes?.[0]?.id || 'S';
+            setSelectedSize(initialSize);
             setIsWishlisted(checkWishlisted(result.data.id));
           }
           if (related.success) {
@@ -294,6 +296,20 @@ export default function DressDetailPage() {
       setTimeout(() => setRentNotification(''), 4500);
       return;
     }
+
+    const currentSizeObj = dress?.sizes?.find((s) => s.id === selectedSize || s.label === selectedSize || s.size === selectedSize);
+    const isCurrentSizeOutOfStock = currentSizeObj && ((currentSizeObj.available !== undefined && Number(currentSizeObj.available) <= 0) || (currentSizeObj.quantity !== undefined && Number(currentSizeObj.quantity) <= 0));
+    if (isCurrentSizeOutOfStock) {
+      const isMaint = Boolean(currentSizeObj.isMaintenance || (currentSizeObj.maintenance > 0));
+      setRentNotification(
+        isMaint
+          ? `Size ${selectedSize} của mẫu váy "${dress?.name}" đang trong chu kỳ bảo dưỡng - hấp sấy, quý cô vui lòng chọn size khác.`
+          : `Size ${selectedSize} của mẫu váy "${dress?.name}" hiện tạm hết hàng trong kho, quý cô vui lòng chọn size khác.`
+      );
+      setTimeout(() => setRentNotification(''), 4500);
+      return;
+    }
+
     addToCart({
       ...dress,
       selectedSize,
@@ -309,6 +325,20 @@ export default function DressDetailPage() {
       setTimeout(() => setRentNotification(''), 4500);
       return;
     }
+
+    const currentSizeObj = dress?.sizes?.find((s) => s.id === selectedSize || s.label === selectedSize || s.size === selectedSize);
+    const isCurrentSizeOutOfStock = currentSizeObj && ((currentSizeObj.available !== undefined && Number(currentSizeObj.available) <= 0) || (currentSizeObj.quantity !== undefined && Number(currentSizeObj.quantity) <= 0));
+    if (isCurrentSizeOutOfStock) {
+      const isMaint = Boolean(currentSizeObj.isMaintenance || (currentSizeObj.maintenance > 0));
+      setRentNotification(
+        isMaint
+          ? `Size ${selectedSize} của mẫu váy "${dress?.name}" đang trong chu kỳ bảo dưỡng - hấp sấy, quý cô vui lòng chọn size khác.`
+          : `Size ${selectedSize} của mẫu váy "${dress?.name}" hiện tạm hết hàng trong kho, quý cô vui lòng chọn size khác.`
+      );
+      setTimeout(() => setRentNotification(''), 4500);
+      return;
+    }
+
     const added = addToCart({
       ...dress,
       selectedSize,
@@ -317,8 +347,8 @@ export default function DressDetailPage() {
     });
     setRentNotification(
       added
-        ? `Đã thêm "${dress?.name}" vào giỏ thuê thành công!`
-        : `"${dress?.name}" đã có trong giỏ thuê váy.`
+        ? `Đã thêm "${dress?.name}" (Size ${selectedSize}) vào giỏ thuê thành công!`
+        : `"${dress?.name}" (Size ${selectedSize}) đã có trong giỏ thuê váy.`
     );
     setTimeout(() => {
       setRentNotification('');
@@ -586,17 +616,26 @@ export default function DressDetailPage() {
               <div className="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
                 {dress.sizes?.map((sz) => {
                   const isSizeActive = selectedSize === sz.id;
-                  const isOutOfStock = sz.quantity !== undefined && Number(sz.quantity) <= 0;
+                  const isOutOfStock = (sz.available !== undefined ? Number(sz.available) <= 0 : (sz.quantity !== undefined && Number(sz.quantity) <= 0));
+                  const isMaintenance = Boolean(sz.isMaintenance || (sz.maintenance > 0 && isOutOfStock));
                   return (
                     <button
                       key={sz.id}
                       type="button"
                       disabled={isOutOfStock}
                       onClick={() => !isOutOfStock && setSelectedSize(sz.id)}
-                      title={isOutOfStock ? `Size ${sz.label} hiện đã hết hàng trong kho` : undefined}
+                      title={
+                        isOutOfStock
+                          ? isMaintenance
+                            ? `Size ${sz.label} hiện đang trong chu kỳ bảo dưỡng - hấp sấy tiệt trùng`
+                            : `Size ${sz.label} hiện đã hết hàng trong kho`
+                          : undefined
+                      }
                       className={`py-2.5 px-3 rounded-[12px] border text-center transition-all flex flex-col items-center justify-center ${
                         isOutOfStock
-                          ? 'border-stone-200 bg-stone-100 text-stone-400 cursor-not-allowed opacity-40 line-through decoration-stone-400 select-none'
+                          ? isMaintenance
+                            ? 'border-amber-200 bg-amber-50/70 text-amber-800/80 cursor-not-allowed opacity-60 line-through decoration-amber-600 select-none'
+                            : 'border-stone-200 bg-stone-100 text-stone-400 cursor-not-allowed opacity-40 line-through decoration-stone-400 select-none'
                           : isSizeActive
                             ? 'border-[#B26B74] bg-[#B26B74] text-white shadow-xs cursor-pointer'
                             : 'border-[#EAE0DC] bg-white text-[#231A19] hover:border-[#B26B74] cursor-pointer'
@@ -605,10 +644,16 @@ export default function DressDetailPage() {
                       <span className="font-semibold text-[13.5px] leading-tight">{sz.label}</span>
                       <span
                         className={`text-[10.5px] leading-tight mt-0.5 ${
-                          isOutOfStock ? 'text-stone-400 font-medium' : isSizeActive ? 'text-white/80' : 'text-[#8A7978]'
+                          isOutOfStock
+                            ? isMaintenance
+                              ? 'text-amber-800 font-medium no-underline'
+                              : 'text-stone-400 font-medium'
+                            : isSizeActive
+                              ? 'text-white/80'
+                              : 'text-[#8A7978]'
                         }`}
                       >
-                        {isOutOfStock ? 'Tạm hết hàng' : sz.note}
+                        {isOutOfStock ? (isMaintenance ? 'Đang bảo dưỡng' : 'Tạm hết hàng') : sz.note}
                       </span>
                     </button>
                   );

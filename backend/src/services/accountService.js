@@ -129,29 +129,62 @@ const ACTIVE_RENTAL_STATUSES = [
   'disputed',
 ];
 
+const MAINTENANCE_STATUSES = [
+  'returned',
+  'waiting_refund',
+  'disputed',
+  'inspecting',
+  'maintenance',
+];
+
 function cleanMatchStr(s) {
   return String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
 }
 
 /**
  * Tự động tính toán số lượng tồn kho khả dụng thực tế của từng size
- * sau khi trừ đi các đơn thuê đang hoạt động hoặc trong chu trình kiểm định.
+ * sau khi trừ đi các đơn thuê đang hoạt động, đơn đã cọc hoặc trong chu trình bảo dưỡng/kiểm định.
  */
 export async function attachAvailabilityToDresses(dresses) {
   if (!dresses || dresses.length === 0) return dresses;
 
   try {
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000);
     const activeOrders = await Order.find({
-      status: { $in: ACTIVE_RENTAL_STATUSES },
-    }).select('items status').lean();
+      $or: [
+        { status: { $in: ACTIVE_RENTAL_STATUSES } },
+        {
+          status: { $in: ['completed', 'complete'] },
+          $or: [
+            { updatedAt: { $gte: oneDayAgo } },
+            { actualReturnDate: { $gte: oneDayAgo } },
+            { completedAt: { $gte: oneDayAgo } },
+          ],
+        },
+      ],
+    }).select('items status updatedAt actualReturnDate completedAt').lean();
 
     return dresses.map((d) => {
       const dressId = String(d._id || d.id || '');
       const dressCode = cleanMatchStr(d.code);
       const dressName = cleanMatchStr(d.name);
 
-      const relatedSizes = [];
+      const maintBySize = {};
+      const rentedBySize = {};
+      const bookedBySize = {};
+
       activeOrders.forEach((o) => {
+        const st = String(o.status || '').toLowerCase();
+        const isMaintenance =
+          MAINTENANCE_STATUSES.includes(st) ||
+          (['completed', 'complete'].includes(st) && (
+            (o.updatedAt && new Date(o.updatedAt) >= oneDayAgo) ||
+            (o.actualReturnDate && new Date(o.actualReturnDate) >= oneDayAgo) ||
+            (o.completedAt && new Date(o.completedAt) >= oneDayAgo)
+          ));
+        const isRenting = ['renting', 'delivered'].includes(st);
+        const isBooked = ['deposit_paid', 'active', 'confirmed', 'preparing'].includes(st);
+
         (o.items || []).forEach((it) => {
           const itId = String(it.dressId?._id || it.dressId || it.id || it._id || '');
           const itCode = cleanMatchStr(it.code);
@@ -163,46 +196,73 @@ export async function attachAvailabilityToDresses(dresses) {
 
           if (idMatch || codeMatch || nameMatch) {
             const rawSize = String(it.size || '').replace(/^size\s*/i, '').trim().toUpperCase();
-            relatedSizes.push(rawSize);
+            const qty = Number(it.quantity || 1);
+            if (isMaintenance) {
+              maintBySize[rawSize] = (maintBySize[rawSize] || 0) + qty;
+            } else if (isRenting) {
+              rentedBySize[rawSize] = (rentedBySize[rawSize] || 0) + qty;
+            } else if (isBooked) {
+              bookedBySize[rawSize] = (bookedBySize[rawSize] || 0) + qty;
+            } else {
+              rentedBySize[rawSize] = (rentedBySize[rawSize] || 0) + qty;
+            }
           }
         });
       });
 
-      const rentedBySize = {};
-      relatedSizes.forEach((sz) => {
-        rentedBySize[sz] = (rentedBySize[sz] || 0) + 1;
-      });
-
       let totalAvailable = 0;
       let totalInitialStock = 0;
+      let totalMaint = 0;
+      let totalRented = 0;
+      let totalBooked = 0;
+
       const updatedSizes = (d.sizes || []).map((s) => {
         const sName = typeof s === 'string' ? s : s?.size || s?.label || '';
         const cleanSName = String(sName).replace(/^size\s*/i, '').trim().toUpperCase();
         const originalQty = typeof s === 'object' && s?.quantity !== undefined ? Math.max(1, Number(s.quantity)) : 1;
         totalInitialStock += originalQty;
+
+        const rawMaint = maintBySize[cleanSName] || 0;
+        const sMaint = Math.min(originalQty, rawMaint);
+
         const rawRented = rentedBySize[cleanSName] || 0;
-        const rented = Math.min(originalQty, rawRented);
-        const available = Math.max(0, originalQty - rented);
+        const sRented = Math.min(Math.max(0, originalQty - sMaint), rawRented);
+
+        const rawBooked = bookedBySize[cleanSName] || 0;
+        const sBooked = Math.min(Math.max(0, originalQty - sMaint - sRented), rawBooked);
+
+        const available = Math.max(0, originalQty - sMaint - sRented - sBooked);
         totalAvailable += available;
+        totalMaint += sMaint;
+        totalRented += sRented;
+        totalBooked += sBooked;
+
+        const isMaintenance = sMaint > 0 && available === 0;
 
         if (typeof s === 'object' && s !== null) {
           return {
             ...s,
             size: sName,
-            quantity: originalQty,
+            quantity: available,
             available,
             availableQuantity: available,
             totalQuantity: originalQty,
-            rented,
+            maintenance: sMaint,
+            rented: sRented,
+            booked: sBooked,
+            isMaintenance,
           };
         }
         return {
           size: sName,
-          quantity: 1,
+          quantity: available,
           available,
           availableQuantity: available,
-          totalQuantity: 1,
-          rented,
+          totalQuantity: originalQty,
+          maintenance: sMaint,
+          rented: sRented,
+          booked: sBooked,
+          isMaintenance,
         };
       });
 
@@ -211,6 +271,9 @@ export async function attachAvailabilityToDresses(dresses) {
         sizes: updatedSizes,
         availableStock: totalAvailable,
         totalStock: totalInitialStock,
+        maintenanceStock: totalMaint,
+        rentedStock: totalRented,
+        bookedStock: totalBooked,
         isOutOfStock: totalAvailable === 0,
       };
     });

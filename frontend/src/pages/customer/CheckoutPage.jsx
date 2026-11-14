@@ -154,7 +154,13 @@ function checkIsSizeOutOfStock(sz, dress) {
     .trim()
     .toUpperCase();
 
-  // 1. Kiểm tra trong kho override (localStorage)
+  // 1. Kiểm tra trạng thái chung của váy
+  const status = String(dress?.status || dress?.statusType || '').toLowerCase();
+  if (['out_of_stock', 'retired', 'unavailable', 'drying'].includes(status)) {
+    return true;
+  }
+
+  // 2. Kiểm tra trong kho override (localStorage)
   try {
     const rawOverrides = localStorage.getItem('unibridal_inventory_overrides');
     if (rawOverrides) {
@@ -170,8 +176,27 @@ function checkIsSizeOutOfStock(sz, dress) {
             (o?.id && String(o.id) === dressId)
         );
 
-      if (ov?.statusType === 'out_of_stock') {
+      if (ov?.statusType === 'out_of_stock' || ov?.statusType === 'drying') {
         return true;
+      }
+
+      // Kiểm tra bảo dưỡng thủ công theo size
+      const manualMaint = Number(ov?.maintenanceSizes?.[sClean] ?? 0);
+      if (manualMaint > 0) {
+        let totalSizeQty = 1;
+        if (Array.isArray(dress?.sizes)) {
+          const matchDress = dress.sizes.find((s) => {
+            const val = String(typeof s === 'string' ? s : s?.size || s?.label || s?.id || '')
+              .replace(/^size\s*/i, '')
+              .trim()
+              .toUpperCase();
+            return val === sClean;
+          });
+          if (matchDress && typeof matchDress === 'object') {
+            totalSizeQty = Math.max(1, Number(matchDress.totalQuantity ?? matchDress.quantity) || 1);
+          }
+        }
+        if (manualMaint >= totalSizeQty) return true;
       }
 
       if (Array.isArray(ov?.sizes)) {
@@ -182,9 +207,12 @@ function checkIsSizeOutOfStock(sz, dress) {
             .toUpperCase();
           return val === sClean;
         });
-        if (matchOv && typeof matchOv === 'object' && matchOv?.quantity !== undefined) {
-          const q = Number(matchOv.quantity);
-          if (!isNaN(q) && q <= 0) return true;
+        if (matchOv && typeof matchOv === 'object') {
+          if (matchOv?.available !== undefined && Number(matchOv.available) <= 0) return true;
+          if (matchOv?.quantity !== undefined) {
+            const q = Number(matchOv.quantity);
+            if (!isNaN(q) && q <= 0) return true;
+          }
         }
       }
     }
@@ -192,13 +220,17 @@ function checkIsSizeOutOfStock(sz, dress) {
     // ignore
   }
 
-  // 2. Kiểm tra trực tiếp trên đối tượng sz
-  if (typeof sz === 'object' && sz !== null && sz?.quantity !== undefined) {
-    const q = Number(sz.quantity);
-    if (!isNaN(q) && q <= 0) return true;
+  // 3. Kiểm tra trực tiếp trên đối tượng sz
+  if (typeof sz === 'object' && sz !== null) {
+    if (sz.available !== undefined && Number(sz.available) <= 0) return true;
+    if (sz.quantity !== undefined) {
+      const q = Number(sz.quantity);
+      if (!isNaN(q) && q <= 0) return true;
+    }
+    if (sz.isMaintenance) return true;
   }
 
-  // 3. Kiểm tra trong dress.sizes
+  // 4. Kiểm tra trong dress.sizes
   if (Array.isArray(dress?.sizes)) {
     const matchDress = dress.sizes.find((s) => {
       const val = String(typeof s === 'string' ? s : s?.size || s?.label || s?.id || '')
@@ -207,9 +239,13 @@ function checkIsSizeOutOfStock(sz, dress) {
         .toUpperCase();
       return val === sClean;
     });
-    if (matchDress && typeof matchDress === 'object' && matchDress?.quantity !== undefined) {
-      const q = Number(matchDress.quantity);
-      if (!isNaN(q) && q <= 0) return true;
+    if (matchDress && typeof matchDress === 'object') {
+      if (matchDress.available !== undefined && Number(matchDress.available) <= 0) return true;
+      if (matchDress.quantity !== undefined) {
+        const q = Number(matchDress.quantity);
+        if (!isNaN(q) && q <= 0) return true;
+      }
+      if (matchDress.isMaintenance) return true;
     }
   }
 
@@ -1711,11 +1747,24 @@ export default function CheckoutPage() {
         selectedSize: selectedSize || orderItems?.[0]?.size || activeDress?.size || 'S',
         items: (orderItems && orderItems.length > 0 ? orderItems : [activeDress]).filter(Boolean).map((item, idx) => {
           const itemDailyPrice = Number(item.price || item.rentPrice) || 0;
+          let rawItemSize = selectedSize || item.size || item.selectedSize || activeDress?.size || 'S';
+          let cleanItemSize = String(rawItemSize).replace(/^size\s*[:\s-]*/i, '').trim();
+          if (cleanItemSize.includes('-') || cleanItemSize.includes('/')) {
+            cleanItemSize = cleanItemSize.split(/[-/]/)[0].replace(/^size\s*[:\s-]*/i, '').trim();
+          }
+          const parenIdx = cleanItemSize.indexOf('(');
+          if (parenIdx > 0) {
+            cleanItemSize = cleanItemSize.slice(0, parenIdx).trim();
+          }
+          if (!cleanItemSize || cleanItemSize.toLowerCase() === 'theo tư vấn') {
+            cleanItemSize = 'S';
+          }
+
           return {
             dressId: item.id || item._id,
             name: item.name,
             code: item.code || `UB-HC-2026-0${idx + 1}`,
-            size: selectedSize || item.size || activeDress?.size || 'S',
+            size: cleanItemSize,
             color: item.color || selectedColor || 'Trắng Sữa',
             rentPrice: itemDailyPrice * Math.max(1, Number(rentalDays) || 1),
             dailyPrice: itemDailyPrice,
@@ -1902,11 +1951,24 @@ export default function CheckoutPage() {
         selectedSize: selectedSize || orderItems?.[0]?.size || activeDress?.size || 'S',
         items: (orderItems && orderItems.length > 0 ? orderItems : [activeDress]).filter(Boolean).map((item, idx) => {
           const itemDailyPrice = Number(item.price || item.rentPrice) || 0;
+          let rawItemSize = selectedSize || item.size || item.selectedSize || activeDress?.size || 'S';
+          let cleanItemSize = String(rawItemSize).replace(/^size\s*[:\s-]*/i, '').trim();
+          if (cleanItemSize.includes('-') || cleanItemSize.includes('/')) {
+            cleanItemSize = cleanItemSize.split(/[-/]/)[0].replace(/^size\s*[:\s-]*/i, '').trim();
+          }
+          const parenIdx = cleanItemSize.indexOf('(');
+          if (parenIdx > 0) {
+            cleanItemSize = cleanItemSize.slice(0, parenIdx).trim();
+          }
+          if (!cleanItemSize || cleanItemSize.toLowerCase() === 'theo tư vấn') {
+            cleanItemSize = 'S';
+          }
+
           return {
             dressId: item.id || item._id,
             name: item.name,
             code: item.code || `UB-HC-2026-0${idx + 1}`,
-            size: selectedSize || item.size || activeDress?.size || 'S',
+            size: cleanItemSize,
             color: item.color || selectedColor || 'Trắng Sữa',
             rentPrice: itemDailyPrice * Math.max(1, Number(rentalDays) || 1),
             dailyPrice: itemDailyPrice,
@@ -3721,29 +3783,72 @@ export default function CheckoutPage() {
                       <span className="text-[#847374] font-normal normal-case">Gói {rentalDays} ngày</span>
                     </div>
                     <div className="max-h-[220px] overflow-y-auto space-y-2 pr-1">
-                      {orderItems.map((item, idx) => (
-                        <div key={item.id || idx} className="flex gap-2.5 items-center bg-[#FAF4EE]/70 p-2 rounded-xl border border-[#F0E5DC]">
-                          <div className="relative w-12 h-16 rounded-lg overflow-hidden shrink-0 border border-[#EEDECF]">
-                            <img
-                              src={item.images?.[0] || item.image}
-                              alt={item.name}
-                              className="w-full h-full object-cover"
-                            />
+                      {orderItems.map((item, idx) => {
+                        const itemSizes = Array.isArray(item.sizes) && item.sizes.length > 0
+                          ? item.sizes
+                          : ['XS', 'S', 'M', 'L'];
+                        let curRawSize = String(item.size || selectedSize || 'S').replace(/^size\s*[:\s-]*/i, '').trim();
+                        if (curRawSize.includes('-') || curRawSize.includes('/')) {
+                          curRawSize = curRawSize.split(/[-/]/)[0].replace(/^size\s*[:\s-]*/i, '').trim();
+                        }
+                        if (curRawSize.indexOf('(') > 0) {
+                          curRawSize = curRawSize.slice(0, curRawSize.indexOf('(')).trim();
+                        }
+                        const curSize = curRawSize || 'S';
+
+                        return (
+                          <div key={item.id || idx} className="flex gap-2.5 items-center bg-[#FAF4EE]/70 p-2.5 rounded-xl border border-[#F0E5DC]">
+                            <div className="relative w-12 h-16 rounded-lg overflow-hidden shrink-0 border border-[#EEDECF]">
+                              <img
+                                src={item.images?.[0] || item.image}
+                                alt={item.name}
+                                className="w-full h-full object-cover"
+                              />
+                            </div>
+                            <div className="flex-1 min-w-0">
+                              <div className="font-playfair font-bold text-[13px] text-[#2C2523] truncate leading-tight">
+                                {item.name}
+                              </div>
+                              <div className="text-[10.5px] text-[#847374] mt-1 flex items-center gap-1.5 flex-wrap">
+                                <span>Mã: <strong className="font-mono text-[#733F49]">{item.code || `UB-HC-2026-0${idx + 1}`}</strong></span>
+                                <span>•</span>
+                                <span>Size:</span>
+                                <div className="inline-flex gap-1 items-center">
+                                  {itemSizes.map((sz, sIdx) => {
+                                    const sVal = typeof sz === 'object' ? (sz.size || sz.label) : sz;
+                                    const sClean = String(sVal).replace(/^size\s*[:\s-]*/i, '').trim();
+                                    const isAct = curSize.toUpperCase() === sClean.toUpperCase();
+                                    return (
+                                      <button
+                                        key={sIdx}
+                                        type="button"
+                                        onClick={(e) => {
+                                          e.preventDefault();
+                                          e.stopPropagation();
+                                          setOrderItems((prev) =>
+                                            prev.map((it, i) => (i === idx ? { ...it, size: sClean } : it))
+                                          );
+                                        }}
+                                        className={`px-1.5 py-0.5 rounded text-[10px] font-bold border transition-all cursor-pointer ${
+                                          isAct
+                                            ? 'bg-[#733F49] text-white border-[#733F49] shadow-2xs'
+                                            : 'bg-white text-[#733F49] border-[#EEDECF] hover:border-[#733F49]'
+                                        }`}
+                                      >
+                                        {sClean}
+                                      </button>
+                                    );
+                                  })}
+                                </div>
+                              </div>
+                              <div className="flex items-center justify-between mt-1 text-[11px]">
+                                <span className="text-[#847374]">Thuê ({rentalDays} ngày): <strong className="text-[#733F49] font-bold">{formatCurrencyVND((Number(item.price || item.rentPrice) || 0) * rentalDays)}</strong></span>
+                                <span className="text-[#847374]">Cọc: <strong>{formatCurrencyVND(item.deposit || item.depositAmount || 15000000)}</strong></span>
+                              </div>
+                            </div>
                           </div>
-                          <div className="flex-1 min-w-0">
-                            <div className="font-playfair font-bold text-[13px] text-[#2C2523] truncate leading-tight">
-                              {item.name}
-                            </div>
-                            <div className="text-[10.5px] text-[#847374] mt-0.5">
-                              Mã: <span className="font-mono text-[#733F49] font-bold">{item.code || `UB-HC-2026-0${idx + 1}`}</span> • Size: <strong>{item.size || selectedSize}</strong>
-                            </div>
-                            <div className="flex items-center justify-between mt-0.5 text-[11px]">
-                              <span className="text-[#847374]">Thuê ({rentalDays} ngày): <strong className="text-[#733F49] font-bold">{formatCurrencyVND((Number(item.price || item.rentPrice) || 0) * rentalDays)}</strong></span>
-                              <span className="text-[#847374]">Cọc: <strong>{formatCurrencyVND(item.deposit || item.depositAmount || 15000000)}</strong></span>
-                            </div>
-                          </div>
-                        </div>
-                      ))}
+                        );
+                      })}
                     </div>
                   </div>
                 ) : (

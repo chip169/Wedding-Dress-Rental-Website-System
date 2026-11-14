@@ -94,7 +94,7 @@ export function refreshCartWithDresses(dresses) {
     positions.set(id, normalized.length);
     normalized.push({ ...item, id, days, detailHref: `/dresses/${id}`, code: dress.code, name: dress.name,
       image: dressImage(dress), price: dress.rentPrice, deposit: dress.depositAmount,
-      status: dress.status, unavailable: dress.status !== 'available' });
+      status: dress.status, unavailable: dress.status !== 'available', sizes: dress.sizes || [] });
   });
   return saveCart(normalized);
 }
@@ -110,7 +110,28 @@ export function addToCart(dress) {
   }
   const id = String(dress._id ?? dress.id);
   const current = getCart();
-  const selectedSize = dress.selectedSize || dress.size || dress.sizes?.[0]?.label || 'Theo tư vấn';
+
+  const availableSizes = Array.isArray(dress.sizes) ? dress.sizes : [];
+  let defaultSize = dress.selectedSize;
+  if (!defaultSize && availableSizes.length > 0) {
+    const first = availableSizes[0];
+    defaultSize = typeof first === 'object' ? (first.size || first.label) : first;
+  }
+  if (!defaultSize && dress.size && typeof dress.size === 'string') {
+    defaultSize = dress.size;
+  }
+  defaultSize = String(defaultSize || 'S').replace(/^size\s*[:\s-]*/i, '').trim();
+  if (defaultSize.includes('-') || defaultSize.includes('/')) {
+    defaultSize = defaultSize.split(/[-/]/)[0].replace(/^size\s*[:\s-]*/i, '').trim();
+  }
+  if (defaultSize.indexOf('(') > 0) {
+    defaultSize = defaultSize.slice(0, defaultSize.indexOf('(')).trim();
+  }
+  if (!defaultSize || defaultSize.toLowerCase() === 'theo tư vấn') {
+    defaultSize = 'S';
+  }
+
+  const selectedSize = defaultSize;
 
   const existingIndex = current.findIndex(
     (item) => String(item.id) === id || (item.code && item.code === dress.code) ||
@@ -122,6 +143,7 @@ export function addToCart(dress) {
     updated[existingIndex] = {
       ...updated[existingIndex],
       size: selectedSize,
+      sizes: availableSizes.length > 0 ? availableSizes : (updated[existingIndex].sizes || []),
     };
     saveCart(updated);
     return true;
@@ -136,11 +158,21 @@ export function addToCart(dress) {
     image: dressImage(dress),
     code: dress.code,
     size: selectedSize,
+    sizes: availableSizes,
     collection: dress.collectionTag ?? dress.collection ?? 'HAUTE COUTURE',
     detailHref: Object.hasOwn(dress, 'detailHref') ? dress.detailHref : `/dresses/${id}`,
   };
   saveCart([...current, item]);
   return true;
+}
+
+export function updateCartItemSize(id, newSize) {
+  const current = getCart();
+  const clean = String(newSize || 'S').replace(/^size\s*[:\s-]*/i, '').trim();
+  const updated = current.map((item) =>
+    String(item.id) === String(id) ? { ...item, size: clean } : item
+  );
+  return saveCart(updated);
 }
 
 export function updateCartDays(id, days) {

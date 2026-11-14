@@ -398,12 +398,53 @@ export default function InventoryManagement() {
       );
     });
 
-    // Chuẩn hóa tên size để so khớp chuẩn xác (ví dụ "Size L", "L", "l " đều thành "L")
-    const normalizeSize = (sz) =>
-      String(sz || '')
-        .replace(/^size\s*/i, '')
-        .trim()
-        .toUpperCase();
+    // Helper kiểm tra một item trong đơn thuê có thuộc mẫu váy d này không
+    const isItemOfThisDress = (it) => {
+      if (!it) return false;
+      const itId = it.dressId?._id || it.dressId || it.id || it._id;
+      const itCleanName = cleanStr(it.name);
+      const itCleanCode = cleanStr(it.code);
+      return Boolean(
+        (itId && (String(itId) === String(dressId) || (d._id && String(itId) === String(d._id)))) ||
+        (itCleanCode && dressCleanCode && itCleanCode === dressCleanCode) ||
+        (itCleanName && dressCleanName && itCleanName === dressCleanName && dressCleanName.length >= 2)
+      );
+    };
+
+    // Chuẩn hóa tên size để so khớp chuẩn xác (ví dụ "Size: L", "Size L", "L (Eo 72-76cm)" -> "L")
+    const normalizeSize = (sz) => {
+      let s = String(sz || '').trim();
+      s = s.replace(/^size\s*[:\s-]*/i, '').trim();
+      const parenIdx = s.indexOf('(');
+      if (parenIdx > 0) {
+        s = s.slice(0, parenIdx).trim();
+      }
+      return s.toUpperCase();
+    };
+
+    // Helper kiểm tra size của item có khớp với size sCleanName đang xét không
+    const doesItemMatchSize = (it, targetSizeClean) => {
+      if (!it) return false;
+      const raw = String(it.size || it.selectedSize || '').trim();
+      if (!raw) return false;
+      let clean = raw.replace(/^size\s*[:\s-]*/i, '').trim().toUpperCase();
+      const parenIdx = clean.indexOf('(');
+      if (parenIdx > 0) {
+        clean = clean.slice(0, parenIdx).trim();
+      }
+
+      // 1. So khớp chính xác hoàn toàn (ví dụ "S" === "S")
+      if (clean === targetSizeClean) return true;
+
+      // 2. Nếu size là chuỗi dải dạng "XS - S" hoặc "M - L" hoặc "S / M" (từ đơn hàng thuê từ giỏ)
+      if (clean.includes('-') || clean.includes('/')) {
+        const parts = clean.split(/[-/]/).map((p) => p.replace(/^size\s*[:\s-]*/i, '').trim().toUpperCase());
+        // Khớp size đầu tiên trong dải size (ví dụ XS trong "XS - S", hoặc M trong "M - L")
+        if (parts[0] === targetSizeClean) return true;
+      }
+
+      return false;
+    };
 
     // 3. Phân bổ chi tiết theo từng Size: Khả dụng / Đang kiểm định / Đang thuê / Đã cọc
     const detailedSizes = sizeList.map((sz) => {
@@ -411,21 +452,19 @@ export default function InventoryManagement() {
       const sCleanName = normalizeSize(sName);
       const sQty = Math.max(1, Number(sz.totalQuantity ?? sz.quantity) || 1);
 
-      // a) Bảo dưỡng từ đơn thuê (kiểm định sau thuê hoặc hoàn tất trong vòng 1 ngày)
-      const orderMaintCount = maintenanceOrders.filter((o) => {
-        const matchedItem = (o.items || []).find((it) => {
-          const itId = it.dressId?._id || it.dressId || it.id || it._id;
-          const itCleanName = cleanStr(it.name);
-          const itCleanCode = cleanStr(it.code);
-          return (
-            (itId && (String(itId) === String(dressId) || (d._id && String(itId) === String(d._id)))) ||
-            (itCleanCode && dressCleanCode && itCleanCode === dressCleanCode) ||
-            (itCleanName && dressCleanName && itCleanName === dressCleanName && dressCleanName.length >= 2)
-          );
+      // a) Bảo dưỡng từ các đơn thuê (kiểm định sau thuê hoặc hoàn tất trong vòng 1 ngày)
+      let orderMaintCount = 0;
+      maintenanceOrders.forEach((o) => {
+        const orderItems = Array.isArray(o.items) && o.items.length > 0 ? o.items : [o];
+        orderItems.forEach((it) => {
+          if (isItemOfThisDress(it)) {
+            const itSize = it.size || it.selectedSize || o.size || o.selectedSize || '';
+            if (doesItemMatchSize({ size: itSize }, sCleanName)) {
+              orderMaintCount += Number(it.quantity || 1);
+            }
+          }
         });
-        const itemSize = normalizeSize(matchedItem?.size || o.size || o.selectedSize || '');
-        return itemSize === sCleanName;
-      }).length;
+      });
 
       // b) Bảo dưỡng từ bản ghi lưu trữ completed records
       const existingOrderIds = new Set(maintenanceOrders.map((o) => String(o._id || o.id || o.orderCode || '')));
@@ -443,37 +482,33 @@ export default function InventoryManagement() {
 
       const sMaint = Math.min(sQty, orderMaintCount + storageMaintCount + manualMaintCount);
 
-      // d) Đơn đang thuê thực tế (đã giao váy)
-      const rawRented = rentingOrders.filter((o) => {
-        const matchedItem = (o.items || []).find((it) => {
-          const itId = it.dressId?._id || it.dressId || it.id || it._id;
-          const itCleanName = cleanStr(it.name);
-          const itCleanCode = cleanStr(it.code);
-          return (
-            (itId && (String(itId) === String(dressId) || (d._id && String(itId) === String(d._id)))) ||
-            (itCleanCode && dressCleanCode && itCleanCode === dressCleanCode) ||
-            (itCleanName && dressCleanName && itCleanName === dressCleanName && dressCleanName.length >= 2)
-          );
+      // d) Đơn đang thuê thực tế (đã bàn giao váy) - Đếm từng chiếc váy trong đơn thuê
+      let rawRented = 0;
+      rentingOrders.forEach((o) => {
+        const orderItems = Array.isArray(o.items) && o.items.length > 0 ? o.items : [o];
+        orderItems.forEach((it) => {
+          if (isItemOfThisDress(it)) {
+            const itSize = it.size || it.selectedSize || o.size || o.selectedSize || '';
+            if (doesItemMatchSize({ size: itSize }, sCleanName)) {
+              rawRented += Number(it.quantity || 1);
+            }
+          }
         });
-        const itemSize = normalizeSize(matchedItem?.size || o.size || o.selectedSize || '');
-        return itemSize === sCleanName;
-      }).length;
+      });
 
-      // e) Đơn mới đặt cọc giữ váy (chưa giao váy)
-      const rawBooked = bookedOrders.filter((o) => {
-        const matchedItem = (o.items || []).find((it) => {
-          const itId = it.dressId?._id || it.dressId || it.id || it._id;
-          const itCleanName = cleanStr(it.name);
-          const itCleanCode = cleanStr(it.code);
-          return (
-            (itId && (String(itId) === String(dressId) || (d._id && String(itId) === String(d._id)))) ||
-            (itCleanCode && dressCleanCode && itCleanCode === dressCleanCode) ||
-            (itCleanName && dressCleanName && itCleanName === dressCleanName && dressCleanName.length >= 2)
-          );
+      // e) Đơn mới đặt cọc giữ váy (chưa bàn giao váy) - Đếm từng chiếc váy trong đơn thuê
+      let rawBooked = 0;
+      bookedOrders.forEach((o) => {
+        const orderItems = Array.isArray(o.items) && o.items.length > 0 ? o.items : [o];
+        orderItems.forEach((it) => {
+          if (isItemOfThisDress(it)) {
+            const itSize = it.size || it.selectedSize || o.size || o.selectedSize || '';
+            if (doesItemMatchSize({ size: itSize }, sCleanName)) {
+              rawBooked += Number(it.quantity || 1);
+            }
+          }
         });
-        const itemSize = normalizeSize(matchedItem?.size || o.size || o.selectedSize || '');
-        return itemSize === sCleanName;
-      }).length;
+      });
 
       // CHẶN TRẦN THEO THỨ TỰ ƯU TIÊN THỰC TẾ TẠI KHO: Bảo dưỡng -> Đang thuê -> Đã cọc giữ lịch
       const sRented = Math.min(Math.max(0, sQty - sMaint), rawRented);
@@ -595,7 +630,23 @@ export default function InventoryManagement() {
       ]);
 
       const dressList = Array.isArray(dressesRes?.data) ? dressesRes.data : [];
-      const orderList = Array.isArray(ordersRes?.orders) ? ordersRes.orders : [];
+      let orderList = Array.isArray(ordersRes?.orders)
+        ? ordersRes.orders
+        : Array.isArray(ordersRes?.data)
+        ? ordersRes.data
+        : [];
+
+      // Đồng bộ đơn mới đặt cọc gần nhất từ localStorage nếu API chưa trả về kịp
+      try {
+        const lastOrder = JSON.parse(localStorage.getItem('unibridal-last-order') || 'null');
+        if (lastOrder && (lastOrder.orderCode || lastOrder._id || lastOrder.id)) {
+          const lastCode = String(lastOrder.orderCode || lastOrder._id || lastOrder.id);
+          const exists = orderList.some((o) => String(o.orderCode || o._id || o.id) === lastCode);
+          if (!exists) {
+            orderList = [lastOrder, ...orderList];
+          }
+        }
+      } catch { }
 
       // Dọn dẹp key mock unibridal-orders cũ trong localStorage để không làm sai lệch trạng thái đơn
       try {
@@ -633,6 +684,28 @@ export default function InventoryManagement() {
 
   useEffect(() => {
     loadInventory();
+    const handleUpdate = () => loadInventory();
+
+    let bc;
+    try {
+      bc = new BroadcastChannel('unibridal_channel');
+      bc.onmessage = () => loadInventory();
+    } catch { }
+
+    window.addEventListener('unibridal_order_created', handleUpdate);
+    window.addEventListener('unibridal_order_updated', handleUpdate);
+    window.addEventListener('storage', handleUpdate);
+    window.addEventListener('focus', handleUpdate);
+
+    return () => {
+      if (bc) {
+        try { bc.close(); } catch { }
+      }
+      window.removeEventListener('unibridal_order_created', handleUpdate);
+      window.removeEventListener('unibridal_order_updated', handleUpdate);
+      window.removeEventListener('storage', handleUpdate);
+      window.removeEventListener('focus', handleUpdate);
+    };
   }, [loadInventory]);
 
   // Đồng bộ danh mục phom dáng và chất liệu từ MongoDB Atlas
