@@ -1703,6 +1703,10 @@ export default function CheckoutPage() {
         // Lưu đơn hàng vừa tạo vào localStorage để trang xác nhận / đơn hàng có thể đọc
         try {
           localStorage.setItem('unibridal-last-order', JSON.stringify(savedOrder));
+          localStorage.setItem('unibridal_order_ping', String(Date.now()));
+          const bc = new BroadcastChannel('unibridal_channel');
+          bc.postMessage({ type: 'order_created', order: savedOrder });
+          bc.close();
         } catch (err) {
           // ignore storage errors
         }
@@ -1896,6 +1900,10 @@ export default function CheckoutPage() {
 
         try {
           localStorage.setItem('unibridal-last-order', JSON.stringify(savedOrder));
+          localStorage.setItem('unibridal_order_ping', String(Date.now()));
+          const bc = new BroadcastChannel('unibridal_channel');
+          bc.postMessage({ type: 'order_created', order: savedOrder });
+          bc.close();
         } catch { }
 
         try {
