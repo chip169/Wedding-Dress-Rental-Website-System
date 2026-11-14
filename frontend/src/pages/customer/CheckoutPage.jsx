@@ -2722,8 +2722,8 @@ export default function CheckoutPage() {
                     onClick={handleProceedToContract}
                     disabled={Boolean(scheduleConflict) || hasOutOfStockItem}
                     className={`w-full py-4 rounded-xl font-jakarta text-[14px] font-bold tracking-wider uppercase transition-all flex items-center justify-center gap-2 border-0 ${scheduleConflict || hasOutOfStockItem
-                        ? 'bg-stone-300 text-stone-500 cursor-not-allowed shadow-none'
-                        : 'bg-[#733F49] hover:bg-[#5F323B] text-white shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer active:scale-[0.99]'
+                      ? 'bg-stone-300 text-stone-500 cursor-not-allowed shadow-none'
+                      : 'bg-[#733F49] hover:bg-[#5F323B] text-white shadow-[0_4px_16px_rgba(115,63,73,0.3)] hover:shadow-[0_6px_22px_rgba(115,63,73,0.4)] cursor-pointer active:scale-[0.99]'
                       }`}
                   >
                     {hasOutOfStockItem ? (
@@ -3002,8 +3002,8 @@ export default function CheckoutPage() {
                                 type="button"
                                 onClick={() => setSignatureMode('draw')}
                                 className={`px-2.5 py-1 rounded-md transition-colors border-0 cursor-pointer ${signatureMode === 'draw'
-                                    ? 'bg-[#733F49] text-white shadow-2xs'
-                                    : 'bg-transparent text-[#733F49] hover:bg-white/60'
+                                  ? 'bg-[#733F49] text-white shadow-2xs'
+                                  : 'bg-transparent text-[#733F49] hover:bg-white/60'
                                   }`}
                               >
                                 ✍️ Vẽ chữ ký
@@ -3016,8 +3016,8 @@ export default function CheckoutPage() {
                                   if (existing) setContractSignature(existing);
                                 }}
                                 className={`px-2.5 py-1 rounded-md transition-colors border-0 cursor-pointer ${signatureMode === 'type'
-                                    ? 'bg-[#733F49] text-white shadow-2xs'
-                                    : 'bg-transparent text-[#733F49] hover:bg-white/60'
+                                  ? 'bg-[#733F49] text-white shadow-2xs'
+                                  : 'bg-transparent text-[#733F49] hover:bg-white/60'
                                   }`}
                               >
                                 ⌨️ Gõ họ tên
@@ -3474,8 +3474,37 @@ export default function CheckoutPage() {
                                   }
                                 }}
                                 className={`px-2 py-0.5 rounded text-[10.5px] font-bold border cursor-pointer transition-all ${isSzActive
-                                    ? 'bg-[#733F49] text-white border-[#733F49]'
-                                    : 'bg-white text-[#733F49] border-[#EEDECF] hover:border-[#733F49]'
+                                  ? 'bg-[#733F49] text-white border-[#733F49]'
+                                  : 'bg-white text-[#733F49] border-[#EEDECF] hover:border-[#733F49]'
+                                  }`}
+                              >
+                                {sClean}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      )}
+                      {Array.isArray(activeDress?.sizes) && activeDress.sizes.length > 1 && (
+                        <div className="mt-2 flex items-center gap-1.5 flex-wrap">
+                          <span className="text-[11px] font-semibold text-[#847374]">Đổi size:</span>
+                          {activeDress.sizes.map((sz, sIdx) => {
+                            const sVal = typeof sz === 'string' ? sz : sz.size || sz.label;
+                            const sClean = String(sVal).replace(/^size\s*/i, '').trim();
+                            const isSzActive = (selectedSize || '').toUpperCase() === sClean.toUpperCase();
+                            return (
+                              <button
+                                key={sIdx}
+                                type="button"
+                                onClick={() => {
+                                  setSelectedSize(sClean);
+                                  setOrderItems((prev) => prev.map((it) => ({ ...it, size: sClean })));
+                                  if (activeDress) {
+                                    setActiveDress((prev) => ({ ...prev, size: sClean }));
+                                  }
+                                }}
+                                className={`px-2 py-0.5 rounded text-[10.5px] font-bold border cursor-pointer transition-all ${isSzActive
+                                  ? 'bg-[#733F49] text-white border-[#733F49]'
+                                  : 'bg-white text-[#733F49] border-[#EEDECF] hover:border-[#733F49]'
                                   }`}
                               >
                                 {sClean}
@@ -3612,8 +3641,8 @@ export default function CheckoutPage() {
                 disabled={hasOutOfStockItem}
                 onClick={handleProceedToContract}
                 className={`px-5 sm:px-7 py-2.5 sm:py-3 rounded-xl text-white text-[12.5px] sm:text-[13.5px] font-bold flex items-center gap-2 shadow-md transition-all border-0 ${hasOutOfStockItem
-                    ? 'bg-stone-300 text-stone-500 cursor-not-allowed'
-                    : 'bg-[#733F49] hover:bg-[#5F323B] cursor-pointer active:scale-[0.98]'
+                  ? 'bg-stone-300 text-stone-500 cursor-not-allowed'
+                  : 'bg-[#733F49] hover:bg-[#5F323B] cursor-pointer active:scale-[0.98]'
                   }`}
               >
                 <span>{hasOutOfStockItem ? 'Hết Hàng Trong Kho' : 'Xem Trước và Ký Hợp Đồng'}</span>
