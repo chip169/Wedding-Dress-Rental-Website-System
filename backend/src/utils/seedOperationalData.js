@@ -97,9 +97,11 @@ async function seedData() {
       const rentPrice = dress.rentPrice || 5000000;
       const depositAmount = dress.depositAmount || 15000000;
       const totalPayment = rentPrice + depositAmount;
+      const branch = cust.address.includes('Hà Nội') ? 'hn-hoankiem' : 'hcm-q1';
 
       const orderObj = {
         orderCode,
+        branch,
         customerId: (i % 2 === 0) ? null : customerId,
         customerName: cust.name,
         customerPhone: cust.phone,

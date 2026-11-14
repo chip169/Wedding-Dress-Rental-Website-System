@@ -118,6 +118,7 @@ export const createUser = async (userData) => {
     phone: phone.trim(),
     password,
     role: cleanRole,
+    branch: userData.branch || (cleanRole === 'staff' ? 'hcm-q1' : 'all'),
     idCard: idCard?.trim() || '',
     address: address || {},
     isActive: true,
@@ -154,6 +155,10 @@ export const updateUser = async (id, updateData) => {
     user.role = updateData.role.toLowerCase();
   } else if (updateData.roleCode) {
     user.role = updateData.roleCode.toLowerCase();
+  }
+
+  if (updateData.branch) {
+    user.branch = updateData.branch;
   }
 
   if (updateData.isActive !== undefined) {

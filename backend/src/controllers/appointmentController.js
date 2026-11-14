@@ -42,7 +42,12 @@ export const getMyAppointments = async (req, res, next) => {
 
 export const getAllAppointments = async (req, res, next) => {
   try {
-    const result = await appointmentService.getAllAppointments(req.query);
+    const filters = { ...req.query };
+    // Phân quyền chi nhánh: Nhân viên chỉ xem lịch của chi nhánh mình
+    if (req.user?.role === 'staff' && req.user.branch && req.user.branch !== 'all') {
+      filters.branch = req.user.branch;
+    }
+    const result = await appointmentService.getAllAppointments(filters);
     res.status(200).json({
       success: true,
       message: 'Lấy danh sách lịch hẹn hệ thống thành công',
@@ -64,7 +69,8 @@ export const updateAppointmentStatus = async (req, res, next) => {
     const appointment = await appointmentService.updateAppointmentStatus(
       req.params.id,
       status,
-      req.user?._id
+      req.user?._id,
+      req.user
     );
     res.status(200).json({
       success: true,
