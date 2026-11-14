@@ -60,7 +60,7 @@ import {
   SHOWROOM_BRANCHES,
   APPOINTMENT_EVENT,
 } from '../../services/appointmentService';
-import { getAllOrdersAdmin } from '../../services/orderService';
+import { getAllOrdersAdmin, updateOrderStatus } from '../../services/orderService';
 import { formatCurrencyVND } from '../../utils/formatCurrency';
 import { formatShortDate } from '../../utils/formatDate';
 
@@ -714,6 +714,63 @@ export default function ScheduleOverviewPage({ defaultTab }) {
       }
     } catch {
       message.error('Không thể cập nhật trạng thái. Vui lòng thử lại!');
+    } finally {
+      setUpdatingId(null);
+    }
+  };
+
+  // Xác nhận khách đã lấy váy (Cập nhật đơn thuê sang trạng thái 'renting' - Đang thuê)
+  const handleConfirmCustomerReceived = async (deliveryItem) => {
+    const orderId = deliveryItem.id || deliveryItem.rawOrder?._id || deliveryItem.code;
+    if (!orderId) {
+      message.error('Không tìm thấy thông tin đơn thuê để cập nhật.');
+      return;
+    }
+
+    setUpdatingId(deliveryItem.id || orderId);
+    try {
+      await updateOrderStatus(orderId, 'renting');
+      message.success(`Đã xác nhận khách lấy váy thành công! Đơn thuê #${deliveryItem.code || orderId} đã được chuyển sang trạng thái "Đang thuê".`);
+
+      // Cập nhật local state orders ngay lập tức để giao diện phản hồi tức thì
+      setOrders((prev) =>
+        prev.map((ord) => {
+          const ordId = ord._id || ord.id;
+          const ordCode = ord.orderCode || ord.contractCode;
+          if (
+            ordId === orderId ||
+            (ord._id && String(ord._id) === String(orderId)) ||
+            (deliveryItem.code && ordCode === deliveryItem.code)
+          ) {
+            return {
+              ...ord,
+              status: 'renting',
+              actualDeliveryDate: new Date().toISOString(),
+            };
+          }
+          return ord;
+        })
+      );
+
+      // Cập nhật selectedEvent nếu đang xem popup chi tiết
+      setSelectedEvent((prev) => {
+        if (!prev) return prev;
+        const prevId = prev.id || prev.code;
+        if (prevId === deliveryItem.id || prevId === deliveryItem.code || prevId === orderId) {
+          return {
+            ...prev,
+            status: 'renting',
+            actualDeliveryDate: new Date().toISOString(),
+          };
+        }
+        return prev;
+      });
+
+      // Tải lại dữ liệu đồng bộ trong nền
+      loadData(false);
+    } catch (err) {
+      console.error('Lỗi khi cập nhật trạng thái đơn thuê:', err);
+      message.error(err?.response?.data?.message || err.message || 'Không thể cập nhật trạng thái đơn thuê.');
     } finally {
       setUpdatingId(null);
     }
@@ -2027,21 +2084,29 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                                 </span>
                               )}
                               {isDelivery && (
-                                <span
-                                  className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
-                                    isDeliveryDone
-                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
-                                      : isDeliveryFutureOrToday
-                                      ? 'bg-amber-50 text-amber-900 border-amber-300'
-                                      : 'bg-rose-50 text-rose-900 border-rose-300'
-                                  }`}
-                                >
-                                  {isDeliveryDone
-                                    ? (item.deliveryMethod === 'express' ? 'Ship đã giao' : 'Khách đã lấy')
-                                    : isDeliveryFutureOrToday
-                                    ? (item.deliveryMethod === 'express' ? 'Sắp giao' : 'Khách sắp lấy')
-                                    : (item.deliveryMethod === 'express' ? 'Chưa giao' : 'Chưa đến lấy')}
-                                </span>
+                                isDeliveryDone ? (
+                                  <span
+                                    className="text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border bg-emerald-50 text-emerald-800 border-emerald-300 flex items-center gap-1"
+                                    title="Khách hàng đã nhận bàn giao váy (đơn đang trong trạng thái Đang thuê)"
+                                  >
+                                    <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                                    <span>{item.deliveryMethod === 'express' ? 'Ship đã giao' : 'Khách đã lấy'}</span>
+                                  </span>
+                                ) : (
+                                  <button
+                                    type="button"
+                                    disabled={updatingId === item.id || updatingId === (item.rawOrder?._id || item.id)}
+                                    onClick={(e) => {
+                                      e.stopPropagation();
+                                      handleConfirmCustomerReceived(item);
+                                    }}
+                                    className="text-[10.5px] px-3 py-1 rounded-full font-bold tracking-tight bg-amber-50 hover:bg-amber-100 active:scale-95 text-amber-900 border border-amber-300 shadow-2xs hover:shadow-xs transition-all cursor-pointer flex items-center gap-1.5 disabled:opacity-50"
+                                    title="Bấm để xác nhận khách đã lấy váy (đơn thuê sẽ tự động cập nhật sang trạng thái Đang thuê)"
+                                  >
+                                    <CheckCircle2 className="w-3.5 h-3.5 text-amber-700" />
+                                    <span>Xác Nhận Khách Đã Lấy</span>
+                                  </button>
+                                )
                               )}
                               {isReturn && (
                                 <span
@@ -2199,18 +2264,32 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                               )}
 
                               {isDelivery && (
-                                <button
-                                  type="button"
-                                  onClick={() => {
-                                    const targetCode = item.code || item.id || '';
-                                    navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}`);
-                                  }}
-                                  className="w-full py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer"
-                                  title="Xem chi tiết đơn thuê và bàn giao"
-                                >
-                                  <PackageCheck className="w-3.5 h-3.5" />
-                                  <span>Đơn Thuê</span>
-                                </button>
+                                <div className="flex items-center gap-2 w-full">
+                                  {!isDeliveryDone && (
+                                    <button
+                                      type="button"
+                                      disabled={updatingId === item.id || updatingId === (item.rawOrder?._id || item.id)}
+                                      onClick={() => handleConfirmCustomerReceived(item)}
+                                      className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
+                                      title="Xác nhận khách đã lấy đồ (chuyển đơn sang trạng thái Đang Thuê)"
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                      <span>Xác Nhận Khách Đã Lấy</span>
+                                    </button>
+                                  )}
+                                  <button
+                                    type="button"
+                                    onClick={() => {
+                                      const targetCode = item.code || item.id || '';
+                                      navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}`);
+                                    }}
+                                    className={`${!isDeliveryDone ? 'px-3.5' : 'w-full'} py-2 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer`}
+                                    title="Xem chi tiết đơn thuê và bàn giao"
+                                  >
+                                    <PackageCheck className="w-3.5 h-3.5" />
+                                    <span>Đơn Thuê</span>
+                                  </button>
+                                </div>
                               )}
 
                               {isReturn && (
@@ -2520,18 +2599,22 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
                 {selectedEvent.type === 'delivery' && (
                   <div className="pt-2 flex flex-col sm:flex-row gap-2">
-                    <button
-                      type="button"
-                      onClick={() => {
-                        setDetailModalOpen(false);
-                        const targetCode = selectedEvent.code || selectedEvent.id || '';
-                        navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}&action=inspect`);
-                      }}
-                      className="flex-1 py-2.5 px-3 bg-[#733F49] hover:bg-[#5a3239] text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
-                    >
-                      <RotateCcw className="w-4 h-4" />
-                      <span>Mở Quy Trình Kiểm Định &amp; Hoàn Cọc</span>
-                    </button>
+                    {!(
+                      ['delivered', 'renting', 'returned', 'completed', 'waiting_refund'].includes(
+                        (selectedEvent.status || '').toLowerCase()
+                      ) || Boolean(selectedEvent.actualDeliveryDate)
+                    ) && (
+                      <button
+                        type="button"
+                        disabled={updatingId === selectedEvent.id}
+                        onClick={() => handleConfirmCustomerReceived(selectedEvent)}
+                        className="flex-1 py-2.5 px-3 bg-emerald-600 hover:bg-emerald-700 active:scale-95 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs disabled:opacity-50"
+                        title="Xác nhận khách đã lấy đồ (chuyển đơn sang trạng thái Đang Thuê)"
+                      >
+                        <CheckCircle2 className="w-4 h-4" />
+                        <span>Xác Nhận Khách Đã Lấy</span>
+                      </button>
+                    )}
                     <button
                       type="button"
                       onClick={() => {

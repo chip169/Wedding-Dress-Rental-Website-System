@@ -534,6 +534,9 @@ export const updateOrderStatus = async (idOrCode, status) => {
   if (!order) throw new Error('Không tìm thấy đơn hàng.');
 
   order.status = status;
+  if (status === 'renting') {
+    order.actualDeliveryDate = order.actualDeliveryDate || new Date();
+  }
   if (status === 'completed' || status === 'complete') {
     order.completedAt = order.completedAt || new Date();
     order.maintenanceUntil = new Date(Date.now() + 24 * 60 * 60 * 1000);
