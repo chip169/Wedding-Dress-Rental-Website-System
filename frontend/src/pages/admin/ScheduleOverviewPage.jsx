@@ -558,11 +558,11 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
   // Bộ lọc cho Tab Lịch Sử Thử Váy
   const [historySearch, setHistorySearch] = useState('');
-  const [historyBranch, setHistoryBranch] = useState('hcm-q1');
+  const [historyBranch, setHistoryBranch] = useState('all');
 
   // Sub-filter trong Tab Lịch Biểu: 'all' | 'fitting' (Thử váy) | 'delivery' (Giao váy) | 'return' (Trả váy)
   const [calendarFilterType, setCalendarFilterType] = useState('all');
-  const [calendarBranchFilter, setCalendarBranchFilter] = useState('hcm-q1');
+  const [calendarBranchFilter, setCalendarBranchFilter] = useState('all');
   // Lọc hình thức giao váy: 'all' (Tất cả) | 'showroom' (Khách đến lấy) | 'express' (Nhân viên ship tận nơi)
   const [deliveryMethodFilter, setDeliveryMethodFilter] = useState('all');
   // Lọc hình thức trả váy: 'all' (Tất cả) | 'showroom' (Khách đến trả) | 'express' (Nhân viên đến lấy)
@@ -853,7 +853,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
         email: apt.customerEmail || apt.email,
         timeSlot: apt.timeSlot || '09:00 — 11:00',
         guestsCount: apt.guestsCount || 2,
-        branch: apt.branch || apt.branchId || 'hcm-q1',
+        branch: apt.branch || apt.branchId || 'hn-hoankiem',
         status: normalizeAptStatus(apt.status),
         notes: apt.notes,
         interestedDresses: apt.interestedDresses || apt.selectedDresses || [],
@@ -880,7 +880,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
   const calendarVisibleAppointments = useMemo(() => {
     return appointments.filter((a) => {
       const matchBranch =
-        calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter;
+        calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hn-hoankiem') === calendarBranchFilter;
       return matchBranch;
     });
   }, [appointments, calendarBranchFilter]);
@@ -888,7 +888,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
   // Toàn bộ đơn thuê còn hiệu lực của chi nhánh hiện tại (hoặc tất cả chi nhánh)
   const calendarBranchOrders = useMemo(() => {
     return activeOrders.filter(
-      (o) => calendarBranchFilter === 'all' || (o.branch || o.branchId || 'hcm-q1') === calendarBranchFilter
+      (o) => calendarBranchFilter === 'all' || (o.branch || o.branchId || 'hn-hoankiem') === calendarBranchFilter
     );
   }, [activeOrders, calendarBranchFilter]);
 
@@ -963,7 +963,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
         shippingAddress: ord.shippingAddress || ord.customerAddress || ord.address || '',
         notes: ord.notes,
         date: key,
-        branch: ord.branch || ord.branchId || 'hcm-q1',
+        branch: ord.branch || ord.branchId || 'hn-hoankiem',
       });
     });
     return map;
@@ -997,7 +997,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
         shippingAddress: ord.shippingAddress || ord.customerAddress || ord.address || '',
         notes: ord.notes,
         date: key,
-        branch: ord.branch || ord.branchId || 'hcm-q1',
+        branch: ord.branch || ord.branchId || 'hn-hoankiem',
       });
     });
     return map;
@@ -1006,13 +1006,13 @@ export default function ScheduleOverviewPage({ defaultTab }) {
   // Thống kê nhanh theo cơ sở đang chọn (hoặc toàn hệ thống) từ MongoDB
   const stats = useMemo(() => {
     const branchAptsToday = (appointmentsByDate[todayKey] || []).filter(
-      (a) => calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
+      (a) => calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hn-hoankiem') === calendarBranchFilter
     );
     const branchDeliveriesToday = (deliveriesByDate[todayKey] || []).filter(
-      (d) => calendarBranchFilter === 'all' || (d.branch || d.branchId || 'hcm-q1') === calendarBranchFilter
+      (d) => calendarBranchFilter === 'all' || (d.branch || d.branchId || 'hn-hoankiem') === calendarBranchFilter
     );
     const branchReturnsToday = (returnsByDate[todayKey] || []).filter(
-      (r) => calendarBranchFilter === 'all' || (r.branch || r.branchId || 'hcm-q1') === calendarBranchFilter
+      (r) => calendarBranchFilter === 'all' || (r.branch || r.branchId || 'hn-hoankiem') === calendarBranchFilter
     );
 
     const todayFittings = branchAptsToday.length;
@@ -1020,10 +1020,10 @@ export default function ScheduleOverviewPage({ defaultTab }) {
     const todayReturns = branchReturnsToday.length;
 
     const branchAppointments = appointments.filter(
-      (a) => calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
+      (a) => calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hn-hoankiem') === calendarBranchFilter
     );
     const branchOrders = activeOrders.filter(
-      (o) => calendarBranchFilter === 'all' || (o.branch || o.branchId || 'hcm-q1') === calendarBranchFilter
+      (o) => calendarBranchFilter === 'all' || (o.branch || o.branchId || 'hn-hoankiem') === calendarBranchFilter
     );
 
     const pendingAppointments = branchAppointments.filter(
@@ -1076,7 +1076,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
         const matchSearch =
           !search || name.includes(search) || phone.includes(search) || code.includes(search);
 
-        const branch = apt.branch || apt.branchId || 'hcm-q1';
+        const branch = apt.branch || apt.branchId || 'hn-hoankiem';
         const matchBranch = historyBranch === 'all' || branch === historyBranch;
 
         return matchSearch && matchBranch;
@@ -1175,17 +1175,15 @@ export default function ScheduleOverviewPage({ defaultTab }) {
       dataIndex: 'branch',
       key: 'branch',
       width: 175,
-      render: (branch, record) => {
-        const b = branch || record.branchId;
-        const isHn = b === 'hn-hoankiem';
+      render: () => {
         return (
           <div className="text-xs space-y-0.5">
             <div className="font-semibold text-gray-800 flex items-center gap-1">
               <Building2 className="w-3.5 h-3.5 text-[#BA7A83] shrink-0" />
-              <span>{isHn ? 'Hoàn Kiếm, HN' : 'Quận 1, TP.HCM'}</span>
+              <span>Hoàn Kiếm, Hà Nội</span>
             </div>
             <div className="text-[11px] text-gray-500 font-normal">
-              📍 {isHn ? '26 Lý Thường Kiệt' : '88 Nam Kỳ Khởi Nghĩa'}
+              📍 26 Lý Thường Kiệt
             </div>
           </div>
         );
@@ -1266,7 +1264,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                   phone: record.customerPhone || record.phone,
                   email: record.customerEmail || record.email,
                   timeSlot: record.timeSlot || '09:00 — 11:00',
-                  branch: record.branch || record.branchId || 'hcm-q1',
+                  branch: record.branch || record.branchId || 'hn-hoankiem',
                   status: record.status,
                   notes: record.notes,
                   interestedDresses: record.interestedDresses || record.selectedDresses || [],
@@ -1321,13 +1319,13 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
     const filteredApts = apts
       .filter(
-        (a) => calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
+        (a) => calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hn-hoankiem') === calendarBranchFilter
       )
       .sort((a, b) => getTimeMinutes(a.timeSlot) - getTimeMinutes(b.timeSlot));
 
     const filteredDeliveries = deliveries.filter((d) => {
       const matchBranch =
-        calendarBranchFilter === 'all' || (d.branch || d.branchId || 'hcm-q1') === calendarBranchFilter;
+        calendarBranchFilter === 'all' || (d.branch || d.branchId || 'hn-hoankiem') === calendarBranchFilter;
       const matchMethod =
         deliveryMethodFilter === 'all' || (d.deliveryMethod || 'showroom') === deliveryMethodFilter;
       return matchBranch && matchMethod;
@@ -1335,7 +1333,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
     const filteredReturns = returns.filter((r) => {
       const matchBranch =
-        calendarBranchFilter === 'all' || (r.branch || r.branchId || 'hcm-q1') === calendarBranchFilter;
+        calendarBranchFilter === 'all' || (r.branch || r.branchId || 'hn-hoankiem') === calendarBranchFilter;
       const matchMethod =
         returnMethodFilter === 'all' || (r.deliveryMethod || 'showroom') === returnMethodFilter;
       return matchBranch && matchMethod;
@@ -1371,12 +1369,12 @@ export default function ScheduleOverviewPage({ defaultTab }) {
     const showReturns = calendarFilterType === 'all' || calendarFilterType === 'return';
 
     const visibleApts = dayApts.filter(
-      (a) => calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
+      (a) => calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hn-hoankiem') === calendarBranchFilter
     );
 
     const visibleDeliveries = dayDeliveries.filter((d) => {
       const matchBranch =
-        calendarBranchFilter === 'all' || (d.branch || d.branchId || 'hcm-q1') === calendarBranchFilter;
+        calendarBranchFilter === 'all' || (d.branch || d.branchId || 'hn-hoankiem') === calendarBranchFilter;
       const matchMethod =
         deliveryMethodFilter === 'all' || (d.deliveryMethod || 'showroom') === deliveryMethodFilter;
       return matchBranch && matchMethod;
@@ -1384,7 +1382,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
     const visibleReturns = dayReturns.filter((r) => {
       const matchBranch =
-        calendarBranchFilter === 'all' || (r.branch || r.branchId || 'hcm-q1') === calendarBranchFilter;
+        calendarBranchFilter === 'all' || (r.branch || r.branchId || 'hn-hoankiem') === calendarBranchFilter;
       const matchMethod =
         returnMethodFilter === 'all' || (r.deliveryMethod || 'showroom') === returnMethodFilter;
       return matchBranch && matchMethod;
@@ -1680,21 +1678,6 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                     <RotateCcw className="w-3.5 h-3.5" />
                     <span>Hạn trả váy ({calendarBranchOrders.length})</span>
                   </button>
-                </div>
-
-                <div className="flex items-center gap-2 text-xs">
-                  <span className="text-gray-500 font-semibold flex items-center gap-1">
-                    <Building2 className="w-3.5 h-3.5 text-[#733F49]" />
-                    <span>Chi nhánh:</span>
-                  </span>
-                  <select
-                    value={calendarBranchFilter}
-                    onChange={(e) => setCalendarBranchFilter(e.target.value)}
-                    className="px-3.5 py-1.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 font-bold outline-none cursor-pointer text-xs focus:border-[#733F49]"
-                  >
-                    <option value="hcm-q1">UniBridal Q.1 TP.HCM</option>
-                    <option value="hn-hoankiem">UniBridal Hoàn Kiếm, HN</option>
-                  </select>
                 </div>
               </div>
 
@@ -2211,9 +2194,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                               <div className="text-[11px] text-gray-500 flex items-center gap-1.5 mt-2 font-medium">
                                 <Building2 size={12} className="text-[#BA7A83]" />
                                 <span>
-                                  {item.branch === 'hn-hoankiem'
-                                    ? 'Showroom Hoàn Kiếm, Hà Nội (26 Lý Thường Kiệt)'
-                                    : 'Flagship Showroom Q.1, TP. HCM (88 Nam Kỳ Khởi Nghĩa)'}
+                                  UniBridal Heritage Mansion (26 Lý Thường Kiệt, Hoàn Kiếm, Hà Nội)
                                 </span>
                               </div>
                             ) : isDelivery ? (
@@ -2479,19 +2460,6 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                       </button>
                     )}
                   </div>
-
-                  {/* Lọc Chi nhánh */}
-                  <div className="flex items-center gap-2">
-                    <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">Chi nhánh:</span>
-                    <select
-                      value={historyBranch}
-                      onChange={(e) => setHistoryBranch(e.target.value)}
-                      className="text-xs font-semibold bg-gray-50 border border-gray-200 text-gray-800 rounded-xl px-3 py-2 focus:outline-none focus:border-[#BA7A83] cursor-pointer"
-                    >
-                      <option value="hcm-q1">UniBridal Q.1 TP.HCM</option>
-                      <option value="hn-hoankiem">UniBridal Hoàn Kiếm, HN</option>
-                    </select>
-                  </div>
                 </div>
               </div>
 
@@ -2612,14 +2580,10 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                       {selectedEvent.type === 'fitting' ? (
                         <div>
                           <div className="font-bold text-gray-900">
-                            {selectedEvent.branch === 'hn-hoankiem'
-                              ? 'UniBridal Showroom Hoàn Kiếm, HN'
-                              : 'UniBridal Flagship Showroom Q.1, TP.HCM'}
+                            UniBridal Heritage Mansion (Hà Nội)
                           </div>
                           <div className="text-[11px] text-gray-600 font-normal">
-                            📍 {selectedEvent.branch === 'hn-hoankiem'
-                              ? '26 Lý Thường Kiệt, P. Hàng Bài, Q. Hoàn Kiếm, Hà Nội'
-                              : '88 Nam Kỳ Khởi Nghĩa, P. Bến Nghé, Q.1, TP. Hồ Chí Minh'}
+                            📍 26 Lý Thường Kiệt, P. Hàng Bài, Q. Hoàn Kiếm, Hà Nội
                           </div>
                         </div>
                       ) : selectedEvent.deliveryMethod === 'express' ? (

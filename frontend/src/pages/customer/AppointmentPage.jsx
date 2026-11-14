@@ -57,8 +57,8 @@ export default function AppointmentPage() {
   const phoneParam = searchParams.get('phone');
   const emailParam = searchParams.get('email');
 
-  // Step 1: Branch selection
-  const [selectedBranchId, setSelectedBranchId] = useState('hcm-q1');
+  // Step 1: Branch selection (Mặc định duy nhất Showroom Hà Nội)
+  const [selectedBranchId, setSelectedBranchId] = useState('hn-hoankiem');
 
   // Step 2: Date và Time Slot selection
   const tomorrowStr = useMemo(() => {
@@ -817,7 +817,7 @@ export default function AppointmentPage() {
               {/* LEFT COLUMN: All Steps (col-span-8) */}
               <div className="lg:col-span-8 space-y-8">
 
-                {/* BƯỚC 1: CHỌN SHOWROOM */}
+                {/* BƯỚC 1: KHÔNG GIAN SHOWROOM HÀ NỘI */}
                 <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
                   <div className="flex items-center gap-3 pb-4 border-b border-[#F5EDE8] mb-5">
                     <span className="w-7 h-7 rounded-full bg-[#733F49] text-white flex items-center justify-center text-[12px] font-bold shrink-0">
@@ -825,7 +825,7 @@ export default function AppointmentPage() {
                     </span>
                     <div>
                       <h2 className="font-jakarta text-[18px] sm:text-[20px] font-bold text-[#2C2523] m-0">
-                        Chọn Showroom Atelier Trải Nghiệm
+                        Showroom Atelier Trải Nghiệm (Hà Nội)
                       </h2>
                       <p className="text-[12px] text-[#847374] m-0 mt-0.5">
                         Mỗi không gian Private Suite chỉ phục vụ tối đa 1 cô dâu tại cùng một khung giờ
@@ -833,67 +833,48 @@ export default function AppointmentPage() {
                     </div>
                   </div>
 
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-                    {SHOWROOM_BRANCHES.map((branch) => {
-                      const isSelected = selectedBranchId === branch.id;
-                      return (
-                        <div
-                          key={branch.id}
-                          onClick={() => setSelectedBranchId(branch.id)}
-                          className={`rounded-2xl border overflow-hidden cursor-pointer transition-all flex flex-col justify-between ${isSelected
-                            ? 'border-[#733F49] ring-2 ring-[#733F49]/20 bg-[#FAF4EE] shadow-sm'
-                            : 'border-[#EEDECF] bg-[#FCF9F6] hover:bg-white hover:border-[#D8C7B8]'
-                            }`}
-                        >
-                          <div className="h-36 sm:h-40 w-full overflow-hidden relative">
-                            <img
-                              src={branch.image}
-                              alt={branch.name}
-                              className="w-full h-full object-cover transition-transform duration-500 hover:scale-105"
-                            />
-                            {isSelected && (
-                              <span className="absolute top-2.5 right-2.5 bg-[#733F49] text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-xs">
-                                <Check className="w-3 h-3" /> Đang chọn
-                              </span>
-                            )}
-                          </div>
+                  <div className="rounded-2xl border border-[#733F49]/40 bg-[#FAF4EE] overflow-hidden flex flex-col md:flex-row shadow-xs">
+                    <div className="md:w-2/5 h-48 md:h-auto overflow-hidden relative">
+                      <img
+                        src={selectedBranch.image}
+                        alt={selectedBranch.name}
+                        className="w-full h-full object-cover"
+                      />
+                      <span className="absolute top-2.5 left-2.5 bg-[#733F49] text-white text-[10px] font-bold px-2.5 py-1 rounded-full flex items-center gap-1 shadow-xs uppercase tracking-wider">
+                        ✦ Flagship Mansion Hà Nội
+                      </span>
+                    </div>
 
-                          <div className="p-4 flex-1 flex flex-col justify-between">
-                            <div>
-                              <h3 className="font-jakarta font-bold text-[14.5px] sm:text-[15px] text-[#2C2523] m-0 mb-1 leading-snug">
-                                <span>{branch.shortName || branch.name.split(' — ')[0]}</span>
-                                {(branch.location || branch.name.includes(' — ')) && (
-                                  <>
-                                    <span className="text-[#847374] font-normal mx-1.5">—</span>
-                                    <span className="whitespace-nowrap text-[#733F49] font-bold">
-                                      {branch.location || branch.name.split(' — ')[1]}
-                                    </span>
-                                  </>
-                                )}
-                              </h3>
-                              <p className="text-[11.5px] text-[#6B5C5D] leading-relaxed mb-2.5 m-0 line-clamp-2">
-                                <MapPin className="w-3 h-3 text-[#B8737D] inline mr-1" />
-                                {branch.address}
-                              </p>
-                            </div>
+                    <div className="p-5 flex-1 flex flex-col justify-between">
+                      <div>
+                        <h3 className="font-jakarta font-bold text-[16px] text-[#2C2523] m-0 mb-1.5 leading-snug">
+                          {selectedBranch.name}
+                        </h3>
+                        <p className="text-[12.5px] text-[#6B5C5D] leading-relaxed mb-2.5 m-0">
+                          <MapPin className="w-3.5 h-3.5 text-[#B8737D] inline mr-1" />
+                          {selectedBranch.address}
+                        </p>
+                        <p className="text-[12px] text-[#733F49] font-medium m-0 mb-3">
+                          Hotline tư vấn đặt lịch: <strong>{selectedBranch.phone}</strong> • Giờ mở cửa: {selectedBranch.hours}
+                        </p>
+                      </div>
 
-                            <div className="pt-2 border-t border-[#EEDECF]/60">
-                              <span className="text-[10px] text-[#847374] block mb-1">Đặc quyền chi nhánh:</span>
-                              <div className="flex flex-wrap gap-1">
-                                {branch.features.map((f, i) => (
-                                  <span
-                                    key={i}
-                                    className="text-[9.5px] font-medium bg-white px-2 py-0.5 rounded-md border border-[#EEDECF] text-[#733F49]"
-                                  >
-                                    ✦ {f}
-                                  </span>
-                                ))}
-                              </div>
-                            </div>
-                          </div>
+                      <div className="pt-3 border-t border-[#EEDECF]/80">
+                        <span className="text-[10px] font-bold text-[#847374] uppercase tracking-wider block mb-1.5">
+                          Đặc quyền không gian thử váy VIP:
+                        </span>
+                        <div className="flex flex-wrap gap-1.5">
+                          {selectedBranch.features.map((f, i) => (
+                            <span
+                              key={i}
+                              className="text-[10.5px] font-medium bg-white px-2.5 py-1 rounded-md border border-[#EEDECF] text-[#733F49] shadow-2xs"
+                            >
+                              ✦ {f}
+                            </span>
+                          ))}
                         </div>
-                      );
-                    })}
+                      </div>
+                    </div>
                   </div>
                 </section>
 

@@ -159,7 +159,7 @@ export default function SignedContractModal({ orderId, order: propOrder, contrac
 
     // Địa chỉ giao nhận
     const addr = rawOrder.shippingAddress || cData.shippingAddress;
-    let shippingAddress = 'Nhận trực tiếp tại Showroom UniBridal (186 Nam Kỳ Khởi Nghĩa, Q.3, TP.HCM)';
+    let shippingAddress = 'Nhận trực tiếp tại Showroom UniBridal (26 Lý Thường Kiệt, Hoàn Kiếm, Hà Nội)';
     if (typeof addr === 'string' && addr.trim()) {
       shippingAddress = addr.trim();
     } else if (addr && typeof addr === 'object') {
@@ -433,10 +433,10 @@ export default function SignedContractModal({ orderId, order: propOrder, contrac
                       <strong>Đại diện:</strong> Ông Kim Xuân Hiếu — Tổng Giám Đốc Atelier
                     </p>
                     <p>
-                      <strong>Địa chỉ Showroom:</strong> 186 Nam Kỳ Khởi Nghĩa, P. Võ Thị Sáu, Q.3, TP.HCM
+                      <strong>Địa chỉ Showroom:</strong> 26 Lý Thường Kiệt, P. Hàng Bài, Q. Hoàn Kiếm, Hà Nội
                     </p>
                     <p>
-                      <strong>Hotline CSKH:</strong> 1900 888 2026 · <strong>Mã số thuế:</strong> 0317892026
+                      <strong>Hotline CSKH:</strong> 024 3936 8998 · <strong>Mã số thuế:</strong> 0317892026
                     </p>
                   </div>
 

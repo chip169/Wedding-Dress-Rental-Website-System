@@ -275,8 +275,8 @@ export const renderTemplatePdf = async (req, res, next) => {
                   <div class="col-title">BÊN CHO THUÊ (BÊN A):</div>
                   <strong>CÔNG TY TNHH UNIBRIDAL HAUTE COUTURE</strong><br />
                   Mã số thuế: <strong>0316889988</strong><br />
-                  Địa chỉ: 88 Nam Kỳ Khởi Nghĩa, P. Bến Nghé, Quận 1, TP. Hồ Chí Minh<br />
-                  Hotline: <strong>1800 8998</strong> • Email: contact@unibridal.vn<br />
+                  Địa chỉ: 26 Lý Thường Kiệt, Phường Hàng Bài, Quận Hoàn Kiếm, Hà Nội<br />
+                  Hotline: <strong>024 3936 8998</strong> • Email: contact@unibridal.vn<br />
                   Người đại diện: <strong>Ông Kim Xuân Hiếu</strong><br />
                   Chức vụ: <strong>Tổng Giám Đốc</strong>
                 </td>

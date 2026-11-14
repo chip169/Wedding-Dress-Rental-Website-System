@@ -118,7 +118,7 @@ export const createUser = async (userData) => {
     phone: phone.trim(),
     password,
     role: cleanRole,
-    branch: userData.branch || (cleanRole === 'staff' ? 'hcm-q1' : 'all'),
+    branch: userData.branch || (cleanRole === 'staff' ? 'hn-hoankiem' : 'all'),
     idCard: idCard?.trim() || '',
     address: address || {},
     isActive: true,

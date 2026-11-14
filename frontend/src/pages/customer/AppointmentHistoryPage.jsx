@@ -31,16 +31,16 @@ const TABS = [
 
 const SHOWROOM_ADDRESSES = {
   'hn-hoankiem': {
-    name: 'UniBridal Hoàn Kiếm, Hà Nội',
-    address: '12 Hàng Trống, P. Hàng Trống, Q. Hoàn Kiếm, Hà Nội',
-    phone: '024 3998 8888',
-    mapUrl: 'https://maps.google.com/?q=12+Hang+Trong+Hoan+Kiem+Ha+Noi',
+    name: 'UniBridal Heritage Mansion — Hoàn Kiếm, Hà Nội',
+    address: '26 Lý Thường Kiệt, P. Hàng Bài, Quận Hoàn Kiếm, Hà Nội',
+    phone: '024 3936 8998',
+    mapUrl: 'https://maps.google.com/?q=26+Ly+Thuong+Kiet+Hoan+Kiem+Ha+Noi',
   },
   'hcm-q1': {
-    name: 'UniBridal Flagship Atelier Q.1, TP.HCM',
-    address: '88 Đồng Khởi, P. Bến Nghé, Quận 1, TP. Hồ Chí Minh',
-    phone: '028 3888 9999',
-    mapUrl: 'https://maps.google.com/?q=88+Dong+Khoi+Quan+1+Ho+Chi+Minh',
+    name: 'UniBridal Heritage Mansion — Hoàn Kiếm, Hà Nội',
+    address: '26 Lý Thường Kiệt, P. Hàng Bài, Quận Hoàn Kiếm, Hà Nội',
+    phone: '024 3936 8998',
+    mapUrl: 'https://maps.google.com/?q=26+Ly+Thuong+Kiet+Hoan+Kiem+Ha+Noi',
   },
 };
 
@@ -268,8 +268,8 @@ export default function AppointmentHistoryPage() {
             {filteredAppointments.map((apt) => {
               const aptId = apt._id || apt.id;
               const dateStr = apt.appointmentDate ? String(apt.appointmentDate).split('T')[0] : '';
-              const branchKey = apt.branch || apt.branchId || 'hcm-q1';
-              const branchInfo = SHOWROOM_ADDRESSES[branchKey] || SHOWROOM_ADDRESSES['hcm-q1'];
+              const branchKey = apt.branch || apt.branchId || 'hn-hoankiem';
+              const branchInfo = SHOWROOM_ADDRESSES[branchKey] || SHOWROOM_ADDRESSES['hn-hoankiem'];
               const st = (apt.status || 'pending').toLowerCase();
               const isPast = dateStr && dateStr < todayStr;
               const canCancel = st !== 'cancelled' && st !== 'completed' && (!dateStr || dateStr >= todayStr);

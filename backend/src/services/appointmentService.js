@@ -3,28 +3,18 @@ import Appointment from '../models/appointmentModel.js';
 import Dress from '../models/dressModel.js';
 import { sendAppointmentSuccessEmail } from '../utils/sendEmail.js';
 
+const HANOI_SHOWROOM = {
+  name: 'UniBridal Heritage Mansion — Hoàn Kiếm, Hà Nội',
+  location: 'Hoàn Kiếm, Hà Nội',
+  address: '26 Lý Thường Kiệt, Phường Hàng Bài, Quận Hoàn Kiếm, Hà Nội',
+  phone: '024 3936 8998',
+  mapUrl: 'https://maps.google.com/?q=26+Ly+Thuong+Kiet+Hoan+Kiem+Ha+Noi',
+};
+
 const BRANCH_DETAILS = {
-  'hcm-q1': {
-    name: 'UniBridal Flagship Atelier — Quận 1, TP. HCM',
-    location: 'Quận 1, TP. HCM',
-    address: '88 Nam Kỳ Khởi Nghĩa, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh',
-    phone: '028 3822 8998',
-    mapUrl: 'https://maps.google.com/?q=88+Nam+Ky+Khoi+Nghia+Quan+1+TP+Ho+Chi+Minh',
-  },
-  'hn-hoankiem': {
-    name: 'UniBridal Heritage Mansion — Hoàn Kiếm, Hà Nội',
-    location: 'Hoàn Kiếm, Hà Nội',
-    address: '26 Lý Thường Kiệt, Phường Hàng Bài, Quận Hoàn Kiếm, Hà Nội',
-    phone: '024 3936 8998',
-    mapUrl: 'https://maps.google.com/?q=26+Ly+Thuong+Kiet+Hoan+Kiem+Ha+Noi',
-  },
-  'hn-hk': {
-    name: 'UniBridal Heritage Mansion — Hoàn Kiếm, Hà Nội',
-    location: 'Hoàn Kiếm, Hà Nội',
-    address: '26 Lý Thường Kiệt, Phường Hàng Bài, Quận Hoàn Kiếm, Hà Nội',
-    phone: '024 3936 8998',
-    mapUrl: 'https://maps.google.com/?q=26+Ly+Thuong+Kiet+Hoan+Kiem+Ha+Noi',
-  },
+  'hn-hoankiem': HANOI_SHOWROOM,
+  'hn-hk': HANOI_SHOWROOM,
+  'hcm-q1': HANOI_SHOWROOM,
 };
 
 /**
@@ -103,10 +93,7 @@ export const createAppointment = async (appointmentData, currentUser = null) => 
     throw new Error('Ngày hẹn thử váy không thể là ngày trong quá khứ.');
   }
 
-  // Kiểm tra sức chứa thực tế của ca thử váy (tối đa 3 khách / ca 90 phút tại mỗi showroom)
-  const branchKey = (branch || branchId || 'hcm-q1').trim();
-  const branchFilter = branchKey.includes('hn') ? ['hn-hoankiem', 'hn-hk', 'hn'] : ['hcm-q1', 'hcm'];
-
+  // Kiểm tra sức chứa thực tế của ca thử váy (tối đa 3 khách / ca 90 phút tại Flagship Showroom Hà Nội)
   const startOfDay = new Date(parsedAppointmentDate);
   startOfDay.setHours(0, 0, 0, 0);
   const endOfDay = new Date(parsedAppointmentDate);
@@ -116,7 +103,6 @@ export const createAppointment = async (appointmentData, currentUser = null) => 
   const targetSlotNorm = normalizeSlot(timeSlot);
 
   const existingInSlot = await Appointment.find({
-    branch: { $in: branchFilter },
     appointmentDate: { $gte: startOfDay, $lte: endOfDay },
     status: { $nin: ['cancelled'] },
   }).lean();
@@ -160,7 +146,7 @@ export const createAppointment = async (appointmentData, currentUser = null) => 
     customerName: resolvedName.trim(),
     customerPhone: cleanPhone,
     customerEmail: (customerEmail || email || '').trim(),
-    branch: branch || branchId || 'hcm-q1',
+    branch: 'hn-hoankiem',
     appointmentDate: parsedAppointmentDate,
     weddingDate: parseDateSafe(weddingDate, null),
     timeSlot: timeSlot.trim(),
@@ -177,7 +163,7 @@ export const createAppointment = async (appointmentData, currentUser = null) => 
   try {
     const targetEmail = newAppointment.customerEmail || currentUser?.email;
     if (targetEmail) {
-      const branchInfo = BRANCH_DETAILS[newAppointment.branch] || BRANCH_DETAILS['hcm-q1'];
+      const branchInfo = BRANCH_DETAILS['hn-hoankiem'];
       sendAppointmentSuccessEmail({
         to: targetEmail,
         fullName: newAppointment.customerName,
@@ -198,12 +184,11 @@ export const createAppointment = async (appointmentData, currentUser = null) => 
     console.error('[TRIGGER APPOINTMENT EMAIL ERROR]', err.message);
   }
 
-  const finalBranchKey = newAppointment.branch || 'hcm-q1';
-  const branchInfo = BRANCH_DETAILS[finalBranchKey] || (String(finalBranchKey).includes('hn') ? BRANCH_DETAILS['hn-hoankiem'] : BRANCH_DETAILS['hcm-q1']);
+  const branchInfo = BRANCH_DETAILS['hn-hoankiem'];
 
   const responseObj = newAppointment.toObject();
   responseObj.id = newAppointment.appointmentCode;
-  responseObj.branch = finalBranchKey;
+  responseObj.branch = 'hn-hoankiem';
   responseObj.branchName = branchInfo.name;
   responseObj.branchAddress = branchInfo.address;
   responseObj.branchPhone = branchInfo.phone;
@@ -303,8 +288,7 @@ export const updateAppointmentStatus = async (id, status, staffId = null) => {
  * Tính số chỗ trống khả dụng thực tế của từng ca thử váy theo ngày và chi nhánh
  * Dựa trên số lượng lịch hẹn thực tế trong database (Sức chứa chuẩn 3 Private Suite/ca)
  */
-export const getSlotAvailability = async ({ date, branch }) => {
-  const branchKey = (branch || 'hcm-q1').trim();
+export const getSlotAvailability = async ({ date }) => {
   const targetDate = parseDateSafe(date, new Date());
 
   const startOfDay = new Date(targetDate);
@@ -313,12 +297,7 @@ export const getSlotAvailability = async ({ date, branch }) => {
   const endOfDay = new Date(targetDate);
   endOfDay.setHours(23, 59, 59, 999);
 
-  const branchFilter = branchKey.includes('hn')
-    ? ['hn-hoankiem', 'hn-hk', 'hn']
-    : ['hcm-q1', 'hcm'];
-
   const appointments = await Appointment.find({
-    branch: { $in: branchFilter },
     appointmentDate: { $gte: startOfDay, $lte: endOfDay },
     status: { $nin: ['cancelled'] },
   }).lean();

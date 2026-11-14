@@ -7,22 +7,10 @@ export const APPOINTMENT_EVENT = 'unibridal-appointment-updated';
 
 export const SHOWROOM_BRANCHES = [
   {
-    id: 'hcm-q1',
-    name: 'UniBridal Flagship Atelier — Quận 1, TP. HCM',
-    shortName: 'UniBridal Flagship Atelier',
-    location: 'Quận 1, TP. HCM',
-    address: '88 Nam Kỳ Khởi Nghĩa, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh',
-    phone: '028 3822 8998',
-    hours: '09:00 — 21:30 (Thứ 2 — Chủ Nhật)',
-    features: ['Private Suite 1:1', 'Sân khấu Catwalk ánh sáng chuẩn', 'Atelier may đo tại chỗ'],
-    image: showroomHcmImg,
-    mapUrl: 'https://maps.google.com/?q=88+Nam+Ky+Khoi+Nghia+Quan+1+TP+Ho+Chi+Minh',
-  },
-  {
     id: 'hn-hoankiem',
-    name: 'UniBridal Heritage Mansion — Hoàn Kiếm, Hà\u00A0Nội',
+    name: 'UniBridal Heritage Mansion — Hoàn Kiếm, Hà Nội',
     shortName: 'UniBridal Heritage Mansion',
-    location: 'Hoàn Kiếm, Hà\u00A0Nội',
+    location: 'Hoàn Kiếm, Hà Nội',
     address: '26 Lý Thường Kiệt, Phường Hàng Bài, Quận Hoàn Kiếm, Hà Nội',
     phone: '024 3936 8998',
     hours: '09:00 — 21:00 (Thứ 2 — Chủ Nhật)',
@@ -79,10 +67,10 @@ const INITIAL_APPOINTMENTS = [
     fullName: 'Lê Nguyễn Thảo My',
     phone: '0938 128 899',
     email: 'thaomy.bride@gmail.com',
-    branchId: 'hcm-q1',
-    branchName: 'UniBridal Flagship Atelier — Quận 1, TP. HCM',
-    branchAddress: '88 Nam Kỳ Khởi Nghĩa, Phường Bến Nghé, Quận 1, TP. Hồ Chí Minh',
-    branchPhone: '028 3822 8998',
+    branchId: 'hn-hoankiem',
+    branchName: 'UniBridal Heritage Mansion — Hoàn Kiếm, Hà Nội',
+    branchAddress: '26 Lý Thường Kiệt, Phường Hàng Bài, Quận Hoàn Kiếm, Hà Nội',
+    branchPhone: '024 3936 8998',
     date: '2026-10-25',
     timeSlot: '13:30 — 15:00',
     guestsCount: 1,
@@ -224,15 +212,10 @@ export async function getSlotAvailabilityApi(date, branch) {
         .replace(/[—–-]/g, '-');
 
     const dateStr = (date || '').split('T')[0];
-    const branchKey = (branch || 'hcm-q1').trim();
 
     const dayBookings = localAppointments.filter((a) => {
       const aDate = (a.date || a.appointmentDate || '').split('T')[0];
-      const aBranch = (a.branch || a.branchId || 'hcm-q1').trim();
-      const matchBranch = branchKey.includes('hn')
-        ? aBranch.includes('hn')
-        : aBranch.includes('hcm');
-      return aDate === dateStr && matchBranch && a.status !== 'cancelled';
+      return aDate === dateStr && a.status !== 'cancelled';
     });
 
     const bookedCounts = {};

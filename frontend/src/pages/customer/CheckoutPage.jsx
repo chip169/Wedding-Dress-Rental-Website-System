@@ -1382,8 +1382,8 @@ export default function CheckoutPage() {
                   <div class="col-title">BÊN CHO THUÊ (BÊN A):</div>
                   <strong>CÔNG TY TNHH UNIBRIDAL HAUTE COUTURE</strong><br />
                   Mã số thuế: <strong>0316889988</strong><br />
-                  Địa chỉ: 88 Nam Kỳ Khởi Nghĩa, P. Bến Nghé, Quận 1, TP. Hồ Chí Minh<br />
-                  Hotline: <strong>1800 8998</strong> • Email: contact@unibridal.vn<br />
+                  Địa chỉ: 26 Lý Thường Kiệt, P. Hàng Bài, Q. Hoàn Kiếm, Hà Nội<br />
+                  Hotline: <strong>024 3936 8998</strong> • Email: contact@unibridal.vn<br />
                   Người đại diện: <strong>Ông Kim Xuân Hiếu</strong><br />
                   Chức vụ: <strong>Tổng Giám Đốc</strong>
                 </td>
@@ -1535,8 +1535,8 @@ export default function CheckoutPage() {
               <strong>BÊN CHO THUÊ (BÊN A):</strong><br>
               <strong>CÔNG TY TNHH UNIBRIDAL HAUTE COUTURE</strong><br>
               Mã số thuế: 0316889988<br>
-              Địa chỉ: 88 Nam Kỳ Khởi Nghĩa, Phường Bến Nghé, Quận 1, TP. HCM<br>
-              Hotline: 1800 8998 • Email: contact@unibridal.vn<br>
+              Địa chỉ: 26 Lý Thường Kiệt, Phường Hàng Bài, Quận Hoàn Kiếm, Hà Nội<br>
+              Hotline: 024 3936 8998 • Email: contact@unibridal.vn<br>
               Đại diện: <strong>Ông Kim Xuân Hiếu</strong><br>
               Chức vụ: <strong>Tổng Giám Đốc</strong>
             </td>
@@ -1760,7 +1760,7 @@ export default function CheckoutPage() {
       email: email.trim() || 'codau.unibridal@gmail.com',
       customerCccd: cccd.trim() || '079198000123',
       cccd: cccd.trim() || '079198000123',
-      shippingAddress: address.trim() || 'Showroom UniBridal Q.1 TP.HCM',
+      shippingAddress: address.trim() || 'Showroom UniBridal (26 Lý Thường Kiệt, Hoàn Kiếm, Hà Nội)',
       contractCode: generatedContractCode,
       contractSignature: contractSignature || brideName || 'Cô Dâu UniBridal',
       measurements,
@@ -1846,7 +1846,7 @@ export default function CheckoutPage() {
         email: email.trim() || 'codau.unibridal@gmail.com',
         customerCccd: cccd.trim() || '079198000123',
         cccd: cccd.trim() || '079198000123',
-        shippingAddress: address.trim() || 'Showroom UniBridal Q.1 TP.HCM',
+        shippingAddress: address.trim() || 'Showroom UniBridal (26 Lý Thường Kiệt, Hoàn Kiếm, Hà Nội)',
         contractCode: generatedContractCode,
         contractSignature: contractSignature || brideName || 'Cô Dâu UniBridal',
         measurements,
@@ -2985,10 +2985,10 @@ export default function CheckoutPage() {
                           <strong>Đại diện:</strong> Ông Kim Xuân Hiếu — Tổng Giám Đốc Atelier
                         </p>
                         <p>
-                          <strong>Địa chỉ Showroom:</strong> 186 Nam Kỳ Khởi Nghĩa, P. Võ Thị Sáu, Q.3, TP.HCM
+                          <strong>Địa chỉ Showroom:</strong> 26 Lý Thường Kiệt, P. Hàng Bài, Q. Hoàn Kiếm, Hà Nội
                         </p>
                         <p>
-                          <strong>Hotline CSKH:</strong> 1900 888 2026 · <strong>Mã số thuế:</strong> 0317892026
+                          <strong>Hotline CSKH:</strong> 024 3936 8998 · <strong>Mã số thuế:</strong> 0317892026
                         </p>
                       </div>
 

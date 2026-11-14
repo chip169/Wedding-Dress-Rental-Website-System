@@ -33,29 +33,19 @@ const Footer = ({ variant }) => {
               Hệ Thống
             </h4>
 
-            {/* TP. HCM */}
-            <div className="mb-4">
-              <span className="font-jakarta font-semibold text-[12px] uppercase tracking-wider text-[#B8737D] block mb-1">
-                TP. Hồ Chí Minh
-              </span>
-              <p className="font-jakarta text-[12px] leading-[18px] text-[#514344] m-0 mb-1">
-                Số 88 Nam Kỳ Khởi Nghĩa, Phường Bến Nghé, Quận 1
-              </p>
-              <span className="font-jakarta text-[11px] text-[#695C4E] block">
-                Hotline VIP: 0908 123 888
-              </span>
-            </div>
-
-            {/* Hà Nội */}
+            {/* Showroom Flagship Mansion Hà Nội */}
             <div>
               <span className="font-jakarta font-semibold text-[12px] uppercase tracking-wider text-[#B8737D] block mb-1">
-                Hà Nội
+                Showroom Flagship Mansion
               </span>
               <p className="font-jakarta text-[12px] leading-[18px] text-[#514344] m-0 mb-1">
-                Số 24 Tràng Tiền, Phường Tràng Tiền, Quận Hoàn Kiếm
+                Số 26 Lý Thường Kiệt, Phường Hàng Bài, Quận Hoàn Kiếm, Hà Nội
               </p>
               <span className="font-jakarta text-[11px] text-[#695C4E] block">
-                Hotline VIP: 0909 789 999
+                Hotline VIP: 024 3936 8998 · 0908 123 888
+              </span>
+              <span className="font-jakarta text-[11px] text-[#847374] block mt-1">
+                Giờ đón tiếp: 09:00 — 21:00 (Thứ 2 — Chủ Nhật)
               </span>
             </div>
           </div>

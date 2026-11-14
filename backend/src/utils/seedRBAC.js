@@ -29,20 +29,20 @@ export const seedRBAC = async () => {
     let staffUser = await User.findOne({ email: 'staff@unibridal.com' });
     if (!staffUser) {
       staffUser = await User.create({
-        fullName: 'Chuyên Viên Showroom TP.HCM',
+        fullName: 'Chuyên Viên Flagship Mansion Hà Nội',
         email: 'staff@unibridal.com',
         password: 'StaffPassword123@',
-        phone: '0908123999',
+        phone: '02439368998',
         role: 'staff',
-        branch: 'hcm-q1',
+        branch: 'hn-hoankiem',
         isEmailVerified: true,
         isActive: true,
       });
-      console.log('Default Staff HCM created: staff@unibridal.com / StaffPassword123@');
+      console.log('Default Staff HN created: staff@unibridal.com / StaffPassword123@');
     } else {
-      staffUser.fullName = 'Chuyên Viên Showroom TP.HCM';
+      staffUser.fullName = 'Chuyên Viên Flagship Mansion Hà Nội';
       staffUser.role = 'staff';
-      staffUser.branch = 'hcm-q1';
+      staffUser.branch = 'hn-hoankiem';
       staffUser.isEmailVerified = true;
       staffUser.isActive = true;
       await staffUser.save();

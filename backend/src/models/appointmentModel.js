@@ -25,7 +25,7 @@ const appointmentSchema = new mongoose.Schema(
     },
     branch: {
       type: String,
-      default: 'hcm-q1',
+      default: 'hn-hoankiem',
       trim: true,
     },
     appointmentCode: {

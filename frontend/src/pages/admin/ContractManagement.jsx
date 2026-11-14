@@ -303,7 +303,7 @@ export default function ContractManagement() {
           }
 
           const addr = ord.shippingAddress;
-          let shippingAddress = 'Nhận trực tiếp tại Showroom UniBridal (186 Nam Kỳ Khởi Nghĩa, Q.3, TP.HCM)';
+          let shippingAddress = 'Nhận trực tiếp tại Showroom UniBridal (26 Lý Thường Kiệt, Hoàn Kiếm, Hà Nội)';
           if (typeof addr === 'string' && addr.trim()) {
             shippingAddress = addr.trim();
           } else if (addr && typeof addr === 'object') {

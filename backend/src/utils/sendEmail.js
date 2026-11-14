@@ -54,12 +54,12 @@ export async function sendVerificationEmail(to, otp, fullName = 'Quý khách') {
         </div>
 
         <p style="font-size: 13px; line-height: 1.5; color: #847374;">
-          Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này hoặc liên hệ hotline UniBridal <strong>0908 123 888</strong> để được hỗ trợ.
+          Nếu bạn không thực hiện yêu cầu này, vui lòng bỏ qua email này hoặc liên hệ hotline UniBridal <strong>024 3936 8998</strong> để được hỗ trợ.
         </p>
       </div>
 
       <div style="background: #FAF6F0; padding: 18px 24px; text-align: center; font-size: 11px; color: #847374; border-top: 1px solid #E6DAC8;">
-        © 2026 UniBridal Atelier. Bảo lưu mọi quyền. • 128 Đồng Khởi, Bến Nghé, Quận 1, TP. HCM
+        © 2026 UniBridal Atelier. Bảo lưu mọi quyền. • 26 Lý Thường Kiệt, P. Hàng Bài, Q. Hoàn Kiếm, Hà Nội
       </div>
     </div>
   `;
@@ -118,7 +118,7 @@ export async function sendResetPasswordEmail(to, otp, fullName = 'Quý khách') 
       </div>
 
       <div style="background: #FAF6F0; padding: 18px 24px; text-align: center; font-size: 11px; color: #847374; border-top: 1px solid #E6DAC8;">
-        © 2026 UniBridal Atelier. Bảo lưu mọi quyền. • 128 Đồng Khởi, Bến Nghé, Quận 1, TP. HCM
+        © 2026 UniBridal Atelier. Bảo lưu mọi quyền. • 26 Lý Thường Kiệt, P. Hàng Bài, Q. Hoàn Kiếm, Hà Nội
       </div>
     </div>
   `;
@@ -294,14 +294,14 @@ export async function sendInspectionNotificationEmail({
               : 'Showroom sẽ đối soát và xử lý khoản hoàn cọc theo biên bản.'}
           </p>
           <p style="font-size: 12px; color: #847374; margin: 0;">
-            Nếu cần hỗ trợ thêm thông tin hoặc giải đáp thắc mắc, nàng vui lòng liên hệ Hotline: <strong style="color: #733F49;">0908 123 888</strong>.
+            Nếu cần hỗ trợ thêm thông tin hoặc giải đáp thắc mắc, nàng vui lòng liên hệ Hotline: <strong style="color: #733F49;">024 3936 8998</strong>.
           </p>
         </div>
         `}
       </div>
 
       <div style="background: #FAF0EC; padding: 18px 24px; text-align: center; font-size: 11.5px; color: #847374; border-top: 1px solid #EEDECF;">
-        © 2026 UniBridal Atelier. Hotline hỗ trợ hoàn cọc: 1800 8998 • 128 Đồng Khởi, Bến Nghé, Quận 1, TP. HCM
+        © 2026 UniBridal Atelier. Hotline hỗ trợ hoàn cọc: 024 3936 8998 • 26 Lý Thường Kiệt, P. Hàng Bài, Q. Hoàn Kiếm, Hà Nội
       </div>
     </div>
   `;
@@ -392,7 +392,7 @@ export async function sendRefundConfirmationEmail({
       </div>
 
       <div style="background: #FAF6F0; padding: 18px 24px; text-align: center; font-size: 11px; color: #847374; border-top: 1px solid #E6DAC8;">
-        © 2026 UniBridal Atelier. Hotline: 0908 123 888 • 128 Đồng Khởi, Bến Nghé, Quận 1, TP. HCM
+        © 2026 UniBridal Atelier. Hotline: 024 3936 8998 • 26 Lý Thường Kiệt, P. Hàng Bài, Q. Hoàn Kiếm, Hà Nội
       </div>
     </div>
   `;
@@ -579,8 +579,7 @@ export async function sendDepositSuccessEmail({
       <!-- Footer chân thư -->
       <div style="background: #FAF0EC; padding: 22px 24px; text-align: center; font-size: 11.5px; color: #847374; border-top: 1px solid #EEDECF; line-height: 1.6;">
         <strong>UniBridal Haute Couture Atelier</strong><br>
-        ✦ Flagship Showroom: 128 Đồng Khởi, Bến Nghé, Quận 1, TP. HCM • Hotline VIP: 1800 8998<br>
-        ✦ Heritage Showroom: 45 Tràng Tiền, Hoàn Kiếm, Hà Nội • Hotline VIP: 1800 8999
+        ✦ Flagship Mansion: 26 Lý Thường Kiệt, P. Hàng Bài, Q. Hoàn Kiếm, Hà Nội • Hotline VIP: 024 3936 8998
       </div>
     </div>
   `;
@@ -615,9 +614,9 @@ export async function sendAppointmentSuccessEmail({
   appointmentCode,
   appointmentDate,
   timeSlot,
-  branchName = 'UniBridal Flagship Showroom Q.1 TP.HCM',
-  branchAddress = '128 Đồng Khởi, P. Bến Nghé, Quận 1, TP. Hồ Chí Minh',
-  branchPhone = '028 3822 8998',
+  branchName = 'UniBridal Heritage Mansion — Hoàn Kiếm, Hà Nội',
+  branchAddress = '26 Lý Thường Kiệt, P. Hàng Bài, Q. Hoàn Kiếm, Hà Nội',
+  branchPhone = '024 3936 8998',
   guestsCount = 1,
   interestedDresses = [],
   vipServices = [],

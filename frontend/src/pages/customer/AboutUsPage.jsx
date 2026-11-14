@@ -314,8 +314,8 @@ export default function AboutUsPage() {
                     year: '2021',
                     side: 'right',
                     title: 'Ra Mắt Flagship Atelier Tại Việt Nam',
-                    desc: 'Khai trương hai không gian Private Suite độc bản tại Tràng Tiền (Hà Nội) và Nam Kỳ Khởi Nghĩa (TP.HCM), mang chuẩn dịch vụ may đo váy cưới châu Âu đến gần hơn với khách hàng.',
-                    tag: 'FLAGSHIP HANOI VÀ SAIGON',
+                    desc: 'Khai trương không gian Private Suite độc bản tại Heritage Mansion (Lý Thường Kiệt, Hoàn Kiếm, Hà Nội), mang chuẩn dịch vụ may đo váy cưới châu Âu đến gần hơn với khách hàng.',
+                    tag: 'HERITAGE MANSION HANOI',
                     isActive: false,
                   },
                   {
@@ -437,60 +437,27 @@ export default function AboutUsPage() {
               Hãy để chúng tôi đồng hành cùng nàng kiến tạo khoảnh khắc rạng ngời nhất cuộc đời
             </p>
 
-            {/* 2 Showroom Cards Grid */}
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-7 text-left">
-              {/* Showroom TP. Hồ Chí Minh */}
-              <div className="bg-white rounded-[26px] border border-[#EEDECF] p-8 sm:p-9 shadow-[0px_6px_24px_rgba(201,138,144,0.06)] hover:shadow-[0px_12px_32px_rgba(184,115,125,0.12)] hover:-translate-y-1 transition-all">
-                <div className="w-12 h-12 rounded-[14px] bg-[#FFF2F0] border border-[#D498A0]/70 flex items-center justify-center text-[#804E55] mb-6">
-                  <MapPin className="w-5 h-5 stroke-[1.8]" />
-                </div>
-                <span className="font-jakarta text-[11px] font-bold text-[#847374] uppercase tracking-[0.14em] block mb-1.5">
-                  FLAGSHIP SOUTH
-                </span>
-                <h3 className="font-playfair text-[24px] sm:text-[26px] font-semibold text-[#2C2523] mb-6">
-                  TP. Hồ Chí Minh
-                </h3>
-
-                <div className="space-y-4 font-jakarta text-[13.5px] sm:text-[14px] text-[#514344]">
-                  <div className="flex items-start gap-3">
-                    <MapPin className="w-4 h-4 text-[#804E55] shrink-0 mt-0.5" />
-                    <span>Số 88 Nam Kỳ Khởi Nghĩa, Phường Bến Nghé, Quận 1</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Phone className="w-4 h-4 text-[#804E55] shrink-0" />
-                    <span>Hotline VIP: 0908 123 888</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Clock className="w-4 h-4 text-[#804E55] shrink-0" />
-                    <span>09:00 – 21:00 (Tất cả các ngày trong tuần)</span>
-                  </div>
-                  <div className="flex items-center gap-3">
-                    <Mail className="w-4 h-4 text-[#804E55] shrink-0" />
-                    <span>contact.hcm@unibridal.com</span>
-                  </div>
-                </div>
-              </div>
-
-              {/* Showroom Hà Nội */}
-              <div className="bg-white rounded-[26px] border border-[#EEDECF] p-8 sm:p-9 shadow-[0px_6px_24px_rgba(201,138,144,0.06)] hover:shadow-[0px_12px_32px_rgba(184,115,125,0.12)] hover:-translate-y-1 transition-all">
+            {/* Showroom Flagship Mansion Hà Nội */}
+            <div className="max-w-2xl mx-auto text-left">
+              <div className="bg-white rounded-[26px] border border-[#EEDECF] p-8 sm:p-9 shadow-[0px_6px_24px_rgba(201,138,144,0.06)] hover:shadow-[0px_12px_32px_rgba(184,115,125,0.12)] transition-all">
                 <div className="w-12 h-12 rounded-[14px] bg-[#FFF2F0] border border-[#D498A0]/70 flex items-center justify-center text-[#804E55] mb-6">
                   <Building2 className="w-5 h-5 stroke-[1.8]" />
                 </div>
                 <span className="font-jakarta text-[11px] font-bold text-[#847374] uppercase tracking-[0.14em] block mb-1.5">
-                  FLAGSHIP NORTH
+                  FLAGSHIP MANSION ATELIER
                 </span>
-                <h3 className="font-playfair text-[24px] sm:text-[26px] font-semibold text-[#2C2523] mb-6">
-                  Hà Nội
+                <h3 className="font-playfair text-[24px] sm:text-[28px] font-semibold text-[#2C2523] mb-6">
+                  UniBridal Heritage Mansion — Hoàn Kiếm, Hà Nội
                 </h3>
 
                 <div className="space-y-4 font-jakarta text-[13.5px] sm:text-[14px] text-[#514344]">
                   <div className="flex items-start gap-3">
                     <MapPin className="w-4 h-4 text-[#804E55] shrink-0 mt-0.5" />
-                    <span>Số 24 Tràng Tiền, Phường Tràng Tiền, Quận Hoàn Kiếm</span>
+                    <span>Số 26 Lý Thường Kiệt, Phường Hàng Bài, Quận Hoàn Kiếm, Hà Nội</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <Phone className="w-4 h-4 text-[#804E55] shrink-0" />
-                    <span>Hotline VIP: 0909 789 999</span>
+                    <span>Hotline VIP: 024 3936 8998 · 0908 123 888</span>
                   </div>
                   <div className="flex items-center gap-3">
                     <Clock className="w-4 h-4 text-[#804E55] shrink-0" />
@@ -498,7 +465,7 @@ export default function AboutUsPage() {
                   </div>
                   <div className="flex items-center gap-3">
                     <Mail className="w-4 h-4 text-[#804E55] shrink-0" />
-                    <span>contact.hn@unibridal.com</span>
+                    <span>contact@unibridal.com</span>
                   </div>
                 </div>
               </div>
