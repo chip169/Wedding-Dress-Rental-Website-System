@@ -435,11 +435,16 @@ export const getAllOrders = async (filters = {}) => {
       getDepositPayments(ids),
     ]);
     const byOrder = new Map(inspections.map((inspection) => [String(inspection.orderId), inspection]));
-    query._id = { $in: orders.filter((order) => {
+    const validIds = orders.filter((order) => {
       const key = String(order._id);
       const state = inspectionRefundState(order, byOrder.get(key), deposits.get(key));
-      return state.canConfirmRefund || state.refundConflict;
-    }).map(({ _id }) => _id) };
+      return state?.canConfirmRefund || state?.refundConflict;
+    }).map(({ _id }) => _id);
+
+    query.$or = [
+      { status: { $in: ['returned', 'waiting_refund'] } },
+      ...(validIds.length > 0 ? [{ _id: { $in: validIds } }] : []),
+    ];
   } else if (filters.status === 'disputed') {
     const disputedInspections = await ReturnInspection.find({ customerStatus: 'disputed' }).select('orderId').lean();
     const disputedOrderIds = disputedInspections.map((i) => i.orderId);
