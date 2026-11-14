@@ -529,11 +529,11 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
   // Bộ lọc cho Tab Lịch Sử Thử Váy
   const [historySearch, setHistorySearch] = useState('');
-  const [historyBranch, setHistoryBranch] = useState('hcm-q1');
+  const [historyBranch, setHistoryBranch] = useState('all');
 
   // Sub-filter trong Tab Lịch Biểu: 'all' | 'fitting' (Thử váy) | 'delivery' (Giao váy) | 'return' (Trả váy)
   const [calendarFilterType, setCalendarFilterType] = useState('all');
-  const [calendarBranchFilter, setCalendarBranchFilter] = useState('hcm-q1');
+  const [calendarBranchFilter, setCalendarBranchFilter] = useState('all');
   // Lọc hình thức giao váy: 'all' (Tất cả) | 'showroom' (Khách đến lấy) | 'express' (Nhân viên ship tận nơi)
   const [deliveryMethodFilter, setDeliveryMethodFilter] = useState('all');
   // Lọc hình thức trả váy: 'all' (Tất cả) | 'showroom' (Khách đến trả) | 'express' (Nhân viên đến lấy)
@@ -750,8 +750,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
   }, [activeHighlightOrder]);
   const highlightEndDateKey = activeHighlightOrder ? toDateKey(activeHighlightOrder.rentalEndDate) : null;
 
-  // Danh sách sự kiện thử váy map theo ngày:
-  // Nếu ca thử đã hoàn tất và ngày thử đã qua trong quá khứ (trước hôm nay), ẩn khỏi lịch biểu (chỉ hiện lịch thử từ hôm nay trở đi)
+  // Danh sách sự kiện thử váy map theo ngày
   const appointmentsByDate = useMemo(() => {
     const map = {};
     appointments.forEach((apt) => {
@@ -761,9 +760,6 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
       const key = toDateKey(apt.appointmentDate);
       if (!key) return;
-
-      // Nếu lịch thử đã hoàn tất và qua ngày hôm sau thì không cần hiện lịch sử thử váy
-      if (key < todayKey && st === 'completed') return;
 
       if (!map[key]) map[key] = [];
       map[key].push({
@@ -784,7 +780,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
       });
     });
     return map;
-  }, [appointments, todayKey]);
+  }, [appointments]);
 
   // Danh sách các đơn thuê còn hiệu lực (loại bỏ các đơn đã bị hủy trước khi thuê)
   const activeOrders = useMemo(
@@ -792,29 +788,24 @@ export default function ScheduleOverviewPage({ defaultTab }) {
     [orders]
   );
 
-  // Lọc danh sách lịch hẹn theo chi nhánh (Lọc riêng từng cơ sở & loại bỏ các ca đã hoàn tất trong quá khứ)
+  // Lọc danh sách lịch hẹn theo chi nhánh (Hỗ trợ 'all' hoặc chi nhánh cụ thể)
   const calendarVisibleAppointments = useMemo(() => {
     return appointments.filter((a) => {
-      const matchBranch = (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter;
+      const matchBranch =
+        calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter;
       if (!matchBranch) return false;
 
       const st = (a.status || '').toLowerCase();
       if (st === 'cancelled') return false;
 
-      const key = toDateKey(a.appointmentDate);
-      // Nếu lịch thử đã hoàn tất và qua ngày hôm sau thì không cần hiện lịch sử thử váy
-      if (key && key < todayKey && st === 'completed') {
-        return false;
-      }
-
       return true;
     });
-  }, [appointments, calendarBranchFilter, todayKey]);
+  }, [appointments, calendarBranchFilter]);
 
-  // Toàn bộ đơn thuê còn hiệu lực của chi nhánh hiện tại
+  // Toàn bộ đơn thuê còn hiệu lực của chi nhánh hiện tại (hoặc tất cả chi nhánh)
   const calendarBranchOrders = useMemo(() => {
     return activeOrders.filter(
-      (o) => (o.branch || o.branchId || 'hcm-q1') === calendarBranchFilter
+      (o) => calendarBranchFilter === 'all' || (o.branch || o.branchId || 'hcm-q1') === calendarBranchFilter
     );
   }, [activeOrders, calendarBranchFilter]);
 
@@ -929,16 +920,16 @@ export default function ScheduleOverviewPage({ defaultTab }) {
     return map;
   }, [orders]);
 
-  // Thống kê nhanh theo đúng cơ sở đang chọn từ MongoDB
+  // Thống kê nhanh theo cơ sở đang chọn (hoặc toàn hệ thống) từ MongoDB
   const stats = useMemo(() => {
     const branchAptsToday = (appointmentsByDate[todayKey] || []).filter(
-      (a) => (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
+      (a) => calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
     );
     const branchDeliveriesToday = (deliveriesByDate[todayKey] || []).filter(
-      (d) => (d.branch || d.branchId || 'hcm-q1') === calendarBranchFilter
+      (d) => calendarBranchFilter === 'all' || (d.branch || d.branchId || 'hcm-q1') === calendarBranchFilter
     );
     const branchReturnsToday = (returnsByDate[todayKey] || []).filter(
-      (r) => (r.branch || r.branchId || 'hcm-q1') === calendarBranchFilter
+      (r) => calendarBranchFilter === 'all' || (r.branch || r.branchId || 'hcm-q1') === calendarBranchFilter
     );
 
     const todayFittings = branchAptsToday.length;
@@ -946,10 +937,10 @@ export default function ScheduleOverviewPage({ defaultTab }) {
     const todayReturns = branchReturnsToday.length;
 
     const branchAppointments = appointments.filter(
-      (a) => (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
+      (a) => calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
     );
     const branchOrders = activeOrders.filter(
-      (o) => (o.branch || o.branchId || 'hcm-q1') === calendarBranchFilter
+      (o) => calendarBranchFilter === 'all' || (o.branch || o.branchId || 'hcm-q1') === calendarBranchFilter
     );
 
     const pendingAppointments = branchAppointments.filter(
@@ -1003,7 +994,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
           !search || name.includes(search) || phone.includes(search) || code.includes(search);
 
         const branch = apt.branch || apt.branchId || 'hcm-q1';
-        const matchBranch = branch === historyBranch;
+        const matchBranch = historyBranch === 'all' || branch === historyBranch;
 
         return matchSearch && matchBranch;
       })
@@ -1206,25 +1197,27 @@ export default function ScheduleOverviewPage({ defaultTab }) {
     },
   ];
 
-  // Sự kiện của ngày được chọn trên lịch (Lọc riêng từng cơ sở & hình thức giao)
+  // Sự kiện của ngày được chọn trên lịch (Lọc theo cơ sở hoặc toàn hệ thống)
   const currentDayEvents = useMemo(() => {
     const apts = appointmentsByDate[selectedDateKey] || [];
     const deliveries = deliveriesByDate[selectedDateKey] || [];
     const returns = returnsByDate[selectedDateKey] || [];
 
     const filteredApts = apts.filter(
-      (a) => (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
+      (a) => calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
     );
 
     const filteredDeliveries = deliveries.filter((d) => {
-      const matchBranch = (d.branch || d.branchId || 'hcm-q1') === calendarBranchFilter;
+      const matchBranch =
+        calendarBranchFilter === 'all' || (d.branch || d.branchId || 'hcm-q1') === calendarBranchFilter;
       const matchMethod =
         deliveryMethodFilter === 'all' || (d.deliveryMethod || 'showroom') === deliveryMethodFilter;
       return matchBranch && matchMethod;
     });
 
     const filteredReturns = returns.filter((r) => {
-      const matchBranch = (r.branch || r.branchId || 'hcm-q1') === calendarBranchFilter;
+      const matchBranch =
+        calendarBranchFilter === 'all' || (r.branch || r.branchId || 'hcm-q1') === calendarBranchFilter;
       const matchMethod =
         returnMethodFilter === 'all' || (r.deliveryMethod || 'showroom') === returnMethodFilter;
       return matchBranch && matchMethod;
@@ -1246,7 +1239,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
     returnMethodFilter,
   ]);
 
-  // Render nội dung từng ô ngày trên lịch Ant Design (Lọc riêng từng cơ sở & hình thức giao)
+  // Render nội dung từng ô ngày trên lịch Ant Design (Lọc theo cơ sở hoặc toàn hệ thống)
   const dateCellRender = (dateObj) => {
     const d = dateObj.toDate ? dateObj.toDate() : new Date(dateObj);
     const key = toDateKey(d);
@@ -1260,18 +1253,20 @@ export default function ScheduleOverviewPage({ defaultTab }) {
     const showReturns = calendarFilterType === 'all' || calendarFilterType === 'return';
 
     const visibleApts = dayApts.filter(
-      (a) => (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
+      (a) => calendarBranchFilter === 'all' || (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
     );
 
     const visibleDeliveries = dayDeliveries.filter((d) => {
-      const matchBranch = (d.branch || d.branchId || 'hcm-q1') === calendarBranchFilter;
+      const matchBranch =
+        calendarBranchFilter === 'all' || (d.branch || d.branchId || 'hcm-q1') === calendarBranchFilter;
       const matchMethod =
         deliveryMethodFilter === 'all' || (d.deliveryMethod || 'showroom') === deliveryMethodFilter;
       return matchBranch && matchMethod;
     });
 
     const visibleReturns = dayReturns.filter((r) => {
-      const matchBranch = (r.branch || r.branchId || 'hcm-q1') === calendarBranchFilter;
+      const matchBranch =
+        calendarBranchFilter === 'all' || (r.branch || r.branchId || 'hcm-q1') === calendarBranchFilter;
       const matchMethod =
         returnMethodFilter === 'all' || (r.deliveryMethod || 'showroom') === returnMethodFilter;
       return matchBranch && matchMethod;
@@ -1582,8 +1577,10 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                     onChange={(e) => setCalendarBranchFilter(e.target.value)}
                     className="px-3.5 py-1.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 font-bold outline-none cursor-pointer text-xs focus:border-[#733F49]"
                   >
-                    <option value="hcm-q1">UniBridal Q.1 TP.HCM</option>
+                    <option value="all">Tất cả chi nhánh (Toàn hệ thống)</option>
                     <option value="hn-hoankiem">UniBridal Hoàn Kiếm, HN</option>
+                    <option value="hcm-q1">UniBridal Q.1 TP.HCM</option>
+                    <option value="dn-haichau">UniBridal Hải Châu, Đà Nẵng</option>
                   </select>
                 </div>
               </div>
@@ -2293,8 +2290,10 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                       onChange={(e) => setHistoryBranch(e.target.value)}
                       className="text-xs font-semibold bg-gray-50 border border-gray-200 text-gray-800 rounded-xl px-3 py-2 focus:outline-none focus:border-[#BA7A83] cursor-pointer"
                     >
-                      <option value="hcm-q1">UniBridal Q.1 TP.HCM</option>
+                      <option value="all">Tất cả chi nhánh (Toàn hệ thống)</option>
                       <option value="hn-hoankiem">UniBridal Hoàn Kiếm, HN</option>
+                      <option value="hcm-q1">UniBridal Q.1 TP.HCM</option>
+                      <option value="dn-haichau">UniBridal Hải Châu, Đà Nẵng</option>
                     </select>
                   </div>
                 </div>
