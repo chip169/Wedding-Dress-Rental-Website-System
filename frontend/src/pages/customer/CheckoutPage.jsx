@@ -3673,24 +3673,13 @@ export default function CheckoutPage() {
               </div>
 
               {/* Dress Details */}
-              <div className="py-1">
-                <div className="text-[#847374] text-[11px] font-bold uppercase tracking-wider mb-0.5">
-                  Trang phục đặt thuê:
-                </div>
-                <div className="text-[#2C2523] font-bold text-[13.5px]">
+              <div className="flex items-center justify-between gap-3 py-1">
+                <span className="text-[#847374] font-medium shrink-0">Trang phục đặt thuê:</span>
+                <strong className="text-[#2C2523] text-right">
                   {orderItems && orderItems.length > 1
-                    ? `${orderItems.length} tác phẩm váy cưới Haute Couture`
-                    : activeDress?.name}
-                </div>
-                <div className="text-[12px] text-[#733F49] font-medium mt-0.5">
-                  {orderItems && orderItems.length > 1 ? (
-                    <span className="text-[#847374] text-[11.5px]">
-                      {orderItems.map((i) => `${i.name} (Size ${i.size || selectedSize})`).join(' • ')}
-                    </span>
-                  ) : (
-                    <span>Kích cỡ: <strong>{selectedSize || 'M'}</strong> </span>
-                  )}
-                </div>
+                    ? orderItems.map((i) => `${i.name} (Size ${i.size || selectedSize})`).join(' • ')
+                    : `${activeDress?.name || 'Váy cưới Haute Couture'} (Size ${selectedSize || 'S'})`}
+                </strong>
               </div>
 
               <div className="space-y-2 pt-1 border-t border-[#EEDECF]/60">
