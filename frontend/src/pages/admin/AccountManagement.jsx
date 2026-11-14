@@ -440,21 +440,6 @@ export default function AccountManagement() {
                   ? 'Chưa có tài khoản nào'
                   : `Hiển thị ${(activePage - 1) * pageSize + 1} – ${Math.min(activePage * pageSize, total)} trong tổng số ${total} tài khoản`}
               </span>
-              <div className="flex items-center gap-1.5 border-l border-[#F0E5DC] pl-3">
-                <span className="text-[11.5px] text-[#8C7D7E]">Dòng/trang:</span>
-                <select
-                  value={pageSize}
-                  onChange={(e) => {
-                    setPageSize(Number(e.target.value));
-                    setActivePage(1);
-                  }}
-                  className="py-1 px-2 rounded-lg bg-white border border-[#EFE5E1] text-xs font-semibold text-[#2C2523] outline-none cursor-pointer focus:border-[#733F49]"
-                >
-                  <option value={5}>5</option>
-                  <option value={10}>10</option>
-                  <option value={20}>20</option>
-                </select>
-              </div>
             </div>
 
             {totalPages > 1 && (
