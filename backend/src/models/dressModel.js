@@ -87,16 +87,6 @@ const dressSchema = new mongoose.Schema(
       type: String,
       default: 'THE HAUTE COUTURE BRIDAL 2026',
     },
-    rating: {
-      type: Number,
-      default: 5.0,
-      min: 0,
-      max: 5,
-    },
-    reviewCount: {
-      type: Number,
-      default: 0,
-    },
     highlights: [
       {
         icon: { type: String, default: 'diamond' },

@@ -549,8 +549,6 @@ export async function seed25Dresses() {
         rentCount: 20 + index * 3,
         isFeatured: index < 6,
         collectionTag: item.collectionTag,
-        rating: Number((4.8 + (index % 3) * 0.1).toFixed(1)),
-        reviewCount: 15 + index * 2,
         description: item.description,
         highlights: [
           {
