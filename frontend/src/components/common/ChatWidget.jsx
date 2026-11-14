@@ -1,19 +1,24 @@
 import React, { useState, useRef, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import {
-  X,
+import { X,
   SendHorizontal,
   ExternalLink,
-  Sparkles,
+  Crown,
   Calendar,
   CheckCheck,
-} from 'lucide-react';
+  ShoppingBag,
+  Smile,
+  Search,
+  Lock,
+  LogIn } from 'lucide-react';
 import aboutFounderImg from '../../assets/about_founder_portrait.jpg';
 import chibiBrideImg from '../../assets/chibi_bride_chat.jpg';
 import chibiBride3DImg from '../../assets/chibi_bride_3d.png';
 import chibiBride3DWinkImg from '../../assets/chibi_bride_3d_wink.png';
+import card1Elysian from '../../assets/card1_elysian.jpg';
 import { useAuth } from '../../contexts/AuthContext';
 import { getMyConversation, sendMessage, getMessages } from '../../services/chatService';
+import { DRESS_CATALOG } from '../../data/dressCatalog';
 
 const STORAGE_KEY = 'unibridal_quick_chat_history';
 
@@ -42,35 +47,44 @@ const QUICK_SUGGESTIONS = [
     reply:
       'UniBridal sở hữu công nghệ Corsetry siết eo định hình độc quyền: Nếu nàng muốn hóa thân công chúa lộng lẫy thì Ballgown xoè bồng là tuyệt nhất; nếu muốn tôn đường cong quyến rũ thì Mermaid đuôi cá; hoặc A-Line nhẹ nhàng thanh thoát cho mọi vóc dáng. Nàng có thể đặt lịch để chuyên viên trực tiếp đo đạc và tư vấn thử nhé!',
   },
-  {
-    id: 'booking',
-    label: '📅 Đặt lịch thử váy VIP',
-    text: 'Mình muốn đặt lịch đến thử váy trực tiếp tại showroom vào cuối tuần.',
-    reply:
-      'Dạ tuyệt vời quá! UniBridal phục vụ phòng thử riêng tư Fitting Suite VIP 1-1 hoàn toàn miễn phí. Nàng có thể bấm nút "Đặt Lịch Thử Váy" trên thanh menu hoặc để lại Số Điện Thoại & Ngày mong muốn tại đây, chuyên viên sẽ liên hệ xác nhận lịch ngay ạ!',
-  },
 ];
-
-// Biểu tượng ngôi sao 4 cánh (FourPointStar) chuẩn theo hình ảnh người dùng
-function FourPointStar({ className = '' }) {
-  return (
-    <svg viewBox="0 0 24 24" fill="currentColor" className={className}>
-      <path d="M12 0C12 7 17 12 24 12C17 12 12 17 12 24C12 17 7 12 0 12C7 12 12 7 12 0Z" />
-    </svg>
-  );
-}
 
 export default function ChatWidget() {
   const navigate = useNavigate();
-  const { user } = useAuth();
+  const { user, isLoggedIn } = useAuth();
   const [isOpen, setIsOpen] = useState(false);
   const [showGreetingBubble, setShowGreetingBubble] = useState(true);
   const [autoShowBubble, setAutoShowBubble] = useState(true);
   const [isWinking, setIsWinking] = useState(false);
   const [inputText, setInputText] = useState('');
+  const [showProductPicker, setShowProductPicker] = useState(false);
+  const [showEmojiPicker, setShowEmojiPicker] = useState(false);
+  const [showLoginPrompt, setShowLoginPrompt] = useState(false);
+  const [productSearchTerm, setProductSearchTerm] = useState('');
   const [isTyping, setIsTyping] = useState(false);
   const [unreadCount, setUnreadCount] = useState(0);
   const [conversationId, setConversationId] = useState(null);
+
+  // Yêu cầu đăng nhập trước khi khách vãng lai nhắn tin
+  const requireAuth = () => {
+    if (!isLoggedIn) {
+      setShowLoginPrompt(true);
+      return false;
+    }
+    return true;
+  };
+
+  const popularEmojis = ['👰', '👗', '✨', '💍', '💖', '💕', '🌸', '🥰', '🪄', '👑', '🥂', '💐', '💌', '😍', '👏'];
+
+  const filteredDresses = DRESS_CATALOG.filter((dress) => {
+    if (!productSearchTerm.trim()) return true;
+    const term = productSearchTerm.toLowerCase();
+    return (
+      dress.name?.toLowerCase().includes(term) ||
+      dress.code?.toLowerCase().includes(term) ||
+      dress.categoryName?.toLowerCase().includes(term)
+    );
+  });
   const [messages, setMessages] = useState(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -83,6 +97,35 @@ export default function ChatWidget() {
 
   const messagesEndRef = useRef(null);
   const inputRef = useRef(null);
+
+  // Lưu lịch sử tin nhắn vào localStorage và đồng bộ tức thì với trang /tin-nhan
+  useEffect(() => {
+    try {
+      localStorage.setItem(STORAGE_KEY, JSON.stringify(messages));
+    } catch {
+      // ignore
+    }
+  }, [messages]);
+
+  // Lắng nghe sự kiện cập nhật từ trang phóng to /tin-nhan
+  useEffect(() => {
+    const handleSync = () => {
+      try {
+        const saved = localStorage.getItem(STORAGE_KEY);
+        if (saved) {
+          setMessages(JSON.parse(saved));
+        }
+      } catch {
+        // ignore
+      }
+    };
+    window.addEventListener('unibridal_chat_updated', handleSync);
+    window.addEventListener('storage', handleSync);
+    return () => {
+      window.removeEventListener('unibridal_chat_updated', handleSync);
+      window.removeEventListener('storage', handleSync);
+    };
+  }, []);
 
   // Tự động hiện lời chào 6 giây đầu khi người dùng vào trang để gây chú ý tự nhiên
   useEffect(() => {
@@ -135,17 +178,21 @@ export default function ChatWidget() {
         if (res?.data?.conversation) {
           setConversationId(res.data.conversation._id);
           if (Array.isArray(res.data.messages) && res.data.messages.length > 0) {
-            const mapped = res.data.messages.map((m) => ({
-              id: m._id || m.id,
-              sender: m.senderRole === 'customer' ? 'user' : 'staff',
-              senderRole: m.senderRole,
-              name: m.senderRole === 'customer' ? (user?.fullName || 'Bạn') : 'Mai Anh • Senior Stylist',
-              time: new Date(m.createdAt || Date.now()).toLocaleTimeString('vi-VN', {
-                hour: '2-digit',
-                minute: '2-digit',
-              }),
-              text: m.text,
-            }));
+            const mapped = res.data.messages.map((m) => {
+              const isRecalled = Boolean(m.isRecalled) || m.text === 'Tin nhắn đã được thu hồi';
+              return {
+                id: m._id || m.id,
+                sender: m.senderRole === 'customer' ? 'user' : 'staff',
+                senderRole: m.senderRole,
+                name: m.senderRole === 'customer' ? (user?.fullName || 'Bạn') : 'Mai Anh • Senior Stylist',
+                time: new Date(m.createdAt || Date.now()).toLocaleTimeString('vi-VN', {
+                  hour: '2-digit',
+                  minute: '2-digit',
+                }),
+                text: isRecalled ? 'Tin nhắn đã được thu hồi' : m.text,
+                isRecalled,
+              };
+            });
             setMessages(mapped);
           }
         }
@@ -212,6 +259,7 @@ export default function ChatWidget() {
   }, [messages, isTyping]);
 
   const handleSendMessage = async (textToSend, isQuickSuggestion = false) => {
+    if (!requireAuth()) return;
     const content = (textToSend || inputText).trim();
     if (!content) return;
 
@@ -227,6 +275,7 @@ export default function ChatWidget() {
     // Tin nhắn của người dùng lập tức hiển thị bên phải (sender: 'user')
     setMessages((prev) => [...prev, userMsg]);
     setInputText('');
+    setTimeout(() => inputRef.current?.focus(), 50);
 
     let currentConvId = conversationId;
 
@@ -250,7 +299,7 @@ export default function ChatWidget() {
       console.warn('Lỗi gửi tin nhắn lên server:', error);
     }
 
-    // Chỉ tự động trả lời nếu người dùng bấm vào các nút Gợi ý Nhanh (FAQ)
+    // Tự động trả lời nếu người dùng bấm vào các nút Gợi ý Nhanh (FAQ) hoặc nhập tin nhắn tư vấn
     if (isQuickSuggestion) {
       const matchedSuggestion = QUICK_SUGGESTIONS.find(
         (q) => q.text.toLowerCase() === content.toLowerCase() || content.toLowerCase().includes(q.label.toLowerCase())
@@ -282,7 +331,100 @@ export default function ChatWidget() {
           }
         }, 800);
       }
+    } else {
+      // Phản hồi tự động chuyên nghiệp cho tin nhắn do khách gõ
+      setIsTyping(true);
+      setTimeout(async () => {
+        const staffMsg = {
+          id: 'bot_' + Date.now(),
+          sender: 'staff',
+          senderRole: 'staff',
+          name: 'Mai Anh • Senior Stylist',
+          time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+          text: `Dạ UniBridal đã ghi nhận tin nhắn từ nàng: "${content}". Chuyên viên Mai Anh sẽ tư vấn may đo chuẩn phom dáng và liên hệ hỗ trợ nàng ngay nhé! ✨`,
+        };
+
+        setMessages((prev) => [...prev, staffMsg]);
+        setIsTyping(false);
+
+        try {
+          await sendMessage({
+            conversationId: currentConvId,
+            text: staffMsg.text,
+            senderRole: 'staff',
+          });
+        } catch {
+          // ignore
+        }
+      }, 1200);
     }
+  };
+
+  const handleSelectProductToConsult = (dress) => {
+    if (!requireAuth()) return;
+    setShowProductPicker(false);
+
+    const priceText = typeof dress.price === 'number'
+      ? dress.price.toLocaleString('vi-VN') + '₫'
+      : (dress.price || '5.200.000₫');
+
+    const productPayload = {
+      id: dress.id,
+      code: dress.code || 'UB-001',
+      name: dress.name,
+      price: priceText,
+      image: dress.image,
+      description: dress.description || 'Tuyệt phẩm váy cưới Haute Couture tinh xảo UniBridal.',
+      category: dress.categoryName || dress.category || 'Váy Cưới Cao Cấp',
+    };
+
+    const userInquiryMsg = {
+      id: 'local_' + Date.now(),
+      sender: 'user',
+      senderRole: 'customer',
+      name: user?.fullName || 'Bạn',
+      time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+      type: 'product_inquiry',
+      text: `Mình muốn hỏi về sản phẩm: ${dress.name}`,
+      product: productPayload,
+    };
+
+    setMessages((prev) => [...prev, userInquiryMsg]);
+    setTimeout(() => {
+      scrollToBottom('smooth');
+      inputRef.current?.focus();
+    }, 60);
+
+    if (conversationId) {
+      sendMessage({
+        conversationId,
+        text: `Mình muốn hỏi về sản phẩm: ${dress.name}`,
+        senderRole: 'customer',
+      }).catch(() => {});
+    }
+
+    setIsTyping(true);
+    setTimeout(async () => {
+      const staffReply = {
+        id: 'bot_' + Date.now(),
+        sender: 'staff',
+        senderRole: 'staff',
+        name: 'Mai Anh • Senior Stylist',
+        time: new Date().toLocaleTimeString('vi-VN', { hour: '2-digit', minute: '2-digit' }),
+        text: `Dạ UniBridal chào nàng! Mẫu thiết kế "${dress.name}" thuộc dòng Haute Couture cao cấp đang có sẵn tại Atelier VIP. Mẫu này may đo từ chất liệu ${dress.material || 'Lụa và Ren cao cấp'} với cấu trúc siết eo định hình cực kỳ tôn dáng. Nàng có muốn đặt lịch để trực tiếp thử váy riêng tư 1-1 miễn phí không ạ? ✨`,
+      };
+
+      setMessages((prev) => [...prev, staffReply]);
+      setIsTyping(false);
+
+      if (conversationId) {
+        sendMessage({
+          conversationId,
+          text: staffReply.text,
+          senderRole: 'staff',
+        }).catch(() => {});
+      }
+    }, 1000);
   };
 
   const handleKeyDown = (e) => {
@@ -298,28 +440,28 @@ export default function ChatWidget() {
       {isOpen && (
         <aside
           aria-label="Cửa sổ tư vấn trực tuyến"
-          className="fixed z-50 w-[315px] sm:w-[335px] h-[435px] max-h-[calc(100vh-110px)] bg-white rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.22)] border border-[#EADBDE] flex flex-col overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
-          style={{ bottom: '86px', right: '20px' }}
+          className="fixed z-50 w-[285px] sm:w-[300px] h-[385px] sm:h-[395px] max-h-[calc(100vh-50px)] bg-white rounded-2xl shadow-[0_12px_40px_rgba(0,0,0,0.22)] border border-[#EADBDE] flex flex-col overflow-hidden transition-all duration-300 animate-in fade-in slide-in-from-bottom-4"
+          style={{ bottom: '20px', right: '20px' }}
         >
           {/* Header */}
-          <div className="bg-gradient-to-r from-[#9B5C66] via-[#B8737D] to-[#A35D67] text-white p-2.5 px-3.5 flex items-center justify-between shrink-0 shadow-sm">
-            <div className="flex items-center gap-2.5">
+          <div className="bg-gradient-to-r from-[#9B5C66] via-[#B8737D] to-[#A35D67] text-white py-2 px-3 flex items-center justify-between shrink-0 shadow-sm">
+            <div className="flex items-center gap-2">
               <div className="relative">
                 <img
                   src={chibiBrideImg}
                   alt="Stylist Mai Anh"
-                  className="w-8 h-8 sm:w-9 sm:h-9 rounded-full object-cover border-2 border-white/70 shadow-sm bg-[#FFF2F0]"
+                  className="w-7 h-7 sm:w-8 sm:h-8 rounded-full object-cover border-2 border-white/70 shadow-sm bg-[#FFF2F0]"
                 />
-                <span className="absolute bottom-0 right-0 w-2.5 h-2.5 rounded-full bg-emerald-400 border-2 border-white ring-1 ring-emerald-300 animate-pulse" />
+                <span className="absolute bottom-0 right-0 w-2 h-2 rounded-full bg-emerald-400 border border-white ring-1 ring-emerald-300 animate-pulse" />
               </div>
               <div>
                 <div className="flex items-center gap-1">
-                  <h3 className="font-playfair text-[14px] font-bold text-white tracking-wide m-0 leading-tight">
+                  <h3 className="font-playfair text-[13px] sm:text-[13.5px] font-bold text-white tracking-wide m-0 leading-tight">
                     UniBridal Concierge
                   </h3>
-                  <Sparkles className="w-3 h-3 text-amber-200" />
+                  <Crown className="w-3 h-3 text-amber-200" />
                 </div>
-                <div className="flex items-center gap-1.5 text-[10.5px] text-white/85 font-jakarta">
+                <div className="flex items-center gap-1 text-[9.5px] sm:text-[10px] text-white/85 font-jakarta">
                   <span className="w-1.5 h-1.5 rounded-full bg-emerald-300" />
                   <span>Trực tuyến • Phản hồi tức thì</span>
                 </div>
@@ -378,12 +520,43 @@ export default function ChatWidget() {
                   )}
                   <div
                     className={`max-w-[84%] px-3 py-2 rounded-2xl shadow-xs leading-relaxed break-words ${
-                      isUser
+                      msg.isRecalled
+                        ? 'bg-[#F5F2F0] text-[#9A8B8C] border border-dashed border-[#E3DBD7] italic'
+                        : isUser
                         ? 'bg-gradient-to-r from-[#B8737D] to-[#A8646E] text-white rounded-br-xs'
                         : 'bg-white text-[#2C2523] border border-[#EADBDE] rounded-bl-xs'
                     }`}
                   >
                     {msg.text}
+
+                    {/* Product Inquiry Card */}
+                    {msg.product && (
+                      <div className="mt-2 bg-white rounded-xl p-2.5 border border-[#E5E7EB] shadow-xs flex gap-2.5 items-start text-[#2C2523] text-left">
+                        <img
+                          src={msg.product.image || card1Elysian}
+                          alt={msg.product.name}
+                          className="w-14 h-14 rounded-lg object-cover bg-[#FAF7F3] border border-[#F0E6DE] shrink-0"
+                        />
+                        <div className="flex-1 min-w-0">
+                          <div className="font-jakarta font-bold text-[12px] text-[#111827] leading-snug truncate">
+                            {msg.product.name}
+                          </div>
+                          <div className="mt-0.5 text-[11.5px] font-bold text-emerald-600 font-jakarta">
+                            {typeof msg.product.price === 'number'
+                              ? `${msg.product.price.toLocaleString('vi-VN')}₫`
+                              : (msg.product.price ? `${msg.product.price}` : '5.200.000₫')}
+                          </div>
+                          <Link
+                            to={`/dresses/${msg.product.id || 1}`}
+                            onClick={() => setIsOpen(false)}
+                            className="mt-1.5 inline-flex items-center gap-0.5 text-[10.5px] font-semibold text-[#1F2937] hover:text-[#B8737D] underline transition-colors"
+                          >
+                            <span>Xem chi tiết sản phẩm</span>
+                            <span className="text-[11px] leading-none">↗</span>
+                          </Link>
+                        </div>
+                      </div>
+                    )}
                   </div>
                   <div className="flex items-center gap-1 text-[9.5px] text-[#B0A6A3] mt-0.5 px-1">
                     <span>{msg.time}</span>
@@ -417,7 +590,10 @@ export default function ChatWidget() {
               <button
                 key={item.id}
                 type="button"
-                onClick={() => handleSendMessage(item.text, true)}
+                onClick={() => {
+                  if (!requireAuth()) return;
+                  handleSendMessage(item.text, true);
+                }}
                 className="text-[10.5px] font-medium text-[#7D535B] bg-white hover:bg-[#FFF2F0] hover:border-[#D498A0] border border-[#EADBDE] rounded-full px-2 py-0.5 whitespace-nowrap transition-all shadow-xs cursor-pointer active:scale-95 shrink-0"
               >
                 {item.label}
@@ -426,22 +602,77 @@ export default function ChatWidget() {
           </div>
 
           {/* Footer Input Area */}
-          <div className="p-2 bg-white border-t border-[#EADBDE] shrink-0">
-            <div className="flex items-center gap-1.5 bg-[#FAF8F7] border border-[#EADBDE] focus-within:border-[#B8737D] focus-within:ring-2 focus-within:ring-[#B8737D]/20 rounded-xl px-2.5 py-1 transition-all">
+          <div className="p-2 bg-white border-t border-[#EADBDE] shrink-0 relative">
+            <div
+              onClick={() => {
+                if (!isLoggedIn) {
+                  setShowLoginPrompt(true);
+                } else {
+                  inputRef.current?.focus();
+                }
+              }}
+              className="flex items-center gap-1 bg-[#FAF8F7] border border-[#EADBDE] focus-within:border-[#B8737D] focus-within:ring-2 focus-within:ring-[#B8737D]/20 rounded-xl px-2 py-1 transition-all cursor-text"
+            >
               <input
                 ref={inputRef}
                 type="text"
                 value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                onKeyDown={handleKeyDown}
-                placeholder="Nhập tin nhắn tư vấn..."
-                className="flex-1 bg-transparent border-0 outline-none text-[12px] text-[#2C2523] placeholder-[#A69B97]"
+                onFocus={(e) => {
+                  if (!isLoggedIn) {
+                    e.target.blur();
+                    setShowLoginPrompt(true);
+                  }
+                }}
+                onClick={(e) => {
+                  if (!isLoggedIn) {
+                    e.preventDefault();
+                    e.target.blur();
+                    setShowLoginPrompt(true);
+                  }
+                }}
+                onChange={(e) => {
+                  if (!requireAuth()) return;
+                  setInputText(e.target.value);
+                }}
+                onKeyDown={(e) => {
+                  if (!requireAuth()) {
+                    e.preventDefault();
+                    return;
+                  }
+                  handleKeyDown(e);
+                }}
+                placeholder={isLoggedIn ? "Nhập tin nhắn tư vấn..." : "Vui lòng đăng nhập để gửi tin nhắn..."}
+                className="flex-1 bg-transparent border-0 outline-none text-[12px] text-[#2C2523] placeholder-[#A69B97] min-w-0"
               />
+
+              {/* Emoji Picker Button */}
               <button
                 type="button"
-                onClick={() => handleSendMessage()}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!requireAuth()) return;
+                  setShowEmojiPicker(!showEmojiPicker);
+                }}
+                className={`p-1 rounded-md transition-colors border-0 bg-transparent cursor-pointer shrink-0 ${
+                  showEmojiPicker
+                    ? 'text-[#B8737D] bg-[#FFF2F0]'
+                    : 'text-[#8C7E7E] hover:text-[#B8737D] hover:bg-[#FFF2F0]'
+                }`}
+                title="Biểu tượng cảm xúc"
+              >
+                <Smile className="w-4 h-4 stroke-[1.8]" />
+              </button>
+
+              {/* Send Button */}
+              <button
+                type="button"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  if (!requireAuth()) return;
+                  handleSendMessage();
+                }}
                 disabled={!inputText.trim()}
-                className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all border-0 cursor-pointer ${
+                className={`w-7 h-7 rounded-lg flex items-center justify-center transition-all border-0 cursor-pointer shrink-0 ${
                   inputText.trim()
                     ? 'bg-[#B8737D] text-white hover:bg-[#a35d67] shadow-sm active:scale-95'
                     : 'bg-stone-200 text-stone-400 cursor-not-allowed'
@@ -451,14 +682,118 @@ export default function ChatWidget() {
                 <SendHorizontal className="w-3.5 h-3.5" />
               </button>
             </div>
+
+            {/* Emoji Picker Popover (Mini) */}
+            {showEmojiPicker && (
+              <div className="absolute right-2 bottom-full mb-2 bg-white rounded-2xl shadow-[0_12px_36px_rgba(44,37,35,0.2)] border border-[#EFE5DB] p-2.5 z-30 w-56">
+                <div className="text-[10px] font-bold text-[#8C7A7C] uppercase tracking-wider mb-1.5">
+                  Biểu tượng cảm xúc
+                </div>
+                <div className="grid grid-cols-5 gap-1 text-[17px]">
+                  {popularEmojis.map((emoji, idx) => (
+                    <button
+                      key={idx}
+                      type="button"
+                      onClick={() => {
+                        setInputText((prev) => prev + emoji);
+                        setShowEmojiPicker(false);
+                        inputRef.current?.focus();
+                      }}
+                      className="hover:bg-[#FAF6F2] rounded-md p-1 transition-colors border-0 bg-transparent cursor-pointer flex items-center justify-center"
+                    >
+                      {emoji}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
+
+          {/* Modal / Dialog Yêu cầu Đăng nhập dành cho Khách vãng lai */}
+          {showLoginPrompt && (
+            <div
+              onClick={() => {
+                setShowLoginPrompt(false);
+                setIsOpen(false);
+              }}
+              className="absolute inset-0 z-50 bg-black/50 backdrop-blur-[2px] flex items-center justify-center p-3 animate-in fade-in duration-200"
+            >
+              <div
+                onClick={(e) => e.stopPropagation()}
+                className="bg-white rounded-2xl p-4 w-full max-w-[265px] shadow-2xl border border-[#F2D6D8] text-center relative animate-in zoom-in-95 duration-200"
+              >
+                {/* Nút đóng - Trả về lại nhân vật chibi nổi */}
+                <button
+                  type="button"
+                  onClick={() => {
+                    setShowLoginPrompt(false);
+                    setIsOpen(false);
+                  }}
+                  className="absolute top-2.5 right-2.5 w-6 h-6 rounded-full flex items-center justify-center text-stone-400 hover:text-stone-700 hover:bg-stone-100 border-0 bg-transparent cursor-pointer transition-colors"
+                  title="Đóng và thu nhỏ"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+
+                {/* Biểu tượng ổ khóa */}
+                <div className="w-11 h-11 rounded-full bg-[#FFF2F0] border border-[#F7D4D7] flex items-center justify-center mx-auto mb-2 text-[#B8737D] shadow-xs">
+                  <Lock className="w-5 h-5 stroke-[2]" />
+                </div>
+
+                <h4 className="font-playfair text-[14px] font-bold text-[#2C2523] mb-1 leading-snug">
+                  Đăng Nhập Để Trò Chuyện
+                </h4>
+                <p className="text-[11px] text-[#6E6260] font-jakarta leading-relaxed mb-3">
+                  Nàng vui lòng đăng nhập để bắt đầu nhắn tin và nhận tư vấn riêng tư 1-1 từ Stylist UniBridal nhé! ✨
+                </p>
+
+                <div className="space-y-1.5">
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowLoginPrompt(false);
+                      setIsOpen(false);
+                      navigate('/login', { state: { from: { pathname: window.location.pathname } } });
+                    }}
+                    className="w-full py-2 px-3 rounded-xl bg-gradient-to-r from-[#9B5C66] via-[#B8737D] to-[#A35D67] hover:opacity-95 text-white font-jakarta font-semibold text-[11.5px] flex items-center justify-center gap-1.5 shadow-sm active:scale-95 transition-all cursor-pointer border-0"
+                  >
+                    <LogIn className="w-3.5 h-3.5" />
+                    <span>Đăng Nhập Ngay</span>
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowLoginPrompt(false);
+                      setIsOpen(false);
+                      navigate('/register');
+                    }}
+                    className="w-full py-1.5 px-3 rounded-xl bg-[#FAF8F7] hover:bg-[#FFF2F0] text-[#7D535B] hover:text-[#B8737D] border border-[#EADBDE] hover:border-[#D498A0] font-jakarta font-medium text-[11px] active:scale-95 transition-all cursor-pointer"
+                  >
+                    Tạo Tài Khoản Mới
+                  </button>
+
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setShowLoginPrompt(false);
+                      setIsOpen(false);
+                    }}
+                    className="text-[10.5px] text-[#A69B97] hover:text-[#5C504E] font-jakarta transition-colors cursor-pointer border-0 bg-transparent pt-0.5 block mx-auto"
+                  >
+                    Để sau
+                  </button>
+                </div>
+              </div>
+            </div>
+          )}
         </aside>
       )}
 
-      {/* 2. Nút Chat Nổi 3D Chibi Bride Không Viền Tròn (Floating 3D Cutout Figure) */}
-      <aside aria-label="Tư vấn trực tuyến" className="fixed bottom-3 right-3 sm:bottom-4 sm:right-5 z-50 flex items-end group/chibi">
-        {/* Lời chào Speech Bubble (Hiện tự động 6s đầu hoặc khi trỏ chuột vào Hover) */}
-        {!isOpen && (
+      {/* 2. Nút Chat Nổi 3D Chibi Bride Không Viền Tròn (Floating 3D Cutout Figure) - Ẩn khi hộp chat đang mở để không che ô nhập tin nhắn */}
+      {!isOpen && (
+        <aside aria-label="Tư vấn trực tuyến" className="fixed bottom-3 right-3 sm:bottom-4 sm:right-5 z-50 flex items-end group/chibi">
+          {/* Lời chào Speech Bubble (Hiện tự động 6s đầu hoặc khi trỏ chuột vào Hover) */}
           <div
             onClick={() => setIsOpen(true)}
             className={`relative -mr-2 sm:-mr-2.5 mb-10 sm:mb-12 cursor-pointer select-none transition-all duration-300 z-10 ${
@@ -476,55 +811,48 @@ export default function ChatWidget() {
               </p>
             </div>
           </div>
-        )}
 
-        {/* 3D Character Figure (Không viền tròn, bồng bềnh 3D, ngôi sao 4 cánh, không chớp sáng) */}
-        <div className="relative select-none animate-chibi-float">
-          {/* Chỉ hiển thị ngôi sao 4 cánh theo đúng mẫu */}
-          <span className="absolute -top-1 left-2 w-4 h-4 text-amber-200 drop-shadow-[0_0_8px_rgba(251,191,36,0.9)] pointer-events-none animate-sparkle-1 select-none">
-            <FourPointStar className="w-full h-full" />
-          </span>
-          <span className="absolute top-2 right-2 w-4 h-4 text-amber-200 drop-shadow-[0_0_8px_rgba(251,191,36,0.9)] pointer-events-none animate-sparkle-2 select-none">
-            <FourPointStar className="w-full h-full" />
-          </span>
+          {/* 3D Character Figure (Không viền tròn, bồng bềnh 3D, ngôi sao 4 cánh, không chớp sáng) */}
+          <div className="relative select-none animate-chibi-float">
+            {/* Chỉ hiển thị ngôi sao 4 cánh theo đúng mẫu */}
+            <span className="absolute -top-1 left-2 w-4 h-4 text-amber-200 drop-shadow-[0_0_8px_rgba(251,191,36,0.9)] pointer-events-none animate-sparkle-1 select-none">
+              <Crown className="w-full h-full" />
+            </span>
+            <span className="absolute top-2 right-2 w-4 h-4 text-amber-200 drop-shadow-[0_0_8px_rgba(251,191,36,0.9)] pointer-events-none animate-sparkle-2 select-none">
+              <Crown className="w-full h-full" />
+            </span>
 
-          <button
-            type="button"
-            id="floating-chat-toggle"
-            onClick={() => setIsOpen((prev) => !prev)}
-            onMouseDown={(e) => e.preventDefault()}
-            className="relative p-0 border-0 bg-transparent cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95 group/btn outline-none focus:outline-none focus-visible:outline-none active:outline-none ring-0 focus:ring-0 focus-visible:ring-0 select-none"
-            style={{
-              outline: 'none',
-              boxShadow: 'none',
-              WebkitTapHighlightColor: 'transparent',
-              WebkitTouchCallout: 'none',
-              userSelect: 'none',
-            }}
-            title={isOpen ? 'Đóng hộp chat' : 'Trò chuyện cùng chuyên viên tư vấn UniBridal'}
-          >
-            {/* Ảnh nhân vật 3D (Đổi ảnh trực tiếp 1 thẻ img, hoàn toàn không bị chớp sáng) */}
-            <img
-              src={isWinking ? chibiBride3DWinkImg : chibiBride3DImg}
-              alt="UniBridal 3D Chibi Bride"
-              draggable={false}
-              className="w-[90px] h-auto sm:w-[106px] object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.14)] select-none pointer-events-none"
+            <button
+              type="button"
+              id="floating-chat-toggle"
+              onClick={() => setIsOpen((prev) => !prev)}
+              onMouseDown={(e) => e.preventDefault()}
+              className="relative p-0 border-0 bg-transparent cursor-pointer transition-all duration-300 hover:scale-110 active:scale-95 group/btn outline-none focus:outline-none focus-visible:outline-none active:outline-none ring-0 focus:ring-0 focus-visible:ring-0 select-none"
               style={{
                 outline: 'none',
+                boxShadow: 'none',
+                WebkitTapHighlightColor: 'transparent',
+                WebkitTouchCallout: 'none',
                 userSelect: 'none',
-                WebkitUserDrag: 'none',
               }}
-            />
-
-            {/* Unread badge nếu có tin nhắn mới */}
-            {!isOpen && unreadCount > 0 && (
-              <span className="absolute top-2 right-1 min-w-[18px] h-[18px] px-1 rounded-full bg-rose-600 text-white font-bold text-[10px] flex items-center justify-center border-2 border-white shadow-sm z-30 animate-bounce">
-                {unreadCount}
-              </span>
-            )}
-          </button>
-        </div>
-      </aside>
+              title="Trò chuyện cùng chuyên viên tư vấn UniBridal"
+            >
+              {/* Ảnh nhân vật 3D (Đổi ảnh trực tiếp 1 thẻ img, hoàn toàn không bị chớp sáng) */}
+              <img
+                src={isWinking ? chibiBride3DWinkImg : chibiBride3DImg}
+                alt="UniBridal 3D Chibi Bride"
+                draggable={false}
+                className="w-[90px] h-auto sm:w-[106px] object-contain drop-shadow-[0_10px_20px_rgba(0,0,0,0.14)] select-none pointer-events-none"
+                style={{
+                  outline: 'none',
+                  userSelect: 'none',
+                  WebkitUserDrag: 'none',
+                }}
+              />
+            </button>
+          </div>
+        </aside>
+      )}
     </>
   );
 }

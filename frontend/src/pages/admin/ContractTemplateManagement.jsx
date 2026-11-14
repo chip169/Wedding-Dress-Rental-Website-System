@@ -1,7 +1,6 @@
 import React, { useState, useMemo, useEffect } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
-import {
-  Layers,
+import { Layers,
   Upload,
   Download,
   FileCode,
@@ -21,7 +20,7 @@ import {
   X,
   Printer,
   ShieldCheck,
-  Sparkles,
+  Crown,
   BookOpen,
   ArrowRight,
   Save,
@@ -34,8 +33,7 @@ import {
   ExternalLink,
   Link2,
   Paperclip,
-  FileUp,
-} from 'lucide-react';
+  FileUp } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import { Modal } from 'antd';
 import {
@@ -45,6 +43,7 @@ import {
   deleteContractTemplate,
   duplicateContractTemplate,
 } from '../../services/contractService';
+import { HIEU_SIGNATURE_BASE64 } from '../../assets/images/signatureHieuBase64';
 
 export default function ContractTemplateManagement() {
   const [templates, setTemplates] = useState([]);
@@ -52,8 +51,6 @@ export default function ContractTemplateManagement() {
   const [loading, setLoading] = useState(false);
   const [activeTab, setActiveTab] = useState('templates'); // 'templates' | 'clauses' | 'audit'
   const [searchQuery, setSearchQuery] = useState('');
-  const [selectedCategory, setSelectedCategory] = useState('all');
-  const [selectedStatus, setSelectedStatus] = useState('all');
 
   // Modal States
   const [previewTemplate, setPreviewTemplate] = useState(null);
@@ -83,26 +80,23 @@ export default function ContractTemplateManagement() {
           badge: item.badge || (item.isDefault ? 'Mặc định hệ thống' : 'Tiêu chuẩn'),
           status: item.status || 'active',
           version: item.version || 'v2026.1',
-          updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString().split('T')[0] : '2026-10-29',
+          updatedAt: item.updatedAt ? new Date(item.updatedAt).toISOString().split('T')[0] : '',
           updatedBy: item.updatedBy || 'Ban Giám Đốc Atelier',
-          appliedCount: item.appliedCount || 0,
-          defaultDuration: item.defaultDuration || '4 ngày 3 đêm',
-          depositRate: item.depositRate || '50% giá trị hợp đồng',
-          overdueFee: item.overdueFee || '800.000 VNĐ / ngày trễ',
+          appliedCount: typeof item.appliedCount === 'number' ? item.appliedCount : 0,
+          defaultDuration: item.defaultDuration || '3 ngày 2 đêm',
+          depositRate: item.depositRate || '100% giá trị hợp đồng',
+          overdueFee: item.overdueFee || '500.000 VNĐ / ngày trễ',
           description: item.description || '',
-          pdfUrl: item.pdfUrl || `http://localhost:5000/api/contract-templates/${item.code || item._id}/pdf`,
-          contractUrl: item.contractUrl || item.pdfUrl || `http://localhost:5000/api/contract-templates/${item.code || item._id}/pdf`,
-          documentFile: item.documentFile?.name
-            ? item.documentFile
-            : {
-                name: `Hop_Dong_${item.code || 'Mau'}.pdf`,
-                size: '286 KB',
-                url: item.pdfUrl || `http://localhost:5000/api/contract-templates/${item.code || item._id}/pdf`,
-              },
+          pdfUrl: item.pdfUrl || '',
+          contractUrl: item.contractUrl || item.pdfUrl || '',
+          documentFile: item.documentFile?.name ? item.documentFile : null,
           clauses: item.clauses || [],
           isDefault: Boolean(item.isDefault),
         }));
         setTemplates(backendList);
+        setError('');
+      } else {
+        setTemplates([]);
         setError('');
       }
     } catch (err) {
@@ -123,12 +117,10 @@ export default function ContractTemplateManagement() {
       const matchSearch =
         tpl.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
         (tpl.code || tpl.id || '').toLowerCase().includes(searchQuery.toLowerCase()) ||
-        tpl.category.toLowerCase().includes(searchQuery.toLowerCase());
-      const matchCategory = selectedCategory === 'all' || tpl.category === selectedCategory;
-      const matchStatus = selectedStatus === 'all' || tpl.status === selectedStatus;
-      return matchSearch && matchCategory && matchStatus;
+        (tpl.category || '').toLowerCase().includes(searchQuery.toLowerCase());
+      return matchSearch;
     });
-  }, [templates, searchQuery, selectedCategory, selectedStatus]);
+  }, [templates, searchQuery]);
 
   // Handler duplicate (Nhân bản mẫu hợp đồng trực tiếp vào Database)
   const handleDuplicate = async (tpl) => {
@@ -184,14 +176,14 @@ export default function ContractTemplateManagement() {
     <AdminLayout
       activeMenu="contract-templates"
       title="Quản Lý Mẫu Hợp Đồng"
-      subtitle="Thiết lập cấu trúc pháp lý, quy chuẩn tiền cọc & chính sách bồi thường áp dụng toàn hệ thống"
+      subtitle="Thiết lập cấu trúc pháp lý, quy chuẩn tiền cọc và chính sách bồi thường áp dụng toàn hệ thống"
       controls={
         <div className="flex items-center gap-3">
           <Link
             to="/admin/hop-dong"
-            className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2 text-xs font-semibold text-[#8C7A6B] bg-white border border-[#E8DFD8] rounded-xl hover:bg-[#FDFBF7] transition-all"
+            className="hidden sm:inline-flex items-center gap-2 px-3.5 py-2.5 text-xs font-bold text-[#5F2B36] bg-white border border-[#E8DDD8] rounded-xl hover:bg-[#FAF0EC] transition-all shadow-xs"
           >
-            <FileSignature className="w-4 h-4 text-[#C5A880]" />
+            <FileSignature className="w-4 h-4 text-[#733F49]" />
             Xem Danh Sách Hợp Đồng Đã Ký
           </Link>
           <button
@@ -199,7 +191,7 @@ export default function ContractTemplateManagement() {
               setCreateAttachedFile(null);
               setIsCreateModalOpen(true);
             }}
-            className="inline-flex items-center gap-2 px-4 py-2 text-xs font-semibold text-white bg-gradient-to-r from-[#C5A880] to-[#B39366] rounded-xl shadow-md hover:shadow-lg hover:brightness-105 transition-all"
+            className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#733F49] to-[#8C4654] hover:from-[#5A2D35] hover:to-[#733F49] text-white text-xs font-bold transition-all cursor-pointer shadow-md border-0 shrink-0 self-start sm:self-auto"
           >
             <Plus className="w-4 h-4" />
             Tạo Mẫu Mới
@@ -243,46 +235,6 @@ export default function ContractTemplateManagement() {
       {/* TAB 1: DANH SÁCH MẪU HỢP ĐỒNG */}
       {activeTab === 'templates' && (
         <div className="space-y-6">
-          {/* Search & Filter Toolbar */}
-          <div className="bg-white p-4 rounded-2xl border border-[#EFE5E1] shadow-xs flex flex-col md:flex-row md:items-center justify-between gap-4">
-            <div className="relative flex-1 max-w-md">
-              <Search className="w-4 h-4 text-[#A8988B] absolute left-3.5 top-1/2 -translate-y-1/2" />
-              <input
-                type="text"
-                placeholder="Tìm theo tên mẫu, mã mẫu (TPL-HC-01), loại hình..."
-                value={searchQuery}
-                onChange={(e) => setSearchQuery(e.target.value)}
-                className="w-full pl-10 pr-4 py-2 text-xs bg-[#FAF7F2] border border-[#E8DFD8] rounded-xl focus:outline-none focus:border-[#C5A880] focus:bg-white text-[#2C2523] placeholder-[#A8988B]"
-              />
-            </div>
-
-            <div className="flex flex-wrap items-center gap-2.5">
-              <select
-                value={selectedCategory}
-                onChange={(e) => setSelectedCategory(e.target.value)}
-                className="px-3 py-2 text-xs bg-[#FAF7F2] border border-[#E8DFD8] rounded-xl text-[#2C2523] focus:outline-none focus:border-[#C5A880]"
-              >
-                <option value="all">Tất cả phân loại</option>
-                <option value="Haute Couture">Haute Couture</option>
-                <option value="Bespoke First-Wear">Bespoke First-Wear</option>
-                <option value="Combo Trọn Gói">Combo Trọn Gói</option>
-                <option value="Áo Dài Cưới">Áo Dài Cưới</option>
-                <option value="VIP Diamond">VIP Diamond</option>
-                <option value="Destination Wedding">Destination Wedding</option>
-              </select>
-
-              <select
-                value={selectedStatus}
-                onChange={(e) => setSelectedStatus(e.target.value)}
-                className="px-3 py-2 text-xs bg-[#FAF7F2] border border-[#E8DFD8] rounded-xl text-[#2C2523] focus:outline-none focus:border-[#C5A880]"
-              >
-                <option value="all">Tất cả trạng thái</option>
-                <option value="active">Đang áp dụng (Active)</option>
-                <option value="draft">Bản nháp (Draft)</option>
-              </select>
-            </div>
-          </div>
-
           {/* Grid of Templates */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-5">
             {filteredTemplates.map((tpl) => (
@@ -317,46 +269,22 @@ export default function ContractTemplateManagement() {
 
                 {/* Body Specs */}
                 <div className="p-5 space-y-2.5 text-xs bg-[#FDFBF9]/60 flex-1">
-                  <div className="flex items-center justify-between text-[#8C7A6B]">
-                    <span className="flex items-center gap-1.5 text-[#9E8E81]">
-                      <Calendar className="w-3.5 h-3.5 text-[#C5A880]" />
-                      Thời lượng thuê chuẩn:
-                    </span>
-                    <span className="font-semibold text-[#2C2523]">{tpl.defaultDuration}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[#8C7A6B]">
-                    <span className="flex items-center gap-1.5 text-[#9E8E81]">
-                      <DollarSign className="w-3.5 h-3.5 text-emerald-600" />
-                      Quy định cọc:
-                    </span>
-                    <span className="font-semibold text-[#2C2523] max-w-[170px] truncate text-right">
-                      {tpl.depositRate}
-                    </span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[#8C7A6B]">
-                    <span className="flex items-center gap-1.5 text-[#9E8E81]">
-                      <AlertTriangle className="w-3.5 h-3.5 text-rose-500" />
-                      Phạt chậm trả:
-                    </span>
-                    <span className="font-semibold text-rose-600">{tpl.overdueFee}</span>
-                  </div>
-
-                  <div className="flex items-center justify-between text-[#8C7A6B] pt-2 border-t border-[#F2E8E2]">
-                    <span className="text-[11px] text-[#A39284]">File văn bản mẫu:</span>
-                    <a
-                      href={tpl.pdfUrl || tpl.documentFile?.url || `http://localhost:5000/api/contract-templates/${tpl.id || tpl.code}/pdf`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="font-semibold text-[#854F55] hover:text-[#5F323B] bg-[#FFF0ED] hover:bg-[#FFE4DE] border border-[#FFDADC] px-2 py-0.5 rounded-md flex items-center gap-1 text-[11px] max-w-[170px] truncate transition-colors group"
-                      title={tpl.documentFile?.name || 'Mở file PDF mẫu hợp đồng'}
-                    >
-                      <FileText className="w-3 h-3 text-[#B8737D] shrink-0" />
-                      <span className="truncate group-hover:underline">{tpl.documentFile?.name || 'Hop_Dong_Mau.pdf'}</span>
-                      <ExternalLink className="w-2.5 h-2.5 text-[#B8737D] shrink-0 opacity-70 group-hover:opacity-100" />
-                    </a>
-                  </div>
+                  {tpl.documentFile?.name && (
+                    <div className="flex items-center justify-between text-[#8C7A6B]">
+                      <span className="text-[11px] text-[#A39284]">File văn bản mẫu:</span>
+                      <a
+                        href={tpl.documentFile?.url || tpl.pdfUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="font-semibold text-[#854F55] hover:text-[#5F323B] bg-[#FFF0ED] hover:bg-[#FFE4DE] border border-[#FFDADC] px-2 py-0.5 rounded-md flex items-center gap-1 text-[11px] max-w-[170px] truncate transition-colors group"
+                        title={tpl.documentFile?.name}
+                      >
+                        <FileText className="w-3 h-3 text-[#B8737D] shrink-0" />
+                        <span className="truncate group-hover:underline">{tpl.documentFile?.name}</span>
+                        <ExternalLink className="w-2.5 h-2.5 text-[#B8737D] shrink-0 opacity-70 group-hover:opacity-100" />
+                      </a>
+                    </div>
+                  )}
                   <div className="flex items-center justify-between text-[#8C7A6B]">
                     <span className="text-[11px] text-[#A39284]">Số lượt hợp đồng áp dụng:</span>
                     <span className="font-bold text-[#C5A880] bg-[#FAF3EC] px-2 py-0.5 rounded-md">
@@ -366,57 +294,27 @@ export default function ContractTemplateManagement() {
                 </div>
 
                 {/* Footer Actions */}
-                <div className="p-4 bg-white border-t border-[#F7EFEA] flex items-center justify-between gap-1.5">
+                <div className="p-4 bg-white border-t border-[#F7EFEA] flex items-center justify-between gap-2">
                   <button
                     onClick={() => setPreviewTemplate(tpl)}
-                    className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-2.5 text-xs font-semibold text-[#2C2523] bg-[#FAF7F2] hover:bg-[#F2ECE4] rounded-xl transition-all border border-[#E8DFD8]"
+                    className="flex-1 inline-flex items-center justify-center gap-1.5 py-2 px-3 text-xs font-semibold text-[#2C2523] bg-[#FAF7F2] hover:bg-[#F2ECE4] rounded-xl transition-all border border-[#E8DFD8] cursor-pointer"
                   >
                     <Eye className="w-3.5 h-3.5 text-[#C5A880]" />
-                    Xem Mẫu
-                  </button>
-
-                  <a
-                    href={tpl.pdfUrl || tpl.documentFile?.url || `http://localhost:5000/api/contract-templates/${tpl.id || tpl.code}/pdf`}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title="Mở trực tiếp bản PDF Hợp đồng (chuẩn in ấn A4)"
-                    className="p-2 text-[#733F49] hover:bg-[#FFF0ED] rounded-xl transition-all border border-[#FFDADC] hover:border-[#733F49] flex items-center justify-center"
-                  >
-                    <ExternalLink className="w-4 h-4" />
-                  </a>
-
-                  <button
-                    onClick={() => {
-                      const link = tpl.pdfUrl || tpl.contractUrl || `http://localhost:5000/api/contract-templates/${tpl.id || tpl.code}/pdf`;
-                      navigator.clipboard.writeText(link);
-                      triggerToast(`Đã sao chép link hợp đồng: ${link}`);
-                    }}
-                    title="Sao chép đường dẫn link hợp đồng"
-                    className="p-2 text-[#8C7A6B] hover:text-[#C5A880] hover:bg-[#FAF7F2] rounded-xl transition-all border border-transparent hover:border-[#E8DFD8]"
-                  >
-                    <Link2 className="w-4 h-4" />
+                    <span>Xem Mẫu</span>
                   </button>
 
                   <button
                     onClick={() => setEditTemplate(tpl)}
-                    title="Chỉnh sửa điều khoản"
-                    className="p-2 text-[#8C7A6B] hover:text-[#C5A880] hover:bg-[#FAF7F2] rounded-xl transition-all border border-transparent hover:border-[#E8DFD8]"
+                    title="Chỉnh sửa mẫu hợp đồng"
+                    className="p-2 text-[#8C7A6B] hover:text-[#733F49] hover:bg-[#FAF0EC] rounded-xl transition-all border border-[#E8DFD8] hover:border-[#EEDECF] cursor-pointer"
                   >
                     <Edit3 className="w-4 h-4" />
                   </button>
 
                   <button
-                    onClick={() => handleDuplicate(tpl)}
-                    title="Nhân bản mẫu"
-                    className="p-2 text-[#8C7A6B] hover:text-[#C5A880] hover:bg-[#FAF7F2] rounded-xl transition-all border border-transparent hover:border-[#E8DFD8]"
-                  >
-                    <Copy className="w-4 h-4" />
-                  </button>
-
-                  <button
                     onClick={() => handleDelete(tpl)}
-                    title="Xóa mẫu"
-                    className="p-2 text-[#8C7A6B] hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-transparent hover:border-rose-100"
+                    title="Xóa mẫu hợp đồng"
+                    className="p-2 text-[#8C7A6B] hover:text-rose-600 hover:bg-rose-50 rounded-xl transition-all border border-[#E8DFD8] hover:border-rose-200 cursor-pointer"
                   >
                     <Trash2 className="w-4 h-4" />
                   </button>
@@ -431,7 +329,7 @@ export default function ContractTemplateManagement() {
       {activeTab === 'matrix' && (
         <div className="bg-white rounded-2xl border border-[#EFE5E1] shadow-xs overflow-hidden">
           <div className="p-6 border-b border-[#F2E8E2] bg-[#FAF7F2]/60">
-            <h3 className="text-base font-bold text-[#2C2523]">Bảng Định Mức Bồi Thường & Khắc Phục Hư Tổn Váy Cưới</h3>
+            <h3 className="text-base font-bold text-[#2C2523]">Bảng Định Mức Bồi Thường và Khắc Phục Hư Tổn Váy Cưới</h3>
             <p className="text-xs text-[#8C7A6B] mt-1">
               Phụ lục chuẩn đính kèm tự động trong mọi hợp đồng điện tử để minh bạch hóa chi phí với cô dâu chú rể khi hoàn trả trang phục.
             </p>
@@ -524,62 +422,51 @@ export default function ContractTemplateManagement() {
 
             {/* Modal Body: Document Preview Style */}
             <div className="p-8 overflow-y-auto space-y-6 text-[#2C2523] font-serif bg-[#FCFAF8]">
-              {/* Download / Direct Link Card */}
-              <div className="bg-[#FFF8F6] border border-[#FFDADC] rounded-2xl p-4 font-sans text-xs shadow-xs space-y-3">
-                <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-xl bg-[#854F55] text-white flex items-center justify-center font-bold text-sm shrink-0">
-                      PDF
+              {/* Download / Direct Link Card (hiển thị khi có file đính kèm) */}
+              {previewTemplate.documentFile?.name && (
+                <div className="bg-[#FFF8F6] border border-[#FFDADC] rounded-2xl p-4 font-sans text-xs shadow-xs space-y-3">
+                  <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3">
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-xl bg-[#854F55] text-white flex items-center justify-center font-bold text-sm shrink-0">
+                        PDF
+                      </div>
+                      <div>
+                        <p className="font-bold text-[#2C2523] text-sm">
+                          {previewTemplate.documentFile.name}
+                        </p>
+                        <p className="text-[11px] text-[#8C7A6B]">
+                          {previewTemplate.documentFile.size ? `Dung lượng: ${previewTemplate.documentFile.size} • ` : ''}Định dạng: PDF / Word{previewTemplate.updatedAt ? ` • Cập nhật: ${previewTemplate.updatedAt}` : ''}
+                        </p>
+                      </div>
                     </div>
-                    <div>
-                      <p className="font-bold text-[#2C2523] text-sm">
-                        {previewTemplate.documentFile?.name || `Hop_Dong_Mau_${previewTemplate.id}.pdf`}
-                      </p>
-                      <p className="text-[11px] text-[#8C7A6B]">
-                        Dung lượng: {previewTemplate.documentFile?.size || '286 KB'} • Định dạng: PDF / Word • Cập nhật: {previewTemplate.updatedAt || '2026-10-29'}
-                      </p>
+
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <a
+                        href={previewTemplate.documentFile.url || previewTemplate.pdfUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#854F55] hover:bg-[#6E3F44] text-white font-semibold rounded-xl text-xs transition-colors shrink-0 shadow-xs text-decoration-none"
+                      >
+                        <ExternalLink className="w-3.5 h-3.5" />
+                        Mở File Văn Bản
+                      </a>
+
+                      <button
+                        type="button"
+                        onClick={() => {
+                          const link = previewTemplate.documentFile.url || previewTemplate.pdfUrl;
+                          navigator.clipboard.writeText(link);
+                          triggerToast(`Đã sao chép link file: ${link}`);
+                        }}
+                        className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-[#FAF7F2] text-[#854F55] border border-[#FFDADC] font-semibold rounded-xl text-xs transition-colors shrink-0"
+                      >
+                        <Link2 className="w-3.5 h-3.5" />
+                        Sao Chép Link
+                      </button>
                     </div>
-                  </div>
-
-                  <div className="flex items-center gap-2 flex-wrap">
-                    <a
-                      href={previewTemplate.pdfUrl || previewTemplate.documentFile?.url || `http://localhost:5000/api/contract-templates/${previewTemplate.id}/pdf`}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3.5 py-2 bg-[#854F55] hover:bg-[#6E3F44] text-white font-semibold rounded-xl text-xs transition-colors shrink-0 shadow-xs text-decoration-none"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      Mở Link PDF (Chuẩn A4)
-                    </a>
-
-                    <button
-                      type="button"
-                      onClick={() => {
-                        const link = previewTemplate.pdfUrl || previewTemplate.contractUrl || `http://localhost:5000/api/contract-templates/${previewTemplate.id}/pdf`;
-                        navigator.clipboard.writeText(link);
-                        triggerToast(`Đã sao chép link hợp đồng: ${link}`);
-                      }}
-                      className="inline-flex items-center gap-1.5 px-3 py-2 bg-white hover:bg-[#FAF7F2] text-[#854F55] border border-[#FFDADC] font-semibold rounded-xl text-xs transition-colors shrink-0"
-                    >
-                      <Link2 className="w-3.5 h-3.5" />
-                      Sao Chép Link
-                    </button>
                   </div>
                 </div>
-
-                {/* Đường dẫn link hợp đồng trực tiếp */}
-                <div className="bg-white/80 border border-[#F5E1E3] rounded-xl p-2.5 flex items-center justify-between gap-2">
-                  <div className="flex items-center gap-2 min-w-0 flex-1">
-                    <span className="text-[10.5px] font-bold text-[#8C7A6B] uppercase shrink-0">Link hợp đồng:</span>
-                    <span className="text-[11.5px] font-mono text-[#854F55] truncate select-all">
-                      {previewTemplate.pdfUrl || previewTemplate.contractUrl || `http://localhost:5000/api/contract-templates/${previewTemplate.id}/pdf`}
-                    </span>
-                  </div>
-                  <span className="text-[10px] bg-emerald-50 text-emerald-700 border border-emerald-200 px-2 py-0.5 rounded-full font-semibold shrink-0">
-                    Sẵn sàng mở
-                  </span>
-                </div>
-              </div>
+              )}
 
               {/* National Header */}
               <div className="text-center space-y-1 font-sans border-b border-[#E8DFD8] pb-6">
@@ -594,7 +481,7 @@ export default function ContractTemplateManagement() {
 
               {/* Legal Notice */}
               <div className="font-sans text-xs bg-amber-50/60 p-4 rounded-xl border border-amber-200/60 text-[#735A47] flex items-start gap-3">
-                <Sparkles className="w-4 h-4 text-[#C5A880] shrink-0 mt-0.5" />
+                <Crown className="w-4 h-4 text-[#C5A880] shrink-0 mt-0.5" />
                 <div>
                   <p className="font-bold">Quy chuẩn dịch vụ UniBridal Haute Couture:</p>
                   <p className="mt-0.5 leading-relaxed">
@@ -613,10 +500,64 @@ export default function ContractTemplateManagement() {
                 ))}
               </div>
 
+              {/* Khối chữ ký điện tử hai bên */}
+              <div className="pt-6 border-t border-[#EFE5E1] grid grid-cols-2 gap-6 text-center text-xs font-sans">
+                {/* Chữ ký Bên A */}
+                <div className="p-4 rounded-2xl border border-[#EEDECF] bg-white flex flex-col items-center justify-between min-h-[190px]">
+                  <div>
+                    <p className="font-bold uppercase text-[#733F49] tracking-wider text-[11px]">
+                      ĐẠI DIỆN BÊN CHO THUÊ (BÊN A)
+                    </p>
+                    <p className="text-[#847374] text-[10px] italic mt-0.5">
+                      CÔNG TY TNHH UNIBRIDAL HAUTE COUTURE
+                    </p>
+                  </div>
+
+                  <div className="my-2 flex flex-col items-center">
+                    <img
+                      src={HIEU_SIGNATURE_BASE64}
+                      alt="Chữ ký Kim Xuân Hiếu"
+                      className="h-16 w-auto object-contain select-none"
+                    />
+                    <div className="mt-1 px-2 py-0.5 rounded-full bg-emerald-50 border border-emerald-300 text-emerald-700 text-[9px] font-bold inline-flex items-center gap-1">
+                      <ShieldCheck size={11} /> VERIFIED BY UNIBRIDAL CA
+                    </div>
+                  </div>
+
+                  <div>
+                    <strong className="block text-[#2C2523] text-[12px]">Ông Kim Xuân Hiếu</strong>
+                    <span className="text-[10px] text-[#847374]">Tổng Giám Đốc Atelier UniBridal</span>
+                  </div>
+                </div>
+
+                {/* Chữ ký Bên B */}
+                <div className="p-4 rounded-2xl border border-[#EEDECF] bg-white flex flex-col items-center justify-between min-h-[190px]">
+                  <div>
+                    <p className="font-bold uppercase text-[#733F49] tracking-wider text-[11px]">
+                      BÊN THUÊ LỄ PHỤC (BÊN B)
+                    </p>
+                    <p className="text-[#847374] text-[10px] italic mt-0.5">
+                      XÁC NHẬN BẰNG CHỮ KÝ ĐIỆN TỬ
+                    </p>
+                  </div>
+
+                  <div className="my-4 flex items-center justify-center">
+                    <span className="font-serif italic text-base text-[#733F49]">
+                      [Chữ ký điện tử / SmartOTP]
+                    </span>
+                  </div>
+
+                  <div>
+                    <strong className="block text-[#2C2523] text-[12px]">[Tên Khách Hàng]</strong>
+                    <span className="text-[10px] text-[#847374]">Bên Thuê Lễ Phục</span>
+                  </div>
+                </div>
+              </div>
+
               {/* Metadata */}
               <div className="font-sans text-xs text-[#8C7A6B] pt-4 border-t border-[#E8DFD8] flex items-center justify-between">
-                <span>Người phê duyệt văn bản: <strong>{previewTemplate.updatedBy}</strong></span>
-                <span>Ngày cập nhật: {previewTemplate.updatedAt}</span>
+                <span>Người phê duyệt văn bản: <strong>{previewTemplate.updatedBy || 'Ban Giám Đốc Atelier'}</strong></span>
+                {previewTemplate.updatedAt && <span>Ngày cập nhật: {previewTemplate.updatedAt}</span>}
               </div>
             </div>
 
@@ -710,7 +651,7 @@ export default function ContractTemplateManagement() {
                     <option value="Combo Trọn Gói">Combo Trọn Gói</option>
                     <option value="Áo Dài Cưới">Áo Dài Cưới</option>
                     <option value="VIP Diamond">VIP Diamond</option>
-                    <option value="Vest & Tuxedo">Vest &amp; Tuxedo</option>
+                    <option value="Vest và Tuxedo">Vest và Tuxedo</option>
                     <option value="Khác">Khác</option>
                   </select>
                 </div>
@@ -861,40 +802,39 @@ export default function ContractTemplateManagement() {
               onSubmit={async (e) => {
                 e.preventDefault();
                 const form = e.target;
-                const enteredCode = form.customCode?.value?.trim()?.toUpperCase();
-                const newCode = enteredCode || `TPL-CUSTOM-${Date.now().toString().slice(-4)}`;
+                const nextIndex = templates.length + 1;
+                let autoCode = `TPL-UB-${String(nextIndex).padStart(2, '0')}`;
+                if (templates.some((t) => t.code === autoCode || t.id === autoCode)) {
+                  autoCode = `TPL-UB-${Date.now().toString().slice(-4)}`;
+                }
+                const newCode = autoCode;
                 const documentFile = createAttachedFile
                   ? {
                       name: createAttachedFile.name,
                       size: createAttachedFile.size,
-                      url: createAttachedFile.url || '#',
+                      url: createAttachedFile.url || '',
                       uploadedAt: new Date(),
                     }
-                  : {
-                      name: `Mau_Hop_Dong_${form.name.value.trim().replace(/\s+/g, '_')}.docx`,
-                      size: '220 KB',
-                      url: '#',
-                      uploadedAt: new Date(),
-                    };
+                  : null;
 
                 const newTpl = {
                   id: newCode,
                   code: newCode,
                   name: form.name.value.trim(),
-                  category: form.category.value,
-                  badge: 'Mẫu tùy chỉnh mới',
-                  status: form.status?.value || 'active',
+                  category: 'Haute Couture',
+                  badge: 'Mẫu hợp đồng',
+                  status: 'active',
                   version: 'v1.0',
                   updatedAt: new Date().toISOString().split('T')[0],
-                  updatedBy: 'Quản trị viên Showroom',
+                  updatedBy: 'Ban Giám Đốc Atelier',
                   appliedCount: 0,
-                  defaultDuration: form.duration.value || '3 ngày 2 đêm',
-                  depositRate: form.deposit.value || '100% giá thuê',
-                  overdueFee: form.overdue.value || '500.000 VNĐ / ngày',
-                  description: form.desc.value || 'Mẫu hợp đồng được thiết lập cho gói dịch vụ mới.',
+                  defaultDuration: '3 ngày 2 đêm',
+                  depositRate: '100% giá trị hợp đồng',
+                  overdueFee: '500.000 VNĐ / ngày trễ',
+                  description: form.desc?.value?.trim() || '',
                   documentFile,
-                  pdfUrl: documentFile.url && documentFile.url !== '#' ? documentFile.url : '',
-                  contractUrl: documentFile.url && documentFile.url !== '#' ? documentFile.url : '',
+                  pdfUrl: documentFile?.url || '',
+                  contractUrl: documentFile?.url || '',
                   clauses: [],
                 };
 
@@ -925,76 +865,6 @@ export default function ContractTemplateManagement() {
                   className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#E8DFD8] rounded-xl focus:border-[#C5A880] focus:bg-white text-[#2C2523]"
                   required
                 />
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-bold text-[#594B43] uppercase mb-1">Mã Mẫu (Code)</label>
-                  <input
-                    name="customCode"
-                    type="text"
-                    placeholder="VD: TPL-HC-05 (để trống tự tạo)"
-                    className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#E8DFD8] rounded-xl focus:border-[#C5A880] focus:bg-white text-[#2C2523] uppercase font-mono"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-[#594B43] uppercase mb-1">Trạng Thái Khởi Tạo</label>
-                  <select
-                    name="status"
-                    className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#E8DFD8] rounded-xl focus:border-[#C5A880] focus:bg-white text-[#2C2523]"
-                  >
-                    <option value="active">Đang áp dụng (Active)</option>
-                    <option value="draft">Bản nháp (Draft)</option>
-                  </select>
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-bold text-[#594B43] uppercase mb-1">Phân Loại Dịch Vụ</label>
-                  <select
-                    name="category"
-                    className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#E8DFD8] rounded-xl focus:border-[#C5A880] focus:bg-white text-[#2C2523]"
-                  >
-                    <option value="Haute Couture">Haute Couture</option>
-                    <option value="Bespoke First-Wear">Bespoke First-Wear</option>
-                    <option value="Combo Trọn Gói">Combo Trọn Gói</option>
-                    <option value="Áo Dài Cưới">Áo Dài Cưới</option>
-                    <option value="VIP Diamond">VIP Diamond</option>
-                    <option value="Vest & Tuxedo">Vest &amp; Tuxedo</option>
-                    <option value="Destination Wedding">Destination Wedding</option>
-                  </select>
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-[#594B43] uppercase mb-1">Thời Lượng Thuê Chuẩn</label>
-                  <input
-                    name="duration"
-                    type="text"
-                    defaultValue="3 ngày 2 đêm"
-                    className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#E8DFD8] rounded-xl focus:border-[#C5A880] focus:bg-white text-[#2C2523]"
-                  />
-                </div>
-              </div>
-
-              <div className="grid grid-cols-2 gap-4">
-                <div>
-                  <label className="block text-[11px] font-bold text-[#594B43] uppercase mb-1">Quy Định Đặt Cọc</label>
-                  <input
-                    name="deposit"
-                    type="text"
-                    defaultValue="15.000.000 VNĐ hoặc 100% giá trị váy"
-                    className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#E8DFD8] rounded-xl focus:border-[#C5A880] focus:bg-white text-[#2C2523]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11px] font-bold text-[#594B43] uppercase mb-1">Phí Trễ Hạn / Ngày</label>
-                  <input
-                    name="overdue"
-                    type="text"
-                    defaultValue="500.000 VNĐ / ngày trễ"
-                    className="w-full px-3.5 py-2.5 bg-[#FAF7F2] border border-[#E8DFD8] rounded-xl focus:border-[#C5A880] focus:bg-white text-[#2C2523]"
-                  />
-                </div>
               </div>
 
               <div>

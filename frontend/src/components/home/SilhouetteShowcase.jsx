@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { ArrowRight } from 'lucide-react';
-import { getAllDresses } from '../../services/dressService';
+import { getAllDresses, getCategories } from '../../services/dressService';
 import card1Img from '../../assets/card1_elysian.jpg';
 import card2Img from '../../assets/card2_celeste.jpg';
 import card3Img from '../../assets/card3_lumiere.jpg';
@@ -10,14 +10,38 @@ import card5Img from '../../assets/card5_aurora.jpg';
 import card7Img from '../../assets/card7_vivienne.jpg';
 import logoEmblemImg from '../../assets/logo_emblem.png';
 
-const SILHOUETTES_CONFIG = [
+const DEFAULT_IMAGE_MAP = {
+  ballgown: '/assets/dresses/dress_01.jpg',
+  mermaid: '/assets/dresses/dress_02.jpg',
+  'a-line': '/assets/dresses/dress_04.jpg',
+  'silk-gown': '/assets/dresses/dress_03.jpg',
+  princess: '/assets/dresses/dress_05.jpg',
+};
+
+const DEFAULT_FALLBACK_MAP = {
+  ballgown: card1Img,
+  mermaid: card2Img,
+  'a-line': card4Img,
+  'silk-gown': card3Img,
+  princess: card5Img,
+};
+
+const DEFAULT_DESC_MAP = {
+  ballgown: 'Lộng lẫy, bồng bềnh với cấu trúc siết eo corsetry tôn vinh tỉ lệ vàng.',
+  mermaid: 'Ôm trọn đường cong quyến rũ với chất liệu ren hoa nổi 3D cao cấp.',
+  'a-line': 'Nhẹ nhàng, bay bổng, hoàn hảo cho tiệc cưới ngoài trời và sảnh tiệc thân mật.',
+  'silk-gown': 'Vẻ đẹp đương đại từ lụa tơ tằm nguyên bản, thuần khiết và sang trọng.',
+  princess: 'Tùng váy xòe rộng 2m đính kết pha lê Swarovski lấp lánh như cực quang.',
+};
+
+const DEFAULT_SILHOUETTES_CONFIG = [
   {
     id: 'ballgown',
     title: 'Công Chúa Hoàng Gia',
     description: 'Lộng lẫy, bồng bềnh với cấu trúc siết eo corsetry tôn vinh tỉ lệ vàng.',
     image: '/assets/dresses/dress_01.jpg',
     fallback: card1Img,
-    defaultCount: 5,
+    count: 5,
   },
   {
     id: 'mermaid',
@@ -25,7 +49,7 @@ const SILHOUETTES_CONFIG = [
     description: 'Ôm trọn đường cong quyến rũ với chất liệu ren hoa nổi 3D cao cấp.',
     image: '/assets/dresses/dress_02.jpg',
     fallback: card2Img,
-    defaultCount: 5,
+    count: 5,
   },
   {
     id: 'a-line',
@@ -33,7 +57,7 @@ const SILHOUETTES_CONFIG = [
     description: 'Nhẹ nhàng, bay bổng, hoàn hảo cho tiệc cưới ngoài trời và sảnh tiệc thân mật.',
     image: '/assets/dresses/dress_04.jpg',
     fallback: card4Img,
-    defaultCount: 5,
+    count: 5,
   },
   {
     id: 'silk-gown',
@@ -41,7 +65,7 @@ const SILHOUETTES_CONFIG = [
     description: 'Vẻ đẹp đương đại từ lụa tơ tằm nguyên bản, thuần khiết và sang trọng.',
     image: '/assets/dresses/dress_03.jpg',
     fallback: card3Img,
-    defaultCount: 5,
+    count: 5,
   },
   {
     id: 'princess',
@@ -49,45 +73,43 @@ const SILHOUETTES_CONFIG = [
     description: 'Tùng váy xòe rộng 2m đính kết pha lê Swarovski lấp lánh như cực quang.',
     image: '/assets/dresses/dress_05.jpg',
     fallback: card5Img,
-    defaultCount: 5,
-  },
-  {
-    id: 'custom-atelier',
-    isCustomBooking: true,
-    title: 'May Đo Riêng 1:1',
-    description: 'Thiết kế độc bản theo số đo và phong cách riêng cùng Giám Đốc Sáng Tạo Atelier.',
-    image: '/assets/dresses/dress_09.jpg',
-    fallback: card2Img,
-    customTag: 'ATELIER MAY ĐO',
-    defaultCount: 1,
+    count: 5,
   },
 ];
 
 const SilhouetteShowcase = ({ onSelectSilhouette }) => {
   const navigate = useNavigate();
-  const [counts, setCounts] = useState({
-    ballgown: 5,
-    mermaid: 5,
-    'a-line': 5,
-    'silk-gown': 5,
-    princess: 5,
-  });
+  const [silhouettes, setSilhouettes] = useState(DEFAULT_SILHOUETTES_CONFIG);
 
-  // Tải danh sách váy thực tế từ database và đếm chính xác số lượng từng loại
+  // Tải danh mục phom dáng động trực tiếp từ MongoDB Atlas
   useEffect(() => {
     let isMounted = true;
-    getAllDresses()
+
+    getCategories()
       .then((res) => {
         if (!isMounted) return;
-        const list = res?.data;
-        if (Array.isArray(list) && list.length > 0) {
-          const tally = {};
-          list.forEach((item) => {
-            let cat = (item.category || item.silhouette || '').toLowerCase().replace(/\s+/g, '-');
-            if (cat === 'sheath') cat = 'silk-gown';
-            tally[cat] = (tally[cat] || 0) + 1;
+        const list = Array.isArray(res?.data) ? res.data : Array.isArray(res) ? res : [];
+        if (list.length > 0) {
+          const mapped = list.map((cat, idx) => {
+            const slug = cat.slug || `category-${idx}`;
+            const cleanTitle = cat.name ? cat.name.replace(/\s*\([^)]*\)/g, '').trim() : (cat.title || 'Váy Cưới');
+            return {
+              id: slug,
+              title: cleanTitle,
+              rawName: cat.name,
+              description:
+                cat.description && !cat.description.startsWith('Danh mục')
+                  ? cat.description
+                  : DEFAULT_DESC_MAP[slug] || cat.description || 'Tuyệt tác thiết kế độc bản Atelier UniBridal 2026.',
+              image:
+                cat.image && cat.image.trim()
+                  ? cat.image
+                  : DEFAULT_IMAGE_MAP[slug] || `/assets/dresses/dress_0${(idx % 5) + 1}.jpg`,
+              fallback: DEFAULT_FALLBACK_MAP[slug] || card1Img,
+              count: cat.dressCount !== undefined ? cat.dressCount : 5,
+            };
           });
-          setCounts((prev) => ({ ...prev, ...tally }));
+          setSilhouettes(mapped);
         }
       })
       .catch(() => {});
@@ -112,24 +134,27 @@ const SilhouetteShowcase = ({ onSelectSilhouette }) => {
     <section id="silhouettes" className="py-20 bg-white">
       <div className="max-w-[1280px] mx-auto px-6 sm:px-8">
         {/* Header Section */}
-        <div className="mb-10 sm:mb-12 flex flex-col sm:flex-row sm:items-end sm:justify-between gap-4">
-          <div>
-            <span className="font-jakarta text-[11.5px] font-semibold tracking-[0.25em] text-[#B26B74] uppercase block mb-2">
-              BỘ SƯU TẬP PHOM DÁNG HAUTE COUTURE ĐỘC QUYỀN
-            </span>
-            <h2 className="font-playfair text-[32px] sm:text-[40px] leading-[1.15] font-normal tracking-tight text-[#2C2523] m-0">
-              Dáng Váy Tuyệt Tác Cho Nàng Dâu
-            </h2>
-          </div>
-          <p className="text-[#695C4E] font-jakarta text-[13.5px] max-w-md m-0 font-light leading-relaxed">
-            Hệ thống quy tụ các phom dáng và lễ phục cưới cao cấp, chuẩn hóa kích cỡ và số lượng trực tiếp từ cơ sở dữ liệu Atelier 2026.
-          </p>
+        <div className="mb-10 sm:mb-12">
+          <span className="font-jakarta text-[11.5px] font-semibold tracking-[0.25em] text-[#B26B74] uppercase block mb-2">
+            BỘ SƯU TẬP PHOM DÁNG HAUTE COUTURE ĐỘC QUYỀN
+          </span>
+          <h2 className="font-playfair text-[32px] sm:text-[40px] leading-[1.15] font-normal tracking-tight text-[#2C2523] m-0">
+            Dáng Váy Tuyệt Tác Cho Nàng Dâu
+          </h2>
         </div>
 
-        {/* 8 Cards Grid (4x2 Responsive) */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-6">
-          {SILHOUETTES_CONFIG.map((item) => {
-            const countLabel = item.customTag || `${counts[item.id] || item.defaultCount} MẪU ĐỘC BẢN`;
+        {/* Dynamic Cards Grid */}
+        <div
+          className={`grid ${
+            silhouettes.length === 5
+              ? 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-5'
+              : silhouettes.length === 4
+              ? 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-4'
+              : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-6'
+          } gap-5 sm:gap-6`}
+        >
+          {silhouettes.map((item) => {
+            const countLabel = `${item.count || 5} MẪU ĐỘC BẢN`;
 
             return (
               <div
@@ -160,8 +185,8 @@ const SilhouetteShowcase = ({ onSelectSilhouette }) => {
                 </div>
 
                 {/* Bottom Content */}
-                <div className="absolute bottom-6 left-5 right-5 text-left">
-                  <h3 className="font-playfair text-[20px] sm:text-[22px] lg:text-[20px] xl:text-[22.5px] font-normal text-white mb-2 leading-snug tracking-tight whitespace-nowrap">
+                <div className="absolute bottom-6 left-3.5 right-3.5 sm:left-4 sm:right-4 text-left">
+                  <h3 className="font-playfair text-[17px] sm:text-[18px] lg:text-[14.5px] xl:text-[16.5px] 2xl:text-[19px] font-normal text-white mb-2 leading-snug tracking-tight whitespace-nowrap">
                     {item.title}
                   </h3>
                   <p className="font-jakarta text-[13px] font-light text-[#E0D5D1] leading-[20px] mb-4 opacity-90 line-clamp-2">

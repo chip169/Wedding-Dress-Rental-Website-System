@@ -1,8 +1,6 @@
 import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import {
-  Sparkles,
-  Scissors,
+import { Scissors,
   Crown,
   Heart,
   ShieldCheck,
@@ -16,8 +14,7 @@ import {
   Award,
   CheckCircle2,
   Building2,
-  Mail
-} from 'lucide-react';
+  Mail } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 
@@ -37,7 +34,7 @@ export default function AboutUsPage() {
       <main className="flex-1 w-full pb-20">
 
         {/* ========================================================================= */}
-        {/* SECTION 1: HERO - TRIẾT LÝ NGHỆ THUẬT & DI SẢN UNIBRIDAL                */}
+        {/* SECTION 1: HERO - TRIẾT LÝ NGHỆ THUẬT VÀ DI SẢN UNIBRIDAL                */}
         {/* ========================================================================= */}
         <section className="relative pt-12 sm:pt-16 pb-12 sm:pb-16 px-6 sm:px-8 overflow-hidden bg-gradient-to-b from-[#FFF7F5] via-[#FFFBF8] to-[#FDFBF7]">
           {/* Subtle Ambient Radial Glows */}
@@ -55,7 +52,7 @@ export default function AboutUsPage() {
 
             {/* Main Headline */}
             <h1 className="font-playfair text-[38px] sm:text-[48px] md:text-[54px] font-normal leading-[1.18] text-[#2C2523] m-0 mb-4 tracking-tight">
-              Triết Lý Nghệ Thuật &{' '}
+              Triết Lý Nghệ Thuật và{' '}
               <span className="italic text-[#B8737D] font-serif block sm:inline">
                 Di Sản UniBridal
               </span>
@@ -95,7 +92,7 @@ export default function AboutUsPage() {
             {/* 4 Statistics Cards Grid */}
             <div className="grid grid-cols-2 md:grid-cols-4 gap-3.5 sm:gap-6 mt-6 sm:mt-8">
               {[
-                { number: '100%', label: 'Lụa Tơ Tằm & Ren Pháp' },
+                { number: '100%', label: 'Lụa Tơ Tằm và Ren Pháp' },
                 { number: '300+', label: 'Giờ May Đo Thủ Công' },
                 { number: '12+', label: 'Năm Di Sản Thương Hiệu' },
                 { number: '5.000+', label: 'Nàng Dâu Đã Tỏa Sáng' },
@@ -129,7 +126,7 @@ export default function AboutUsPage() {
                 <div className="relative rounded-[28px] overflow-hidden shadow-[0px_16px_40px_rgba(44,37,35,0.08)] border border-[#EEDECF]">
                   <img
                     src={aboutFounderImg}
-                    alt="Elena Nguyen - Founder & Creative Director UniBridal"
+                    alt="Elena Nguyen - Founder và Creative Director UniBridal"
                     className="w-full h-[460px] sm:h-[540px] object-cover object-top hover:scale-[1.02] transition-transform duration-500"
                   />
                 </div>
@@ -141,7 +138,7 @@ export default function AboutUsPage() {
                   </div>
                   <div>
                     <span className="block font-jakarta text-[10px] font-bold uppercase tracking-[1.4px] text-[#B8737D]">
-                      FOUNDER & CREATIVE DIRECTOR
+                      FOUNDER VÀ CREATIVE DIRECTOR
                     </span>
                     <span className="block font-playfair text-[16px] font-bold text-[#2C2523]">
                       Elena Nguyen
@@ -181,7 +178,7 @@ export default function AboutUsPage() {
                     "Một chiếc váy cưới đẹp không chỉ nằm ở sự lộng lẫy, mà ở cảm xúc tự hào được thắp sáng trên gương mặt nàng dâu khi bước vào lễ đường."
                   </p>
                   <div className="font-jakarta text-[11.5px] font-bold text-[#804E55] tracking-wider uppercase">
-                    Elena Nguyen — Nhà Sáng Lập & Giám Đốc Sáng Tạo UniBridal
+                    Elena Nguyen — Nhà Sáng Lập và Giám Đốc Sáng Tạo UniBridal
                   </div>
                 </div>
 
@@ -192,7 +189,7 @@ export default function AboutUsPage() {
                   </div>
                   <span className="text-[#A49394] text-[13px]">•</span>
                   <span className="font-jakarta text-[12.5px] text-[#695C4E]">
-                    Paris & Hà Nội Atelier
+                    Paris và Hà Nội Atelier
                   </span>
                 </div>
               </div>
@@ -227,7 +224,7 @@ export default function AboutUsPage() {
               {[
                 {
                   icon: Gem,
-                  title: 'Lụa & Ren Pháp Ý',
+                  title: 'Lụa và Ren Pháp Ý',
                   desc: '100% chất liệu cao cấp nhập khẩu từ các xưởng dệt truyền thống tại Lyon và Como, mang lại cảm giác mềm mại và sang trọng tuyệt đối.',
                 },
                 {
@@ -286,7 +283,7 @@ export default function AboutUsPage() {
         {/* ========================================================================= */}
         <section className="py-20 sm:py-28 px-6 sm:px-8">
           <div className="max-w-[1100px] mx-auto">
-            {/* Tag & Title */}
+            {/* Tag và Title */}
             <div className="text-center mb-16 sm:mb-20">
               <span className="font-jakarta text-[11px] sm:text-[11.5px] font-bold text-[#BA7A83] uppercase tracking-[0.24em] block mb-3">
                 HÀNH TRÌNH TỎA SÁNG
@@ -318,7 +315,7 @@ export default function AboutUsPage() {
                     side: 'right',
                     title: 'Ra Mắt Flagship Atelier Tại Việt Nam',
                     desc: 'Khai trương hai không gian Private Suite độc bản tại Tràng Tiền (Hà Nội) và Nam Kỳ Khởi Nghĩa (TP.HCM), mang chuẩn dịch vụ may đo váy cưới châu Âu đến gần hơn với khách hàng.',
-                    tag: 'FLAGSHIP HANOI & SAIGON',
+                    tag: 'FLAGSHIP HANOI VÀ SAIGON',
                     isActive: false,
                   },
                   {
@@ -420,7 +417,7 @@ export default function AboutUsPage() {
         </section>
 
         {/* ========================================================================= */}
-        {/* SECTION 5: KẾT NỐI CÙNG UNIBRIDAL (SHOWROOM & SALON)                     */}
+        {/* SECTION 5: KẾT NỐI CÙNG UNIBRIDAL (SHOWROOM VÀ SALON)                     */}
         {/* ========================================================================= */}
         <section className="pt-16 sm:pt-20 pb-20 sm:pb-24 px-6 sm:px-8 bg-[#FAF6F3] border-t border-[#EAE0DC]">
           <div className="max-w-[1080px] mx-auto text-center">
@@ -428,7 +425,7 @@ export default function AboutUsPage() {
             <div className="inline-flex items-center gap-1.5 px-3.5 py-1 rounded-full bg-white border border-[#F3D8D8] shadow-xs mb-3.5">
               <span className="w-1.5 h-1.5 rounded-full bg-[#B8737D]"></span>
               <span className="font-jakarta font-bold text-[10.5px] uppercase tracking-[1.4px] text-[#B8737D]">
-                LIÊN HỆ & HỆ THỐNG SHOWROOM
+                LIÊN HỆ VÀ HỆ THỐNG SHOWROOM
               </span>
             </div>
 

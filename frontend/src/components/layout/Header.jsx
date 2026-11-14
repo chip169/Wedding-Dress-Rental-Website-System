@@ -69,7 +69,7 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
     },
     {
       title: 'Váy Cưới Lụa Tối Giản',
-      subtitle: 'Lụa Mikado Ý & Satin tơ tằm thanh tao',
+      subtitle: 'Lụa Mikado Ý và Satin tơ tằm thanh tao',
       href: '/collection?category=silk-gown',
     },
     {
@@ -280,7 +280,7 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
               title="Giỏ thuê váy"
             >
               <ShoppingBag className="w-[18px] h-[18px] stroke-[1.8] text-[#2C2523]" />
-              {isCartPage && cartCount > 0 && (
+              {cartCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-[#B8737D] text-white font-jakarta text-[9.5px] font-bold flex items-center justify-center leading-none shadow-xs">
                   {cartCount}
                 </span>
@@ -307,7 +307,7 @@ const Header = ({ onOpenBooking, onLogout, cartCount: propCartCount, wishlistCou
               title="Tủ đồ trong mơ (Danh sách yêu thích)"
             >
               <Heart className="w-[18px] h-[18px] stroke-[1.8] text-[#2C2523]" />
-              {isWishlistPage && wishlistCount > 0 && (
+              {wishlistCount > 0 && (
                 <span className="absolute -top-1 -right-1 min-w-[16px] h-[16px] px-1 rounded-full bg-[#B8737D] text-white font-jakarta text-[9.5px] font-bold flex items-center justify-center leading-none shadow-xs">
                   {wishlistCount}
                 </span>

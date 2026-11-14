@@ -1,11 +1,13 @@
-import Order from '../models/Order.model.js';
-import Payment from '../models/Payment.model.js';
-import Dress from '../models/Dress.model.js';
-import User from '../models/User.model.js';
-import Role from '../models/Role.model.js';
-import Appointment from '../models/Appointment.model.js';
-import { reportBounds, previousBounds, reportBuckets, isInPeriod, paymentDate, sumPayments, growthRate, revenueChart, rankedDresses } from '../utils/adminReportMetrics.js';
-const REVENUE_TYPES = ['rental_payment', 'damage_compensation'];
+import Order from '../models/orderModel.js';
+import Payment from '../models/paymentModel.js';
+import Dress from '../models/dressModel.js';
+import User from '../models/userModel.js';
+import Appointment from '../models/appointmentModel.js';
+import ReturnInspection from '../models/returnInspectionModel.js';
+import {
+    reportBounds, previousBounds, reportBuckets, isInPeriod, paymentDate, sumPayments, growthRate,
+    revenueChart, rankedDresses, depositBalance, retainedDepositCharges, revenueTotals,
+} from '../utils/adminReportMetrics.js';
 const DEPOSIT_ORDER_STATUSES = ['deposit_paid', 'preparing', 'delivered', 'renting', 'returned', 'completed', 'complete'];
 const effectiveDateFilter = (start, end) => ({ $or: [{ paidAt: { ...(start ? { $gte: start } : {}), $lt: end } }, { paidAt: null, createdAt: { ...(start ? { $gte: start } : {}), $lt: end } }] });
 export async function revenueReport(period = 'month') {
@@ -13,29 +15,43 @@ export async function revenueReport(period = 'month') {
         period = 'month';
     const { start, end } = reportBounds(period);
     const previous = previousBounds(period, start);
-    const [successful, payments, orders, dresses] = await Promise.all([
+    const [successful, payments, orders, dresses, inspections] = await Promise.all([
         Payment.find({ status: 'success', ...effectiveDateFilter(null, end) }).populate('orderId', 'orderCode items customerName shippingAddress totalRentPrice').select('orderId transactionType amount paidAt createdAt').lean(),
         // Load the complete selected period; client pagination and CSV use the same data.
         Payment.find(effectiveDateFilter(start, end)).sort({ paidAt: -1, createdAt: -1 }).populate('orderId', 'orderCode items customerName shippingAddress').populate('customerId', 'fullName').lean(),
         Order.find({ createdAt: { $gte: start, $lt: end } }).select('orderCode status items totalRentPrice createdAt').lean(),
         Dress.find({}).select('code name images').lean(),
+        ReturnInspection.find({
+            customerStatus: 'approved',
+            totalDeduction: { $gt: 0 },
+            $or: [{ customerConfirmedAt: { $lt: end } }, { customerConfirmedAt: null, refundedAt: { $lt: end } }],
+        }).select('orderId totalDeduction latePenaltyFee customerConfirmedAt refundedAt').lean(),
     ]);
     const selected = successful.filter((p) => isInPeriod(paymentDate(p), start, end));
     const prior = successful.filter((p) => isInPeriod(paymentDate(p), previous.start, previous.end));
-    const revenue = sumPayments(selected, REVENUE_TYPES);
-    const rentalRevenue = sumPayments(selected, ['rental_payment']);
+    const charges = retainedDepositCharges(successful, inspections);
+    const selectedCharges = charges.filter((charge) => isInPeriod(charge.date, start, end));
+    const priorCharges = charges.filter((charge) => isInPeriod(charge.date, previous.start, previous.end));
+    const totals = revenueTotals(selected, selectedCharges);
+    const priorTotals = revenueTotals(prior, priorCharges);
     const depositPayment = sumPayments(selected, ['deposit_payment']);
-    const damagePayment = sumPayments(selected, ['damage_compensation']);
-    const depositsHeld = Math.max(0, sumPayments(successful, ['deposit_payment']) - sumPayments(successful, ['deposit_refund']));
-    const inflow = rentalRevenue + depositPayment + damagePayment;
-    const percent = (value) => inflow ? Math.round(value / inflow * 100) : 0;
+    const retained = charges.reduce((sum, charge) => sum + charge.damagePayment + charge.latePenaltyRevenue, 0);
+    const depositsHeld = Math.max(0, depositBalance(successful) - retained);
+    const percent = (value) => totals.revenue > 0 ? value / totals.revenue * 100 : 0;
     const activeOrders = orders.filter((o) => DEPOSIT_ORDER_STATUSES.includes(o.status));
     const recorded = new Set((await Payment.distinct('orderId', { orderId: { $in: activeOrders.map((o) => o._id) }, transactionType: 'deposit_payment', status: 'success' })).map(String));
-    return { period, revenue, rentalRevenue, depositPayment, damagePayment, depositsHeld,
+    return { period, ...totals, depositPayment, depositsHeld,
         orders: orders.length, activeOrdersCount: activeOrders.length,
-        orderValue: activeOrders.reduce((s, o) => s + o.totalRentPrice, 0), growthRate: growthRate(revenue, sumPayments(prior, REVENUE_TYPES)),
-        financialBreakdown: { rentalRevenue, depositPayment, damagePayment, depositsHeld, rentalPercentage: percent(rentalRevenue), depositPercentage: percent(depositPayment), damagePercentage: percent(damagePayment) },
-        topDresses: rankedDresses(selected, dresses), chart: revenueChart(selected, orders, period, start, end),
+        orderValue: activeOrders.reduce((s, o) => s + o.totalRentPrice, 0), growthRate: growthRate(totals.revenue, priorTotals.revenue),
+        financialBreakdown: {
+            rentalRevenue: totals.rentalRevenue,
+            damagePayment: totals.damagePayment,
+            latePenaltyRevenue: totals.latePenaltyRevenue,
+            rentalPercentage: percent(totals.rentalRevenue),
+            damagePercentage: percent(totals.damagePayment),
+            latePenaltyPercentage: percent(totals.latePenaltyRevenue),
+        },
+        topDresses: rankedDresses(selected, dresses), chart: revenueChart(selected, orders, period, start, end, selectedCharges),
         ordersMissingDepositTransaction: activeOrders.filter((o) => !recorded.has(String(o._id))).map((o) => o.orderCode),
         transactions: payments.map((p) => ({ id: String(p._id), code: p.transactionCode || `TXN-${String(p._id).slice(-8).toUpperCase()}`,
             date: paymentDate(p) ? new Date(paymentDate(p)).toISOString() : null,
@@ -52,14 +68,14 @@ export async function dashboard(period = 'month') {
     today.setHours(0, 0, 0, 0);
     const tomorrow = new Date(today);
     tomorrow.setDate(tomorrow.getDate() + 1);
-    const [report, orders, customerRole, maintenance, totalAppointments, todayAppointments, totalUsers] = await Promise.all([
+    const [report, orders, maintenance, totalAppointments, todayAppointments, totalUsers, members] = await Promise.all([
         revenueReport(period), Order.find({ createdAt: { $gte: start, $lt: end } }).select('status totalRentPrice createdAt').lean(),
-        Role.findOne({ code: 'CUSTOMER' }).select('_id').lean(), Dress.countDocuments({ status: 'maintenance' }),
+        Dress.countDocuments({ status: 'maintenance' }),
         Appointment.countDocuments({ appointmentDate: { $gte: start, $lt: end }, status: { $ne: 'cancelled' } }),
         Appointment.countDocuments({ appointmentDate: { $gte: today, $lt: tomorrow }, status: { $ne: 'cancelled' } }),
         User.countDocuments({}),
+        User.countDocuments({ role: 'customer', isActive: true }),
     ]);
-    const members = customerRole ? await User.countDocuments({ roleId: customerRole._id, isActive: true }) : 0;
     const buckets = reportBuckets(period, start, end);
     const ordersPipeline = Object.fromEntries(['deposit_paid', 'preparing', 'delivered', 'renting', 'returned', 'completed'].map((status) => [status, orders.filter((order) => order.status === status || status === 'completed' && order.status === 'complete').length]));
     return { period, revenue: report.revenue, growthRate: report.growthRate, orderValue: report.orderValue, totalOrders: orders.length, completedOrders: ordersPipeline.completed,

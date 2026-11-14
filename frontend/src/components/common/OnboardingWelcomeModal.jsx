@@ -1,6 +1,6 @@
 import React, { useEffect } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Sparkles, Ruler, Calendar, ArrowRight, X, ShieldCheck, HeartHandshake } from 'lucide-react';
+import { Crown, Ruler, Calendar, ArrowRight, X, ShieldCheck, HeartHandshake } from 'lucide-react';
 
 export default function OnboardingWelcomeModal({ isOpen, onClose, userName }) {
   const navigate = useNavigate();
@@ -46,7 +46,7 @@ export default function OnboardingWelcomeModal({ isOpen, onClose, userName }) {
         {/* Top Decorative Banner */}
         <div className="bg-gradient-to-r from-[#733F49] via-[#8E525E] to-[#B8737D] px-6 sm:px-8 pt-7 pb-6 text-white text-center relative">
           <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-white/15 backdrop-blur-md text-[11px] font-bold tracking-[1.5px] uppercase text-[#FDEEE9] mb-3">
-            <Sparkles className="w-3.5 h-3.5 text-[#FAD2C0]" />
+            <Crown className="w-3.5 h-3.5 text-[#FAD2C0]" />
             ĐẶC QUYỀN THÀNH VIÊN ATELIER
           </div>
           <h2 className="font-playfair text-[24px] sm:text-[27px] font-semibold leading-snug m-0 text-white">
@@ -73,7 +73,7 @@ export default function OnboardingWelcomeModal({ isOpen, onClose, userName }) {
           <div className="space-y-2.5 text-[12.5px] text-[#4A3D3B] font-jakarta">
             <div className="flex items-start gap-2.5">
               <div className="w-5 h-5 rounded-full bg-[#FAF0EC] text-[#B8737D] flex items-center justify-center shrink-0 mt-0.5">
-                <Sparkles className="w-3 h-3" />
+                <Crown className="w-3 h-3" />
               </div>
               <span><strong>Gợi ý phom váy thông minh</strong>: Tự động đề xuất thiết kế tôn dáng nhất.</span>
             </div>

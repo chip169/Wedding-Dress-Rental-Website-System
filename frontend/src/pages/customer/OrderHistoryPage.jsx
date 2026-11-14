@@ -10,7 +10,7 @@ import SignedContractModal from '../../components/common/SignedContractModal';
 
 const tabs = [
   { id: 'all', label: 'Tất cả' },
-  { id: 'active', label: 'Đang thuê & Chờ nhận' },
+  { id: 'active', label: 'Đang thuê và Chờ nhận' },
   { id: 'complete', label: 'Đã hoàn tất' },
   { id: 'cancelled', label: 'Đã hủy' },
 ];
@@ -35,7 +35,7 @@ function OrderCard({ order, onOpenInspection, onOpenContract }) {
             <div>
               <h3 className="font-playfair text-xl">{order.dress}</h3>
               <p className="mt-1 text-xs text-[#766966]">
-                Phân loại: {order.category} • Size {order.size} • Form {order.style}
+                Phân loại: {order.category} • Size {order.size} • Màu {order.color || 'Trắng Sữa'} • Form {order.style}
               </p>
             </div>
             <strong className="text-base text-[#874e57]">{formatVnd(order.amount)}</strong>
@@ -58,7 +58,7 @@ function OrderCard({ order, onOpenInspection, onOpenContract }) {
         </div>
       </div>
 
-      {/* BANNER BIÊN BẢN KIỂM ĐỊNH & HOÀN CỌC NỔI BẬT */}
+      {/* BANNER BIÊN BẢN KIỂM ĐỊNH VÀ HOÀN CỌC NỔI BẬT */}
       {hasInspection && (
         <div className="mb-4 pt-1">
           {inspStatus === 'pending' && (
@@ -78,7 +78,7 @@ function OrderCard({ order, onOpenInspection, onOpenContract }) {
                   onClick={() => onOpenInspection(order)}
                   className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#733F49] to-[#8C4654] hover:from-[#5A2D35] hover:to-[#733F49] text-white text-xs font-bold transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg border-0 shrink-0"
                 >
-                  <span>Xem Biên Bản &amp; Xác Nhận Hoàn Cọc</span>
+                  <span>Xem Biên Bản và Xác Nhận Hoàn Cọc</span>
                 </button>
               </div>
 
@@ -105,7 +105,7 @@ function OrderCard({ order, onOpenInspection, onOpenContract }) {
                   onClick={() => onOpenInspection(order)}
                   className="px-3.5 py-1.5 rounded-xl bg-white border border-amber-300 text-amber-900 text-xs font-bold hover:bg-amber-100 transition-colors cursor-pointer shadow-2xs"
                 >
-                  Xem Lại Biên Bản &amp; Khiếu Nại
+                  Xem Lại Biên Bản và Khiếu Nại
                 </button>
               </div>
               <p className="text-[12px] text-amber-800 m-0 italic bg-white/70 p-2 rounded-lg border border-amber-100">
@@ -311,7 +311,7 @@ export default function OrderHistoryPage() {
         )}
       </section>
 
-      {/* Modal Kiểm Định & Hoàn Cọc (Khách Hàng) */}
+      {/* Modal Kiểm Định và Hoàn Cọc (Khách Hàng) */}
       {selectedInspectionOrder && (
         <CustomerInspectionModal
           order={selectedInspectionOrder}

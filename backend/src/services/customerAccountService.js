@@ -1,9 +1,10 @@
 import mongoose from 'mongoose';
-import Order from '../models/Order.model.js';
-import User from '../models/User.model.js';
-import Contract from '../models/Contract.model.js';
-import ReturnInspection from '../models/ReturnInspection.model.js';
-import Payment from '../models/Payment.model.js';
+import Order from '../models/orderModel.js';
+import User from '../models/userModel.js';
+import Contract from '../models/contractModel.js';
+import ReturnInspection from '../models/returnInspectionModel.js';
+import Payment from '../models/paymentModel.js';
+import { sendRefundConfirmationEmail } from '../utils/sendEmail.js';
 const fail = (status, message) => { throw Object.assign(new Error(message), { statusCode: status }); };
 // Profile contacts are editable and cannot prove ownership of a guest order.
 // Personal endpoints only expose orders explicitly assigned to this account.
@@ -15,7 +16,7 @@ async function ownerFilter(userId) {
 }
 async function ownOrder(userOrId, identifier) {
     const identity = mongoose.isValidObjectId(identifier) ? { _id: identifier } : { orderCode: String(identifier).toUpperCase() };
-    const role = typeof userOrId === 'object' ? String(userOrId?.roleId?.code || userOrId?.role || '').toUpperCase() : '';
+    const role = typeof userOrId === 'object' ? String(userOrId?.role || '').toUpperCase() : '';
     if (['ADMIN', 'STAFF', 'MANAGER'].includes(role)) {
         const order = await Order.findOne(identity);
         if (!order) fail(404, 'Không tìm thấy thông tin đơn thuê.');
@@ -30,7 +31,7 @@ async function ownOrder(userOrId, identifier) {
 export async function assertOrderAccess(user, identifier) {
     if (!user?._id)
         fail(401, 'Vui lòng đăng nhập để xem thông tin đơn thuê.');
-    const role = String(user.roleId?.code || user.role || '').toUpperCase();
+    const role = String(user.role || '').toUpperCase();
     if (!['ADMIN', 'STAFF'].includes(role))
         await ownOrder(user._id, identifier);
 }
@@ -49,7 +50,11 @@ export async function listOrders(userId) {
             status = 'completed';
             Order.updateOne({ _id: order._id }, { $set: { status: 'completed' } }).catch(() => {});
         }
-        return { ...order, status, inspection: insp };
+        const items = (order.items || []).map((it) => ({
+            ...it,
+            color: it.color || it.fabric || order.color || 'Trắng Sữa',
+        }));
+        return { ...order, items, status, inspection: insp };
     });
 }
 export async function orderDetail(userId, identifier) {
@@ -58,7 +63,7 @@ export async function orderDetail(userId, identifier) {
     const [inspection, contract] = await Promise.all([
         getInspection(userId, identifier),
         Contract.findOne({ orderId: order._id })
-            .select('contractCode templateName customerName phone idCard status signedAt signedMethod contractPdfUrl clauses')
+            .select('contractCode templateName customerName phone idCard status signedAt signedMethod contractPdfUrl clauses contractSignature')
             .lean(),
     ]);
     const orderObj = order.toObject();
@@ -67,7 +72,11 @@ export async function orderDetail(userId, identifier) {
         orderObj.status = 'completed';
         Order.updateOne({ _id: order._id }, { $set: { status: 'completed' } }).catch(() => {});
     }
-    return { ...orderObj, inspection, contract };
+    const items = (orderObj.items || []).map((it) => ({
+        ...it,
+        color: it.color || it.fabric || orderObj.color || 'Trắng Sữa',
+    }));
+    return { ...orderObj, items, inspection, contract };
 }
 export async function cancelOrder(userId, identifier) {
     const order = await ownOrder(userId, identifier);
@@ -112,8 +121,36 @@ export async function confirmInspection(userId, identifier, bankData = {}) {
         fail(409, 'Biên bản vừa thay đổi. Vui lòng tải lại.');
     // Khi khách ấn duyệt -> cập nhật đơn hàng thành hoàn tất (completed)
     order.status = 'completed';
+    order.completedAt = order.completedAt || new Date();
+    order.maintenanceUntil = new Date(Date.now() + 24 * 60 * 60 * 1000);
     await order.save();
-    // Completing the rental does not create a refund transaction.
+
+    await Contract.findOneAndUpdate(
+        { $or: [{ orderId: order._id }, { contractCode: order.contractCode }] },
+        { status: 'completed' }
+    ).catch(() => {});
+
+    try {
+        let customerEmail = order.customerEmail || order.email;
+        let customerName = order.customerName || order.brideName || 'Quý khách';
+        if (!customerEmail && order.customerId) {
+            const cust = await User.findById(order.customerId).lean();
+            if (cust) {
+                customerEmail = cust.email;
+                customerName = cust.fullName || customerName;
+            }
+        }
+        if (customerEmail) {
+            sendRefundConfirmationEmail({
+                to: customerEmail,
+                fullName: customerName,
+                orderCode: order.orderCode,
+                finalRefundAmount: updated.finalRefundAmount,
+                bankDetails: updated.refundBankDetails,
+            }).catch(() => {});
+        }
+    } catch {}
+
     return { order: order.toObject(), inspection: await getInspection(userId, identifier) };
 }
 export async function disputeInspection(userId, identifier, reason) {

@@ -70,7 +70,8 @@ export default function DashboardChart({ labels, primary, secondary = [], trend 
   const y = (value) => PLOT_BOTTOM - (Math.min(max, value) / max) * plotHeight;
   const points = trend.map((value, index) => `${PLOT_LEFT + groupWidth * (index + .5)},${y(value)}`).join(' ');
   const barOnly = chartType === 'bar';
-  const legendLabels = [primaryLabel, !barOnly && secondaryLabel, !barOnly && trendLabel].filter(Boolean);
+  const showTrend = !barOnly && trend.length > 0;
+  const legendLabels = [primaryLabel, !barOnly && secondaryLabel, showTrend && trendLabel].filter(Boolean);
   const tooltipEnabled = barOnly && Array.isArray(tooltipValues) && typeof formatTooltipValue === 'function';
   const tooltipVisible = tooltipEnabled && hoveredIndex !== null && labels[hoveredIndex] != null;
   const tooltipX = Math.max(PLOT_LEFT, Math.min(W - PLOT_RIGHT - 220, PLOT_LEFT + groupWidth * (hoveredIndex + .5) - 110));
@@ -82,7 +83,7 @@ export default function DashboardChart({ labels, primary, secondary = [], trend 
       <div className="ub-chart-legend" aria-label="Chú giải biểu đồ">
         <span><i className="ub-chart-dot primary" />{primaryLabel}</span>
         {!barOnly && <span><i className="ub-chart-dot secondary" />{secondaryLabel}</span>}
-        {!barOnly && <span><i className="ub-chart-line-key" />{trendLabel}</span>}
+        {showTrend && trendLabel && <span><i className="ub-chart-line-key" />{trendLabel}</span>}
       </div>
       <p className="ub-chart-scroll-hint"><MoveHorizontal size={14} /> Vuốt ngang để xem toàn bộ biểu đồ</p>
       <div className="ub-chart-scroll" role="region" tabIndex={0} onMouseLeave={() => setHoveredIndex(null)} aria-label={`Biểu đồ có thể cuộn ngang: ${legendLabels.join(', ')} theo ${labels.join(', ')}`}>
@@ -128,8 +129,8 @@ export default function DashboardChart({ labels, primary, secondary = [], trend 
               </g>
             );
           })}
-          {!barOnly && <polyline points={points} fill="none" stroke="#8c704d" strokeWidth="2.2" strokeDasharray={variant === 'admin' ? undefined : '3 4'} />}
-          {!barOnly && trend.map((value, index) => <circle key={index} cx={PLOT_LEFT + groupWidth * (index + .5)} cy={y(value)} r="3.4" fill="#fff" stroke="#9e6b55" strokeWidth="2" />)}
+          {showTrend && <polyline points={points} fill="none" stroke="#8c704d" strokeWidth="2.2" strokeDasharray={variant === 'admin' ? undefined : '3 4'} />}
+          {showTrend && trend.map((value, index) => <circle key={index} cx={PLOT_LEFT + groupWidth * (index + .5)} cy={y(value)} r="3.4" fill="#fff" stroke="#9e6b55" strokeWidth="2" />)}
           {tooltipVisible && (
             <g role="tooltip" pointerEvents="none" transform={`translate(${tooltipX}, ${tooltipY})`}>
               <rect width="220" height="58" rx="7" fill="#fff8f6" stroke="#d9b9bd" />

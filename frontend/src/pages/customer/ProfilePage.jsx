@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { useLocation } from 'react-router-dom';
 import { Alert, ConfigProvider, Form, Input, InputNumber } from 'antd';
-import { Ruler, IdCard, Sparkles, Lock } from 'lucide-react';
+import { Ruler, IdCard, Crown, Lock, CheckCircle2 } from 'lucide-react';
 import AccountLayout from '../../components/layout/AccountLayout';
 import { getProfile, saveProfile } from '../../services/profileService';
 import { useAuth } from '../../contexts/AuthContext';
@@ -157,7 +157,7 @@ export default function ProfilePage() {
       setSaved(updated);
       updateUser(updated);
       form.setFieldsValue(updated);
-      notify('success', 'Đã cập nhật thông tin hồ sơ & số đo vóc dáng thành công.');
+      notify('success', 'Đã cập nhật thông tin hồ sơ và số đo vóc dáng thành công.');
     } catch (error) {
       notify('error', error.message || 'Không thể cập nhật hồ sơ. Vui lòng thử lại.');
     } finally { setSaving(false); }
@@ -249,7 +249,22 @@ export default function ProfilePage() {
                 <Form.Item
                   label={<span className="font-semibold uppercase tracking-wider text-[11px]">Họ và tên</span>}
                   name="name"
-                  rules={[{ required: true, whitespace: true, message: 'Vui lòng nhập họ và tên của bạn.' }]}
+                  rules={[
+                    { required: true, whitespace: true, message: 'Vui lòng nhập họ và tên của bạn.' },
+                    { min: 2, message: 'Họ và tên phải có tối thiểu 2 ký tự.' },
+                    {
+                      validator(_, value) {
+                        if (!value) return Promise.resolve();
+                        if (/\d/.test(value)) {
+                          return Promise.reject(new Error('Họ và tên không được chứa chữ số.'));
+                        }
+                        if (!/^[\p{L}\s'-]+$/u.test(value)) {
+                          return Promise.reject(new Error('Họ và tên chỉ được chứa chữ cái và khoảng trắng.'));
+                        }
+                        return Promise.resolve();
+                      },
+                    },
+                  ]}
                 >
                   <Input placeholder="Nhập họ và tên cô dâu..." size="large" />
                 </Form.Item>
@@ -306,7 +321,7 @@ export default function ProfilePage() {
               </div>
             </div>
 
-            {/* 2. THÔNG TIN PHÁP LÝ & GIAO NHẬN LỄ PHỤC */}
+            {/* 2. THÔNG TIN PHÁP LÝ VÀ GIAO NHẬN LỄ PHỤC */}
             <div className="pt-5 border-t border-[#eee2df] pb-3 mb-4">
               <div className="flex items-center gap-2 mb-1">
                 <IdCard className="w-4 h-4 text-[#874e57]" />
@@ -335,7 +350,7 @@ export default function ProfilePage() {
               </Form.Item>
             </div>
 
-            {/* 3. THÔNG SỐ VÓC DÁNG & SỐ ĐO CÔ DÂU (ANCHOR: #measurements) */}
+            {/* 3. THÔNG SỐ VÓC DÁNG VÀ SỐ ĐO CÔ DÂU (ANCHOR: #measurements) */}
             <div id="measurements" className="pt-5 border-t border-[#eee2df] pb-2 scroll-mt-24">
               <div className="flex items-center justify-between mb-1">
                 <div className="flex items-center gap-2">
@@ -345,7 +360,7 @@ export default function ProfilePage() {
                   </h3>
                 </div>
                 <span className="text-[11px] font-semibold text-[#2E7D32] bg-[#E8F5E9] px-2.5 py-0.5 rounded-full flex items-center gap-1">
-                  <Sparkles className="w-3 h-3 text-[#2E7D32]" /> Tinh chỉnh may đo miễn phí
+                  <Crown className="w-3 h-3 text-[#2E7D32]" /> Tinh chỉnh may đo miễn phí
                 </span>
               </div>
 
@@ -360,7 +375,7 @@ export default function ProfilePage() {
 
             <p className="text-xs text-emerald-700 font-medium flex items-center gap-1.5 mt-4">
               <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 shrink-0" />
-              <span>Toàn bộ thông tin hồ sơ &amp; số đo vóc dáng được lưu trữ trực tiếp và đồng bộ trên cơ sở dữ liệu hệ thống.</span>
+              <span>Toàn bộ thông tin hồ sơ và số đo vóc dáng được lưu trữ trực tiếp và đồng bộ trên cơ sở dữ liệu hệ thống.</span>
             </p>
 
             {/* Submit / Reset Actions */}

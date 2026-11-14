@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import {
   Table,
@@ -11,24 +11,23 @@ import {
   Empty,
   Spin,
 } from 'antd';
-import {
-  FolderTree,
-  Plus,
+import { Plus,
+  RefreshCw,
   Search,
   Edit3,
   Trash2,
-  RefreshCw,
   Image as ImageIcon,
   CheckCircle2,
   XCircle,
+  X,
   Eye,
   Layers,
-  Sparkles,
+  Crown,
   LayoutGrid,
   Table as TableIcon,
   Shirt,
   Info,
-} from 'lucide-react';
+  Upload } from 'lucide-react';
 import {
   getCategoriesApi,
   createCategoryApi,
@@ -37,15 +36,6 @@ import {
   deleteCategoryApi,
 } from '../../services/categoryService';
 
-// Thư viện ảnh mẫu có sẵn tại showroom để admin dễ dàng chọn nhanh
-const PRESET_IMAGES = [
-  { label: 'Ballgown Công Chúa', url: '/assets/dresses/dress_01.jpg' },
-  { label: 'Mermaid Đuôi Cá', url: '/assets/dresses/dress_02.jpg' },
-  { label: 'A-Line Chữ A', url: '/assets/dresses/dress_03.jpg' },
-  { label: 'Silk Gown Lụa Tối Giản', url: '/assets/dresses/dress_04.jpg' },
-  { label: 'Princess Hoàng Gia', url: '/assets/dresses/dress_05.jpg' },
-  { label: 'Traditional Áo Dài', url: '/assets/dresses/dress_06.jpg' },
-];
 
 // Helper tự động tạo slug từ tên tiếng Việt
 function generateSlug(text) {
@@ -77,9 +67,57 @@ export default function CategoryManagement() {
   const [formName, setFormName] = useState('');
   const [formSlug, setFormSlug] = useState('');
   const [formDesc, setFormDesc] = useState('');
-  const [formImage, setFormImage] = useState('/assets/dresses/dress_01.jpg');
+  const [formImage, setFormImage] = useState('');
   const [formIsActive, setFormIsActive] = useState(true);
   const [formErrors, setFormErrors] = useState({});
+  const fileInputRef = useRef(null);
+
+  // Xử lý upload ảnh từ máy tính của admin
+  const handleImageUpload = (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+
+    if (!file.type.startsWith('image/')) {
+      message.error('Vui lòng chọn đúng tệp định dạng hình ảnh (JPG, PNG, WEBP)!');
+      return;
+    }
+
+    if (file.size > 5 * 1024 * 1024) {
+      message.error('Dung lượng ảnh vượt quá 5MB. Vui lòng chọn ảnh nhỏ hơn!');
+      return;
+    }
+
+    const reader = new FileReader();
+    reader.onload = (event) => {
+      const img = new Image();
+      img.onload = () => {
+        const maxDim = 800;
+        let { width, height } = img;
+        if (width > maxDim || height > maxDim) {
+          if (width > height) {
+            height = Math.round((height * maxDim) / width);
+            width = maxDim;
+          } else {
+            width = Math.round((width * maxDim) / height);
+            height = maxDim;
+          }
+        }
+        const canvas = document.createElement('canvas');
+        canvas.width = width;
+        canvas.height = height;
+        const ctx = canvas.getContext('2d');
+        ctx.drawImage(img, 0, 0, width, height);
+        setFormImage(canvas.toDataURL('image/jpeg', 0.8));
+        message.success(`Đã tải ảnh "${file.name}" lên thành công!`);
+      };
+      img.src = event.target.result;
+    };
+    reader.onerror = () => {
+      message.error('Có lỗi xảy ra khi đọc tệp ảnh.');
+    };
+    reader.readAsDataURL(file);
+    e.target.value = '';
+  };
 
   // Tải danh sách danh mục
   const fetchCategories = useCallback(async () => {
@@ -105,7 +143,7 @@ export default function CategoryManagement() {
     setFormName('');
     setFormSlug('');
     setFormDesc('');
-    setFormImage('/assets/dresses/dress_01.jpg');
+    setFormImage('');
     setFormIsActive(true);
     setFormErrors({});
     setIsModalOpen(true);
@@ -116,18 +154,15 @@ export default function CategoryManagement() {
     setFormName(cat.name || '');
     setFormSlug(cat.slug || '');
     setFormDesc(cat.description || '');
-    setFormImage(cat.image || '/assets/dresses/dress_01.jpg');
+    setFormImage(cat.image || '');
     setFormIsActive(cat.isActive !== false);
     setFormErrors({});
     setIsModalOpen(true);
   };
 
-  // Tự động gợi ý slug khi người dùng gõ tên danh mục (chỉ khi tạo mới hoặc chưa sửa slug thủ công)
+  // Cập nhật tên danh mục (không tự động gõ theo vào ô slug để người dùng tự do nhập)
   const handleNameChange = (val) => {
     setFormName(val);
-    if (!editingCategory) {
-      setFormSlug(generateSlug(val));
-    }
     if (formErrors.name) {
       setFormErrors((prev) => ({ ...prev, name: '' }));
     }
@@ -138,7 +173,12 @@ export default function CategoryManagement() {
     e.preventDefault();
     const errors = {};
     if (!formName.trim()) errors.name = 'Vui lòng nhập tên danh mục';
-    if (!formSlug.trim()) errors.slug = 'Vui lòng nhập đường dẫn (slug)';
+
+    let finalSlug = formSlug.trim();
+    if (!finalSlug && formName.trim()) {
+      finalSlug = generateSlug(formName.trim());
+    }
+    if (!finalSlug) errors.slug = 'Vui lòng nhập đường dẫn (slug)';
 
     if (Object.keys(errors).length > 0) {
       setFormErrors(errors);
@@ -149,7 +189,7 @@ export default function CategoryManagement() {
     try {
       const payload = {
         name: formName.trim(),
-        slug: formSlug.trim(),
+        slug: finalSlug,
         description: formDesc.trim(),
         image: formImage.trim() || '/assets/dresses/dress_01.jpg',
         isActive: formIsActive,
@@ -250,7 +290,7 @@ export default function CategoryManagement() {
   // Cấu hình bảng Ant Design
   const columns = [
     {
-      title: 'DANH MỤC & PHOM DÁNG',
+      title: 'DANH MỤC / PHOM DÁNG',
       dataIndex: 'name',
       key: 'name',
       width: 300,
@@ -371,32 +411,54 @@ export default function CategoryManagement() {
 
   return (
     <AdminLayout activeMenu="categories">
-      <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-        {/* Header & Tiêu đề trang */}
-        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#EFE5E1] pb-5">
+      {/* Stylesheet đồng bộ typography và bảng chuẩn Quản Lý Tài Khoản */}
+      <style>{`
+        .unibridal-admin-table .ant-table {
+          background: transparent !important;
+          font-family: inherit !important;
+        }
+        .unibridal-admin-table .ant-table-thead > tr > th {
+          background-color: #FAF5F2 !important;
+          border-bottom: 1px solid #F0E5DC !important;
+          color: #7A696B !important;
+          font-size: 11px !important;
+          font-weight: 700 !important;
+          letter-spacing: 1px !important;
+          text-transform: uppercase !important;
+          font-family: inherit !important;
+          padding: 16px 20px !important;
+        }
+        .unibridal-admin-table .ant-table-thead > tr > th::before {
+          display: none !important;
+        }
+        .unibridal-admin-table .ant-table-tbody > tr > td {
+          border-bottom: 1px solid #F6EDE9 !important;
+          padding: 14px 20px !important;
+          font-family: inherit !important;
+        }
+        .unibridal-admin-table .ant-table-tbody > tr:hover > td {
+          background-color: #FCF9F7 !important;
+        }
+      `}</style>
+
+      <div className="space-y-5">
+        {/* Header và Tiêu đề trang */}
+        <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="flex items-center gap-2">
-              <span className="px-2.5 py-0.5 rounded-full bg-[#FAF0EC] text-[#733F49] text-[11px] font-bold tracking-wider uppercase border border-[#F2D8D4]">
-                Phân Loại Sản Phẩm
-              </span>
-              <span className="text-xs text-gray-400">•</span>
-              <span className="text-xs text-gray-500 font-medium">Atelier Haute Couture</span>
-            </div>
-            <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-playfair flex items-center gap-2.5 mt-1">
-              <FolderTree className="w-7 h-7 text-[#733F49]" />
-              Quản Lý Danh Mục & Phom Dáng
+            <h1 className="font-playfair text-[32px] sm:text-[38px] font-normal text-[#5F2B36] tracking-tight leading-tight mb-2">
+              Quản Lý Danh Mục
             </h1>
-            <p className="text-sm text-gray-500 mt-1">
-              Quản lý các phân loại phom dáng váy cưới độc quyền (Ballgown, Mermaid, A-Line, Silk Gown...) và kiểm soát hiển thị trên toàn hệ thống.
+            <p className="text-[14px] text-[#7A6B6C] font-normal max-w-3xl leading-relaxed">
+              Quản lý các phân loại phom dáng váy cưới độc quyền (Ballgown, Mermaid, A-Line, Silk Gown...) và kiểm soát hiển thị trên toàn hệ thống UniBridal.
             </p>
           </div>
 
-          <div className="flex items-center gap-2.5 self-start sm:self-auto">
+          <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0">
             <button
               type="button"
               onClick={fetchCategories}
               disabled={loading}
-              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold transition shadow-xs cursor-pointer"
+              className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-[#E8DDD8] bg-white text-[#5F2B36] hover:bg-[#FAF0EC] text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-60"
             >
               <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
               <span>Làm mới</span>
@@ -405,22 +467,22 @@ export default function CategoryManagement() {
             <button
               type="button"
               onClick={openCreateModal}
-              className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl bg-[#733F49] hover:bg-[#5a3239] text-white text-xs font-bold transition shadow-md shadow-[#733F49]/20 cursor-pointer"
+              className="inline-flex items-center gap-2 px-5 py-3 rounded-xl bg-gradient-to-r from-[#733F49] to-[#8C4654] hover:from-[#5A2D35] hover:to-[#733F49] text-white text-xs font-bold transition-all cursor-pointer shadow-md border-0 shrink-0 self-start sm:self-auto"
             >
-              <Plus className="w-4 h-4" />
-              <span>Thêm Danh Mục Mới</span>
+              <Plus className="w-4 h-4 shrink-0" />
+              <span className="whitespace-nowrap">Thêm Danh Mục Mới</span>
             </button>
           </div>
         </div>
 
         {/* 4 Thẻ KPI Thông Số */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <div className="bg-white rounded-2xl border border-[#EFE5E1] p-5 shadow-xs">
-            <span className="text-[11px] font-bold tracking-wider text-gray-500 uppercase">
+          <div className="bg-white rounded-2xl border border-indigo-200 p-5 shadow-xs bg-radial from-indigo-50/60 to-transparent">
+            <span className="text-[11px] font-bold tracking-wider text-indigo-900 uppercase">
               TỔNG SỐ PHOM DÁNG
             </span>
-            <div className="text-3xl font-bold text-gray-900 mt-1">{stats.total}</div>
-            <div className="text-xs text-gray-500 mt-1">Phân loại váy cưới chuẩn</div>
+            <div className="text-3xl font-bold text-indigo-700 mt-1">{stats.total}</div>
+            <div className="text-xs text-indigo-800/80 mt-1">Phân loại váy cưới chuẩn</div>
           </div>
 
           <div className="bg-white rounded-2xl border border-emerald-200 p-5 shadow-xs bg-radial from-emerald-50/60 to-transparent">
@@ -434,12 +496,15 @@ export default function CategoryManagement() {
             <div className="text-xs text-emerald-800 mt-1">Hiển thị trong bộ lọc khách hàng</div>
           </div>
 
-          <div className="bg-white rounded-2xl border border-gray-200 p-5 shadow-xs bg-gray-50/40">
-            <span className="text-[11px] font-bold tracking-wider text-gray-500 uppercase">
-              TẠM ẨN
-            </span>
-            <div className="text-3xl font-bold text-gray-600 mt-1">{stats.inactive}</div>
-            <div className="text-xs text-gray-500 mt-1">Không xuất hiện trên trang chủ</div>
+          <div className="bg-white rounded-2xl border border-amber-200 p-5 shadow-xs bg-radial from-amber-50/60 to-transparent">
+            <div className="flex items-center justify-between">
+              <span className="text-[11px] font-bold tracking-wider text-amber-900 uppercase">
+                TẠM ẨN
+              </span>
+              <span className="w-2 h-2 rounded-full bg-amber-400"></span>
+            </div>
+            <div className="text-3xl font-bold text-amber-700 mt-1">{stats.inactive}</div>
+            <div className="text-xs text-amber-800/80 mt-1">Không xuất hiện trên trang chủ</div>
           </div>
 
           <div className="bg-white rounded-2xl border border-[#F2D8D4] p-5 shadow-xs bg-radial from-[#FAF0EC] to-transparent">
@@ -451,7 +516,7 @@ export default function CategoryManagement() {
           </div>
         </div>
 
-        {/* Thanh Tìm Kiếm & Chuyển Chế Độ Xem */}
+        {/* Thanh Tìm Kiếm và Chuyển Chế Độ Xem */}
         <div className="bg-white rounded-2xl border border-[#EFE5E1] p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
           <div className="relative flex-1 min-w-[260px] max-w-md">
             <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
@@ -639,8 +704,7 @@ export default function CategoryManagement() {
           footer={null}
           destroyOnClose
           title={
-            <div className="flex items-center gap-2 text-base font-bold text-gray-900 font-playfair pb-2 border-b border-gray-100">
-              <FolderTree className="w-5 h-5 text-[#733F49]" />
+            <div className="text-base font-bold text-gray-900 font-playfair pb-2 border-b border-gray-100">
               <span>{editingCategory ? 'Chỉnh Sửa Phom Dáng / Danh Mục' : 'Thêm Danh Mục Phom Dáng Mới'}</span>
             </div>
           }
@@ -667,9 +731,24 @@ export default function CategoryManagement() {
 
             {/* Slug URL */}
             <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                Slug nhận diện đường dẫn <span className="text-red-500">*</span>
-              </label>
+              <div className="flex items-center justify-between mb-1.5">
+                <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider">
+                  Slug nhận diện đường dẫn <span className="text-red-500">*</span>
+                </label>
+                {formName && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setFormSlug(generateSlug(formName));
+                      if (formErrors.slug) setFormErrors((p) => ({ ...p, slug: '' }));
+                    }}
+                    className="text-[11px] text-[#733F49] hover:underline font-semibold cursor-pointer"
+                    title="Tự động tạo slug chuẩn từ tên danh mục"
+                  >
+                    Gợi ý từ tên
+                  </button>
+                )}
+              </div>
               <input
                 type="text"
                 value={formSlug}
@@ -690,58 +769,24 @@ export default function CategoryManagement() {
               </p>
             </div>
 
-            {/* Hình ảnh đại diện */}
+            {/* Mô tả */}
             <div>
               <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                Hình ảnh đại diện phom dáng
-              </label>
-              <input
-                type="text"
-                value={formImage}
-                onChange={(e) => setFormImage(e.target.value)}
-                placeholder="Nhập đường dẫn ảnh hoặc chọn ảnh mẫu bên dưới"
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-xs text-gray-900 outline-none focus:bg-white focus:border-[#733F49] transition"
-              />
-
-              {/* Preset ảnh mẫu chọn nhanh */}
-              <div className="mt-2">
-                <span className="text-[11px] text-gray-500 font-medium">Chọn nhanh ảnh mẫu Haute Couture:</span>
-                <div className="grid grid-cols-6 gap-2 mt-1.5">
-                  {PRESET_IMAGES.map((preset, idx) => (
-                    <button
-                      key={idx}
-                      type="button"
-                      onClick={() => setFormImage(preset.url)}
-                      className={`h-14 rounded-lg overflow-hidden border-2 transition relative group cursor-pointer ${
-                        formImage === preset.url ? 'border-[#733F49] ring-2 ring-[#733F49]/20' : 'border-transparent hover:border-gray-300'
-                      }`}
-                      title={preset.label}
-                    >
-                      <img src={preset.url} alt={preset.label} className="w-full h-full object-cover" />
-                    </button>
-                  ))}
-                </div>
-              </div>
-            </div>
-
-            {/* Mô tả đặc trưng */}
-            <div>
-              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5">
-                Mô tả đặc trưng & chất liệu
+                Mô tả đặc trưng phom dáng
               </label>
               <textarea
-                rows={3}
+                rows={2}
                 value={formDesc}
                 onChange={(e) => setFormDesc(e.target.value)}
                 placeholder="Mô tả phom dáng, phong cách thiết kế, chất liệu voan Tulle, lụa Mikado, ren 3D..."
-                className="w-full px-3.5 py-2.5 rounded-xl border border-gray-200 bg-gray-50 text-xs text-gray-900 outline-none focus:bg-white focus:border-[#733F49] transition"
+                className="w-full px-3.5 py-2.5 rounded-xl border bg-gray-50 text-xs text-gray-900 outline-none focus:bg-white focus:border-[#733F49] transition resize-none border-gray-200"
               />
             </div>
 
             {/* Trạng thái hoạt động */}
             <div className="p-3 bg-gray-50 rounded-xl border border-gray-200 flex items-center justify-between">
               <div>
-                <div className="font-bold text-gray-900 text-xs">Kích hoạt hiển thị</div>
+                <div className="font-bold text-gray-800 text-xs">Kích hoạt hiển thị</div>
                 <div className="text-[11px] text-gray-500">Cho phép cô dâu lọc theo danh mục này trên website</div>
               </div>
               <Switch
@@ -749,6 +794,81 @@ export default function CategoryManagement() {
                 onChange={setFormIsActive}
                 className={formIsActive ? 'bg-[#733F49]' : 'bg-gray-300'}
               />
+            </div>
+
+            {/* Hình ảnh đại diện */}
+            <div>
+              <label className="block text-xs font-bold text-gray-700 uppercase tracking-wider mb-1.5 flex items-center justify-between">
+                <span>Hình ảnh đại diện phom dáng</span>
+                {formImage && (
+                  <span className="text-[11px] text-emerald-600 font-semibold flex items-center gap-1">
+                    <CheckCircle2 size={12} /> Đã có ảnh
+                  </span>
+                )}
+              </label>
+
+              {/* Input file ẩn tải ảnh từ máy */}
+              <input
+                type="file"
+                ref={fileInputRef}
+                accept="image/*"
+                onChange={handleImageUpload}
+                className="hidden"
+              />
+
+              {formImage ? (
+                <div className="relative group rounded-2xl overflow-hidden border-2 border-[#EFE2DC] bg-[#FAF5F2] p-2.5 flex items-center gap-4">
+                  <div className="w-24 h-24 rounded-xl overflow-hidden border border-[#EFE2DC] shrink-0 bg-white shadow-xs">
+                    <img
+                      src={formImage}
+                      alt="Ảnh đại diện"
+                      className="w-full h-full object-cover"
+                      onError={(e) => { e.target.src = '/assets/dresses/dress_01.jpg'; }}
+                    />
+                  </div>
+                  <div className="flex-1 min-w-0 pr-2">
+                    <div className="text-xs font-bold text-gray-800 truncate mb-1">
+                      Ảnh đại diện phom dáng
+                    </div>
+                    <p className="text-[11px] text-gray-500 line-clamp-2 leading-relaxed mb-2.5">
+                      Ảnh đã được tải lên từ máy tính của bạn và sẽ hiển thị trên trang chủ và bộ sưu tập.
+                    </p>
+                    <div className="flex items-center gap-2">
+                      <button
+                        type="button"
+                        onClick={() => fileInputRef.current?.click()}
+                        className="px-3 py-1.5 rounded-lg bg-white border border-gray-300 hover:border-[#733F49] text-[#733F49] text-xs font-bold transition flex items-center gap-1.5 cursor-pointer shadow-2xs"
+                      >
+                        <Upload size={13} />
+                        <span>Tải ảnh khác</span>
+                      </button>
+                      <button
+                        type="button"
+                        onClick={() => setFormImage('')}
+                        className="px-2.5 py-1.5 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-medium transition cursor-pointer"
+                        title="Xóa ảnh này"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              ) : (
+                <div
+                  onClick={() => fileInputRef.current?.click()}
+                  className="border-2 border-dashed border-gray-300 hover:border-[#733F49] bg-gray-50 hover:bg-[#FAF5F2] rounded-2xl p-6 text-center cursor-pointer transition-all group"
+                >
+                  <div className="w-12 h-12 rounded-2xl bg-white border border-gray-200 text-[#733F49] flex items-center justify-center mx-auto mb-2.5 shadow-2xs group-hover:scale-105 transition">
+                    <Upload size={20} />
+                  </div>
+                  <div className="text-xs font-bold text-gray-800">
+                    Bấm để tải ảnh lên từ máy tính
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1">
+                    Hỗ trợ định dạng JPG, PNG, WEBP (Tối đa 5MB)
+                  </p>
+                </div>
+              )}
             </div>
 
             {/* Nút hành động */}

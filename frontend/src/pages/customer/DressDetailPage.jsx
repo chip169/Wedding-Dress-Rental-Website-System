@@ -1,10 +1,10 @@
 import React, { useState, useEffect, useMemo } from 'react';
 import { useParams, Link, useNavigate } from 'react-router-dom';
 import {
-  Heart, Star, ShieldCheck, Sparkles, Scissors,
+  Heart, Star, ShieldCheck, Crown, Scissors,
   Ruler, Calendar, Clock, Phone, MessageCircle,
   ChevronRight, ChevronLeft, Check, CheckCircle2, Info, ArrowRight, Share2,
-  Sparkle, X, ShoppingBag, Headphones
+  X, ShoppingBag, Headphones, Sparkles
 } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
@@ -12,6 +12,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getDressById, getRelatedDresses, formatCurrencyVND } from '../../services/dressService';
 import { addToCart } from '../../services/cartService';
 import { isWishlisted as checkWishlisted, toggleWishlist, WISHLIST_EVENT } from '../../services/wishlistService';
+import { formatShortDate } from '../../utils/formatDate';
 
 // Import local photos for feedbacks
 import card1 from '../../assets/card1_elysian.jpg';
@@ -131,41 +132,36 @@ export default function DressDetailPage() {
   const [feedbackPage, setFeedbackPage] = useState(1);
   const feedbacksPerPage = 6;
 
-  // Rental date calculations
-  const [startDate, setStartDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 5);
-    return d.toISOString().split('T')[0];
-  });
-  const [endDate, setEndDate] = useState(() => {
-    const d = new Date();
-    d.setDate(d.getDate() + 9);
-    return d.toISOString().split('T')[0];
-  });
-
   // Load dress data whenever URL parameter `id` changes
   useEffect(() => {
     let isMounted = true;
     setLoading(true);
 
     const loadData = async () => {
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-      const targetId = id || '1';
-      const result = await getDressById(targetId);
-      const related = await getRelatedDresses(result.data ? result.data.id : targetId);
+      try {
+        window.scrollTo({ top: 0, behavior: 'smooth' });
+        const targetId = id || '1';
+        const result = await getDressById(targetId);
+        const related = await getRelatedDresses(result.data ? result.data.id : targetId);
 
-      if (isMounted) {
-        if (result.success && result.data) {
-          setDress(result.data);
-          setSelectedImageIndex(0);
-          setSelectedColor(result.data.colors?.[0] || null);
-          setSelectedSize(result.data.sizes?.[1]?.id || 'S');
-          setIsWishlisted(checkWishlisted(result.data.id));
+        if (isMounted) {
+          if (result.success && result.data) {
+            setDress(result.data);
+            setSelectedImageIndex(0);
+            setSelectedColor(result.data.colors?.[0] || null);
+            setSelectedSize(result.data.sizes?.[1]?.id || 'S');
+            setIsWishlisted(checkWishlisted(result.data.id));
+          }
+          if (related.success) {
+            setRelatedDresses(related.data);
+          }
         }
-        if (related.success) {
-          setRelatedDresses(related.data);
+      } catch (err) {
+        console.error('Lỗi khi tải chi tiết váy cưới:', err);
+      } finally {
+        if (isMounted) {
+          setLoading(false);
         }
-        setLoading(false);
       }
     };
 
@@ -191,41 +187,25 @@ export default function DressDetailPage() {
     };
   }, [dress?.id]);
 
-  // Calculate rental duration in days
-  const rentalDays = useMemo(() => {
-    if (!startDate || !endDate) return 4;
-    const start = new Date(startDate);
-    const end = new Date(endDate);
-    const diffTime = end.getTime() - start.getTime();
-    const diffDays = Math.ceil(diffTime / (1000 * 60 * 60 * 24));
-    return diffDays > 0 ? diffDays : 1;
-  }, [startDate, endDate]);
-
-  // Calculate total price based on rental days and base price
+  // Giá thuê niêm yết 1 ngày và tiền cọc bảo lãnh
   const pricing = useMemo(() => {
     if (!dress) return { base: 0, deposit: 0, total: 0 };
-    const basePrice = dress.price || 5200000;
-    const deposit = dress.depositAmount || 15000000;
-
-    // Package 4 days = 100% base price. Additional days = 20% of base price per day
-    let rentalFee = basePrice;
-    if (rentalDays > 4) {
-      rentalFee = basePrice + (rentalDays - 4) * (basePrice * 0.2);
-    }
+    const basePrice = Number(dress.price || dress.rentPrice || dress.rentalPrice || 3900000);
+    const deposit = Number(dress.depositAmount || dress.depositPrice || 10000000);
 
     return {
-      base: rentalFee,
+      base: basePrice,
       deposit: deposit,
-      total: rentalFee + deposit,
+      total: basePrice + deposit,
     };
-  }, [dress, rentalDays]);
+  }, [dress]);
 
   // Chuẩn bị danh sách 48 phản hồi thực tế của các nàng dâu
   const allFeedbacks = useMemo(() => {
     if (!dress?.realBrides || dress.realBrides.length === 0) return [];
 
     const sampleReviews = [
-      { quote: "Váy đẹp xuất sắc! Cả hội trường cưới ai cũng khen lộng lẫy. Form siết eo tôn dáng cực kỳ mà mặc rất thoải mái suốt cả ngày dài.", name: "Cô dâu Hà My & Lê Anh", date: "15/10/2026" },
+      { quote: "Váy đẹp xuất sắc! Cả hội trường cưới ai cũng khen lộng lẫy. Form siết eo tôn dáng cực kỳ mà mặc rất thoải mái suốt cả ngày dài.", name: "Cô dâu Hà My và Lê Anh", date: "15/10/2026" },
       { quote: "Đuôi váy dài thướt tha khi bước vào lễ đường tạo cảm giác như một nàng công chúa đích thực. Cảm ơn UniBridal rất nhiều!", name: "Cô dâu Thục Quyên", date: "02/10/2026" },
       { quote: "Mặc vào cảm thấy mình như một nữ hoàng trong buổi tiệc tối! Từng đường đính kết bắt sáng lung linh dưới ánh đèn sân khấu. Đáng giá từng đồng!", name: "Cô dâu Lan Chi", date: "28/09/2026" },
       { quote: "Thiết kế corsetry siết eo kỳ diệu, giấu khuyết điểm bụng cực đỉnh. Mình chụp phóng sự cưới góc nào cũng thấy eo thon gọn.", name: "Cô dâu Bích Phương", date: "20/09/2026" },
@@ -269,19 +249,30 @@ export default function DressDetailPage() {
   const handleDirectRent = () => {
     addToCart({
       ...dress,
+      selectedSize,
       size: selectedSize,
-      rentalDays: rentalDays,
-      startDate: startDate,
-      endDate: endDate,
+      selectedColor,
+      color: selectedColor?.name,
+      fabric: selectedColor?.name,
+      rentalDays: 1,
     });
-    navigate(`/checkout?dressId=${dress.id}&size=${selectedSize}&startDate=${startDate}&endDate=${endDate}&days=${rentalDays}`);
+    const colorQuery = selectedColor?.name ? `&color=${encodeURIComponent(selectedColor.name)}` : '';
+    navigate(`/checkout?dressId=${dress.id}&size=${selectedSize}${colorQuery}`);
   };
 
   const handleOnlineRent = () => {
-    const added = addToCart(dress);
+    const added = addToCart({
+      ...dress,
+      selectedSize,
+      size: selectedSize,
+      selectedColor,
+      color: selectedColor?.name,
+      fabric: selectedColor?.name,
+      rentalDays: 1,
+    });
     setRentNotification(
       added
-        ? `Đã thêm "${dress?.name}" vào giỏ thuê thành công! (Gói ${rentalDays} ngày từ ${startDate} đến ${endDate})`
+        ? `Đã thêm "${dress?.name}" vào giỏ thuê thành công!`
         : `"${dress?.name}" đã có trong giỏ thuê váy.`
     );
     setTimeout(() => {
@@ -362,13 +353,13 @@ export default function DressDetailPage() {
 
       {/* Toast Notification */}
       {rentNotification && (
-        <div className="fixed top-20 right-6 z-50 bg-[#2C2523] text-white px-5 py-3.5 rounded-xl shadow-2xl flex items-center gap-3 border border-[#B8737D]/30 animate-fade-in max-w-[420px]">
-          <ShoppingBag className="w-5 h-5 text-[#E8B6BC] shrink-0" />
-          <p className="text-[13px] leading-snug m-0 font-medium">{rentNotification}</p>
+        <div className="fixed bottom-24 right-6 z-50 bg-[#2C2523] text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-[#E6DAC8]/40 animate-bounce text-[13px] font-medium max-w-[420px]">
+          <Crown className="w-4 h-4 text-[#B8737D] shrink-0" />
+          <span className="flex-1 leading-snug">{rentNotification}</span>
           <button
             type="button"
             onClick={() => setRentNotification('')}
-            className="text-white/60 hover:text-white p-1 ml-auto cursor-pointer"
+            className="text-white/60 hover:text-white ml-2 bg-transparent border-0 cursor-pointer p-0 flex items-center justify-center"
           >
             <X className="w-4 h-4" />
           </button>
@@ -400,7 +391,7 @@ export default function DressDetailPage() {
       <main className="flex-1 max-w-[1280px] mx-auto w-full px-5 sm:px-8 pt-8 sm:pt-10 pb-16">
         <div className="grid grid-cols-1 lg:grid-cols-12 gap-8 lg:gap-12 items-start">
 
-          {/* ================= LEFT COLUMN: IMAGES & HIGHLIGHTS (Col 7) ================= */}
+          {/* ================= LEFT COLUMN: IMAGES VÀ HIGHLIGHTS (Col 7) ================= */}
           <div className="lg:col-span-7 flex flex-col gap-5">
             {/* Main Stage Image */}
             <div className="relative w-full aspect-[3/4] rounded-[24px] overflow-hidden bg-[#F6ECE8] shadow-[0_8px_30px_rgba(44,37,35,0.06)] border border-[#EAE0DC] group">
@@ -467,11 +458,11 @@ export default function DressDetailPage() {
               {dress.highlights?.map((hl, idx) => (
                 <div key={idx} className="flex items-start gap-2 xl:gap-2.5 px-1 sm:px-1.5 pt-2 sm:pt-0 min-w-0">
                   <div className="w-8 h-8 rounded-full bg-[#FFF5F3] border border-[#F4DDD8] flex items-center justify-center text-[#B26B74] shrink-0">
-                    {hl.icon === 'diamond' && <Sparkles className="w-4 h-4" />}
+                    {hl.icon === 'diamond' && <Crown className="w-4 h-4" />}
                     {hl.icon === 'ruler' && <Ruler className="w-4 h-4" />}
-                    {hl.icon === 'sparkles' && <Sparkle className="w-4 h-4" />}
+                    {hl.icon === 'sparkles' && <Crown className="w-4 h-4" />}
                     {hl.icon === 'shield' && <ShieldCheck className="w-4 h-4" />}
-                    {!['diamond', 'ruler', 'sparkles', 'shield'].includes(hl.icon) && <Sparkles className="w-4 h-4" />}
+                    {!['diamond', 'ruler', 'sparkles', 'shield'].includes(hl.icon) && <Crown className="w-4 h-4" />}
                   </div>
                   <div className="min-w-0 flex-1 overflow-hidden">
                     <span
@@ -501,7 +492,7 @@ export default function DressDetailPage() {
             </div>
           </div>
 
-          {/* ================= RIGHT COLUMN: PRODUCT DETAILS & BOOKING (Col 5) ================= */}
+          {/* ================= RIGHT COLUMN: PRODUCT DETAILS VÀ BOOKING (Col 5) ================= */}
           <div className="lg:col-span-5 flex flex-col gap-6">
 
             {/* Header info */}
@@ -513,19 +504,8 @@ export default function DressDetailPage() {
                 {dress.name}
               </h1>
 
-              {/* Rating and SKU row */}
+              {/* SKU row */}
               <div className="flex items-center justify-between pb-4 border-b border-[#EAE0DC] text-[13px]">
-                <div className="flex items-center gap-1.5 text-[#B26B74]">
-                  <div className="flex text-[#B26B74]">
-                    {[...Array(5)].map((_, i) => (
-                      <Star key={i} className="w-4 h-4 fill-current" />
-                    ))}
-                  </div>
-                  <span className="font-bold ml-1 text-[#231A19]">
-                    {Number(dress.rating || 5).toFixed(1)}
-                  </span>
-                  <span className="text-[#8A7978]">({dress.rentCount})</span>
-                </div>
                 <div className="text-[#8A7978] tracking-wider text-[12px] font-medium">
                   MÃ SẢN PHẨM: <span className="text-[#231A19] font-bold">{dress.code}</span>
                 </div>
@@ -608,61 +588,29 @@ export default function DressDetailPage() {
               </div>
             </div>
 
-            {/* Rental Period & Cost Breakdown Box */}
+            {/* Thông Tin Giá Thuê & Đặt Cọc */}
             <div className="border border-[#F2DDD9] bg-[#FFF8F6] rounded-[20px] p-5 sm:p-6 shadow-xs">
               <div className="flex items-center justify-between pb-3.5 border-b border-[#F0D5D0]">
-                <h3 className="font-playfair text-[18px] font-semibold text-[#231A19] m-0">
-                  Chọn ngày thuê & trả váy
-                </h3>
-                <span className="text-[12px] font-semibold text-[#B26B74] bg-[#FCEEE9] px-2.5 py-1 rounded-full">
-                  Gói {rentalDays} ngày
-                </span>
-              </div>
-
-              {/* Date pickers row */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-3 my-4">
-                <div className="bg-white border border-[#EAE0DC] rounded-[12px] p-3">
-                  <label className="block text-[10.5px] font-bold uppercase tracking-wider text-[#8A7978] mb-1">
-                    NGÀY BẮT ĐẦU THUÊ
-                  </label>
-                  <input
-                    type="date"
-                    value={startDate}
-                    onChange={(e) => setStartDate(e.target.value)}
-                    className="w-full text-[13.5px] font-medium text-[#231A19] border-0 outline-none p-0 bg-transparent cursor-pointer"
-                  />
-                </div>
-
-                <div className="bg-white border border-[#EAE0DC] rounded-[12px] p-3">
-                  <label className="block text-[10.5px] font-bold uppercase tracking-wider text-[#8A7978] mb-1">
-                    NGÀY TRẢ DỰ KIẾN
-                  </label>
-                  <input
-                    type="date"
-                    value={endDate}
-                    onChange={(e) => setEndDate(e.target.value)}
-                    className="w-full text-[13.5px] font-medium text-[#231A19] border-0 outline-none p-0 bg-transparent cursor-pointer"
-                  />
+                <div>
+                  <h3 className="font-playfair text-[18px] font-semibold text-[#231A19] m-0 flex items-center gap-2">
+                    <Sparkles className="w-4 h-4 text-[#B8737D]" />
+                    Bảng Giá Thuê
+                  </h3>
                 </div>
               </div>
 
               {/* Price Breakdown items */}
-              <div className="flex flex-col gap-2.5 text-[12.5px] pt-1 pb-3">
+              <div className="flex flex-col gap-2.5 text-[12.5px] pt-4 pb-3">
                 <div className="flex items-center justify-between text-[#5A4848]">
-                  <span>Giá thuê cơ bản (gói {rentalDays} ngày):</span>
-                  <strong className="text-[#231A19] font-semibold">{formatCurrencyVND(pricing.base)}</strong>
+                  <span>Giá thuê váy (1 ngày):</span>
+                  <strong className="text-[#231A19] font-bold text-[14px]">
+                    {formatCurrencyVND(pricing.base)} <span className="text-[12px] font-normal text-[#8A7978]">/ ngày</span>
+                  </strong>
                 </div>
 
                 <div className="flex items-center justify-between text-[#5A4848]">
                   <span>Tiền cọc bảo lãnh hoàn lại:</span>
                   <strong className="text-[#231A19] font-semibold">{formatCurrencyVND(pricing.deposit)}</strong>
-                </div>
-
-                <div className="flex items-center justify-between text-[#5A4848]">
-                  <span>Phụ kiện tặng kèm (Voan, găng tay, tùng):</span>
-                  <span className="text-[#B26B74] font-semibold bg-[#FDF2F0] px-2 py-0.5 rounded text-[11px]">
-                    ĐÃ BAO GỒM
-                  </span>
                 </div>
               </div>
 
@@ -684,7 +632,7 @@ export default function DressDetailPage() {
 
             {/* Action Buttons - Khớp 100% với Hình 2 */}
             <div className="flex flex-col gap-2.5">
-              {/* Row 1: ĐẶT THUÊ NGAY & Wishlist */}
+              {/* Row 1: ĐẶT THUÊ NGAY VÀ Wishlist */}
               <div className="flex items-center gap-2.5">
                 <button
                   type="button"
@@ -696,7 +644,7 @@ export default function DressDetailPage() {
                     <path d="M8 10 5 21h14l-3-11" />
                     <path d="M9 14h6" />
                   </svg>
-                  ĐẶT THUÊ NGAY (KÝ HỢP ĐỒNG & CỌC)
+                  ĐẶT THUÊ NGAY (KÝ HỢP ĐỒNG VÀ CỌC)
                 </button>
 
                 {isLoggedIn && (
@@ -704,12 +652,12 @@ export default function DressDetailPage() {
                     type="button"
                     onClick={handleToggleWishlist}
                     className={`w-[48px] h-[48px] rounded-[4px] border flex items-center justify-center transition-all duration-200 cursor-pointer ${isWishlisted
-                      ? 'bg-red-50 border-red-300 text-red-500 shadow-xs'
-                      : 'bg-white border-[#D6C7C3] text-[#70484E] hover:border-red-300 hover:text-red-500'
+                      ? 'bg-[#FFF5F6] border-[#B8737D]/50 text-[#B8737D] shadow-xs'
+                      : 'bg-white border-[#D6C7C3] text-[#70484E] hover:border-[#B8737D]/50 hover:text-[#B8737D]'
                       }`}
                     title={isWishlisted ? 'Đã yêu thích' : 'Lưu vào danh sách yêu thích'}
                   >
-                    <Heart className={`w-5 h-5 transition-all duration-200 ${isWishlisted ? 'fill-red-500 text-red-500 scale-110' : ''}`} strokeWidth={1.75} />
+                    <Heart className={`w-5 h-5 transition-all duration-200 ${isWishlisted ? 'fill-[#B8737D] text-[#B8737D] scale-110' : ''}`} strokeWidth={1.75} />
                   </button>
                 )}
               </div>
@@ -748,7 +696,7 @@ export default function DressDetailPage() {
               </button>
             </div>
 
-            {/* Commitments & Trust Signals - Khớp 100% với Hình 2 */}
+            {/* Commitments và Trust Signals - Khớp 100% với Hình 2 */}
             <div className="pt-4 border-t border-[#EAE0DC] flex flex-col gap-2.5 text-[12.5px] text-[#4A3B3D]">
               <div className="flex items-start gap-2.5">
                 <CheckCircle2 className="w-4 h-4 text-[#70484E] shrink-0 mt-0.5" strokeWidth={1.75} />
@@ -828,7 +776,7 @@ export default function DressDetailPage() {
             <div className="flex items-end justify-between mb-10">
               <div>
                 <span className="font-jakarta font-bold text-[11px] tracking-[2.5px] uppercase text-[#B8737D] block mb-1">
-                  BRIDAL FEEDBACK & MOMENTS
+                  BRIDAL FEEDBACK VÀ MOMENTS
                 </span>
                 <h2 className="font-playfair text-[30px] sm:text-[36px] leading-tight font-semibold text-[#231A19] m-0">
                   Trải Nghiệm Nàng Dâu Thực Tế

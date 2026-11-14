@@ -4,13 +4,32 @@ import auroraImage from '../assets/card3_lumiere.jpg';
 import { formatCurrencyVND } from '../utils/formatCurrency';
 import { dressImage } from './dressApiService';
 
+// Module-level in-memory cache for admin orders
+const adminOrdersCache = new Map();
+const ADMIN_ORDERS_CACHE_TTL = 15000; // 15s cache
+
+export function clearAdminOrdersCache() {
+  adminOrdersCache.clear();
+}
+
+export function getCachedAdminOrders(params = {}) {
+  const key = JSON.stringify(params);
+  const entry = adminOrdersCache.get(key);
+  if (entry && (Date.now() - entry.timestamp < ADMIN_ORDERS_CACHE_TTL)) {
+    return entry.data;
+  }
+  return null;
+}
+
 const STATUS = {
   pending_payment: ['active', 'Chờ thanh toán cọc'],
   deposit_paid: ['active', 'Đã đặt cọc'],
   preparing: ['active', 'Đang chuẩn bị bàn giao'],
   delivered: ['active', 'Đã bàn giao'],
   renting: ['active', 'Đang thuê'],
-  returned: ['active', 'Đang kiểm định'],
+  returned: ['active', 'Chờ hoàn cọc'],
+  waiting_refund: ['active', 'Chờ hoàn cọc'],
+  disputed: ['active', 'Tạm giữ - Chờ đàm phán'],
   completed: ['complete', 'Hoàn tất'],
   complete: ['complete', 'Hoàn tất'],
   cancelled: ['cancelled', 'Đã hủy'],
@@ -23,9 +42,10 @@ export function mapOrder(order) {
   if (!order) return null;
   const item = order.items?.[0] || {};
   let currentRawStatus = order.status;
-  const isApproved = order.inspection?.customerStatus === 'approved' || order.inspection?.customerConfirmed;
-  if (isApproved && currentRawStatus !== 'cancelled') {
+  if (['completed', 'complete'].includes(currentRawStatus)) {
     currentRawStatus = 'completed';
+  } else if (['returned', 'waiting_refund'].includes(currentRawStatus)) {
+    currentRawStatus = 'waiting_refund';
   }
   const [status, statusLabel] = STATUS[currentRawStatus] || ['active', order.statusLabel || currentRawStatus || 'Đang xử lý'];
   return {
@@ -41,6 +61,7 @@ export function mapOrder(order) {
     imageAlt: order.imageAlt || item.name || 'Lễ phục',
     category: item.dressId?.silhouette || order.category || 'Haute Couture',
     size: item.size || order.size || '—',
+    color: item.color || item.fabric || order.color || 'Trắng Sữa',
     style: order.style || 'Theo đơn hàng',
     amount: order.totalRentPrice || order.amount || 0,
     deposit: order.totalDeposit || order.deposit || 0,
@@ -52,7 +73,10 @@ export function mapOrder(order) {
     rentalDates: order.rentalDates || `${fmtDate(order.rentalStartDate)} – ${fmtDate(order.rentalEndDate)}`,
     fitting: order.fitting || 'Liên hệ showroom để xác nhận',
     shippingAddress: order.shippingAddress,
-    items: order.items || [],
+    items: (order.items || []).map((it) => ({
+      ...it,
+      color: it.color || it.fabric || order.color || 'Trắng Sữa',
+    })),
     inspection: order.inspection || null,
     customerName: order.customerName || '',
     contract: order.contract || null,
@@ -110,8 +134,6 @@ export async function getOrder(idOrCode) {
   throw new Error('Không tìm thấy đơn hàng trong cơ sở dữ liệu.');
 }
 
-export const getOrderById = getOrder;
-
 /**
  * Tạo mới đơn thuê váy từ giỏ hàng
  * @param {Object} orderData - { items, rentalStartDate, rentalEndDate, deliveryMethod, shippingAddress, notes }
@@ -130,6 +152,7 @@ export async function createOrder(orderData) {
  * @param {string} status - 'confirmed' | 'preparing' | 'handover' | 'renting' | 'returned' | 'completed' | 'cancelled'
  */
 export async function updateOrderStatus(orderId, status) {
+  clearAdminOrdersCache();
   try {
     return await axiosClient.patch(`/orders/${orderId}/status`, { status });
   } catch (error) {
@@ -143,10 +166,26 @@ export async function updateOrderStatus(orderId, status) {
  * @param {Object} inspectionData - { itemsCondition, evidencePhotos }
  */
 export async function submitReturnInspection(orderId, inspectionData) {
+  clearAdminOrdersCache();
   try {
     return await axiosClient.post(`/orders/${orderId}/inspection`, inspectionData);
   } catch (error) {
-    return { success: true, message: 'Lập biên bản hoàn trả thành công (Offline Demo)' };
+    throw error;
+  }
+}
+
+/**
+ * Admin duyệt đàm phán mức phạt và hoàn tất đơn (Trường hợp 2)
+ * @param {string} orderId
+ * @param {Object} data - { agreedPenaltyFee, refundMethod, refundBankDetails, negotiationNotes }
+ */
+export async function settleInspectionAdmin(orderId, data) {
+  clearAdminOrdersCache();
+  try {
+    const res = await axiosClient.post(`/orders/${orderId}/inspection/admin-settle`, data);
+    return res.data;
+  } catch (error) {
+    throw error;
   }
 }
 
@@ -156,6 +195,7 @@ export async function submitReturnInspection(orderId, inspectionData) {
  * @param {Object} bankData - { bankName, accountNumber, accountHolder, notes }
  */
 export async function approveReturnInspection(orderId, bankData = {}) {
+  clearAdminOrdersCache();
   try {
     const res = await axiosClient.post(`/orders/${orderId}/inspection/approve`, bankData);
     return res.data;
@@ -170,6 +210,7 @@ export async function approveReturnInspection(orderId, bankData = {}) {
  * @param {Object} data - { reason }
  */
 export async function disputeReturnInspection(orderId, data) {
+  clearAdminOrdersCache();
   try {
     const res = await axiosClient.post(`/orders/${orderId}/inspection/dispute`, data);
     return res.data;
@@ -183,27 +224,36 @@ export async function disputeReturnInspection(orderId, data) {
  * @param {string} dressId
  */
 export async function getDressBookedDates(dressId) {
+  if (!dressId) return [];
   try {
-    const res = await axiosClient.get('/orders/booked-dates', {
-      params: { dressId },
-    });
-    return res.data?.data || res.data || [];
+    const res = await axiosClient.get(`/orders/dress/${dressId}/booked-dates`);
+    return Array.isArray(res.data) ? res.data : (res.data?.data || res || []);
   } catch (error) {
-    return [];
+    try {
+      const res = await axiosClient.get('/orders/booked-dates', {
+        params: { dressId },
+      });
+      return Array.isArray(res.data) ? res.data : (res.data?.data || res || []);
+    } catch {
+      return [];
+    }
   }
 }
 
-export function getDemoOrders() {
-  return [];
-}
-
-export function getDemoOrder(id) { return null; }
-
 /**
- * Lấy toàn bộ danh sách đơn thuê (Admin)
+ * Lấy toàn bộ danh sách đơn thuê (Admin) - Có cơ chế Memory Caching chống lag khi chuyển trang
  * @param {Object} params - { status, search, page, limit }
+ * @param {boolean} forceRefresh - Bỏ qua cache để lấy mới
  */
-export async function getAllOrdersAdmin(params = {}) {
+export async function getAllOrdersAdmin(params = {}, forceRefresh = false) {
+  const key = JSON.stringify(params);
+  if (!forceRefresh) {
+    const cached = adminOrdersCache.get(key);
+    if (cached && (Date.now() - cached.timestamp < ADMIN_ORDERS_CACHE_TTL)) {
+      return cached.data;
+    }
+  }
+
   try {
     const res = await axiosClient.get('/orders', { params });
     const list = Array.isArray(res.data) ? res.data : (Array.isArray(res) ? res : res.data?.data || []);
@@ -211,13 +261,15 @@ export async function getAllOrdersAdmin(params = {}) {
     const page = res.pagination?.page ?? res.page ?? 1;
     const totalPages = res.pagination?.totalPages ?? res.totalPages ?? 1;
     const stats = res.stats || null;
-    return {
+    const result = {
       orders: list,
       total,
       page,
       totalPages,
       stats,
     };
+    adminOrdersCache.set(key, { data: result, timestamp: Date.now() });
+    return result;
   } catch (error) {
     return { orders: [], total: 0, page: 1, totalPages: 1, stats: null };
   }

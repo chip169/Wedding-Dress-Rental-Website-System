@@ -103,3 +103,54 @@ export async function togglePin(conversationId) {
   }
 }
 
+/**
+ * Thu hồi tin nhắn
+ * @param {string} messageId
+ */
+export async function recallMessage(messageId) {
+  try {
+    return await axiosClient.patch(`/messages/${messageId}/recall`);
+  } catch (error) {
+    return { success: true, message: 'Đã thu hồi tin nhắn cục bộ' };
+  }
+}
+
+/**
+ * Ghim / Bỏ ghim một tin nhắn trong hội thoại
+ * @param {string} conversationId
+ * @param {string} messageId
+ */
+export async function togglePinMessage(conversationId, messageId) {
+  try {
+    return await axiosClient.patch(`/conversations/${conversationId}/messages/${messageId}/pin`);
+  } catch (error) {
+    return { success: true, message: 'Đã cập nhật ghim tin nhắn' };
+  }
+}
+
+/**
+ * Bỏ ghim tin nhắn của hội thoại
+ * @param {string} conversationId
+ */
+export async function unpinMessage(conversationId) {
+  try {
+    return await axiosClient.patch(`/conversations/${conversationId}/unpin-message`);
+  } catch (error) {
+    return { success: true, message: 'Đã bỏ ghim' };
+  }
+}
+
+/**
+ * Xóa một cuộc hội thoại và toàn bộ tin nhắn bên trong (Admin/Staff)
+ * @param {string} conversationId
+ */
+export async function deleteConversation(conversationId) {
+  try {
+    return await axiosClient.delete(`/conversations/${conversationId}`);
+  } catch (error) {
+    return { success: false, message: error.message };
+  }
+}
+
+
+

@@ -5,6 +5,7 @@ import { useAuth } from '../../contexts/AuthContext';
 import { getAllDresses } from '../../services/dressService';
 import { dressImage } from '../../services/dressApiService';
 import { getWishlistIds, toggleWishlist, WISHLIST_EVENT } from '../../services/wishlistService';
+import RentSelectionModal from '../common/RentSelectionModal';
 import card1Img from '../../assets/card1_elysian.jpg';
 import card2Img from '../../assets/card2_celeste.jpg';
 import card3Img from '../../assets/card3_lumiere.jpg';
@@ -89,9 +90,11 @@ const renderDepositWithDong = (amountVal) => {
 const TrendingCollection = ({ onBookProduct, onToggleWishlist, wishlistedIds: propWishlistedIds }) => {
   const navigate = useNavigate();
   const { isLoggedIn } = useAuth();
-  const [items, setItems] = useState([]);
+  const [items, setItems] = useState(products);
   const [error, setError] = useState('');
   const [internalWishlistIds, setInternalWishlistIds] = useState(() => getWishlistIds());
+  const [selectedDressForRent, setSelectedDressForRent] = useState(null);
+  const [isRentModalOpen, setIsRentModalOpen] = useState(false);
 
   useEffect(() => {
     const refresh = () => setInternalWishlistIds(getWishlistIds());
@@ -121,6 +124,9 @@ const TrendingCollection = ({ onBookProduct, onToggleWishlist, wishlistedIds: pr
             size: d.sizes?.length
               ? `Size: ${d.sizes.map((s) => (typeof s === 'string' ? s : s.id || s.label)).join(' - ')}`
               : 'Size: S - M',
+            sizes: d.sizes,
+            colors: d.colors || d.colorOptions,
+            color: d.color,
             price: d.price || d.rentPrice || 5000000,
             depositAmount: d.depositAmount || 15000000,
             image: dressImage(d) || card1Img,
@@ -128,14 +134,14 @@ const TrendingCollection = ({ onBookProduct, onToggleWishlist, wishlistedIds: pr
           setItems(mapped);
           setError('');
         } else if (isMounted) {
-          setItems([]);
-          setError('Lỗi kết nối cơ sở dữ liệu: Không có dữ liệu váy cưới từ MongoDB.');
+          setItems(products);
+          setError('');
         }
       })
       .catch((err) => {
         if (isMounted) {
-          setItems([]);
-          setError('Lỗi kết nối cơ sở dữ liệu: Không thể kết nối tới máy chủ MongoDB.');
+          setItems(products);
+          setError('');
         }
       });
 
@@ -177,7 +183,7 @@ const TrendingCollection = ({ onBookProduct, onToggleWishlist, wishlistedIds: pr
                 onClick={() => handleCardClick(item.slug || item.id)}
                 className="bg-white border border-[#EFE5E2] rounded-[24px] overflow-hidden shadow-[0px_4px_20px_rgba(44,37,35,0.03)] hover:shadow-[0px_12px_32px_rgba(44,37,35,0.07)] transition-all duration-300 flex flex-col group cursor-pointer"
               >
-                {/* Image & Badges */}
+                {/* Image và Badges */}
                 <div className="relative w-full h-[370px] sm:h-[390px] bg-[#FCEEE9] overflow-hidden rounded-t-[23px]">
                   <img
                     src={item.image}
@@ -213,14 +219,13 @@ const TrendingCollection = ({ onBookProduct, onToggleWishlist, wishlistedIds: pr
                           setInternalWishlistIds(getWishlistIds());
                         }
                       }}
-                      className={`absolute top-4 right-4 w-[36px] h-[36px] rounded-[12px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex items-center justify-center border cursor-pointer z-10 transition-all hover:scale-105 active:scale-90 p-0 ${
-                        isWishlisted ? 'border-red-200 bg-red-50/70 text-red-500' : 'border-transparent text-[#4A3E3D] hover:text-red-500'
-                      }`}
+                      className={`absolute top-4 right-4 w-[36px] h-[36px] rounded-[12px] bg-white shadow-[0_2px_8px_rgba(0,0,0,0.06)] flex items-center justify-center border cursor-pointer z-10 transition-all hover:scale-105 active:scale-90 p-0 ${isWishlisted ? 'border-[#B8737D]/40 bg-[#FFF5F6] text-[#B8737D]' : 'border-transparent text-[#4A3E3D] hover:text-[#B8737D]'
+                        }`}
                       title={isWishlisted ? 'Bỏ yêu thích' : 'Yêu thích'}
                       aria-label="Yêu thích"
                     >
                       <Heart
-                        className={`w-[17px] h-[17px] transition-all duration-200 ${isWishlisted ? 'fill-red-500 text-red-500 scale-110' : 'text-[#4A3E3D]'}`}
+                        className={`w-[17px] h-[17px] transition-all duration-200 ${isWishlisted ? 'fill-[#B8737D] text-[#B8737D] scale-110' : 'text-[#4A3E3D]'}`}
                         strokeWidth={1.65}
                       />
                     </button>
@@ -242,12 +247,8 @@ const TrendingCollection = ({ onBookProduct, onToggleWishlist, wishlistedIds: pr
                 {/* Details Bottom */}
                 <div className="px-5 pt-6 sm:pt-6.5 pb-4 flex flex-col justify-start">
                   <div>
-                    {/* Rating & Size Row */}
-                    <div className="flex items-center justify-between text-[12px] font-jakarta mb-1">
-                      <div className="flex items-center gap-1.5 text-[#B26B74]">
-                        <span className="font-bold">★ {Number(item.rating || 4.9).toFixed(1)}</span>
-                        <span className="text-[#C69098] font-normal">({item.rentCount})</span>
-                      </div>
+                    {/* Size Row */}
+                    <div className="flex items-center text-[12px] font-jakarta mb-1">
                       <span className="text-[#231A19] font-semibold tracking-wide text-[12.5px]">
                         {item.size}
                       </span>
@@ -261,7 +262,7 @@ const TrendingCollection = ({ onBookProduct, onToggleWishlist, wishlistedIds: pr
                     </div>
                   </div>
 
-                  {/* Price & Deposit */}
+                  {/* Price và Deposit */}
                   <div>
                     <div className="flex items-baseline gap-1.5 mb-2 flex-nowrap">
                       <span className="font-playfair font-medium text-[33px] sm:text-[35px] leading-none text-[#B26B74] tracking-tight whitespace-nowrap">
@@ -285,7 +286,8 @@ const TrendingCollection = ({ onBookProduct, onToggleWishlist, wishlistedIds: pr
                       type="button"
                       onClick={(e) => {
                         e.stopPropagation();
-                        navigate(`/checkout?dressId=${item.id}`);
+                        setSelectedDressForRent(item);
+                        setIsRentModalOpen(true);
                       }}
                       className="w-full py-3 rounded-[13px] bg-[#B26B74] hover:bg-[#a05a63] text-white font-jakarta text-[14px] font-medium tracking-[0.8px] transition-colors cursor-pointer border-0 shadow-xs flex items-center justify-center active:scale-[0.99]"
                     >
@@ -298,6 +300,16 @@ const TrendingCollection = ({ onBookProduct, onToggleWishlist, wishlistedIds: pr
           })}
         </div>
       </div>
+
+      {/* Popup chọn màu sắc & kích thước chuẩn Ảnh 3 khi bấm Thuê Ngay */}
+      <RentSelectionModal
+        isOpen={isRentModalOpen}
+        onClose={() => {
+          setIsRentModalOpen(false);
+          setSelectedDressForRent(null);
+        }}
+        dress={selectedDressForRent}
+      />
     </section>
   );
 };

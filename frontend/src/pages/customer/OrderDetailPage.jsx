@@ -43,16 +43,16 @@ const TIMELINE_STEPS = [
     Icon: Clock,
   },
   {
-    key: 'returned',
-    label: 'Đang Kiểm Định',
-    subLabel: 'Kiểm định & hoàn cọc',
+    key: 'waiting_refund',
+    label: 'Chờ Hoàn Cọc',
+    subLabel: 'Đã kiểm định, chờ hoàn cọc',
     Icon: RefreshCcw,
   },
   {
     key: 'completed',
     label: 'Hoàn Tất',
     subLabel: 'Đơn hàng hoàn tất',
-    Icon: Star,
+    Icon: CheckCircle2,
   },
 ];
 
@@ -64,6 +64,7 @@ const STATUS_STEP_MAP = {
   delivered: 1,
   renting: 2,
   returned: 3,
+  waiting_refund: 3,
   completed: 4,
   complete: 4,
 };
@@ -87,6 +88,7 @@ function OrderStatusTimeline({ rawStatus }) {
     );
   }
 
+  const isAllCompleted = rawStatus === 'completed' || rawStatus === 'complete';
   const activeIndex = STATUS_STEP_MAP[rawStatus] ?? -1;
 
   return (
@@ -94,8 +96,8 @@ function OrderStatusTimeline({ rawStatus }) {
       <p className="mb-5 text-[11px] font-bold uppercase tracking-[1.6px] text-[#BA7A83]">✦ Hành Trình Lễ Phục Của Nàng</p>
       <ol className="flex flex-col sm:flex-row sm:items-start">
         {TIMELINE_STEPS.map(({ key, label, subLabel, Icon }, index) => {
-          const done = index < activeIndex;
-          const active = index === activeIndex;
+          const done = isAllCompleted ? index <= activeIndex : index < activeIndex;
+          const active = !isAllCompleted && index === activeIndex;
           const StepIcon = done ? CheckCircle2 : active ? Icon : Circle;
           const circleClass = done ? 'bg-[#BA7A83] text-white' : active
             ? 'border-2 border-[#BA7A83] bg-white text-[#BA7A83]'
@@ -177,10 +179,10 @@ export default function OrderDetailPage() {
       breadcrumb={[]}
     >
       <div className="account-detail-content">
-        <div className="mb-4 flex justify-end">
+        <div className="mb-3 flex justify-end">
           <Link
             to="/profile/orders"
-            className="inline-flex items-center gap-1 text-xs font-semibold tracking-wider text-[#874e57]"
+            className="inline-flex items-center gap-1 text-xs font-semibold tracking-wider text-[#874e57] hover:text-[#5F2B36] transition-colors"
           >
             <ArrowLeft size={14} /> QUAY LẠI LỊCH SỬ ĐƠN HÀNG
           </Link>
@@ -196,19 +198,26 @@ export default function OrderDetailPage() {
           </section>
         ) : (
           <>
-            {/* ── HEADER ── */}
-            <div className="rounded-2xl bg-gradient-to-br from-[#f8e9e4] to-[#FFF9F6] px-6 py-6 sm:px-8 border border-[#EEDECF]">
-              <span className="account-status account-status-active">{order.statusLabel}</span>
-              <h1 className="mt-2 font-playfair text-3xl sm:text-4xl">Chi Tiết Đơn Thuê Lễ Phục</h1>
-              <p className="mt-2 font-playfair text-[27px] italic text-[#874e57]">#{order.id}</p>
-              <p className="mt-2 text-xs text-[#874e57]">
-                <CalendarDays size={14} className="mr-1 inline" />
-                Lịch thuê: {order.rentalDates}
-              </p>
+            {/* ── HEADER GỌN GÀNG ── */}
+            <div className="rounded-xl bg-gradient-to-r from-[#FAF0EB] to-[#FFF8F5] px-5 py-3.5 sm:px-6 border border-[#EEDECF]">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
+                <div className="flex items-center gap-2.5 flex-wrap">
+                  <h1 className="font-playfair text-xl sm:text-2xl font-bold text-[#2C2424] m-0">
+                    Chi Tiết Đơn Thuê
+                  </h1>
+                  <span className="font-mono text-xs sm:text-sm font-bold text-[#874e57] bg-white px-2.5 py-1 rounded-lg border border-[#EEDECF] shadow-2xs">
+                    #{order.orderCode || order.id}
+                  </span>
+                </div>
+                <div className="text-xs text-[#7A6A6B] flex items-center gap-1.5 shrink-0">
+                  <CalendarDays size={13} className="text-[#874e57]" />
+                  <span>Lịch thuê: <strong className="text-[#2C2424]">{order.rentalDates}</strong></span>
+                </div>
+              </div>
             </div>
 
-            {/* ── BANNER BIÊN BẢN KIỂM ĐỊNH & HOÀN CỌC NỔI BẬT ── */}
-            {(order.rawStatus === 'returned' || order.inspection) && (
+            {/* ── BANNER BIÊN BẢN KIỂM ĐỊNH VÀ HOÀN CỌC NỔI BẬT (Chỉ hiển thị khi đơn đang chờ duyệt kiểm định, ẩn đối với đơn đã hoàn thành) ── */}
+            {order.rawStatus !== 'completed' && order.status !== 'completed' && !approved && (order.rawStatus === 'returned' || order.inspection) && (
               <div className="mt-5 p-4 sm:p-5 rounded-2xl bg-gradient-to-r from-[#FFF4F0] via-[#FFF8F5] to-[#FFF1EC] border-2 border-[#E7BFB5] shadow-sm space-y-3 font-jakarta transition-all">
                 <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
                   <div className="flex items-center gap-2.5">
@@ -217,9 +226,7 @@ export default function OrderDetailPage() {
                       <span className="relative inline-flex rounded-full h-3 w-3 bg-[#8C4654]"></span>
                     </span>
                     <span className="font-playfair font-bold text-[#5F2B36] text-[15px] sm:text-[16px] tracking-wide">
-                      {approved
-                        ? '✦ Biên Bản Kiểm Định Đã Được Nàng Duyệt'
-                        : '✦ Yêu Cầu Bắt Buộc: Xem Biên Bản Kiểm Định & Xác Nhận Hoàn Cọc'}
+                      ✦ Yêu Cầu Bắt Buộc: Xem Biên Bản Kiểm Định và Xác Nhận Hoàn Cọc
                     </span>
                   </div>
                   <button
@@ -227,18 +234,12 @@ export default function OrderDetailPage() {
                     onClick={() => setIsInspectionOpen(true)}
                     className="inline-flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl bg-gradient-to-r from-[#733F49] to-[#8C4654] hover:from-[#5A2D35] hover:to-[#733F49] text-white text-xs font-bold transition-all duration-200 cursor-pointer shadow-md hover:shadow-lg border-0 shrink-0"
                   >
-                    <span>
-                      {approved
-                        ? 'Xem Lại Biên Bản Đã Duyệt'
-                        : 'Xem Biên Bản & Xác Nhận Hoàn Cọc'}
-                    </span>
+                    <span>Xem Biên Bản và Xác Nhận Hoàn Cọc</span>
                   </button>
                 </div>
 
                 <p className="text-[12.5px] sm:text-[13px] leading-relaxed text-[#5E4D4F] m-0">
-                  {approved
-                    ? 'Nàng đã duyệt biên bản kiểm định. Đơn thuê đã hoàn tất; trạng thái hoàn cọc được theo dõi riêng trong biên bản.'
-                    : 'Nàng vui lòng kiểm tra hiện trạng váy và số tiền đề nghị hoàn. Showroom sẽ đối soát và xử lý hoàn cọc sau khi nàng xác nhận; nếu chưa đồng ý, nàng có thể gửi khiếu nại.'}
+                  Nàng vui lòng kiểm tra hiện trạng váy và số tiền đề nghị hoàn. Showroom sẽ đối soát và xử lý hoàn cọc sau khi nàng xác nhận; nếu chưa đồng ý, nàng có thể gửi khiếu nại.
                 </p>
 
                 <div className="pt-1 flex items-center gap-1.5 text-[11px] text-[#8C7A7B]">
@@ -269,6 +270,7 @@ export default function OrderDetailPage() {
                       <div>
                         <h3 className="font-playfair text-xl">{item.name || 'Lễ phục'}</h3>
                         <p className="mt-2 text-sm">Kích cỡ: {item.size || 'Theo đơn hàng'}</p>
+                        <p className="mt-2 text-sm">Màu sắc: {item.color || item.fabric || order.color || 'Trắng Sữa'}</p>
                         <p className="mt-2 text-sm">Tiền thuê: {formatVnd(item.rentPrice)}</p>
                         <p className="mt-2 text-sm">Tiền cọc: {formatVnd(item.depositAmount)}</p>
                       </div>
@@ -285,7 +287,7 @@ export default function OrderDetailPage() {
                 <div>
                   <div className="flex items-center justify-between">
                     <p className="account-overline text-[#874e57]">
-                      Tài chính &amp; ký quỹ
+                      Tài chính và ký quỹ
                     </p>
                     <Landmark size={15} className="text-[#874e57]" />
                   </div>
@@ -309,28 +311,37 @@ export default function OrderDetailPage() {
                   </p>
                 </div>
 
-                {/* Hợp đồng tích hợp ngay trong ô tài chính & bảng giá */}
+                {/* Mã đơn hàng và Nút xem hợp đồng */}
                 <div className="mt-5 pt-4 border-t border-[#eee2df] flex flex-wrap items-center justify-between gap-3">
                   <div>
-                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#874e57] block">HỢP ĐỒNG ĐÃ KÝ</span>
-                    <span className="text-xs text-stone-500 font-mono">
-                      {order.contract?.contractCode || order.contractCode
-                        ? `Mã: ${order.contract?.contractCode || order.contractCode}`
-                        : 'Hợp đồng điện tử đã lưu'}
+                    <span className="text-[11px] font-bold uppercase tracking-wider text-[#874e57] block">MÃ ĐƠN HÀNG</span>
+                    <span className="text-xs font-mono font-bold text-stone-700">
+                      #{order.orderCode || order.id}
                     </span>
                   </div>
-                  <button
-                    type="button"
-                    onClick={() => setIsContractOpen(true)}
-                    className="account-button-secondary inline-flex items-center gap-1.5 text-xs py-2 px-3 rounded-lg"
-                  >
-                    <FileSignature size={15} /> Xem hợp đồng đã ký
-                  </button>
+                  <div className="flex items-center gap-2 flex-wrap">
+                    {order.inspection && (
+                      <button
+                        type="button"
+                        onClick={() => setIsInspectionOpen(true)}
+                        className="account-button-secondary inline-flex items-center gap-1.5 text-xs py-2 px-3 rounded-lg"
+                      >
+                        <CheckCircle2 size={14} className="text-[#874e57]" /> Xem biên bản kiểm định
+                      </button>
+                    )}
+                    <button
+                      type="button"
+                      onClick={() => setIsContractOpen(true)}
+                      className="account-button-secondary inline-flex items-center gap-1.5 text-xs py-2 px-3 rounded-lg"
+                    >
+                      <FileSignature size={15} /> Xem hợp đồng đã ký
+                    </button>
+                  </div>
                 </div>
               </section>
             </div>
 
-            {/* Modal Biên Bản Kiểm Định & Quyết Toán Hoàn Cọc */}
+            {/* Modal Biên Bản Kiểm Định và Quyết Toán Hoàn Cọc */}
             {isInspectionOpen && (
               <CustomerInspectionModal
                 order={order}

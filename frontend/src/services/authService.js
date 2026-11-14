@@ -13,8 +13,8 @@ export async function login({ email, password }) {
     }
     return res;
   } catch (error) {
-    console.error('Login error from database:', error);
-    throw new Error(error?.message || 'Lỗi kết nối cơ sở dữ liệu: Không thể kết nối tới máy chủ xác thực.');
+    console.error('Login error:', error);
+    throw error;
   }
 }
 
@@ -26,8 +26,8 @@ export async function register(userData) {
   try {
     return await axiosClient.post('/auth/register', userData);
   } catch (error) {
-    console.error('Register error from database:', error);
-    throw new Error(error?.message || 'Lỗi kết nối cơ sở dữ liệu: Không thể tạo tài khoản trên máy chủ.');
+    console.error('Register error:', error);
+    throw error;
   }
 }
 

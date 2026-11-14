@@ -9,7 +9,7 @@ const CART_KEY = 'unibridal-rental-cart';
 const WISHLIST_KEY = 'unibridal-wishlist';
 export const CART_EVENT = 'unibridal-cart-updated';
 
-export const CART_CATALOG = {
+const CART_CATALOG = {
   '1': { id: '1', name: 'Elysian Rose Ballgown', price: 5200000, deposit: 15000000, image: elysianImage, code: 'UB-HC-2025-01', collection: 'HAUTE NOUVEAUTÉ 2025', size: 'S (Eo 64–68cm)', fabric: 'Champagne Rose', style: 'Gói 3 Ngày Tiêu Chuẩn', location: 'SUITE SÀI GÒN' },
   '4': { id: '4', name: 'Monet 3D Floral Couture', price: 5500000, deposit: 15000000, image: monetImage, code: 'UB-HC-2025-04', collection: 'ARTISAN HAND-CRAFTED', size: 'May đo chuẩn dáng cá nhân', fabric: 'Ivory Cream', style: 'Gói 3 Ngày', location: 'MAY ĐO BESPOKE' },
   'preview-seraphina-royal': { id: 'preview-seraphina-royal', detailHref: null, name: 'Seraphina Royal Ballgown', price: 6200000, deposit: 18000000, image: seraphinaImage, code: 'UB-HC-2025-06', collection: 'BESPOKE COUTURE', size: 'S / M', fabric: 'Ivory', style: 'Dáng bồng xòe hoàng gia' },
@@ -106,8 +106,26 @@ function parseMoney(value) {
 export function addToCart(dress) {
   const id = String(dress._id ?? dress.id);
   const current = getCart();
-  if (current.some((item) => String(item.id) === id || (item.code && item.code === dress.code) ||
-    (!isDatabaseId(item.id) && (item.name || CART_CATALOG[item.id]?.name) === dress.name))) return false;
+  const selectedSize = dress.selectedSize || dress.size || dress.sizes?.[0]?.label || 'Theo tư vấn';
+  const selectedColor = dress.selectedColor?.name || (typeof dress.selectedColor === 'string' ? dress.selectedColor : null) || dress.color || 'Trắng Sữa';
+
+  const existingIndex = current.findIndex(
+    (item) => String(item.id) === id || (item.code && item.code === dress.code) ||
+      (!isDatabaseId(item.id) && (item.name || CART_CATALOG[item.id]?.name) === dress.name)
+  );
+
+  if (existingIndex >= 0) {
+    const updated = [...current];
+    updated[existingIndex] = {
+      ...updated[existingIndex],
+      size: selectedSize,
+      color: selectedColor,
+      fabric: selectedColor,
+    };
+    saveCart(updated);
+    return true;
+  }
+
   const item = {
     id,
     days: 1,
@@ -116,7 +134,9 @@ export function addToCart(dress) {
     deposit: parseMoney(dress.depositAmount ?? dress.deposit),
     image: dressImage(dress),
     code: dress.code,
-    size: dress.size ?? dress.sizes?.[0]?.label ?? 'Theo tư vấn',
+    size: selectedSize,
+    color: selectedColor,
+    fabric: selectedColor,
     collection: dress.collectionTag ?? dress.collection ?? 'HAUTE COUTURE',
     detailHref: Object.hasOwn(dress, 'detailHref') ? dress.detailHref : `/dresses/${id}`,
   };

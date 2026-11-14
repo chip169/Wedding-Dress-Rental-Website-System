@@ -1,6 +1,6 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CalendarDays, CheckCircle2, Heart, LockKeyhole, Minus, Phone, Plus, ShieldCheck, ShoppingBag, Sparkles, Trash2, X } from 'lucide-react';
+import { ArrowRight, CalendarDays, CheckCircle2, Heart, LockKeyhole, Minus, Phone, Plus, ShieldCheck, ShoppingBag, Crown, Trash2, X } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { CART_EVENT, addToCart, clearCart, getCart, refreshCartWithDresses, removeFromCart, resolveCartItem, updateCartDays } from '../../services/cartService';
@@ -1154,7 +1154,7 @@ export default function CartPage() {
     showMessage(result.isAdded ? `Đã lưu ${dress.name} vào danh sách yêu thích.` : `Đã bỏ ${dress.name} khỏi danh sách yêu thích.`);
   };
   const isWishlisted = (id) => {
-    const dress = catalog.find((item) => String(item.id) === String(id)) || items.find((item) => String(item.id) === String(id)) || {id};
+    const dress = catalog.find((item) => String(item.id) === String(id)) || items.find((item) => String(item.id) === String(id)) || { id };
     return wishlistIds.some((value) => String(value) === String(wishlistKey(dress)));
   };
   // One order uses a single rental window; selected days must agree across items.
@@ -1170,7 +1170,7 @@ export default function CartPage() {
       <Header onOpenBooking={() => { setSelectedProduct(null); setIsConsultationOpen(true); }} />
       <main>
         <section className="cart-hero" aria-labelledby="cart-title">
-          <span className="cart-hero-label"><Sparkles size={13} /> THUÊ VÁY CƯỚI CAO CẤP</span>
+          <span className="cart-hero-label"><Crown size={13} /> THUÊ VÁY CƯỚI CAO CẤP</span>
           <h1 id="cart-title">Giỏ Hàng Của Nàng</h1>
           <p>Lưu giữ những tác phẩm Haute Couture hoàn mỹ cho khoảnh khắc bước vào lễ đường vĩnh cửu.</p>
           <span className="cart-hero-rule" />
@@ -1180,14 +1180,13 @@ export default function CartPage() {
         {mismatchedDays && <p role="alert" className="mb-4 text-sm text-amber-800">Các váy trong cùng đơn cần chọn cùng số ngày thuê. Vui lòng điều chỉnh trước khi đặt thuê.</p>}
         <div className="cart-content">
           <section className="cart-saved" aria-labelledby="cart-saved-title">
-            <div className="cart-section-bar"><div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}><h2 id="cart-saved-title">Tác phẩm trong giỏ thuê {items.length > 0 ? `(${items.length})` : ""}</h2>{items.length > 0 && (<button type="button" onClick={handleClearCart} style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 12px", borderRadius: "999px", backgroundColor: "#fff", border: "1px solid #e0bcbc", color: "#b84f58", fontSize: "11.5px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#fff0f0"; e.currentTarget.style.color = "#963740"; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#fff"; e.currentTarget.style.color = "#b84f58"; }} title="Xóa tất cả sản phẩm khỏi giỏ thuê"><Trash2 size={13} /><span>Xóa tất cả</span></button>)}</div><span><LockKeyhole size={13} /> Lịch thuê được xác nhận sau khi tư vấn</span></div>
+            <div className="cart-section-bar"><div style={{ display: "flex", alignItems: "center", gap: "14px", flexWrap: "wrap" }}><h2 id="cart-saved-title">Tác phẩm trong giỏ thuê {items.length > 0 ? `(${items.length})` : ""}</h2>{items.length > 0 && (<button type="button" onClick={handleClearCart} style={{ display: "inline-flex", alignItems: "center", gap: "5px", padding: "4px 12px", borderRadius: "999px", backgroundColor: "#fff", border: "1px solid #e0bcbc", color: "#b84f58", fontSize: "11.5px", fontWeight: 600, cursor: "pointer", transition: "all 0.2s" }} onMouseEnter={(e) => { e.currentTarget.style.backgroundColor = "#fff0f0"; e.currentTarget.style.color = "#963740"; }} onMouseLeave={(e) => { e.currentTarget.style.backgroundColor = "#fff"; e.currentTarget.style.color = "#b84f58"; }} title="Xóa tất cả sản phẩm khỏi giỏ thuê"><Trash2 size={13} /><span>Xóa tất cả</span></button>)}</div></div>
             {items.length ? <div className="cart-items">{items.map((item) => <CartItem key={item.id} item={item} onUpdate={updateCartDays} onRemove={removeFromCart} onWishlist={handleWishlist} isWishlisted={isWishlisted(item.id)} />)}</div> : <div className="cart-empty"><ShoppingBag size={38} strokeWidth={1.3} /><h3>Giỏ thuê của nàng đang trống</h3><p>Khám phá những tuyệt tác được tuyển chọn dành riêng cho ngày trọng đại.</p><Link to="/collection">Khám phá bộ sưu tập <ArrowRight size={16} /></Link></div>}
-            {wishlist.length > 0 && <div className="cart-wishlist" id="cart-wishlist"><h3><Heart size={17} fill="currentColor" /> Danh sách yêu thích ({wishlist.length})</h3><div>{wishlist.map((dress) => <div className="cart-wishlist-item" key={dress.id}><img src={dress.image} alt="" /><span>{dress.name}</span><button type="button" onClick={() => handleWishlist(dress)} aria-label={`Bỏ ${dress.name} khỏi yêu thích`}><X size={16} /></button></div>)}</div></div>}
           </section>
 
           <aside className="cart-aside" aria-label="Tóm tắt đơn thuê">
             <div className="cart-summary">
-              <span className="cart-eyebrow">TÓM TẮT ĐƠN THUÊ & ĐẶT CỌC</span>
+              <span className="cart-eyebrow">TÓM TẮT ĐƠN THUÊ VÀ ĐẶT CỌC</span>
               <h2>Chi Phí Tạm Tính</h2>
               <div className="cart-summary-line"><span>Tổng phí thuê váy ({items.length} tác phẩm)</span><strong>{money(rentalFee)}</strong></div>
               <div className="cart-summary-line"><span>Phí giao nhận</span><strong className="cart-rose">Xác nhận sau</strong></div>
@@ -1200,12 +1199,12 @@ export default function CartPage() {
                 onClick={(event) => { if (checkoutBlocked) event.preventDefault(); }}
                 className={`cart-checkout ${checkoutBlocked ? 'opacity-50 pointer-events-none' : ''}`}
               >
-                TIẾN HÀNH ĐẶT THUÊ & KÝ HỢP ĐỒNG <ArrowRight size={16} />
+                TIẾN HÀNH ĐẶT THUÊ VÀ KÝ HỢP ĐỒNG <ArrowRight size={16} />
               </Link>
               <p className="cart-checkout-note">Xác thực số đo, chính sách đặt cọc và hợp đồng bảo chứng số.</p>
               <Link className="cart-continue" to="/collection">TIẾP TỤC KHÁM PHÁ BỘ SƯU TẬP</Link>
             </div>
-            <div className="cart-promises"><h2><ShieldCheck size={19} /> CAM KẾT ĐỘC QUYỀN</h2><ul><li><strong>Hoàn cọc theo biên bản</strong><span>Showroom đối soát sau kiểm định và xử lý khoản hoàn theo hợp đồng đã ký.</span></li><li><strong>Hợp đồng điện tử ký số</strong><span>Minh bạch điều khoản, bảo vệ toàn diện quyền lợi và số đo của cô dâu.</span></li><li><strong>Bảo hiểm lỗi sợi & hạt đính</strong><span>Miễn trừ trách nhiệm với các vết dơ thông thường và hạt rơi nhẹ khi khiêu vũ.</span></li><li><strong>Đổi dáng váy miễn phí</strong><span>Được chuyển đổi mẫu váy khác cùng phân khúc trước ngày cưới 15 ngày.</span></li></ul><p>Cần hỗ trợ lựa chọn? <a href="tel:18008998"><Phone size={13} /> Hotline 1800 8998 (24/7)</a></p></div>
+            <div className="cart-promises"><h2><ShieldCheck size={19} /> CAM KẾT ĐỘC QUYỀN</h2><ul><li><strong>Hoàn cọc theo biên bản</strong><span>Showroom đối soát sau kiểm định và xử lý khoản hoàn theo hợp đồng đã ký.</span></li><li><strong>Hợp đồng điện tử ký số</strong><span>Minh bạch điều khoản, bảo vệ toàn diện quyền lợi và số đo của cô dâu.</span></li><li><strong>Bảo hiểm lỗi sợi và hạt đính</strong><span>Miễn trừ trách nhiệm với các vết dơ thông thường và hạt rơi nhẹ khi khiêu vũ.</span></li><li><strong>Đổi dáng váy miễn phí</strong><span>Được chuyển đổi mẫu váy khác cùng phân khúc trước ngày cưới 15 ngày.</span></li></ul><p>Cần hỗ trợ lựa chọn? <a href="tel:18008998"><Phone size={13} /> Hotline 1800 8998 (24/7)</a></p></div>
           </aside>
         </div>
 

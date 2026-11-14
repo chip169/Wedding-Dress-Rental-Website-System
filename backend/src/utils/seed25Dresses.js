@@ -7,8 +7,8 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
-import Dress from '../models/Dress.model.js';
-import Category from '../models/Category.model.js';
+import Dress from '../models/dressModel.js';
+import Category from '../models/categoryModel.js';
 
 export const DRESS_DATA_25 = [
   // 1. BALLGOWN (5 mẫu)
@@ -154,7 +154,7 @@ export const DRESS_DATA_25 = [
     name: 'Adeline Silk Crepe Mermaid',
     silhouette: 'Mermaid',
     categorySlug: 'mermaid',
-    material: 'Lụa Mikado Ý & Satin Tơ Tằm Tự Nhiên',
+    material: 'Lụa Mikado Ý và Satin Tơ Tằm Tự Nhiên',
     color: 'Trắng Kem Nhạt',
     rentPrice: 5600000,
     depositAmount: 16000000,
@@ -385,7 +385,7 @@ export const DRESS_DATA_25 = [
     name: 'Sylvie Champagne Tulle',
     silhouette: 'Princess',
     categorySlug: 'princess',
-    material: 'Ren 3D Floral & Đính Kết Pha Lê Swarovski',
+    material: 'Ren 3D Floral và Đính Kết Pha Lê Swarovski',
     color: 'Champagne Ánh Hồng',
     rentPrice: 5800000,
     depositAmount: 16000000,
@@ -408,7 +408,7 @@ export async function seed25Dresses() {
     }
     console.log('Connected to MongoDB successfully!');
 
-    // 1. Delete traditional & tuxedo categories
+    // 1. Delete traditional và tuxedo categories
     console.log('Removing traditional and tuxedo categories...');
     const catDeleteRes = await Category.deleteMany({ slug: { $in: ['traditional', 'tuxedo'] } });
     console.log(`Deleted ${catDeleteRes.deletedCount} traditional/tuxedo categories.`);
@@ -562,13 +562,13 @@ export async function seed25Dresses() {
           {
             icon: 'sparkles',
             label: 'Đính Kết Thủ Công',
-            value: 'Pha Lê & Chỉ Tơ Kim',
+            value: 'Pha Lê và Chỉ Tơ Kim',
             sub: '100% chế tác tay tỉ mỉ',
           },
           {
             icon: 'shield',
             label: 'Bảo Quản Chuẩn Atelier',
-            value: 'Hấp nhiệt & Tiệt trùng UV',
+            value: 'Hấp nhiệt và Tiệt trùng UV',
             sub: 'Đóng gói vali chuyên dụng',
           },
         ],

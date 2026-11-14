@@ -24,7 +24,6 @@ import OrderRentalManagement from './pages/admin/OrderRentalManagement';
 import InventoryManagement from './pages/admin/InventoryManagement';
 import CustomerCareManagement from './pages/admin/CustomerCareManagement';
 import ContractManagement from './pages/admin/ContractManagement';
-import ContractTemplateManagement from './pages/admin/ContractTemplateManagement';
 import AccountManagement from './pages/admin/AccountManagement';
 import CategoryManagement from './pages/admin/CategoryManagement';
 import ScheduleOverviewPage from './pages/admin/ScheduleOverviewPage';
@@ -99,8 +98,8 @@ export default function App() {
               <Route path="/staff/schedule" element={<Navigate to="/staff/lich-tong-quan" replace />} />
               <Route path="/staff/don-thue" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><OrderRentalManagement /></ProtectedRoute>} />
               <Route path="/staff/orders" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><OrderRentalManagement /></ProtectedRoute>} />
-              <Route path="/staff/lich-hen" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><ScheduleOverviewPage defaultTab="appointments" /></ProtectedRoute>} />
-              <Route path="/staff/appointments" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><ScheduleOverviewPage defaultTab="appointments" /></ProtectedRoute>} />
+              <Route path="/staff/lich-hen" element={<Navigate to="/staff/lich-tong-quan" replace />} />
+              <Route path="/staff/appointments" element={<Navigate to="/staff/lich-tong-quan" replace />} />
               <Route path="/staff/kho-hang" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><InventoryManagement /></ProtectedRoute>} />
               <Route path="/staff/inventory" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><InventoryManagement /></ProtectedRoute>} />
               <Route path="/staff/cham-soc-khach-hang" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><CustomerCareManagement /></ProtectedRoute>} />
@@ -118,8 +117,8 @@ export default function App() {
               <Route path="/admin/revenue" element={<Navigate to="/admin/reports/revenue" replace />} />
               <Route path="/admin/don-thue" element={<ProtectedRoute allowedRoles={['admin']}><OrderRentalManagement /></ProtectedRoute>} />
               <Route path="/admin/orders" element={<ProtectedRoute allowedRoles={['admin']}><OrderRentalManagement /></ProtectedRoute>} />
-              <Route path="/admin/lich-hen" element={<ProtectedRoute allowedRoles={['admin']}><ScheduleOverviewPage defaultTab="appointments" /></ProtectedRoute>} />
-              <Route path="/admin/appointments" element={<ProtectedRoute allowedRoles={['admin']}><ScheduleOverviewPage defaultTab="appointments" /></ProtectedRoute>} />
+              <Route path="/admin/lich-hen" element={<Navigate to="/admin/lich-tong-quan" replace />} />
+              <Route path="/admin/appointments" element={<Navigate to="/admin/lich-tong-quan" replace />} />
               <Route path="/admin/kho-hang" element={<ProtectedRoute allowedRoles={['admin']}><InventoryManagement /></ProtectedRoute>} />
               <Route path="/admin/inventory" element={<ProtectedRoute allowedRoles={['admin']}><InventoryManagement /></ProtectedRoute>} />
               <Route path="/admin/dresses" element={<Navigate to="/admin/kho-hang" replace />} />
@@ -128,8 +127,8 @@ export default function App() {
               <Route path="/admin/customer-care" element={<ProtectedRoute allowedRoles={['admin']}><CustomerCareManagement /></ProtectedRoute>} />
               <Route path="/admin/hop-dong" element={<ProtectedRoute allowedRoles={['admin']}><ContractManagement /></ProtectedRoute>} />
               <Route path="/admin/contracts" element={<ProtectedRoute allowedRoles={['admin']}><ContractManagement /></ProtectedRoute>} />
-              <Route path="/admin/mau-hop-dong" element={<ProtectedRoute allowedRoles={['admin']}><ContractTemplateManagement /></ProtectedRoute>} />
-              <Route path="/admin/contract-templates" element={<ProtectedRoute allowedRoles={['admin']}><ContractTemplateManagement /></ProtectedRoute>} />
+              <Route path="/admin/mau-hop-dong" element={<Navigate to="/admin/hop-dong" replace />} />
+              <Route path="/admin/contract-templates" element={<Navigate to="/admin/hop-dong" replace />} />
               <Route path="/admin/accounts" element={<ProtectedRoute allowedRoles={['admin']}><AccountManagement /></ProtectedRoute>} />
               <Route path="/admin/users" element={<Navigate to="/admin/accounts" replace />} />
               <Route path="/admin/tai-khoan" element={<Navigate to="/admin/accounts" replace />} />
@@ -146,10 +145,10 @@ export default function App() {
               <Route path="/cham-soc-khach-hang" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><CustomerCareManagement /></ProtectedRoute>} />
               <Route path="/quan-ly-hop-dong" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><ContractManagement /></ProtectedRoute>} />
               <Route path="/hop-dong" element={<ProtectedRoute allowedRoles={['staff', 'admin']}><ContractManagement /></ProtectedRoute>} />
-              <Route path="/quan-ly-mau-hop-dong" element={<ProtectedRoute allowedRoles={['admin']}><ContractTemplateManagement /></ProtectedRoute>} />
-              <Route path="/mau-hop-dong" element={<ProtectedRoute allowedRoles={['admin']}><ContractTemplateManagement /></ProtectedRoute>} />
+              <Route path="/quan-ly-mau-hop-dong" element={<Navigate to="/admin/hop-dong" replace />} />
+              <Route path="/mau-hop-dong" element={<Navigate to="/admin/hop-dong" replace />} />
 
-              {/* Error & Access Control Routes */}
+              {/* Error và Access Control Routes */}
               <Route path="/404" element={<NotFoundPage type="404" />} />
               <Route path="/403" element={<NotFoundPage type="forbidden" />} />
               <Route path="/401" element={<NotFoundPage type="unauthenticated" />} />

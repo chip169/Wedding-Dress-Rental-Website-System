@@ -25,7 +25,6 @@ export default function ChangePasswordPage() {
   const hasMinLength = rules[0].pass;
   const passedRules = rules.filter((rule) => rule.pass).length;
   const score = hasMinLength ? passedRules : Math.min(passedRules, 1);
-  const label = score <= 1 ? 'YẾU' : score === 2 ? 'TRUNG BÌNH' : score === 3 ? 'KHÁ' : 'MẠNH (RẤT AN TOÀN)';
   const same = values.confirm && values.next === values.confirm;
 
   const change = (key) => (event) => setValues((current) => ({ ...current, [key]: event.target.value }));
@@ -60,7 +59,7 @@ export default function ChangePasswordPage() {
   return (
     <AccountLayout hideBreadcrumb={true} breadcrumb={[]}>
       <section className="profile-card rounded-lg bg-white px-5 py-7 sm:px-7" aria-labelledby="password-title">
-        <p className="account-overline text-[#874e57]">Bảo mật tài khoản & sự riêng tư</p>
+
         <h1 id="password-title" className="mt-1 font-playfair text-[25px]">
           Đổi Mật Khẩu
         </h1>
@@ -71,9 +70,8 @@ export default function ChangePasswordPage() {
 
         {notice && (
           <div
-            className={`mt-4 rounded-md p-3 text-sm ${
-              notice.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
-            }`}
+            className={`mt-4 rounded-md p-3 text-sm ${notice.type === 'success' ? 'bg-green-50 text-green-800' : 'bg-red-50 text-red-800'
+              }`}
           >
             {notice.text}
           </div>
@@ -139,20 +137,6 @@ export default function ChangePasswordPage() {
               </span>
             </label>
 
-            <div className="mt-4 flex items-center justify-between text-[10px] uppercase tracking-wider text-[#766966]">
-              <span>Độ mạnh mật khẩu:</span>
-              <strong className="text-[#874e57]">{values.next ? label : 'CHƯA NHẬP'}</strong>
-            </div>
-
-            <div className="mt-2 grid grid-cols-4 gap-1">
-              {rules.map((rule, index) => (
-                <span
-                  key={rule.label}
-                  className={`h-1.5 rounded-sm ${index < score ? 'bg-[#874e57]' : 'bg-[#eadbd8]'}`}
-                />
-              ))}
-            </div>
-
             <div className="mt-3 rounded-sm bg-[#fff8f6] px-4 py-3">
               <p className="account-overline mb-3">Tiêu chuẩn mật khẩu an toàn UniBridal:</p>
               <div className="grid gap-2 text-xs text-[#766966] sm:grid-cols-2">
@@ -206,8 +190,8 @@ export default function ChangePasswordPage() {
               {same
                 ? 'Mật khẩu xác nhận trùng khớp.'
                 : values.confirm
-                ? 'Mật khẩu xác nhận chưa trùng khớp.'
-                : 'Nhập lại mật khẩu mới để xác nhận.'}
+                  ? 'Mật khẩu xác nhận chưa trùng khớp.'
+                  : 'Nhập lại mật khẩu mới để xác nhận.'}
             </p>
           </div>
 
@@ -222,9 +206,7 @@ export default function ChangePasswordPage() {
           </div>
 
           <div className="flex justify-end gap-3 pt-3">
-            <button type="button" onClick={reset} className="account-button-secondary">
-              LÀM LẠI
-            </button>
+
             <button type="button" disabled={saving} onClick={submit} className="account-button-primary">
               {saving ? 'ĐANG LƯU...' : 'LƯU MẬT KHẨU MỚI'}
             </button>

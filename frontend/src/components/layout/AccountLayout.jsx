@@ -48,10 +48,10 @@ const items = [
   { to: '/profile/password', label: 'Đổi mật khẩu', Icon: History },
 ];
 
-export function AccountSidebar({ onLogout }) {
+function AccountSidebar({ onLogout }) {
   return (
     <aside className="profile-sidebar rounded-lg border border-[#f4edeb] bg-white p-4">
-      <p className="mb-2 mt-1 text-[11px] font-medium uppercase tracking-[2.5px] text-[#874e57]">Bridal Concierge</p>
+
       <h2 className="mb-3 text-lg font-semibold">Danh Mục Quản Lý</h2>
       <nav aria-label="Quản lý tài khoản" className="flex flex-col gap-1">
         {items.map(({ to, label, Icon, end }) => (
@@ -60,8 +60,7 @@ export function AccountSidebar({ onLogout }) {
             to={to}
             end={end}
             className={({ isActive }) =>
-              `flex items-center gap-2 rounded-sm px-2 py-2.5 text-left text-sm transition-colors ${
-                isActive ? 'bg-[#faeae5] text-[#874e57]' : 'text-[#615452] hover:bg-[#fff8f6]'
+              `flex items-center gap-2 rounded-sm px-2 py-2.5 text-left text-sm transition-colors ${isActive ? 'bg-[#faeae5] text-[#874e57]' : 'text-[#615452] hover:bg-[#fff8f6]'
               }`
             }
           >
@@ -119,7 +118,7 @@ export default function AccountLayout({ children, breadcrumb = [], notice, onLog
         </div>
       </main>
       <Footer variant="profile" />
-      
+
     </div>
   );
 }

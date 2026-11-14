@@ -1,20 +1,17 @@
 import React, { useState } from 'react';
 import { Link, useLocation, useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  Lock,
+import { Lock,
   ShieldAlert,
   Compass,
   ArrowLeft,
   Home,
   LogIn,
   Search,
-  Sparkles,
+  Crown,
   Calendar,
-  Sparkle,
   UserPlus,
   HelpCircle,
-  ShoppingBag
-} from 'lucide-react';
+  ShoppingBag } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
 import { useAuth } from '../../contexts/AuthContext';
@@ -66,7 +63,7 @@ export default function NotFoundPage({ type: propType }) {
 
         <div className="max-w-2xl w-full mx-auto relative z-10 text-center">
           
-          {/* Top Emblem & Error Badge */}
+          {/* Top Emblem và Error Badge */}
           <div className="flex flex-col items-center justify-center mb-6">
             <div className="relative mb-5">
               <div className="w-24 h-24 sm:w-28 sm:h-28 rounded-full bg-white border-2 border-[#EEDECF] shadow-lg flex items-center justify-center p-4 relative">
@@ -92,7 +89,7 @@ export default function NotFoundPage({ type: propType }) {
 
             {/* Error Code Pill */}
             <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full text-[11px] font-bold tracking-widest uppercase bg-white border border-[#EEDECF] shadow-2xs">
-              <Sparkles className="w-3 h-3 text-[#E0A96D]" />
+              <Crown className="w-3 h-3 text-[#E0A96D]" />
               {is401 && <span className="text-[#B8737D]">YÊU CẦU ĐĂNG NHẬP • 401 UNAUTHORIZED</span>}
               {is403 && <span className="text-[#893844]">TRUY CẬP BỊ GIỚI HẠN • 403 FORBIDDEN</span>}
               {is404 && <span className="text-[#733F49]">TRANG KHÔNG TỒN TẠI • 404 NOT FOUND</span>}
@@ -240,7 +237,7 @@ export default function NotFoundPage({ type: propType }) {
                 >
                   <div className="flex items-center gap-2.5">
                     <div className="w-8 h-8 rounded-full bg-[#FAF4EE] text-[#733F49] flex items-center justify-center shrink-0 group-hover:bg-[#733F49] group-hover:text-white transition-colors">
-                      <Sparkle className="w-4 h-4" />
+                      <Crown className="w-4 h-4" />
                     </div>
                     <div>
                       <strong className="block text-[12.5px] text-[#2C2523] group-hover:text-[#733F49] transition-colors">
@@ -263,7 +260,7 @@ export default function NotFoundPage({ type: propType }) {
                       <strong className="block text-[12.5px] text-[#2C2523] group-hover:text-[#733F49] transition-colors">
                         Đặt Lịch Thử Váy VIP
                       </strong>
-                      <span className="text-[11px] text-[#847374] block">Phòng thử riêng tư & Stylist 1-1</span>
+                      <span className="text-[11px] text-[#847374] block">Phòng thử riêng tư và Stylist 1-1</span>
                     </div>
                   </div>
                 </Link>
@@ -278,7 +275,7 @@ export default function NotFoundPage({ type: propType }) {
                     </div>
                     <div>
                       <strong className="block text-[12.5px] text-[#2C2523] group-hover:text-[#733F49] transition-colors">
-                        Tư Vấn & Trợ Giúp
+                        Tư Vấn và Trợ Giúp
                       </strong>
                       <span className="text-[11px] text-[#847374] block">Trò chuyện trực tiếp cùng Stylist</span>
                     </div>

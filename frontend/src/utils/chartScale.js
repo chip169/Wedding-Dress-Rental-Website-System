@@ -9,6 +9,3 @@ export function formatGrowth(value) {
         return 'Chưa có kỳ so sánh';
     return `${Number(value) > 0 ? '+' : ''}${new Intl.NumberFormat('vi-VN', { maximumFractionDigits: 1 }).format(Number(value))}%`;
 }
-export function growthLabel(value) {
-    return value == null ? 'Chưa đủ dữ liệu' : value > 0 ? 'Tăng' : value < 0 ? 'Giảm' : 'Không đổi';
-}

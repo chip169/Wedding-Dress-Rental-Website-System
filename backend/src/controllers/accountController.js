@@ -3,8 +3,6 @@ import * as customer from '../services/customerAccountService.js';
 
 const ok = (res, message, data, status = 200) => res.status(status).json({ success: true, message, data });
 
-export const login = async (req, res) => ok(res, 'Đăng nhập thành công.', await account.login(req.body.email, req.body.password));
-export const register = async (req, res) => ok(res, 'Đăng ký tài khoản thành công.', await account.register(req.body), 201);
 export const profile = async (req, res) => ok(res, 'Lấy thông tin hồ sơ thành công.', account.getProfile(req.user));
 export const updateProfile = async (req, res) => ok(res, 'Cập nhật thông tin hồ sơ thành công.', await account.updateProfile(req.user, req.body));
 export const changePassword = async (req, res) => ok(res, 'Đổi mật khẩu thành công.', await account.changePassword(req.user, req.body));
@@ -12,8 +10,8 @@ export const orders = async (req, res) => ok(res, 'Lấy danh sách đơn hàng 
 export const order = async (req, res) => ok(res, 'Lấy chi tiết đơn hàng thành công.', await customer.orderDetail(req.user, req.params.id));
 export const cancelOrder = async (req, res) => ok(res, 'Đã hủy đơn thuê. Việc hoàn tiền (nếu có) cần showroom đối soát riêng.', await customer.cancelOrder(req.user, req.params.id));
 export const inspection = async (req, res) => ok(res, 'Lấy biên bản kiểm định thành công.', await customer.getInspection(req.user, req.params.id));
-export const confirmInspection = async (req, res) => ok(res, 'Đã xác nhận biên bản và gửi thông tin nhận hoàn cọc cho showroom.', await customer.confirmInspection(req.user._id, req.params.id, req.body));
-export const disputeInspection = async (req, res) => ok(res, 'Đã gửi khiếu nại biên bản.', await customer.disputeInspection(req.user._id, req.params.id, req.body.reason));
+export const confirmInspection = async (req, res) => ok(res, 'Đã xác nhận biên bản và gửi thông tin nhận hoàn cọc cho showroom.', await customer.confirmInspection(req.user, req.params.id, req.body));
+export const disputeInspection = async (req, res) => ok(res, 'Đã gửi khiếu nại biên bản.', await customer.disputeInspection(req.user, req.params.id, req.body.reason));
 export const dresses = async (req, res) => ok(res, 'Lấy danh sách sản phẩm thành công.', await account.listDresses());
 export const dressDetail = async (req, res) => ok(res, 'Lấy chi tiết sản phẩm thành công.', await account.getDressDetail(req.params.id));
 export const createDress = async (req, res) => ok(res, 'Thêm mới mẫu váy cưới thành công.', await account.createDress(req.body), 201);

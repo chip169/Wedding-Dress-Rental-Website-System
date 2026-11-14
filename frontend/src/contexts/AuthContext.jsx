@@ -127,8 +127,8 @@ export function AuthProvider({ children }) {
     setToken(nextToken);
   };
 
-  const isLoggedIn = !!token && !!user;
-  const rawRole = user?.role || user?.roleId?.code || (token ? 'customer' : 'guest');
+  const isLoggedIn = Boolean(token && user);
+  const rawRole = user?.role || (token ? 'customer' : 'guest');
   const role = (typeof rawRole === 'string' ? rawRole : 'guest').toLowerCase();
 
   return (

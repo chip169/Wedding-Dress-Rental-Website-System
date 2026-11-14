@@ -1,23 +1,17 @@
-import { formatCurrencyVND } from '../../utils/formatCurrency';
-import React, { useEffect, useMemo, useState } from 'react';
-import {
-  PackageCheck,
+import React, { useEffect, useState } from 'react';
+import { PackageCheck,
   CalendarDays,
   TrendingUp,
-  Sparkles,
+  Crown,
   ArrowRight,
   Users,
   Layers,
-  ArrowUpRight,
-} from 'lucide-react';
+  ArrowUpRight } from 'lucide-react';
 import { Link } from 'react-router-dom';
 import DashboardLayout from '../../components/layout/DashboardLayout';
-import DashboardChart from '../../components/common/DashboardChart';
-import { roundedChartScale } from '../../utils/chartScale';
 import { getAdminDashboard } from '../../services/reportService';
 
 const PERIODS = { week: '7 ngày qua', month: 'Tháng này', quarter: 'Quý này', year: 'Năm nay' };
-const money = (value) => value == null ? '—' : formatCurrencyVND(value);
 
 export default function AdminDashboardPage() {
   const [period, setPeriod] = useState('month');
@@ -50,20 +44,6 @@ export default function AdminDashboardPage() {
     };
   }, [period, reload]);
 
-  const chart = useMemo(() => {
-    const values = data?.chart || [];
-    const primary = values.map((item) => (item.orderValue || 0) / 1_000_000);
-    const { max, ticks } = roundedChartScale(Math.max(0, ...primary));
-    return {
-      labels: values.map((item) => item.label),
-      primary,
-      tooltipValues: values.map((item) => item.orderValue || 0),
-      max,
-      ticks,
-      unit: 'tr',
-    };
-  }, [data]);
-
   const controls = (
     <div className="ub-dashboard-periods is-heading" role="group" aria-label="Khoảng thời gian thống kê">
       {Object.entries(PERIODS).map(([key, label]) => (
@@ -85,7 +65,7 @@ export default function AdminDashboardPage() {
       role="admin"
       controls={controls}
       title="Tổng Quan Kinh Doanh"
-      subtitle="Chỉ số hoạt động & phân tích tài chính UniBridal 2026"
+      subtitle="Chỉ số hoạt động và phân tích tài chính UniBridal 2026"
       activeNav="dashboard"
     >
       {error && (
@@ -93,20 +73,14 @@ export default function AdminDashboardPage() {
           <span className="font-semibold">⚠️ Lỗi kết nối Cơ sở dữ liệu:</span> {error} <button type="button" onClick={() => setReload((value) => value + 1)} className="ml-3 underline">Thử lại</button>
         </div>
       )}
-      {data?.ordersMissingDepositTransaction > 0 && (
-        <p role="alert" className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          {data.ordersMissingDepositTransaction} đơn đã chuyển sang trạng thái đặt cọc nhưng chưa có giao dịch cọc thành công trong hệ thống. Cần đối soát trước khi xác nhận tiền thực thu.
-        </p>
-      )}
-
       {loading && <p role="status" className="mb-4 text-sm text-stone-500">Đang tải thống kê...</p>}
       {/* Tổng đơn thuê, lịch hẹn và người dùng */}
-      <section className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-5" aria-label="Chỉ số kinh doanh trọng yếu">
+      <section className="mx-auto grid w-full max-w-5xl grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3" aria-label="Chỉ số kinh doanh trọng yếu">
         {[
           {
             title: 'TỔNG ĐƠN THUÊ',
             value: data?.totalOrders ?? '—',
-            note: `${data?.completedOrders ?? 0} đơn đã hoàn tất & quyết toán`,
+            note: `${data?.completedOrders ?? 0} đơn đã hoàn tất và quyết toán`,
             Icon: PackageCheck,
             color: 'rose',
           },
@@ -127,18 +101,18 @@ export default function AdminDashboardPage() {
         ].map(({ title, value, note, Icon, color }) => (
           <article
             key={title}
-            className="ub-dashboard-metric admin-metric min-w-0 rounded-2xl border border-[#EFE5E1] bg-white p-5 shadow-xs hover:shadow-md transition-shadow"
+            className="min-w-0 rounded-2xl border border-[#EFE5E1] bg-white px-5 py-4 shadow-sm transition-shadow hover:shadow-md"
           >
-            <div className="ub-dashboard-metric-head flex items-center justify-between mb-3">
-              <span className="text-[11px] font-bold tracking-[1.2px] text-[#705F60] uppercase">{title}</span>
-              <span className={`w-10 h-10 rounded-xl flex items-center justify-center ${color === 'rose' ? 'bg-[#FAF0EC] text-[#733F49]' : 'bg-[#FAF2EE] text-[#8C6B46]'}`}>
+            <div className="flex items-start justify-between gap-3">
+              <div className="min-w-0">
+                <h2 className="m-0 text-[11px] font-bold leading-snug tracking-[1.2px] text-[#705F60]">{title}</h2>
+                <p className="mb-0 mt-2 font-serif text-[40px] font-bold leading-none tracking-tight tabular-nums text-[#2C2523] sm:text-[46px]">{value}</p>
+              </div>
+              <span aria-hidden="true" className={`flex h-10 w-10 shrink-0 items-center justify-center rounded-xl ${color === 'rose' ? 'bg-[#FAF0EC] text-[#733F49]' : 'bg-[#FAF2EE] text-[#8C6B46]'}`}>
                 <Icon size={19} />
               </span>
             </div>
-            <div className="text-[28px] font-bold text-[#2C2523] tracking-tight leading-none mb-2 font-serif">{value}</div>
-            <div className="flex items-center justify-between text-xs text-[#8A797A] pt-2 border-t border-[#F5EAE6]">
-              <span>{note}</span>
-            </div>
+            <p className="mb-0 mt-3 border-t border-[#F5EAE6] pt-2 text-xs leading-relaxed text-[#786663]">{note}</p>
           </article>
         ))}
       </section>
@@ -148,7 +122,7 @@ export default function AdminDashboardPage() {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-5 pb-3 border-b border-[#F4EBE7]">
           <div>
             <h2 className="text-sm font-bold text-[#2C2523] uppercase tracking-wider flex items-center gap-2">
-              <Sparkles size={16} className="text-[#733F49]" />
+              <Crown size={16} className="text-[#733F49]" />
               Tiến Độ Chu Trình Đơn Thuê Showroom
             </h2>
             <p className="text-xs text-[#8A797A]">Theo dõi trực tiếp số lượng đơn hàng qua từng giai đoạn phục vụ cô dâu</p>
@@ -184,39 +158,13 @@ export default function AdminDashboardPage() {
         </div>
       </section>
 
-      {/* Biểu Đồ Doanh Thu & Giá Trị Đơn */}
-      <section
-        className="ub-dashboard-chart-card is-admin mt-7 rounded-2xl border border-[#EFE5E1] bg-white p-6 shadow-xs"
-        aria-labelledby="admin-chart-title"
-      >
-        <div className="ub-dashboard-chart-head mb-4">
-          <h2 id="admin-chart-title" className="text-base font-bold text-[#2C2523] flex items-center gap-2">
-            <span className="ub-dashboard-title-dot" />
-            Biểu Đồ Giá Trị Đơn Đã Đặt Cọc Theo Kỳ
-          </h2>
-          <p className="ub-dashboard-chart-subtitle text-xs text-[#8A797A]">
-            Tổng tiền thuê của các đơn đã qua bước đặt cọc giữ lịch theo niên độ 2026 · Đơn vị: triệu đồng (VNĐ).
-          </p>
-        </div>
-        {data && (
-          <DashboardChart
-            chartId={`admin-${period}`}
-            {...chart}
-            primaryLabel="Giá trị đơn"
-            chartType="bar"
-            variant="admin"
-            formatTooltipValue={money}
-          />
-        )}
-      </section>
-
       {/* Quick Action Navigation Grid */}
       <section className="mt-7 grid grid-cols-2 sm:grid-cols-4 gap-4" aria-label="Phím tắt quản trị">
         {[
-          { label: 'Quản Lý Đơn Thuê', to: '/admin/don-thue', icon: PackageCheck, desc: 'Bàn giao, kiểm định & hoàn cọc' },
-          { label: 'Quản Lý Kho Hàng', to: '/admin/kho-hang', icon: Layers, desc: 'Tồn kho size & vị trí tủ' },
+          { label: 'Quản Lý Đơn Thuê', to: '/admin/don-thue', icon: PackageCheck, desc: 'Bàn giao, kiểm định và hoàn cọc' },
+          { label: 'Quản Lý Sản Phẩm', to: '/admin/kho-hang', icon: Layers, desc: 'Tồn kho size và vị trí' },
           { label: 'Quản Lý Tài Khoản', to: '/admin/accounts', icon: Users, desc: 'Phân quyền Admin / Staff / Khách' },
-          { label: 'Báo Cáo Doanh Thu', to: '/admin/reports/revenue', icon: TrendingUp, desc: 'Dòng tiền & quỹ cọc bảo lãnh' },
+          { label: 'Báo Cáo Doanh Thu', to: '/admin/reports/revenue', icon: TrendingUp, desc: 'Dòng tiền và quỹ cọc bảo lãnh' },
         ].map((item) => (
           <Link
             key={item.label}

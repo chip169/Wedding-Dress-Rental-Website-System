@@ -1,9 +1,8 @@
 import jwt from 'jsonwebtoken';
 import mongoose from 'mongoose';
-import User from '../models/User.model.js';
-import Role from '../models/Role.model.js';
-import Order from '../models/Order.model.js';
-import Dress from '../models/Dress.model.js';
+import User from '../models/userModel.js';
+import Order from '../models/orderModel.js';
+import Dress from '../models/dressModel.js';
 
 const fail = (status, message) => {
   throw Object.assign(new Error(message), { status, statusCode: status });
@@ -17,7 +16,7 @@ const publicUser = (user) => ({
   email: user.email,
   phone: user.phone,
   avatar: user.avatar || '',
-  role: user.roleId?.code?.toLowerCase() || user.role || 'customer',
+  role: user.role || 'customer',
   wishlist: (user.wishlist || []).filter(Boolean).map((d) => String(d._id || d)),
   fullName: user.fullName,
   measurements: user.measurements || {},
@@ -33,45 +32,6 @@ const tokenFor = (user) => jwt.sign(
   process.env.JWT_SECRET || 'unibridal_jwt_secret_key_2026_wdp301',
   { expiresIn: process.env.JWT_EXPIRES_IN || '7d' },
 );
-
-export async function login(email, password) {
-  if (!email || !password) fail(400, 'Vui lòng nhập đầy đủ email và mật khẩu.');
-  const identity = String(email).trim().toLowerCase();
-  const user = await User.findOne({ $or: [{ email: identity }, { phone: identity }] })
-    .select('+password')
-    .populate('roleId');
-
-  if (!user || !(await user.comparePassword(password))) {
-    fail(401, 'Email hoặc mật khẩu không chính xác.');
-  }
-  if (!user.isActive) {
-    fail(403, 'Tài khoản của bạn hiện đang bị tạm khóa. Vui lòng liên hệ quản trị viên.');
-  }
-  return { user: publicUser(user), token: tokenFor(user) };
-}
-
-export async function register({ name, email, phone, password }) {
-  if (!name?.trim() || !emailPattern.test(email || '') || !phone?.trim() || !password || password.length < 6) {
-    fail(400, 'Vui lòng nhập đầy đủ họ tên, email hợp lệ, số điện thoại và mật khẩu từ 6 ký tự.');
-  }
-  const cleanEmail = email.trim().toLowerCase();
-  const role = await Role.findOne({ code: 'CUSTOMER' });
-  if (!role) fail(503, 'Cấu hình vai trò khách hàng (CUSTOMER) chưa sẵn sàng trên hệ thống.');
-  if (await User.exists({ email: cleanEmail })) {
-    fail(400, 'Địa chỉ email này đã được đăng ký trong hệ thống.');
-  }
-
-  const user = await User.create({
-    fullName: name.trim(),
-    email: cleanEmail,
-    phone: phone.trim(),
-    password,
-    roleId: role._id,
-    isActive: true,
-  });
-  user.roleId = role;
-  return { user: publicUser(user), token: tokenFor(user) };
-}
 
 export function getProfile(user) {
   return publicUser(user);
@@ -89,6 +49,15 @@ export async function updateProfile(user, data) {
 
   if (!name || !phone) {
     fail(400, 'Họ tên và số điện thoại là thông tin bắt buộc.');
+  }
+  if (name.length < 2) {
+    fail(400, 'Họ và tên phải có tối thiểu 2 ký tự.');
+  }
+  if (/\d/.test(name)) {
+    fail(400, 'Họ và tên không được chứa chữ số.');
+  }
+  if (!/^[\p{L}\s'-]+$/u.test(name)) {
+    fail(400, 'Họ và tên chỉ được chứa chữ cái và khoảng trắng.');
   }
   if (data.avatar && (!/^data:image\/(png|jpeg|webp);base64,/.test(data.avatar) || data.avatar.length > 7_000_000)) {
     fail(400, 'Ảnh đại diện không đúng định dạng (PNG/JPEG/WEBP) hoặc dung lượng vượt quá 5MB.');
@@ -133,7 +102,7 @@ export async function changePassword(user, { currentPassword, newPassword }) {
   if (!currentPassword || !newPassword || newPassword.length < 6) {
     fail(400, 'Mật khẩu mới cần tối thiểu 6 ký tự.');
   }
-  const account = await User.findById(user._id).select('+password').populate('roleId');
+  const account = await User.findById(user._id).select('+password');
   if (!(await account.comparePassword(currentPassword))) {
     fail(400, 'Mật khẩu hiện tại không chính xác.');
   }
@@ -143,26 +112,6 @@ export async function changePassword(user, { currentPassword, newPassword }) {
   account.password = newPassword;
   await account.save();
   return { token: tokenFor(account) };
-}
-
-export async function getOrders(customerId) {
-  return Order.find({ customerId })
-    .sort({ createdAt: -1 })
-    .populate('items.dressId', 'images code silhouette')
-    .lean();
-}
-
-export async function getOrder(customerId, identifier) {
-  const filter = mongoose.isValidObjectId(identifier)
-    ? { _id: identifier, customerId }
-    : { orderCode: String(identifier).toUpperCase(), customerId };
-
-  const order = await Order.findOne(filter)
-    .populate('items.dressId', 'images code silhouette')
-    .lean();
-
-  if (!order) fail(404, 'Không tìm thấy thông tin đơn hàng yêu cầu.');
-  return order;
 }
 
 export async function listDresses() {
@@ -185,15 +134,56 @@ export async function getDressDetail(idOrSlug) {
   return dress;
 }
 
+const normalizeSilhouette = (sil = '') => {
+  const s = String(sil).toLowerCase();
+  if (s.includes('ballgown') || s.includes('bồng')) return 'Ballgown';
+  if (s.includes('mermaid') || s.includes('đuôi cá')) return 'Mermaid';
+  if (s.includes('a-line') || s.includes('chữ a') || s.includes('aline')) return 'A-Line';
+  if (s.includes('silk') || s.includes('lụa')) return 'Silk Gown';
+  if (s.includes('princess') || s.includes('hoàng gia')) return 'Princess';
+  return 'Other';
+};
+
+const COLOR_PALETTE = {
+  'trắng tinh khôi': { hex: '#FFFFFF', border: '#D9D9D9' },
+  'trắng ngọc tinh khôi': { hex: '#FFFFFF', border: '#D9D9D9' },
+  'trắng kem (ivory)': { hex: '#FDFBF7', border: '#E7DEC8' },
+  'trắng kem ivory': { hex: '#FDFBF7', border: '#E7DEC8' },
+  'trắng kem': { hex: '#FDFBF7', border: '#E7DEC8' },
+  'champagne': { hex: '#F7E7CE', border: '#DEC8A6' },
+  'hồng pastel': { hex: '#F5D6D8', border: '#E8B6BC' },
+  'hồng nude': { hex: '#EED9D1', border: '#D8BCB2' },
+  'đỏ ruby': { hex: '#9B111E', border: '#780B15' },
+  'xanh khói (dusty blue)': { hex: '#8CA4B8', border: '#6E8B9E' },
+  'xanh khói': { hex: '#8CA4B8', border: '#6E8B9E' },
+};
+
 export async function createDress(data) {
-  if (!data?.name) fail(400, 'Tên váy cưới không được để trống.');
+  if (!data?.name?.trim()) fail(400, 'Tên váy cưới không được để trống.');
+  if (!data?.rentPrice || Number(data.rentPrice) <= 0) fail(400, 'Đơn giá thuê váy cưới không được để trống và phải lớn hơn 0.');
+  if (!data?.depositAmount || Number(data.depositAmount) <= 0) fail(400, 'Tiền đặt cọc váy cưới không được để trống và phải lớn hơn 0.');
+  if (!data?.color?.trim()) fail(400, 'Màu sắc váy cưới không được để trống.');
+  if (!Array.isArray(data?.images) || data.images.length === 0) fail(400, 'Váy cưới bắt buộc phải có ít nhất một hình ảnh sản phẩm.');
   const count = await Dress.countDocuments();
   const code = data.code || `UB-${(count + 1).toString().padStart(3, '0')}`;
   const slug = (data.slug || data.name).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/(^-|-$)/g, '') + '-' + Date.now().toString().slice(-4);
 
+  const Category = mongoose.model('Category');
   let categoryId = data.categoryId;
   if (!categoryId || !mongoose.isValidObjectId(categoryId)) {
-    const Category = mongoose.model('Category');
+    if (data.category || data.categoryName || data.silhouette) {
+      const catQuery = data.category || data.categoryName || data.silhouette;
+      const foundCat = await Category.findOne({
+        $or: [
+          { name: new RegExp(catQuery, 'i') },
+          { slug: String(catQuery).toLowerCase().replace(/[^a-z0-9]+/g, '-') }
+        ]
+      });
+      if (foundCat) categoryId = foundCat._id;
+    }
+  }
+
+  if (!categoryId || !mongoose.isValidObjectId(categoryId)) {
     let defaultCat = await Category.findOne();
     if (!defaultCat) {
       defaultCat = await Category.create({ name: 'Váy Cưới Cao Cấp', slug: 'vay-cuoi-cao-cap' });
@@ -201,19 +191,39 @@ export async function createDress(data) {
     categoryId = defaultCat._id;
   }
 
+  const silhouette = data.silhouette ? normalizeSilhouette(data.silhouette) : 'Ballgown';
+
+  let colorOptions = [];
+  if (typeof data.color === 'string' && data.color.trim()) {
+    const colorNames = data.color.split(',').map((c) => c.trim()).filter(Boolean);
+    colorOptions = colorNames.map((cName) => {
+      const key = cName.toLowerCase();
+      const matched = COLOR_PALETTE[key];
+      return {
+        name: cName,
+        hex: matched ? matched.hex : '#FDFBF7',
+        border: matched ? matched.border : '#E7DEC8',
+      };
+    });
+  }
+
   const dress = await Dress.create({
     code,
     name: data.name,
     slug,
     categoryId,
-    silhouette: data.silhouette || 'Ballgown',
-    material: data.material || 'Lụa tơ tằm Ý & Ren Pháp',
-    sizes: data.sizes || ['S', 'M'],
+    silhouette,
+    material: data.material || 'Lụa Mikado Ý',
+    color: data.color || 'Trắng Tinh Khôi',
+    colorOptions: colorOptions.length > 0 ? colorOptions : undefined,
+    sizes: Array.isArray(data.sizes) && data.sizes.length > 0 ? data.sizes : ['XS', 'S', 'M', 'L'],
     rentPrice: Number(data.rentPrice || data.price || 5000000),
     depositAmount: Number(data.depositAmount || 15000000),
-    originalPrice: Number(data.originalPrice || 30000000),
-    description: data.description || '',
-    images: data.images || [data.image || '/assets/dresses/dress_01.jpg'],
+    originalPrice: Number(data.originalPrice || (Number(data.rentPrice || 5000000) * 5)),
+    description: data.description || 'Lễ phục cưới cao cấp bảo quản tiêu chuẩn vi khí hậu.',
+    images: Array.isArray(data.images) && data.images.length > 0
+      ? data.images
+      : [data.image || '/assets/dresses/dress_01.jpg'],
     status: data.status || 'available',
     collectionTag: data.collectionTag || 'ATELIER COUTURE 2026',
   });
@@ -221,15 +231,75 @@ export async function createDress(data) {
 }
 
 export async function updateDress(id, data) {
-  const dress = await Dress.findByIdAndUpdate(id, { $set: data }, { new: true, runValidators: true });
+  const updateData = { ...data };
+
+  // 1. Chuẩn hóa silhouette nếu có (khớp enum schema)
+  if (updateData.silhouette || updateData.category) {
+    updateData.silhouette = normalizeSilhouette(updateData.silhouette || updateData.category);
+  }
+  if (updateData.category) {
+    delete updateData.category;
+  }
+  if (updateData.categoryId && !mongoose.isValidObjectId(updateData.categoryId)) {
+    delete updateData.categoryId;
+  }
+
+  // 2. Tự động cập nhật colorOptions đồng bộ khi thay đổi color
+  if (typeof updateData.color === 'string' && updateData.color.trim()) {
+    const colorNames = updateData.color.split(',').map((c) => c.trim()).filter(Boolean);
+    updateData.colorOptions = colorNames.map((cName) => {
+      const key = cName.toLowerCase();
+      const matched = COLOR_PALETTE[key];
+      return {
+        name: cName,
+        hex: matched ? matched.hex : '#FDFBF7',
+        border: matched ? matched.border : '#E7DEC8',
+      };
+    });
+  }
+
+  // 3. Cho phép tìm theo cả _id ObjectId hoặc mã SKU (UB-012) hoặc slug
+  const filter = mongoose.isValidObjectId(id)
+    ? { _id: id }
+    : { $or: [{ code: String(id).toUpperCase() }, { slug: String(id).toLowerCase() }] };
+
+  const dress = await Dress.findOneAndUpdate(filter, { $set: updateData }, { returnDocument: 'after', runValidators: true });
   if (!dress) fail(404, 'Không tìm thấy mẫu váy cưới cần cập nhật.');
   return dress;
 }
 
 export async function deleteDress(id) {
-  const dress = await Dress.findByIdAndUpdate(id, { $set: { status: 'retired' } }, { new: true });
+  const dress = await Dress.findById(id).lean();
   if (!dress) fail(404, 'Không tìm thấy mẫu váy cưới.');
-  return dress;
+
+  // 1. Kiểm tra trạng thái trực tiếp của váy
+  if (dress.status === 'renting') {
+    fail(400, `Không thể xóa mẫu váy "${dress.name}" (${dress.code}) vì đang trong trạng thái "Đang cho thuê".`);
+  }
+
+  // 2. Kiểm tra các đơn hàng đang thuê chưa hoàn tất liên quan đến mẫu váy này
+  const dressIdsToCheck = [
+    id,
+    String(id),
+    dress._id,
+    String(dress._id),
+    mongoose.isValidObjectId(id) ? new mongoose.Types.ObjectId(id) : null,
+  ].filter(Boolean);
+
+  const activeOrder = await Order.findOne({
+    $or: [
+      { 'items.dressId': { $in: dressIdsToCheck } },
+      { 'items.code': dress.code },
+    ],
+    status: { $nin: ['completed', 'complete', 'cancelled'] },
+  }).lean();
+
+  if (activeOrder) {
+    fail(400, `Không thể xóa mẫu váy "${dress.name}" (${dress.code}) vì đang có đơn thuê #${activeOrder.orderCode} chưa hoàn tất.`);
+  }
+
+  const updated = await Dress.findByIdAndUpdate(id, { $set: { status: 'retired' } }, { new: true });
+  return updated;
 }
 
 export async function getWishlist(user) {

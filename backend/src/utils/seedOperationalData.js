@@ -7,11 +7,11 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 dotenv.config({ path: path.join(__dirname, '../../.env') });
 
-import Order from '../models/Order.model.js';
-import Payment from '../models/Payment.model.js';
-import Appointment from '../models/Appointment.model.js';
-import Dress from '../models/Dress.model.js';
-import User from '../models/User.model.js';
+import Order from '../models/orderModel.js';
+import Payment from '../models/paymentModel.js';
+import Appointment from '../models/appointmentModel.js';
+import Dress from '../models/dressModel.js';
+import User from '../models/userModel.js';
 
 async function seedData() {
   try {
@@ -66,10 +66,10 @@ async function seedData() {
       'deposit_paid',
       'preparing',
       'renting',
-      'returned',
-      'completed',
+      'renting',
+      'renting',
       'deposit_paid',
-      'completed',
+      'renting',
       'preparing',
     ];
 
@@ -83,9 +83,10 @@ async function seedData() {
       const status = statuses[i];
       const orderCode = `UB-2026-${(i + 1).toString().padStart(4, '0')}`;
       
-      // Distribute orders across November 2026
-      const dayOfMonth = (i % 20) + 1;
-      const createdAt = new Date(2026, 10, dayOfMonth, 10 + (i % 8), 15 * (i % 4));
+      // Phân bố các đơn mẫu về quá khứ (cách đây 1 đến 15 ngày so với ngày hôm nay)
+      // Đảm bảo không bao giờ có ngày tạo trong tương lai làm chìm các đơn thực tế mới tạo
+      const daysAgo = Math.max(1, 15 - i);
+      const createdAt = new Date(today.getTime() - daysAgo * 24 * 60 * 60 * 1000 + (i % 8) * 3600 * 1000);
       
       // Đảm bảo có đơn bàn giao đúng ngày hôm nay
       const rentalStartDate = i === 1 
@@ -175,7 +176,7 @@ async function seedData() {
       '18:30 — 20:00',
     ];
     const branches = ['hcm-q1', 'hn-hoankiem', 'dn-haichau'];
-    const aptStatuses = ['pending', 'confirmed', 'confirmed', 'completed', 'pending', 'confirmed', 'completed', 'confirmed', 'pending', 'completed'];
+    const aptStatuses = ['confirmed', 'confirmed', 'confirmed', 'completed', 'confirmed', 'confirmed', 'completed', 'confirmed', 'confirmed', 'completed'];
 
     const appointmentsData = [];
     for (let i = 0; i < 10; i++) {
@@ -201,7 +202,7 @@ async function seedData() {
             image: (dress.images && dress.images[0]) || '',
           },
         ],
-        vipServices: ['Tiệc trà chiều Macaron & Trà hoa Paris', 'Tư vấn trực tiếp 1:1 cùng Stylist'],
+        vipServices: ['Tiệc trà chiều Macaron và Trà hoa Paris', 'Tư vấn trực tiếp 1:1 cùng Stylist'],
         status: aptStatuses[i],
         notes: 'Khách hàng mong muốn thử phom dáng siết eo corsetry độc quyền.',
         createdAt: new Date(today.getTime() - (10 - i) * 24 * 60 * 60 * 1000),

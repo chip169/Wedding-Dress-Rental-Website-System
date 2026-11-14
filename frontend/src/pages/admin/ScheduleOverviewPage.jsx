@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import {
   Calendar,
@@ -9,13 +9,13 @@ import {
   Empty,
   Spin,
   message,
+  Table,
 } from 'antd';
 import viVN from 'antd/locale/vi_VN';
 import dayjs from 'dayjs';
 import 'dayjs/locale/vi';
-import {
-  CalendarDays,
-  Sparkles,
+import { CalendarDays,
+  Crown,
   RotateCcw,
   Clock,
   Phone,
@@ -24,7 +24,6 @@ import {
   CheckCircle2,
   AlertCircle,
   Eye,
-  RefreshCw,
   ShoppingBag,
   ArrowRight,
   Filter,
@@ -37,15 +36,24 @@ import {
   Check,
   ChevronLeft,
   ChevronRight,
-  Table as TableIcon,
+  ChevronDown,
+  ChevronUp,
+  ChevronsLeft,
+  ChevronsRight,
+  GripVertical,
   LayoutGrid,
   PhoneCall,
   CheckCheck,
   AlertTriangle,
   HeartHandshake,
   MessageSquare,
+  RefreshCw,
+  PackageCheck,
+  Truck,
+  History,
 } from 'lucide-react';
-import { useNavigate, useSearchParams } from 'react-router-dom';
+import { useNavigate, useSearchParams, useLocation } from 'react-router-dom';
+import { useAuth } from '../../contexts/AuthContext';
 import {
   getAppointmentsApi,
   updateAppointmentStatusApi,
@@ -54,6 +62,7 @@ import {
 } from '../../services/appointmentService';
 import { getAllOrdersAdmin } from '../../services/orderService';
 import { formatCurrencyVND } from '../../utils/formatCurrency';
+import { formatShortDate } from '../../utils/formatDate';
 
 // Thiết lập locale tiếng Việt cho Dayjs
 dayjs.locale('vi');
@@ -73,28 +82,462 @@ const extractDisplayName = (fullName) => {
   return parts.slice(-2).join(' ');
 };
 
+// Chuẩn hóa trạng thái lịch hẹn: chỉ có 'confirmed' và 'completed'
+const normalizeAptStatus = (st) => {
+  const s = (st || '').toLowerCase();
+  if (s === 'completed') return 'completed';
+  if (s === 'cancelled') return 'cancelled';
+  return 'confirmed';
+};
+
+// Định dạng địa chỉ khách hàng (hỗ trợ cả dạng string và object)
+const formatAddress = (addr) => {
+  if (!addr) return '';
+  if (typeof addr === 'string') return addr.trim();
+  if (typeof addr === 'object') {
+    const parts = [addr.street, addr.ward, addr.district, addr.city].filter(Boolean);
+    if (parts.length > 0) return parts.join(', ');
+  }
+  return String(addr);
+};
+
+
+
+// Chuẩn hóa định dạng YYYY-MM-DD
+const toDateKey = (dateStr) => {
+  if (!dateStr) return '';
+  const d = new Date(dateStr);
+  if (isNaN(d.getTime())) return '';
+  const y = d.getFullYear();
+  const m = String(d.getMonth() + 1).padStart(2, '0');
+  const day = String(d.getDate()).padStart(2, '0');
+  return `${y}-${m}-${day}`;
+};
+
+// Trợ giúp định dạng nhãn trạng thái chính xác theo nghiệp vụ database
+const getEventBadge = (item) => {
+  if (!item) return { label: 'ĐANG XỬ LÝ', className: 'bg-gray-100 text-gray-700 border-gray-300' };
+
+  if (item.type === 'fitting') {
+    const isCompleted = item.status === 'completed';
+    const isCancelled = item.status === 'cancelled';
+    return {
+      label: isCompleted ? 'CÓ MẶT' : isCancelled ? 'VẮNG MẶT' : 'ĐÃ XÁC NHẬN',
+      className: isCompleted
+        ? 'bg-emerald-100 text-emerald-800 border-emerald-300'
+        : isCancelled
+        ? 'bg-rose-50 text-rose-700 border-rose-200'
+        : 'bg-sky-100 text-sky-800 border-sky-300',
+    };
+  }
+
+  // Sự kiện Giao Váy: Vàng (khách sắp lấy / sắp giao), Xanh (khách đã lấy / ship đã giao), Đỏ (chưa đến lấy / chưa giao)
+  if (item.type === 'delivery') {
+    const isDone = ['delivered', 'renting', 'returned', 'completed', 'waiting_refund'].includes((item.status || '').toLowerCase()) || Boolean(item.actualDeliveryDate);
+    const deliveryDateKey = item.deliveryDate || item.date;
+    const todayKey = toDateKey(new Date());
+    const isExpress = item.deliveryMethod === 'express';
+
+    if (isDone) {
+      return {
+        label: isExpress ? 'SHIP ĐÃ GIAO' : 'KHÁCH ĐÃ LẤY',
+        className: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+      };
+    }
+    if (deliveryDateKey && deliveryDateKey < todayKey) {
+      return {
+        label: isExpress ? 'CHƯA GIAO' : 'CHƯA ĐẾN LẤY',
+        className: 'bg-rose-100 text-rose-800 border-rose-300',
+      };
+    }
+    return {
+      label: isExpress ? 'SẮP GIAO' : 'KHÁCH SẮP LẤY',
+      className: 'bg-amber-100 text-amber-800 border-amber-300',
+    };
+  }
+
+  // Sự kiện Trả Váy: Vàng (sắp đến hạn / tương lai), Xanh (đã trả), Đỏ (quá hạn chưa trả)
+  if (item.type === 'return') {
+    const isDone = item.status === 'completed' || item.status === 'returned' || item.status === 'waiting_refund' || Boolean(item.actualReturnDate);
+    const returnDateKey = item.date || toDateKey(item.rentalEndDate);
+    const todayKey = toDateKey(new Date());
+
+    if (isDone) {
+      return {
+        label: 'ĐÃ TRẢ',
+        className: 'bg-emerald-100 text-emerald-800 border-emerald-300',
+      };
+    }
+    if (returnDateKey && returnDateKey < todayKey) {
+      return {
+        label: 'CHƯA TRẢ',
+        className: 'bg-rose-100 text-rose-800 border-rose-300',
+      };
+    }
+    return {
+      label: 'SẮP ĐẾN HẠN',
+      className: 'bg-amber-100 text-amber-800 border-amber-300',
+    };
+  }
+
+  const st = (item.status || '').toLowerCase();
+  switch (st) {
+    case 'deposit_paid':
+      return { label: 'ĐÃ CỌC (CHỜ GIAO)', className: 'bg-sky-100 text-sky-800 border-sky-300' };
+    case 'preparing':
+      return { label: 'ĐANG CHUẨN BỊ', className: 'bg-amber-100 text-amber-800 border-amber-300' };
+    case 'delivered':
+      return { label: 'ĐÃ BÀN GIAO', className: 'bg-indigo-100 text-indigo-800 border-indigo-300' };
+    case 'renting':
+      return { label: 'ĐANG THUÊ', className: 'bg-emerald-100 text-emerald-800 border-emerald-300' };
+    case 'returned':
+      return { label: 'ĐÃ TRẢ (CHỜ KIỂM ĐỊNH)', className: 'bg-rose-100 text-rose-800 border-rose-300' };
+    case 'completed':
+      return { label: 'HOÀN TẤT ĐƠN', className: 'bg-purple-100 text-purple-800 border-purple-300' };
+    case 'cancelled':
+      return { label: 'ĐÃ HỦY', className: 'bg-gray-100 text-gray-700 border-gray-300' };
+    default:
+      return { label: (st || 'ĐANG XỬ LÝ').toUpperCase(), className: 'bg-gray-100 text-gray-700 border-gray-300' };
+  }
+};
+
+// Component hiển thị danh sách sự kiện trên từng ô ngày của Lịch Biểu
+// Hỗ trợ hiển thị đầy đủ 1-3 lịch, và tự động kích hoạt cuộn + nút mũi tên lướt xuống khi có từ 4 lịch trở lên
+// Hỗ trợ làm nổi bật ĐỒNG THỜI cả ngày Giao & ngày Trả khi click vào đơn thuê
+function CalendarDateCellEvents({
+  dayApts = [],
+  dayDeliveries = [],
+  dayReturns = [],
+  showApts = true,
+  showDeliveries = true,
+  showReturns = true,
+  activeOrderCode = null,
+  onSelectEvent,
+  onSelectOrderHighlight,
+}) {
+  const scrollRef = React.useRef(null);
+  const [canScrollDown, setCanScrollDown] = React.useState(false);
+  const [canScrollUp, setCanScrollUp] = React.useState(false);
+
+  // Gộp tất cả các sự kiện hợp lệ hiển thị trong ô ngày
+  const items = React.useMemo(() => {
+    const list = [];
+    if (showApts) {
+      dayApts.forEach((item) => list.push({ ...item, eventCategory: 'apt' }));
+    }
+    if (showDeliveries) {
+      dayDeliveries.forEach((item) => list.push({ ...item, eventCategory: 'delivery' }));
+    }
+    if (showReturns) {
+      dayReturns.forEach((item) => list.push({ ...item, eventCategory: 'return' }));
+    }
+    return list;
+  }, [dayApts, dayDeliveries, dayReturns, showApts, showDeliveries, showReturns]);
+
+  const total = items.length;
+  const isScrollable = total > 3;
+
+  const checkScroll = React.useCallback(() => {
+    const el = scrollRef.current;
+    if (!el) return;
+    const { scrollTop, scrollHeight, clientHeight } = el;
+    setCanScrollUp(scrollTop > 4);
+    setCanScrollDown(scrollTop + clientHeight < scrollHeight - 4);
+  }, []);
+
+  React.useEffect(() => {
+    checkScroll();
+  }, [items.length, checkScroll]);
+
+  if (total === 0) return null;
+
+  return (
+    <div className="relative flex flex-col h-full w-full">
+      {/* Danh sách các sự kiện trong ô */}
+      <div
+        ref={scrollRef}
+        onScroll={checkScroll}
+        className={`space-y-1 mt-0.5 px-0.5 ${
+          isScrollable
+            ? 'max-h-[76px] overflow-y-auto custom-mini-scrollbar pr-0.5'
+            : 'overflow-hidden'
+        }`}
+      >
+        {items.map((item, idx) => {
+          if (item.eventCategory === 'apt') {
+            const startTime = extractStartTime(item.timeSlot);
+            const displayName = extractDisplayName(item.customerName);
+            const isConfirmed = item.status === 'confirmed';
+            const isCompleted = item.status === 'completed';
+            const isCancelled = item.status === 'cancelled';
+
+            const badgeBg = isCompleted
+              ? 'bg-emerald-50/90 text-emerald-900 border-emerald-300 hover:bg-emerald-100'
+              : isCancelled
+              ? 'bg-rose-50/90 text-rose-900 border-rose-300 hover:bg-rose-100'
+              : 'bg-sky-50/90 text-sky-900 border-sky-300 hover:bg-sky-100';
+
+            const dotBg = isCompleted
+              ? 'bg-emerald-500'
+              : isCancelled
+              ? 'bg-rose-500'
+              : 'bg-sky-500';
+
+            const statusText = isCompleted ? 'Có mặt' : isCancelled ? 'Vắng mặt' : 'Đã xác nhận';
+
+            return (
+              <Tooltip key={item.id || `apt-${idx}`} title={`👗 Thử váy: ${item.customerName} (${item.timeSlot}) — ${statusText}`}>
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectEvent?.(item);
+                  }}
+                  className={`flex items-center gap-1.5 px-2.5 py-0.5 rounded-lg text-[10.5px] font-medium border shadow-2xs transition-all hover:scale-[1.01] cursor-pointer ${badgeBg}`}
+                >
+                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotBg}`} />
+                  <span className="font-mono text-[9.5px] font-bold text-gray-900 shrink-0">
+                    {startTime}
+                  </span>
+                </div>
+              </Tooltip>
+            );
+          }
+
+          if (item.eventCategory === 'delivery') {
+            const isDone = ['delivered', 'renting', 'returned', 'completed', 'waiting_refund'].includes((item.status || '').toLowerCase()) || Boolean(item.actualDeliveryDate);
+            const isHighlight = Boolean(activeOrderCode && (item.code === activeOrderCode || item.id === activeOrderCode));
+            const isExpress = item.deliveryMethod === 'express';
+            const deliveryDateKey = item.deliveryDate || item.date;
+            const currentTodayKey = toDateKey(new Date());
+
+            const isOverdue = !isDone && Boolean(deliveryDateKey && deliveryDateKey < currentTodayKey);
+            const isFutureOrToday = !isDone && (!deliveryDateKey || deliveryDateKey >= currentTodayKey);
+
+            let deliveryBadgeBg = '';
+            let deliveryDotBg = '';
+            let deliveryTextColor = '';
+
+            if (isDone) {
+              // Xanh là khách đã lấy, hoặc ship đã giao
+              deliveryBadgeBg = 'bg-emerald-50/90 border-emerald-300 hover:bg-emerald-100';
+              deliveryDotBg = 'bg-emerald-500';
+              deliveryTextColor = 'text-emerald-950 font-bold';
+            } else if (isFutureOrToday) {
+              // Vàng là khách sắp lấy
+              deliveryBadgeBg = 'bg-amber-50/90 border-amber-300 hover:bg-amber-100';
+              deliveryDotBg = 'bg-amber-500';
+              deliveryTextColor = 'text-amber-950 font-bold';
+            } else {
+              // Đỏ là khách chưa đến lấy hoặc nhân viên chưa giao
+              deliveryBadgeBg = 'bg-rose-50/90 border-rose-300 hover:bg-rose-100';
+              deliveryDotBg = 'bg-rose-500';
+              deliveryTextColor = 'text-rose-950 font-bold';
+            }
+
+            return (
+              <Tooltip
+                key={`del-${item.id || idx}`}
+                title={
+                  <div className="text-xs space-y-1">
+                    <div>Khách hàng: <strong>{item.customerName}</strong></div>
+                    <div>
+                      Trạng thái: <strong>{isDone ? (isExpress ? 'Ship đã giao' : 'Khách đã lấy') : isFutureOrToday ? (isExpress ? 'Sắp giao' : 'Khách sắp lấy') : (isExpress ? 'Chưa giao' : 'Chưa đến lấy')}</strong>
+                    </div>
+                    {item.rentalStartDate && (
+                      <div className="text-amber-200">
+                        Thuê chính thức: <strong>{formatShortDate(item.rentalStartDate)}</strong>
+                      </div>
+                    )}
+                  </div>
+                }
+              >
+                <div
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onSelectOrderHighlight?.(item);
+                  }}
+                  className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10.5px] font-medium border shadow-2xs transition-all cursor-pointer ${
+                    isHighlight
+                      ? isDone
+                        ? 'bg-emerald-600 text-white border-emerald-500 font-bold shadow-xs'
+                        : isFutureOrToday
+                        ? 'bg-amber-600 text-white border-amber-500 font-bold shadow-xs'
+                        : 'bg-rose-600 text-white border-rose-500 font-bold shadow-xs'
+                      : `${deliveryBadgeBg} hover:scale-[1.02]`
+                  }`}
+                >
+                  <span
+                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                      isHighlight ? 'bg-white' : deliveryDotBg
+                    }`}
+                  />
+                  <span
+                    className={`font-mono text-[9px] shrink-0 uppercase tracking-tight flex items-center gap-0.5 ${
+                      isHighlight ? 'font-extrabold text-white' : deliveryTextColor
+                    }`}
+                  >
+                    {isExpress ? 'NV SHIP' : 'KHÁCH LẤY'}
+                  </span>
+                </div>
+              </Tooltip>
+            );
+          }
+
+          // Trả Váy (return)
+          const isDone = item.status === 'completed' || item.status === 'returned' || item.status === 'waiting_refund' || Boolean(item.actualReturnDate);
+          const isHighlight = Boolean(activeOrderCode && (item.code === activeOrderCode || item.id === activeOrderCode));
+          const isExpress = item.deliveryMethod === 'express';
+          const returnDateKey = item.date || toDateKey(item.rentalEndDate);
+          const currentTodayKey = toDateKey(new Date());
+
+          const isOverdue = !isDone && Boolean(returnDateKey && returnDateKey < currentTodayKey);
+          const isFutureOrToday = !isDone && (!returnDateKey || returnDateKey >= currentTodayKey);
+
+          let returnBadgeBg = '';
+          let returnDotBg = '';
+          let returnTextColor = '';
+
+          if (isDone) {
+            // Xanh là đã trả
+            returnBadgeBg = 'bg-emerald-50/90 border-emerald-300 hover:bg-emerald-100';
+            returnDotBg = 'bg-emerald-500';
+            returnTextColor = 'text-emerald-950 font-bold';
+          } else if (isFutureOrToday) {
+            // Vàng là sắp đến hạn trả hoặc các ngày trong tương lai
+            returnBadgeBg = 'bg-amber-50/90 border-amber-300 hover:bg-amber-100';
+            returnDotBg = 'bg-amber-500';
+            returnTextColor = 'text-amber-950 font-bold';
+          } else {
+            // Đỏ là chưa trả
+            returnBadgeBg = 'bg-rose-50/90 border-rose-300 hover:bg-rose-100';
+            returnDotBg = 'bg-rose-500';
+            returnTextColor = 'text-rose-950 font-bold';
+          }
+
+          return (
+            <Tooltip
+              key={`ret-${item.id || idx}`}
+              title={
+                <div className="text-xs space-y-1">
+                  <div>Khách hàng: <strong>{item.customerName}</strong></div>
+                  <div>
+                    Trạng thái: <strong>{isDone ? 'Đã trả' : isFutureOrToday ? 'Sắp đến hạn' : 'Chưa trả'}</strong>
+                  </div>
+                </div>
+              }
+            >
+              <div
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onSelectOrderHighlight?.(item);
+                }}
+                className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[10.5px] font-medium border shadow-2xs transition-all cursor-pointer ${
+                  isHighlight
+                    ? isDone
+                      ? 'bg-emerald-600 text-white border-emerald-500 font-bold shadow-xs'
+                      : isFutureOrToday
+                      ? 'bg-amber-600 text-white border-amber-500 font-bold shadow-xs'
+                      : 'bg-rose-600 text-white border-rose-500 font-bold shadow-xs'
+                    : `${returnBadgeBg} hover:scale-[1.02]`
+                }`}
+              >
+                <span
+                  className={`w-1.5 h-1.5 rounded-full shrink-0 ${
+                    isHighlight ? 'bg-white' : returnDotBg
+                  }`}
+                />
+                <span
+                  className={`font-mono text-[9px] shrink-0 uppercase tracking-tight flex items-center gap-0.5 ${
+                    isHighlight ? 'font-extrabold text-white' : returnTextColor
+                  }`}
+                >
+                  {isExpress ? 'NV LẤY' : 'KHÁCH TRẢ'}
+                </span>
+              </div>
+            </Tooltip>
+          );
+        })}
+      </div>
+
+      {/* Dấu mũi tên lướt xuống để báo hiệu còn nhiều lịch chưa hiện lên */}
+      {isScrollable && (
+        <div className="pt-0.5 mt-0.5">
+          {canScrollDown ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (scrollRef.current) {
+                  scrollRef.current.scrollBy({ top: 32, behavior: 'smooth' });
+                }
+              }}
+              className="w-full h-3.5 bg-[#FFF2EE] hover:bg-[#FDE2D9] text-[#733F49] border border-[#F5CDC3] rounded-md flex items-center justify-center transition-all cursor-pointer select-none group shadow-2xs"
+              title="Còn lịch hẹn khác bên dưới — Bấm hoặc cuộn chuột để xem"
+            >
+              <ChevronDown size={12} className="stroke-[2.2] text-[#733F49] animate-bounce group-hover:translate-y-0.5 transition-transform" />
+            </button>
+          ) : canScrollUp ? (
+            <button
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                if (scrollRef.current) {
+                  scrollRef.current.scrollTo({ top: 0, behavior: 'smooth' });
+                }
+              }}
+              className="w-full h-3.5 bg-gray-50 hover:bg-gray-100 text-gray-600 border border-gray-200 rounded-md flex items-center justify-center transition-all cursor-pointer select-none group shadow-2xs"
+              title="Đã xem hết — Bấm để cuộn lên đầu ô"
+            >
+              <ChevronUp size={12} className="stroke-[2.2] group-hover:-translate-y-0.5 transition-transform" />
+            </button>
+          ) : null}
+        </div>
+      )}
+    </div>
+  );
+}
+
 export default function ScheduleOverviewPage({ defaultTab }) {
   const navigate = useNavigate();
+  const location = useLocation();
+  const { user } = useAuth();
   const [searchParams, setSearchParams] = useSearchParams();
 
-  // Tab chính: 'calendar' (Lịch Biểu Showroom) | 'appointments' (Danh Sách & Phê Duyệt Lịch Hẹn) | 'returns' (Lịch Hạn Trả Đồ)
-  const activeMainTab = searchParams.get('tab') || defaultTab || 'calendar';
-  const handleTabChange = (tabKey) => {
+  // Tự động nhận diện phân hệ đang truy cập: Admin vs Staff để điều hướng đúng màn hình
+  const isStaffContext =
+    location.pathname.startsWith('/staff') ||
+    (user?.role === 'staff' && !location.pathname.startsWith('/admin'));
+  const orderBasePath = isStaffContext ? '/staff/don-thue' : '/admin/don-thue';
+
+  // Tab chính điều hướng: 'calendar' (Lịch Biểu Showroom) | 'history' (Lịch Sử Thử Váy)
+  const [activeMainTab, setActiveMainTab] = useState(
+    searchParams.get('tab') === 'history' ? 'history' : 'calendar'
+  );
+
+  const handleMainTabChange = (tabKey) => {
+    setActiveMainTab(tabKey);
     setSearchParams((prev) => {
       const next = new URLSearchParams(prev);
-      next.set('tab', tabKey);
+      if (tabKey === 'calendar') {
+        next.delete('tab');
+      } else {
+        next.set('tab', tabKey);
+      }
       return next;
     });
   };
 
-  // Sub-filter trong Tab Lịch Biểu: 'all' | 'fitting' (Thử váy) | 'return' (Trả váy)
-  const [calendarFilterType, setCalendarFilterType] = useState('all');
-  const [calendarBranchFilter, setCalendarBranchFilter] = useState('all');
+  // Bộ lọc cho Tab Lịch Sử Thử Váy
+  const [historySearch, setHistorySearch] = useState('');
+  const [historyBranch, setHistoryBranch] = useState('hcm-q1');
 
-  // Bộ lọc cho Tab Danh Sách Lịch Hẹn (Merged từ AppointmentManagement)
-  const [searchTerm, setSearchTerm] = useState('');
-  const [branchFilter, setBranchFilter] = useState('all');
-  const [statusFilter, setStatusFilter] = useState('all');
+  // Sub-filter trong Tab Lịch Biểu: 'all' | 'fitting' (Thử váy) | 'delivery' (Giao váy) | 'return' (Trả váy)
+  const [calendarFilterType, setCalendarFilterType] = useState('all');
+  const [calendarBranchFilter, setCalendarBranchFilter] = useState('hcm-q1');
+  // Lọc hình thức giao váy: 'all' (Tất cả) | 'showroom' (Khách đến lấy) | 'express' (Nhân viên ship tận nơi)
+  const [deliveryMethodFilter, setDeliveryMethodFilter] = useState('all');
+  // Lọc hình thức trả váy: 'all' (Tất cả) | 'showroom' (Khách đến trả) | 'express' (Nhân viên đến lấy)
+  const [returnMethodFilter, setReturnMethodFilter] = useState('all');
 
   // Dữ liệu
   const [appointments, setAppointments] = useState([]);
@@ -105,13 +548,115 @@ export default function ScheduleOverviewPage({ defaultTab }) {
   const [detailModalOpen, setDetailModalOpen] = useState(false);
   const [updatingId, setUpdatingId] = useState(null);
 
+  // Quản lý làm nổi bật ĐỒNG THỜI cả ngày Giao & ngày Trả của cùng một đơn hàng
+  const [highlightedOrderCode, setHighlightedOrderCode] = useState(null);
+
+  // Quản lý kéo co giãn kích thước & thu gọn/mở rộng bảng Chi Tiết Ngày Được Chọn
+  const splitContainerRef = useRef(null);
+  const [rightPanelWidth, setRightPanelWidth] = useState(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('unibridal_schedule_right_panel_width');
+      if (saved) {
+        const parsed = parseInt(saved, 10);
+        if (!isNaN(parsed) && parsed >= 320 && parsed <= 900) return parsed;
+      }
+    }
+    return 480;
+  });
+  const [isRightPanelCollapsed, setIsRightPanelCollapsed] = useState(() => {
+    if (typeof window !== 'undefined') {
+      return localStorage.getItem('unibridal_schedule_right_panel_collapsed') === 'true';
+    }
+    return false;
+  });
+  const [isDragging, setIsDragging] = useState(false);
+  const [isLargeScreen, setIsLargeScreen] = useState(() => {
+    if (typeof window !== 'undefined') return window.innerWidth >= 1024;
+    return true;
+  });
+
+  const handleToggleRightPanel = useCallback(() => {
+    setIsRightPanelCollapsed((prev) => {
+      const next = !prev;
+      try {
+        localStorage.setItem('unibridal_schedule_right_panel_collapsed', String(next));
+      } catch (_) {}
+      return next;
+    });
+  }, []);
+
+  useEffect(() => {
+    const handleResize = () => {
+      setIsLargeScreen(window.innerWidth >= 1024);
+    };
+    window.addEventListener('resize', handleResize);
+    return () => window.removeEventListener('resize', handleResize);
+  }, []);
+
+  const handleMouseDownResize = (e) => {
+    e.preventDefault();
+    const startX = e.clientX;
+    const startWidth = isRightPanelCollapsed ? 320 : rightPanelWidth;
+    let hasMoved = false;
+
+    setIsDragging(true);
+
+    const handleMouseMove = (moveEvent) => {
+      const deltaX = startX - moveEvent.clientX;
+      if (Math.abs(deltaX) > 4) {
+        hasMoved = true;
+        if (isRightPanelCollapsed) {
+          setIsRightPanelCollapsed(false);
+          try {
+            localStorage.setItem('unibridal_schedule_right_panel_collapsed', 'false');
+          } catch (_) {}
+        }
+      }
+
+      let newWidth = startWidth + deltaX;
+
+      const containerWidth = splitContainerRef.current?.offsetWidth || 1200;
+      // Đảm bảo lịch tháng bên trái luôn còn ít nhất 380px
+      const maxAllowed = Math.max(340, Math.min(850, containerWidth - 380));
+      const minAllowed = 320;
+
+      newWidth = Math.max(minAllowed, Math.min(newWidth, maxAllowed));
+      setRightPanelWidth(newWidth);
+    };
+
+    const handleMouseUp = () => {
+      setIsDragging(false);
+      document.removeEventListener('mousemove', handleMouseMove);
+      document.removeEventListener('mouseup', handleMouseUp);
+      document.body.style.cursor = '';
+      document.body.style.userSelect = '';
+
+      if (!hasMoved) {
+        // Người dùng click vào nút mũi tên mà không kéo chuột -> Toggle Mở / Thu gọn
+        handleToggleRightPanel();
+      } else {
+        setRightPanelWidth((curr) => {
+          try {
+            localStorage.setItem('unibridal_schedule_right_panel_width', String(curr));
+          } catch (_) {}
+          return curr;
+        });
+      }
+    };
+
+    document.body.style.cursor = 'col-resize';
+    document.body.style.userSelect = 'none';
+    document.addEventListener('mousemove', handleMouseMove);
+    document.addEventListener('mouseup', handleMouseUp);
+  };
+
   // Lấy dữ liệu cả Lịch Hẹn Thử Váy và Đơn Thuê
   const fetchData = useCallback(async () => {
     setLoading(true);
     try {
       const [resApt, resOrd] = await Promise.all([
-        getAppointmentsApi().catch(() => ({ data: [] })),
-        getAllOrdersAdmin({ limit: 500 }).catch(() => ({ orders: [] })),
+        getAppointmentsApi({ limit: 1000 }).catch(() => ({ data: [] })),
+        getAllOrdersAdmin({ limit: 1000 }).catch(() => ({ orders: [] })),
       ]);
 
       const aptList = Array.isArray(resApt?.data)
@@ -149,8 +694,8 @@ export default function ScheduleOverviewPage({ defaultTab }) {
         newStatus === 'confirmed'
           ? 'Đã xác nhận'
           : newStatus === 'completed'
-          ? 'Đã hoàn tất ca thử'
-          : 'Đã hủy lịch';
+          ? 'Đã ghi nhận khách CÓ MẶT thử váy'
+          : 'Đã ghi nhận khách VẮNG MẶT';
       message.success(`Cập nhật thành công: "${statusText}"`);
 
       // Cập nhật local state ngay lập tức để giao diện phản hồi mượt mà
@@ -188,12 +733,38 @@ export default function ScheduleOverviewPage({ defaultTab }) {
   const todayKey = toDateKey(new Date());
   const selectedDateKey = toDateKey(selectedDate);
 
-  // Danh sách sự kiện thử váy map theo ngày
+  // Đơn hàng đang được làm nổi bật chu kỳ Giao - Trả
+  const activeOrderCode = highlightedOrderCode;
+  const activeHighlightOrder = useMemo(() => {
+    if (!activeOrderCode) return null;
+    return orders.find(
+      (o) => (o.orderCode || o.contractCode || o._id || o.id) === activeOrderCode
+    ) || null;
+  }, [activeOrderCode, orders]);
+
+  const highlightStartDateKey = useMemo(() => {
+    if (!activeHighlightOrder?.rentalStartDate) return null;
+    const d = new Date(activeHighlightOrder.rentalStartDate);
+    d.setDate(d.getDate() - 1);
+    return toDateKey(d);
+  }, [activeHighlightOrder]);
+  const highlightEndDateKey = activeHighlightOrder ? toDateKey(activeHighlightOrder.rentalEndDate) : null;
+
+  // Danh sách sự kiện thử váy map theo ngày:
+  // Nếu ca thử đã hoàn tất và ngày thử đã qua trong quá khứ (trước hôm nay), ẩn khỏi lịch biểu (chỉ hiện lịch thử từ hôm nay trở đi)
   const appointmentsByDate = useMemo(() => {
     const map = {};
     appointments.forEach((apt) => {
+      const st = (apt.status || '').toLowerCase();
+      // Bỏ qua ca hẹn đã hủy
+      if (st === 'cancelled') return;
+
       const key = toDateKey(apt.appointmentDate);
       if (!key) return;
+
+      // Nếu lịch thử đã hoàn tất và qua ngày hôm sau thì không cần hiện lịch sử thử váy
+      if (key < todayKey && st === 'completed') return;
+
       if (!map[key]) map[key] = [];
       map[key].push({
         type: 'fitting',
@@ -205,7 +776,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
         timeSlot: apt.timeSlot || '09:00 — 11:00',
         guestsCount: apt.guestsCount || 2,
         branch: apt.branch || apt.branchId || 'hcm-q1',
-        status: (apt.status || 'pending').toLowerCase(),
+        status: normalizeAptStatus(apt.status),
         notes: apt.notes,
         interestedDresses: apt.interestedDresses || apt.selectedDresses || [],
         weddingDate: apt.weddingDate,
@@ -213,19 +784,131 @@ export default function ScheduleOverviewPage({ defaultTab }) {
       });
     });
     return map;
-  }, [appointments]);
+  }, [appointments, todayKey]);
+
+  // Danh sách các đơn thuê còn hiệu lực (loại bỏ các đơn đã bị hủy trước khi thuê)
+  const activeOrders = useMemo(
+    () => orders.filter((o) => (o.status || '').toLowerCase() !== 'cancelled'),
+    [orders]
+  );
+
+  // Lọc danh sách lịch hẹn theo chi nhánh (Lọc riêng từng cơ sở & loại bỏ các ca đã hoàn tất trong quá khứ)
+  const calendarVisibleAppointments = useMemo(() => {
+    return appointments.filter((a) => {
+      const matchBranch = (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter;
+      if (!matchBranch) return false;
+
+      const st = (a.status || '').toLowerCase();
+      if (st === 'cancelled') return false;
+
+      const key = toDateKey(a.appointmentDate);
+      // Nếu lịch thử đã hoàn tất và qua ngày hôm sau thì không cần hiện lịch sử thử váy
+      if (key && key < todayKey && st === 'completed') {
+        return false;
+      }
+
+      return true;
+    });
+  }, [appointments, calendarBranchFilter, todayKey]);
+
+  // Toàn bộ đơn thuê còn hiệu lực của chi nhánh hiện tại
+  const calendarBranchOrders = useMemo(() => {
+    return activeOrders.filter(
+      (o) => (o.branch || o.branchId || 'hcm-q1') === calendarBranchFilter
+    );
+  }, [activeOrders, calendarBranchFilter]);
+
+  // Đếm đơn khách đến lấy trực tiếp tại showroom
+  const showroomDeliveriesCount = useMemo(() => {
+    return calendarBranchOrders.filter(
+      (o) => (o.deliveryMethod || 'showroom') === 'showroom'
+    ).length;
+  }, [calendarBranchOrders]);
+
+  // Đếm đơn nhân viên giao váy tận nơi
+  const expressDeliveriesCount = useMemo(() => {
+    return calendarBranchOrders.filter(
+      (o) => (o.deliveryMethod || 'showroom') === 'express'
+    ).length;
+  }, [calendarBranchOrders]);
+
+  // Đếm đơn khách đến trả trực tiếp tại showroom
+  const showroomReturnsCount = useMemo(() => {
+    return calendarBranchOrders.filter(
+      (o) => (o.deliveryMethod || 'showroom') === 'showroom'
+    ).length;
+  }, [calendarBranchOrders]);
+
+  // Đếm đơn nhân viên đến lấy (thu hồi tận nơi)
+  const expressReturnsCount = useMemo(() => {
+    return calendarBranchOrders.filter(
+      (o) => (o.deliveryMethod || 'showroom') === 'express'
+    ).length;
+  }, [calendarBranchOrders]);
+
+  // Đơn giao hiển thị sau khi lọc theo hình thức nhận/giao
+  const calendarVisibleActiveOrders = useMemo(() => {
+    if (deliveryMethodFilter === 'all') return calendarBranchOrders;
+    return calendarBranchOrders.filter(
+      (o) => (o.deliveryMethod || 'showroom') === deliveryMethodFilter
+    );
+  }, [calendarBranchOrders, deliveryMethodFilter]);
+
+  // Danh sách sự kiện bàn giao / nhận váy: LÙI 1 NGÀY trước ngày khách bắt đầu thuê
+  // (Do showroom giao sớm 1 ngày hoặc khách đến showroom lấy sớm 1 ngày để thử và chuẩn bị)
+  const deliveriesByDate = useMemo(() => {
+    const map = {};
+    orders.forEach((ord) => {
+      // Đơn hàng đã hủy trước khi thuê thì không phát sinh lịch giao
+      if ((ord.status || '').toLowerCase() === 'cancelled') return;
+
+      const startDate = ord.rentalStartDate ? new Date(ord.rentalStartDate) : null;
+      if (!startDate || isNaN(startDate.getTime())) return;
+
+      // Lùi về 1 ngày trước khi khách bắt đầu thuê
+      const deliveryDate = new Date(startDate);
+      deliveryDate.setDate(deliveryDate.getDate() - 1);
+
+      const key = toDateKey(deliveryDate);
+      if (!key) return;
+      if (!map[key]) map[key] = [];
+      map[key].push({
+        type: 'delivery',
+        id: ord._id || ord.id,
+        code: ord.orderCode || ord.contractCode || 'UB-ORD',
+        customerName: ord.customerName || ord.brideName || 'Cô dâu',
+        phone: ord.customerPhone || ord.phone,
+        status: (ord.status || 'deposit_paid').toLowerCase(),
+        items: ord.items || [],
+        totalDeposit: ord.totalDeposit || 0,
+        totalRentPrice: ord.totalRentPrice || 0,
+        deliveryDate: key,
+        rentalStartDate: ord.rentalStartDate,
+        rentalEndDate: ord.rentalEndDate,
+        deliveryMethod: ord.deliveryMethod || 'showroom',
+        shippingAddress: ord.shippingAddress || ord.customerAddress || ord.address || '',
+        notes: ord.notes,
+        date: key,
+        branch: ord.branch || ord.branchId || 'hcm-q1',
+      });
+    });
+    return map;
+  }, [orders]);
 
   // Danh sách sự kiện trả váy map theo ngày hạn trả (rentalEndDate)
   const returnsByDate = useMemo(() => {
     const map = {};
     orders.forEach((ord) => {
+      // Đơn hàng đã hủy trước khi thuê thì không phát sinh lịch trả váy
+      if ((ord.status || '').toLowerCase() === 'cancelled') return;
+
       const key = toDateKey(ord.rentalEndDate);
       if (!key) return;
       if (!map[key]) map[key] = [];
       map[key].push({
         type: 'return',
         id: ord._id || ord.id,
-        code: ord.orderCode || ord.contractCode || 'UB-ORDER',
+        code: ord.orderCode || ord.contractCode || 'UB-ORD',
         customerName: ord.customerName || ord.brideName || 'Cô dâu',
         phone: ord.customerPhone || ord.phone,
         status: (ord.status || 'renting').toLowerCase(),
@@ -236,227 +919,389 @@ export default function ScheduleOverviewPage({ defaultTab }) {
         rentalEndDate: ord.rentalEndDate,
         actualReturnDate: ord.actualReturnDate,
         inspection: ord.inspection,
+        deliveryMethod: ord.deliveryMethod || 'showroom',
+        shippingAddress: ord.shippingAddress || ord.customerAddress || ord.address || '',
+        notes: ord.notes,
         date: key,
+        branch: ord.branch || ord.branchId || 'hcm-q1',
       });
     });
     return map;
   }, [orders]);
 
-  // Thống kê nhanh
+  // Thống kê nhanh theo đúng cơ sở đang chọn từ MongoDB
   const stats = useMemo(() => {
-    const todayFittings = (appointmentsByDate[todayKey] || []).length;
-    const todayReturns = (returnsByDate[todayKey] || []).length;
-    const pendingAppointments = appointments.filter(
+    const branchAptsToday = (appointmentsByDate[todayKey] || []).filter(
+      (a) => (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
+    );
+    const branchDeliveriesToday = (deliveriesByDate[todayKey] || []).filter(
+      (d) => (d.branch || d.branchId || 'hcm-q1') === calendarBranchFilter
+    );
+    const branchReturnsToday = (returnsByDate[todayKey] || []).filter(
+      (r) => (r.branch || r.branchId || 'hcm-q1') === calendarBranchFilter
+    );
+
+    const todayFittings = branchAptsToday.length;
+    const todayDeliveries = branchDeliveriesToday.length;
+    const todayReturns = branchReturnsToday.length;
+
+    const branchAppointments = appointments.filter(
+      (a) => (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
+    );
+    const branchOrders = activeOrders.filter(
+      (o) => (o.branch || o.branchId || 'hcm-q1') === calendarBranchFilter
+    );
+
+    const pendingAppointments = branchAppointments.filter(
       (a) => (a.status || 'pending').toLowerCase() === 'pending'
     ).length;
-    const confirmedAppointments = appointments.filter(
+    const confirmedAppointments = branchAppointments.filter(
       (a) => (a.status || '').toLowerCase() === 'confirmed'
     ).length;
-    const completedAppointments = appointments.filter(
+    const completedAppointments = branchAppointments.filter(
       (a) => (a.status || '').toLowerCase() === 'completed'
     ).length;
-    const totalReturns = orders.filter((o) =>
-      ['renting', 'delivered', 'returned'].includes(o.status)
+    const activeRentals = branchOrders.filter((o) =>
+      ['renting', 'delivered', 'preparing', 'deposit_paid'].includes((o.status || '').toLowerCase())
+    ).length;
+    const totalReturns = branchOrders.filter((o) =>
+      ['renting', 'delivered', 'returned'].includes((o.status || '').toLowerCase())
     ).length;
 
     return {
       todayFittings,
+      todayDeliveries,
       todayReturns,
       pendingAppointments,
       confirmedAppointments,
       completedAppointments,
-      totalAppointments: appointments.length,
+      totalAppointments: branchAppointments.length,
+      totalOrders: branchOrders.length,
+      activeRentals,
       totalReturns,
     };
-  }, [appointmentsByDate, returnsByDate, todayKey, appointments, orders]);
-
-  // Lọc danh sách lịch hẹn cho Tab Quản Lý Lịch Hẹn
-  const filteredAppointments = useMemo(() => {
-    return appointments.filter((apt) => {
-      const name = (apt.customerName || apt.fullName || '').toLowerCase();
-      const phone = apt.customerPhone || apt.phone || '';
-      const code = (apt.appointmentCode || apt._id || apt.id || '').toLowerCase();
-      const search = searchTerm.trim().toLowerCase();
-
-      const matchSearch =
-        !search || name.includes(search) || phone.includes(search) || code.includes(search);
-      const matchBranch =
-        branchFilter === 'all' || apt.branch === branchFilter || apt.branchId === branchFilter;
-      const currentStatus = (apt.status || 'pending').toLowerCase();
-      const matchStatus = statusFilter === 'all' || currentStatus === statusFilter.toLowerCase();
-
-      return matchSearch && matchBranch && matchStatus;
-    });
-  }, [appointments, searchTerm, branchFilter, statusFilter]);
-
-  // Sự kiện của ngày được chọn trên lịch
-  const currentDayEvents = useMemo(() => {
-    const apts = appointmentsByDate[selectedDateKey] || [];
-    const returns = returnsByDate[selectedDateKey] || [];
-
-    // Lọc theo chi nhánh nếu có
-    const filteredApts =
-      calendarBranchFilter === 'all'
-        ? apts
-        : apts.filter((a) => a.branch === calendarBranchFilter);
-
-    if (calendarFilterType === 'fitting') return filteredApts;
-    if (calendarFilterType === 'return') return returns;
-
-    // 'all': kết hợp cả 2
-    return [...filteredApts, ...returns];
   }, [
     appointmentsByDate,
+    deliveriesByDate,
+    returnsByDate,
+    todayKey,
+    appointments,
+    activeOrders,
+    calendarBranchFilter,
+  ]);
+
+  // Lọc danh sách Lịch Sử Thử Váy (theo từ khóa tìm kiếm và chi nhánh)
+  const historyAppointments = useMemo(() => {
+    return appointments
+      .filter((apt) => {
+        const name = (apt.customerName || apt.fullName || '').toLowerCase();
+        const phone = apt.customerPhone || apt.phone || '';
+        const code = (apt.appointmentCode || apt._id || apt.id || '').toLowerCase();
+        const search = historySearch.trim().toLowerCase();
+
+        const matchSearch =
+          !search || name.includes(search) || phone.includes(search) || code.includes(search);
+
+        const branch = apt.branch || apt.branchId || 'hcm-q1';
+        const matchBranch = branch === historyBranch;
+
+        return matchSearch && matchBranch;
+      })
+      .sort((a, b) => {
+        const dateA = a.appointmentDate ? new Date(a.appointmentDate).getTime() : 0;
+        const dateB = b.appointmentDate ? new Date(b.appointmentDate).getTime() : 0;
+        return dateB - dateA;
+      });
+  }, [appointments, historySearch, historyBranch]);
+
+  // Cấu hình cột hiển thị cho Bảng Lịch Sử Thử Váy
+  const historyColumns = [
+    {
+      title: 'MÃ HẸN',
+      dataIndex: 'appointmentCode',
+      key: 'code',
+      width: 125,
+      render: (code, record) => (
+        <span className="font-mono font-bold text-xs text-[#733F49] bg-[#FAF0EC] px-2 py-0.5 rounded border border-[#F2D8D4]">
+          {code || record._id?.slice(-6)?.toUpperCase() || 'APT'}
+        </span>
+      ),
+    },
+    {
+      title: 'KHÁCH HÀNG',
+      key: 'customer',
+      width: 210,
+      render: (_, record) => {
+        const phone = record.customerPhone || record.phone;
+        const email = record.customerEmail || record.email;
+        return (
+          <div className="space-y-0.5">
+            <div className="font-bold text-gray-900 text-xs sm:text-sm font-playfair">
+              {record.customerName || record.fullName || 'Cô dâu'}
+            </div>
+            {phone && (
+              <a
+                href={`tel:${phone}`}
+                className="inline-flex items-center gap-1 text-[11px] text-[#733F49] hover:underline font-semibold"
+              >
+                <Phone className="w-3 h-3 text-[#733F49]" />
+                <span>{phone}</span>
+              </a>
+            )}
+            {email && (
+              <div className="text-[10.5px] text-gray-400 truncate max-w-[180px]">
+                {email}
+              </div>
+            )}
+          </div>
+        );
+      },
+    },
+    {
+      title: 'NGÀY & GIỜ HẸN',
+      key: 'datetime',
+      width: 180,
+      render: (_, record) => {
+        const dateStr = record.appointmentDate
+          ? dayjs(record.appointmentDate).format('DD/MM/YYYY')
+          : record.date || '---';
+        const dateKey = toDateKey(record.appointmentDate || record.date);
+        const isPast = dateKey && dateKey < todayKey;
+        const isToday = dateKey === todayKey;
+
+        return (
+          <div className="space-y-1">
+            <div className="flex items-center gap-1.5 text-xs font-bold text-gray-800">
+              <Clock className="w-3.5 h-3.5 text-[#733F49]" />
+              <span>{record.timeSlot || '09:00 — 11:00'}</span>
+            </div>
+            <div className="flex items-center gap-1.5 text-xs text-gray-600 font-medium">
+              <span>{dateStr}</span>
+              {isToday ? (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-purple-100 text-purple-800 font-bold">
+                  Hôm nay
+                </span>
+              ) : isPast ? (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-gray-100 text-gray-600 font-medium">
+                  Đã qua
+                </span>
+              ) : (
+                <span className="text-[10px] px-1.5 py-0.5 rounded-full bg-sky-100 text-sky-800 font-medium">
+                  Sắp tới
+                </span>
+              )}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      title: 'CƠ SỞ SHOWROOM',
+      dataIndex: 'branch',
+      key: 'branch',
+      width: 175,
+      render: (branch, record) => {
+        const b = branch || record.branchId;
+        const isHn = b === 'hn-hoankiem';
+        return (
+          <div className="text-xs space-y-0.5">
+            <div className="font-semibold text-gray-800 flex items-center gap-1">
+              <Building2 className="w-3.5 h-3.5 text-[#BA7A83] shrink-0" />
+              <span>{isHn ? 'Hoàn Kiếm, HN' : 'Quận 1, TP.HCM'}</span>
+            </div>
+            <div className="text-[11px] text-gray-500 font-normal">
+              📍 {isHn ? '26 Lý Thường Kiệt' : '88 Nam Kỳ Khởi Nghĩa'}
+            </div>
+          </div>
+        );
+      },
+    },
+    {
+      title: 'LỄ PHỤC QUAN TÂM',
+      key: 'dresses',
+      render: (_, record) => {
+        const dresses = record.interestedDresses || record.selectedDresses || [];
+        if (!dresses || dresses.length === 0) {
+          return <span className="text-gray-400 text-xs italic">Tư vấn trực tiếp tại showroom</span>;
+        }
+        return (
+          <div className="flex flex-wrap gap-1 max-w-[240px]">
+            {dresses.map((d, i) => (
+              <span
+                key={i}
+                className="text-[10.5px] px-2 py-0.5 bg-[#FAF0EC] text-[#733F49] rounded-md border border-[#F2D8D4] font-medium"
+              >
+                👗 {d.name || d}
+              </span>
+            ))}
+          </div>
+        );
+      },
+    },
+    {
+      title: 'THAO TÁC',
+      key: 'actions',
+      width: 175,
+      render: (_, record) => {
+        const st = (record.status || '').toLowerCase();
+        const id = record._id || record.id;
+        const isBusy = updatingId === id;
+
+        return (
+          <div className="flex items-center gap-1.5">
+            <button
+              type="button"
+              onClick={() => {
+                setSelectedEvent({
+                  type: 'fitting',
+                  id,
+                  code: record.appointmentCode || 'APT',
+                  customerName: record.customerName || record.fullName || 'Cô dâu',
+                  phone: record.customerPhone || record.phone,
+                  email: record.customerEmail || record.email,
+                  timeSlot: record.timeSlot || '09:00 — 11:00',
+                  branch: record.branch || record.branchId || 'hcm-q1',
+                  status: record.status,
+                  notes: record.notes,
+                  interestedDresses: record.interestedDresses || record.selectedDresses || [],
+                  weddingDate: record.weddingDate,
+                  date: toDateKey(record.appointmentDate),
+                });
+                setDetailModalOpen(true);
+              }}
+              className="p-1.5 rounded-lg bg-gray-50 hover:bg-[#FAF0EC] text-gray-600 hover:text-[#733F49] border border-gray-200 transition cursor-pointer"
+              title="Xem chi tiết ca thử"
+            >
+              <Eye className="w-3.5 h-3.5" />
+            </button>
+
+            {st !== 'completed' && (
+              <button
+                type="button"
+                disabled={isBusy}
+                onClick={() => handleUpdateAppointmentStatus(id, 'completed')}
+                className="px-2 py-1 rounded-lg bg-emerald-50 hover:bg-emerald-100 text-emerald-800 border border-emerald-300 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                title="Ghi nhận khách có mặt thử váy"
+              >
+                <CheckCircle2 className="w-3 h-3 text-emerald-600" />
+                <span>Có Mặt</span>
+              </button>
+            )}
+
+            {st !== 'cancelled' && (
+              <button
+                type="button"
+                disabled={isBusy}
+                onClick={() => handleUpdateAppointmentStatus(id, 'cancelled')}
+                className="px-2 py-1 rounded-lg bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-[11px] font-bold transition flex items-center gap-1 cursor-pointer disabled:opacity-50"
+                title="Ghi nhận khách vắng mặt"
+              >
+                <XCircle className="w-3 h-3 text-rose-600" />
+                <span>Vắng Mặt</span>
+              </button>
+            )}
+          </div>
+        );
+      },
+    },
+  ];
+
+  // Sự kiện của ngày được chọn trên lịch (Lọc riêng từng cơ sở & hình thức giao)
+  const currentDayEvents = useMemo(() => {
+    const apts = appointmentsByDate[selectedDateKey] || [];
+    const deliveries = deliveriesByDate[selectedDateKey] || [];
+    const returns = returnsByDate[selectedDateKey] || [];
+
+    const filteredApts = apts.filter(
+      (a) => (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
+    );
+
+    const filteredDeliveries = deliveries.filter((d) => {
+      const matchBranch = (d.branch || d.branchId || 'hcm-q1') === calendarBranchFilter;
+      const matchMethod =
+        deliveryMethodFilter === 'all' || (d.deliveryMethod || 'showroom') === deliveryMethodFilter;
+      return matchBranch && matchMethod;
+    });
+
+    const filteredReturns = returns.filter((r) => {
+      const matchBranch = (r.branch || r.branchId || 'hcm-q1') === calendarBranchFilter;
+      const matchMethod =
+        returnMethodFilter === 'all' || (r.deliveryMethod || 'showroom') === returnMethodFilter;
+      return matchBranch && matchMethod;
+    });
+
+    if (calendarFilterType === 'fitting') return filteredApts;
+    if (calendarFilterType === 'delivery') return filteredDeliveries;
+    if (calendarFilterType === 'return') return filteredReturns;
+
+    return [...filteredApts, ...filteredDeliveries, ...filteredReturns];
+  }, [
+    appointmentsByDate,
+    deliveriesByDate,
     returnsByDate,
     selectedDateKey,
     calendarFilterType,
     calendarBranchFilter,
+    deliveryMethodFilter,
+    returnMethodFilter,
   ]);
 
-  // Render nội dung từng ô ngày trên lịch Ant Design (Đã khắc phục lỗi tràn chữ & định dạng sang trọng)
+  // Render nội dung từng ô ngày trên lịch Ant Design (Lọc riêng từng cơ sở & hình thức giao)
   const dateCellRender = (dateObj) => {
     const d = dateObj.toDate ? dateObj.toDate() : new Date(dateObj);
     const key = toDateKey(d);
 
     const dayApts = appointmentsByDate[key] || [];
+    const dayDeliveries = deliveriesByDate[key] || [];
     const dayReturns = returnsByDate[key] || [];
 
     const showApts = calendarFilterType === 'all' || calendarFilterType === 'fitting';
+    const showDeliveries = calendarFilterType === 'all' || calendarFilterType === 'delivery';
     const showReturns = calendarFilterType === 'all' || calendarFilterType === 'return';
 
-    const visibleApts =
-      calendarBranchFilter === 'all'
-        ? dayApts
-        : dayApts.filter((a) => a.branch === calendarBranchFilter);
+    const visibleApts = dayApts.filter(
+      (a) => (a.branch || a.branchId || 'hcm-q1') === calendarBranchFilter
+    );
+
+    const visibleDeliveries = dayDeliveries.filter((d) => {
+      const matchBranch = (d.branch || d.branchId || 'hcm-q1') === calendarBranchFilter;
+      const matchMethod =
+        deliveryMethodFilter === 'all' || (d.deliveryMethod || 'showroom') === deliveryMethodFilter;
+      return matchBranch && matchMethod;
+    });
+
+    const visibleReturns = dayReturns.filter((r) => {
+      const matchBranch = (r.branch || r.branchId || 'hcm-q1') === calendarBranchFilter;
+      const matchMethod =
+        returnMethodFilter === 'all' || (r.deliveryMethod || 'showroom') === returnMethodFilter;
+      return matchBranch && matchMethod;
+    });
 
     const totalEvents =
-      (showApts ? visibleApts.length : 0) + (showReturns ? dayReturns.length : 0);
+      (showApts ? visibleApts.length : 0) +
+      (showDeliveries ? visibleDeliveries.length : 0) +
+      (showReturns ? visibleReturns.length : 0);
     if (totalEvents === 0) return null;
 
     return (
-      <div className="space-y-1 mt-1 overflow-hidden px-0.5">
-        {/* Lịch Thử Váy */}
-        {showApts &&
-          visibleApts.slice(0, 2).map((item) => {
-            const startTime = extractStartTime(item.timeSlot);
-            const displayName = extractDisplayName(item.customerName);
-
-            const isPending = item.status === 'pending';
-            const isConfirmed = item.status === 'confirmed';
-            const isCompleted = item.status === 'completed';
-
-            const badgeBg = isPending
-              ? 'bg-amber-50/90 text-amber-900 border-amber-300 hover:bg-amber-100 hover:border-amber-400'
-              : isConfirmed
-              ? 'bg-emerald-50/90 text-emerald-900 border-emerald-300 hover:bg-emerald-100 hover:border-emerald-400'
-              : isCompleted
-              ? 'bg-purple-50/90 text-purple-900 border-purple-300 hover:bg-purple-100 hover:border-purple-400'
-              : 'bg-gray-100 text-gray-600 border-gray-300';
-
-            const dotBg = isPending
-              ? 'bg-amber-500 shadow-xs'
-              : isConfirmed
-              ? 'bg-emerald-500 shadow-xs'
-              : isCompleted
-              ? 'bg-purple-500 shadow-xs'
-              : 'bg-gray-400';
-
-            return (
-              <Tooltip
-                key={item.id}
-                title={
-                  <div className="text-xs space-y-1 p-1">
-                    <div className="font-bold text-sm text-white">{item.customerName}</div>
-                    <div className="text-amber-200 flex items-center gap-1">
-                      <Clock size={12} />
-                      <span>Khung giờ: {item.timeSlot}</span>
-                    </div>
-                    <div className="flex items-center gap-1">
-                      <span>Trạng thái:</span>
-                      <span className="font-bold uppercase px-1.5 py-0.2 rounded bg-white/20 text-white">
-                        {item.status}
-                      </span>
-                    </div>
-                    {item.phone && <div>📞 {item.phone}</div>}
-                    {item.interestedDresses?.length > 0 && (
-                      <div className="text-pink-200">
-                        👗 Thử {item.interestedDresses.length} mẫu lễ phục VIP
-                      </div>
-                    )}
-                  </div>
-                }
-              >
-                <div
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedEvent(item);
-                    setDetailModalOpen(true);
-                  }}
-                  className={`group flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] font-medium border shadow-2xs transition-all hover:scale-[1.02] cursor-pointer ${badgeBg}`}
-                >
-                  <span className={`w-1.5 h-1.5 rounded-full shrink-0 ${dotBg}`} />
-                  <span className="font-mono text-[10px] font-bold text-gray-900 shrink-0">
-                    {startTime}
-                  </span>
-                  <span className="text-gray-400 text-[9px]">•</span>
-                  <span className="truncate text-[10.5px] font-semibold text-gray-800">
-                    {displayName}
-                  </span>
-                </div>
-              </Tooltip>
-            );
-          })}
-
-        {/* Lịch Trả Váy */}
-        {showReturns &&
-          dayReturns.slice(0, 1).map((item) => {
-            const isDone = item.status === 'completed' || item.status === 'returned';
-            const displayName = extractDisplayName(item.customerName);
-
-            return (
-              <Tooltip
-                key={item.id}
-                title={
-                  <div className="text-xs space-y-1 p-1">
-                    <div className="font-bold text-amber-300">Hạn hoàn trả váy cưới</div>
-                    <div>Mã đơn: {item.code}</div>
-                    <div>Khách hàng: {item.customerName}</div>
-                    <div>Trạng thái: {item.status}</div>
-                  </div>
-                }
-              >
-                <div
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    setSelectedEvent(item);
-                    setDetailModalOpen(true);
-                  }}
-                  className={`flex items-center gap-1.5 px-2 py-0.5 rounded-lg text-[11px] font-medium border shadow-2xs transition-all hover:scale-[1.02] cursor-pointer ${
-                    isDone
-                      ? 'bg-emerald-50/90 text-emerald-800 border-emerald-300'
-                      : 'bg-rose-50/90 text-rose-800 border-rose-300'
-                  }`}
-                >
-                  <span
-                    className={`w-1.5 h-1.5 rounded-full shrink-0 ${
-                      isDone ? 'bg-emerald-500' : 'bg-rose-500'
-                    }`}
-                  />
-                  <span className="font-mono text-[10px] font-bold shrink-0">TRẢ</span>
-                  <span className="text-gray-400 text-[9px]">•</span>
-                  <span className="truncate text-[10.5px] font-semibold">{displayName}</span>
-                </div>
-              </Tooltip>
-            );
-          })}
-
-        {totalEvents > 2 && (
-          <div className="text-[10px] text-gray-500 font-bold pl-1.5 flex items-center gap-1">
-            <span className="w-1 h-1 rounded-full bg-gray-400" />
-            <span>+{totalEvents - 2} sự kiện khác</span>
-          </div>
-        )}
-      </div>
+      <CalendarDateCellEvents
+        dayApts={visibleApts}
+        dayDeliveries={visibleDeliveries}
+        dayReturns={visibleReturns}
+        showApts={showApts}
+        showDeliveries={showDeliveries}
+        showReturns={showReturns}
+        activeOrderCode={calendarFilterType === 'all' ? activeOrderCode : null}
+        onSelectEvent={(item) => {
+          setSelectedEvent(item);
+          setDetailModalOpen(true);
+        }}
+        onSelectOrderHighlight={(item) => {
+          if (calendarFilterType !== 'all') return;
+          const targetCode = item.code || item.id;
+          setHighlightedOrderCode((prev) => (prev === targetCode ? null : targetCode));
+        }}
+      />
     );
   };
 
@@ -485,15 +1330,43 @@ export default function ScheduleOverviewPage({ defaultTab }) {
           border: 1px solid #F1E5E2 !important;
           border-radius: 14px !important;
           margin: 3px !important;
-          min-height: 108px !important;
+          min-height: 122px !important;
           background: #FFFFFF !important;
           transition: all 0.22s cubic-bezier(0.4, 0, 0.2, 1) !important;
           box-shadow: 0 1px 3px rgba(0,0,0,0.015) !important;
+          display: flex !important;
+          flex-direction: column !important;
         }
         .unibridal-luxury-calendar .ant-picker-calendar-date:hover {
           border-color: #BA7A83 !important;
           background: #FFFDFD !important;
           box-shadow: 0 4px 16px rgba(115, 63, 73, 0.08) !important;
+        }
+        .unibridal-luxury-calendar .ant-picker-calendar-date-value {
+          padding: 4px 8px 1px 8px !important;
+          line-height: 1.2 !important;
+        }
+        .unibridal-luxury-calendar .ant-picker-calendar-date-content {
+          flex: 1 1 auto !important;
+          height: auto !important;
+          max-height: 98px !important;
+          overflow: visible !important;
+          padding: 0 2px 2px 2px !important;
+        }
+        /* Custom scrollbar siêu nhỏ cho ô lịch */
+        .custom-mini-scrollbar::-webkit-scrollbar {
+          width: 3.5px;
+        }
+        .custom-mini-scrollbar::-webkit-scrollbar-track {
+          background: #FAF3F0;
+          border-radius: 4px;
+        }
+        .custom-mini-scrollbar::-webkit-scrollbar-thumb {
+          background: #D8B7AE;
+          border-radius: 4px;
+        }
+        .custom-mini-scrollbar::-webkit-scrollbar-thumb:hover {
+          background: #733F49;
         }
         /* Ô ĐƯỢC CHỌN (SELECTED CELL): KHÔNG BỊ XÁM ĐEN MÙ MỊT NỮA */
         .unibridal-luxury-calendar .ant-picker-cell-selected .ant-picker-calendar-date {
@@ -521,35 +1394,50 @@ export default function ScheduleOverviewPage({ defaultTab }) {
           opacity: 0.4 !important;
           border-color: #F3F3F3 !important;
         }
+
+        /* NỔI BẬT ĐỒNG THỜI NGÀY GIAO & NGÀY TRẢ CỦA CÙNG ĐƠN HÀNG */
+        .unibridal-luxury-calendar .ant-picker-calendar-date.cell-delivery-highlight {
+          border: 2px solid #0284C7 !important;
+          background: #F0F9FF !important;
+          box-shadow: 0 0 0 2px rgba(2, 132, 199, 0.2) !important;
+          z-index: 2;
+        }
+        .unibridal-luxury-calendar .ant-picker-calendar-date.cell-delivery-highlight .ant-picker-calendar-date-value {
+          color: #0369A1 !important;
+          font-weight: 800 !important;
+        }
+
+        .unibridal-luxury-calendar .ant-picker-calendar-date.cell-return-highlight {
+          border: 2px solid #E11D48 !important;
+          background: #FFF1F2 !important;
+          box-shadow: 0 0 0 2px rgba(225, 29, 72, 0.2) !important;
+          z-index: 2;
+        }
+        .unibridal-luxury-calendar .ant-picker-calendar-date.cell-return-highlight .ant-picker-calendar-date-value {
+          color: #BE123C !important;
+          font-weight: 800 !important;
+        }
       `}</style>
 
-      <AdminLayout activeMenu="lich-tong-quan">
-        <div className="p-4 sm:p-6 lg:p-8 max-w-7xl mx-auto space-y-6">
-          {/* Header & Thanh Tiêu Đề */}
-          <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 border-b border-[#EFE5E1] pb-5">
+      <AdminLayout activeMenu="lich-tong-quan" role={isStaffContext ? 'staff' : 'admin'}>
+        <div className="space-y-5">
+          {/* Header và Thanh Tiêu Đề */}
+          <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
             <div>
-              <div className="flex items-center gap-2">
-                <span className="px-2.5 py-0.5 rounded-full bg-[#FAF0EC] text-[#733F49] text-[11px] font-bold tracking-wider uppercase border border-[#F2D8D4]">
-                  Điều Phối Showroom
-                </span>
-                <span className="text-xs text-gray-400">•</span>
-                <span className="text-xs text-gray-500 font-medium">Trung tâm điều hành độc quyền</span>
-              </div>
-              <h1 className="text-2xl sm:text-3xl font-bold text-gray-900 font-playfair flex items-center gap-2.5 mt-1">
-                <CalendarDays className="w-7 h-7 text-[#733F49]" />
+              <h1 className="font-playfair text-[32px] sm:text-[38px] font-normal text-[#5F2B36] tracking-tight leading-tight mb-2">
                 Lịch Tổng Quan
               </h1>
-              <p className="text-sm text-gray-500 mt-1">
-                Quản lý lịch hẹn thử váy Private Suite 1:1 và điều phối ngày bàn giao / hạn hoàn trả lễ phục cưới.
+              <p className="text-[14px] text-[#7A6B6C] font-normal max-w-3xl leading-relaxed">
+                Quản lý lịch hẹn thử váy Private Suite 1:1 và điều phối ngày bàn giao / hạn hoàn trả lễ phục cưới UniBridal.
               </p>
             </div>
 
-            <div className="flex items-center gap-2.5 self-start sm:self-auto">
+            <div className="flex items-center gap-2.5 self-start sm:self-auto shrink-0">
               <button
                 type="button"
                 onClick={fetchData}
                 disabled={loading}
-                className="inline-flex items-center gap-2 px-4 py-2.5 rounded-xl border border-gray-300 bg-white hover:bg-gray-50 text-gray-700 text-xs font-bold transition shadow-xs cursor-pointer"
+                className="inline-flex items-center gap-2 px-3.5 py-2.5 rounded-xl border border-[#E8DDD8] bg-white text-[#5F2B36] hover:bg-[#FAF0EC] text-xs font-bold transition-all shadow-xs cursor-pointer disabled:opacity-60"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? 'animate-spin' : ''}`} />
                 <span>Làm mới dữ liệu</span>
@@ -557,72 +1445,56 @@ export default function ScheduleOverviewPage({ defaultTab }) {
             </div>
           </div>
 
-          {/* 3 TAB CHÍNH HỢP NHẤT: LỊCH BIỂU SHOWROOM | QUẢN LÝ LỊCH HẸN | HẠN TRẢ ĐỒ */}
+          {/* TAB CHÍNH ĐIỀU HƯỚNG: LỊCH BIỂU & LỊCH SỬ THỬ VÁY */}
           <div className="flex flex-wrap items-center justify-between gap-3 bg-white p-2.5 sm:p-3 rounded-2xl border border-[#EFE5E1] shadow-xs">
             <div className="flex flex-wrap items-center gap-2">
-              {/* Tab 1: Lịch Biểu Showroom (Calendar) */}
               <button
                 type="button"
-                onClick={() => handleTabChange('calendar')}
+                onClick={() => handleMainTabChange('calendar')}
                 className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
                   activeMainTab === 'calendar'
-                    ? 'bg-[#733F49] text-white shadow-md shadow-[#733F49]/20'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                    ? 'bg-[#733F49] text-white shadow-xs'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
                 <CalendarIcon className="w-4 h-4" />
-                <span>Lịch Biểu Showroom</span>
+                <span>Lịch Biểu</span>
               </button>
-
-              {/* Tab 2: Quản Lý Lịch Hẹn (Merged từ AppointmentManagement) */}
               <button
                 type="button"
-                onClick={() => handleTabChange('appointments')}
+                onClick={() => handleMainTabChange('history')}
                 className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                  activeMainTab === 'appointments'
-                    ? 'bg-[#733F49] text-white shadow-md shadow-[#733F49]/20'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
+                  activeMainTab === 'history'
+                    ? 'bg-[#733F49] text-white shadow-xs'
+                    : 'bg-gray-100 text-gray-700 hover:bg-gray-200'
                 }`}
               >
-                <TableIcon className="w-4 h-4" />
-                <span>Danh Sách & Duyệt Lịch Hẹn</span>
-                {stats.pendingAppointments > 0 && (
-                  <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold animate-pulse">
-                    {stats.pendingAppointments} mới
-                  </span>
-                )}
-              </button>
-
-              {/* Tab 3: Lịch Hạn Trả Đồ */}
-              <button
-                type="button"
-                onClick={() => handleTabChange('returns')}
-                className={`flex items-center gap-2 px-4 sm:px-5 py-2.5 rounded-xl text-xs sm:text-sm font-bold transition-all cursor-pointer ${
-                  activeMainTab === 'returns'
-                    ? 'bg-[#733F49] text-white shadow-md shadow-[#733F49]/20'
-                    : 'text-gray-600 hover:text-gray-900 hover:bg-gray-100'
-                }`}
-              >
-                <RotateCcw className="w-4 h-4" />
-                <span>Hạn Trả Váy ({stats.totalReturns})</span>
+                <History className="w-4 h-4" />
+                <span>Lịch thử váy</span>
               </button>
             </div>
 
-            {/* Quick Stats Pill */}
-            <div className="flex flex-wrap items-center gap-2.5 text-xs">
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 text-purple-900 rounded-lg border border-purple-200 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse"></span>
-                <span>Hôm nay: <strong>{stats.todayFittings} ca thử</strong></span>
+            {/* Quick Stats Pill: Thống kê nhanh hôm nay (chỉ hiển thị ở Lịch Biểu) */}
+            {activeMainTab === 'calendar' && (
+              <div className="flex flex-wrap items-center gap-2.5 text-xs">
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-purple-50 text-purple-900 rounded-lg border border-purple-200 font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-purple-600 animate-pulse"></span>
+                  <span>Hôm nay: <strong>{stats.todayFittings} ca thử</strong></span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-sky-50 text-sky-900 rounded-lg border border-sky-200 font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-sky-600"></span>
+                  <span>Hôm nay: <strong>{stats.todayDeliveries} đơn giao</strong></span>
+                </div>
+                <div className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 text-rose-900 rounded-lg border border-rose-200 font-semibold">
+                  <span className="w-2 h-2 rounded-full bg-rose-500"></span>
+                  <span>Hôm nay: <strong>{stats.todayReturns} đơn trả</strong></span>
+                </div>
               </div>
-              <div className="flex items-center gap-2 px-3 py-1.5 bg-rose-50 text-rose-900 rounded-lg border border-rose-200 font-semibold">
-                <span className="w-2 h-2 rounded-full bg-rose-500"></span>
-                <span>Hôm nay: <strong>{stats.todayReturns} đơn trả</strong></span>
-              </div>
-            </div>
+            )}
           </div>
 
           {/* ========================================================= */}
-          {/* NỘI DUNG TAB 1: LỊCH BIỂU SHOWROOM (LỊCH THÁNG + CHI TIẾT NGÀY) */}
+          {/* NỘI DUNG LỊCH BIỂU SHOWROOM (LỊCH THÁNG + CHI TIẾT NGÀY) */}
           {/* ========================================================= */}
           {activeMainTab === 'calendar' && (
             <div className="space-y-6">
@@ -635,30 +1507,60 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                   </span>
                   <button
                     type="button"
-                    onClick={() => setCalendarFilterType('all')}
+                    onClick={() => {
+                      setCalendarFilterType('all');
+                      setDeliveryMethodFilter('all');
+                      setReturnMethodFilter('all');
+                      setHighlightedOrderCode(null);
+                    }}
                     className={`px-3.5 py-1.5 rounded-xl font-bold transition-all cursor-pointer ${
                       calendarFilterType === 'all'
                         ? 'bg-[#733F49] text-white shadow-xs'
                         : 'bg-gray-100 text-gray-700 hover:bg-gray-200/80'
                     }`}
                   >
-                    Tất cả sự kiện ({appointments.length + orders.length})
+                    Tất cả sự kiện ({calendarVisibleAppointments.length + calendarBranchOrders.length * 2})
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCalendarFilterType('fitting')}
+                    onClick={() => {
+                      setCalendarFilterType('fitting');
+                      setDeliveryMethodFilter('all');
+                      setReturnMethodFilter('all');
+                      setHighlightedOrderCode(null);
+                    }}
                     className={`px-3.5 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                       calendarFilterType === 'fitting'
                         ? 'bg-purple-700 text-white shadow-xs'
                         : 'bg-purple-50 text-purple-800 hover:bg-purple-100 border border-purple-200'
                     }`}
                   >
-                    <Sparkles className="w-3.5 h-3.5" />
-                    <span>Lịch thử váy ({appointments.length})</span>
+                    <Crown className="w-3.5 h-3.5" />
+                    <span>Lịch thử váy ({calendarVisibleAppointments.length})</span>
                   </button>
                   <button
                     type="button"
-                    onClick={() => setCalendarFilterType('return')}
+                    onClick={() => {
+                      setCalendarFilterType('delivery');
+                      setReturnMethodFilter('all');
+                      setHighlightedOrderCode(null);
+                    }}
+                    className={`px-3.5 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
+                      calendarFilterType === 'delivery'
+                        ? 'bg-sky-700 text-white shadow-xs'
+                        : 'bg-sky-50 text-sky-800 hover:bg-sky-100 border border-sky-200'
+                    }`}
+                  >
+                    <PackageCheck className="w-3.5 h-3.5" />
+                    <span>Lịch giao váy ({calendarBranchOrders.length})</span>
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => {
+                      setCalendarFilterType('return');
+                      setDeliveryMethodFilter('all');
+                      setHighlightedOrderCode(null);
+                    }}
                     className={`px-3.5 py-1.5 rounded-xl font-bold transition-all cursor-pointer flex items-center gap-1.5 ${
                       calendarFilterType === 'return'
                         ? 'bg-rose-700 text-white shadow-xs'
@@ -666,7 +1568,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                     }`}
                   >
                     <RotateCcw className="w-3.5 h-3.5" />
-                    <span>Hạn trả váy ({orders.length})</span>
+                    <span>Hạn trả váy ({calendarBranchOrders.length})</span>
                   </button>
                 </div>
 
@@ -680,17 +1582,16 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                     onChange={(e) => setCalendarBranchFilter(e.target.value)}
                     className="px-3.5 py-1.5 rounded-xl border border-gray-200 bg-gray-50 text-gray-800 font-bold outline-none cursor-pointer text-xs focus:border-[#733F49]"
                   >
-                    <option value="all">Toàn bộ 2 Showroom</option>
                     <option value="hcm-q1">UniBridal Q.1 TP.HCM</option>
                     <option value="hn-hoankiem">UniBridal Hoàn Kiếm, HN</option>
                   </select>
                 </div>
               </div>
 
-              {/* Grid 2 Cột: Lịch Tháng (Trái) & Bảng Chi Tiết Ngày VIP Concierge (Phải) */}
-              <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-                {/* Lịch tháng Ant Design với Custom Styling & Header */}
-                <div className="lg:col-span-3 bg-white p-5 rounded-2xl shadow-xs border border-[#EFE5E1]">
+              {/* Container 2 Cột: Lịch Tháng (Trái) + Thanh Kéo Co Giãn (Giữa) + Bảng Chi Tiết Ngày (Phải) */}
+              <div ref={splitContainerRef} className="flex flex-col lg:flex-row items-stretch gap-0 relative">
+                {/* Lịch tháng Ant Design với Custom Styling và Header */}
+                <div className="flex-1 min-w-[340px] bg-white p-5 rounded-2xl shadow-xs border border-[#EFE5E1]">
                   {loading ? (
                     <div className="h-96 flex items-center justify-center">
                       <Spin tip="Đang tải dữ liệu lịch showroom..." />
@@ -698,7 +1599,42 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                   ) : (
                     <Calendar
                       className="unibridal-luxury-calendar"
-                      cellRender={dateCellRender}
+                      fullCellRender={(date, info) => {
+                        if (info?.type === 'month') return info.originNode;
+
+                        const d = date?.toDate ? date.toDate() : new Date(date);
+                        const day = String(d.getDate()).padStart(2, '0');
+                        const month = String(d.getMonth() + 1).padStart(2, '0');
+                        const dateLabel = `${day}/${month}`;
+                        const isToday = toDateKey(d) === todayKey;
+                        const dateKey = toDateKey(d);
+
+                        const isAllEvents = calendarFilterType === 'all';
+                        const isDeliveryHighlight = isAllEvents && highlightStartDateKey && dateKey === highlightStartDateKey;
+                        const isReturnHighlight = isAllEvents && highlightEndDateKey && dateKey === highlightEndDateKey;
+
+                        let highlightClass = '';
+                        if (isDeliveryHighlight) {
+                          highlightClass = 'cell-delivery-highlight';
+                        } else if (isReturnHighlight) {
+                          highlightClass = 'cell-return-highlight';
+                        }
+
+                        return (
+                          <div
+                            className={`ant-picker-cell-inner ant-picker-calendar-date ${
+                              isToday ? 'ant-picker-calendar-date-today' : ''
+                            } ${highlightClass}`}
+                          >
+                            <div className="ant-picker-calendar-date-value font-mono">
+                              {dateLabel}
+                            </div>
+                            <div className="ant-picker-calendar-date-content">
+                              {dateCellRender(date)}
+                            </div>
+                          </div>
+                        );
+                      }}
                       headerRender={({ value, onChange }) => {
                         const current = value || dayjs();
                         const monthLabel = current.format('MMMM, YYYY');
@@ -707,13 +1643,149 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
                         return (
                           <div className="flex flex-wrap items-center justify-between gap-3 pb-4 mb-3 border-b border-gray-100">
-                            <div className="flex items-center gap-2.5">
-                              <div className="w-8 h-8 rounded-lg bg-[#FAF0EC] border border-[#F2D8D4] flex items-center justify-center">
-                                <CalendarIcon className="w-4 h-4 text-[#733F49]" />
+                            <div className="flex flex-wrap items-center gap-3">
+                              <div className="flex items-center gap-2.5">
+                                <div className="w-8 h-8 rounded-lg bg-[#FAF0EC] border border-[#F2D8D4] flex items-center justify-center">
+                                  <CalendarIcon className="w-4 h-4 text-[#733F49]" />
+                                </div>
+                                <h2 className="text-lg font-bold text-gray-900 m-0 font-playfair tracking-wide">
+                                  {capitalized}
+                                </h2>
                               </div>
-                              <h2 className="text-lg font-bold text-gray-900 m-0 font-playfair tracking-wide">
-                                {capitalized}
-                              </h2>
+
+                              {/* 2 Ô Lọc: Khách đến lấy & Giao tận nơi CHỈ HIỂN THỊ KHI ĐANG XEM LỊCH GIAO VÁY */}
+                              {calendarFilterType === 'delivery' && (
+                                <div className="flex items-center gap-1.5 sm:gap-2 pl-2 sm:pl-3 border-l border-gray-200">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setDeliveryMethodFilter((prev) =>
+                                        prev === 'showroom' ? 'all' : 'showroom'
+                                      )
+                                    }
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border shadow-2xs ${
+                                      deliveryMethodFilter === 'showroom'
+                                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                                        : 'bg-indigo-50/80 text-indigo-900 border-indigo-200 hover:bg-indigo-100'
+                                    }`}
+                                    title={
+                                      deliveryMethodFilter === 'showroom'
+                                        ? 'Đang lọc: Khách đến lấy (Bấm để xem tất cả)'
+                                        : 'Lọc đơn khách đến showroom lấy trực tiếp'
+                                    }
+                                  >
+                                    <Building2 className="w-3.5 h-3.5" />
+                                    <span>Khách đến lấy</span>
+                                    <span
+                                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+                                        deliveryMethodFilter === 'showroom'
+                                          ? 'bg-white/20 text-white'
+                                          : 'bg-indigo-100 text-indigo-900'
+                                      }`}
+                                    >
+                                      {showroomDeliveriesCount}
+                                    </span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setDeliveryMethodFilter((prev) =>
+                                        prev === 'express' ? 'all' : 'express'
+                                      )
+                                    }
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border shadow-2xs ${
+                                      deliveryMethodFilter === 'express'
+                                        ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+                                        : 'bg-sky-50/80 text-sky-900 border-sky-200 hover:bg-sky-100'
+                                    }`}
+                                    title={
+                                      deliveryMethodFilter === 'express'
+                                        ? 'Đang lọc: Nhân viên giao (Bấm để xem tất cả)'
+                                        : 'Lọc đơn nhân viên giao váy tận nơi'
+                                    }
+                                  >
+                                    <Truck className="w-3.5 h-3.5" />
+                                    <span>Nhân viên giao</span>
+                                    <span
+                                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+                                        deliveryMethodFilter === 'express'
+                                          ? 'bg-white/20 text-white'
+                                          : 'bg-sky-100 text-sky-900'
+                                      }`}
+                                    >
+                                      {expressDeliveriesCount}
+                                    </span>
+                                  </button>
+                                </div>
+                              )}
+
+                              {/* 2 Ô Lọc: Khách đến trả & Nhân viên đến lấy CHỈ HIỂN THỊ KHI ĐANG XEM HẠN TRẢ VÁY */}
+                              {calendarFilterType === 'return' && (
+                                <div className="flex items-center gap-1.5 sm:gap-2 pl-2 sm:pl-3 border-l border-gray-200">
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setReturnMethodFilter((prev) =>
+                                        prev === 'showroom' ? 'all' : 'showroom'
+                                      )
+                                    }
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border shadow-2xs ${
+                                      returnMethodFilter === 'showroom'
+                                        ? 'bg-indigo-600 text-white border-indigo-600 shadow-xs'
+                                        : 'bg-indigo-50/80 text-indigo-900 border-indigo-200 hover:bg-indigo-100'
+                                    }`}
+                                    title={
+                                      returnMethodFilter === 'showroom'
+                                        ? 'Đang lọc: Khách đến trả (Bấm để xem tất cả)'
+                                        : 'Lọc đơn khách đến showroom trả trực tiếp'
+                                    }
+                                  >
+                                    <Building2 className="w-3.5 h-3.5" />
+                                    <span>Khách đến trả</span>
+                                    <span
+                                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+                                        returnMethodFilter === 'showroom'
+                                          ? 'bg-white/20 text-white'
+                                          : 'bg-indigo-100 text-indigo-900'
+                                      }`}
+                                    >
+                                      {showroomReturnsCount}
+                                    </span>
+                                  </button>
+
+                                  <button
+                                    type="button"
+                                    onClick={() =>
+                                      setReturnMethodFilter((prev) =>
+                                        prev === 'express' ? 'all' : 'express'
+                                      )
+                                    }
+                                    className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all cursor-pointer flex items-center gap-1.5 border shadow-2xs ${
+                                      returnMethodFilter === 'express'
+                                        ? 'bg-sky-600 text-white border-sky-600 shadow-xs'
+                                        : 'bg-sky-50/80 text-sky-900 border-sky-200 hover:bg-sky-100'
+                                    }`}
+                                    title={
+                                      returnMethodFilter === 'express'
+                                        ? 'Đang lọc: Nhân viên lấy (Bấm để xem tất cả)'
+                                        : 'Lọc đơn nhân viên đến thu hồi váy tận nơi'
+                                    }
+                                  >
+                                    <Truck className="w-3.5 h-3.5" />
+                                    <span>Nhân viên lấy</span>
+                                    <span
+                                      className={`text-[10px] px-1.5 py-0.5 rounded-full font-mono font-bold ${
+                                        returnMethodFilter === 'express'
+                                          ? 'bg-white/20 text-white'
+                                          : 'bg-sky-100 text-sky-900'
+                                      }`}
+                                    >
+                                      {expressReturnsCount}
+                                    </span>
+                                  </button>
+                                </div>
+                              )}
                             </div>
 
                             <div className="flex items-center gap-1.5">
@@ -752,30 +1824,83 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                   )}
                 </div>
 
-                {/* Cột Phải: Bảng Chi Tiết Ngày VIP Concierge Docket */}
-                <div className="bg-white p-5 rounded-2xl shadow-xs border border-[#EFE5E1] flex flex-col h-fit">
-                  <div className="border-b border-[#F2E5E0] pb-3 mb-4">
-                    <div className="flex items-center justify-between">
-                      <span className="text-[11px] uppercase tracking-wider text-[#733F49] font-bold flex items-center gap-1">
-                        <Sparkles className="w-3 h-3" />
-                        <span>Chi tiết ngày được chọn</span>
-                      </span>
-                      <span className="text-[11px] font-semibold text-gray-500 bg-gray-100 px-2 py-0.5 rounded-full">
-                        {currentDayEvents.length} lượt hẹn
-                      </span>
-                    </div>
+                {/* Thanh Kéo Co Giãn & Nút Mũi Tên Kéo Ra (Pull-out Arrow Handle) ở giữa 2 cột */}
+                <div
+                  onMouseDown={handleMouseDownResize}
+                  onDoubleClick={() => {
+                    setIsRightPanelCollapsed(false);
+                    setRightPanelWidth(480);
+                    try {
+                      localStorage.setItem('unibridal_schedule_right_panel_width', '480');
+                      localStorage.setItem('unibridal_schedule_right_panel_collapsed', 'false');
+                    } catch (_) {}
+                  }}
+                  className={`hidden lg:flex items-center justify-center shrink-0 cursor-col-resize select-none relative z-20 group transition-all duration-200 ${
+                    isRightPanelCollapsed ? 'w-8 pl-1.5' : 'w-6'
+                  }`}
+                  title={
+                    isRightPanelCollapsed
+                      ? 'Bấm để kéo ra bảng chi tiết ngày'
+                      : 'Bấm mũi tên để thu gọn / Kéo sang trái để mở rộng (Nhấp đúp đặt lại 480px)'
+                  }
+                >
+                  {/* Đường rãnh phân cách mờ */}
+                  {!isRightPanelCollapsed && (
+                    <div className="absolute inset-y-0 w-[1px] bg-[#EFE5E1] group-hover:bg-[#BA7A83]/60 transition-colors" />
+                  )}
 
-                    <div className="text-lg font-bold text-gray-900 mt-1 capitalize font-playfair">
-                      {selectedDate.toLocaleDateString('vi-VN', {
-                        weekday: 'long',
-                        day: 'numeric',
-                        month: 'numeric',
-                        year: 'numeric',
-                      })}
-                    </div>
+                  {/* Nút Mũi Tên Kéo Ra */}
+                  <div
+                    className={`relative z-10 w-6 h-16 rounded-full flex flex-col items-center justify-center border shadow-xs transition-all duration-200 cursor-pointer ${
+                      isDragging
+                        ? 'bg-[#733F49] text-white border-[#5F2B36] shadow-md scale-110 ring-2 ring-[#733F49]/20'
+                        : isRightPanelCollapsed
+                        ? 'bg-[#733F49] text-white border-[#5F2B36] shadow-md hover:scale-105 hover:bg-[#5F2B36]'
+                        : 'bg-white hover:bg-[#733F49] text-[#733F49] hover:text-white border-[#E8DDD8] hover:border-[#733F49] hover:shadow-md'
+                    }`}
+                  >
+                    {isRightPanelCollapsed ? (
+                      <ChevronsLeft className="w-4 h-4 stroke-[2.5] animate-pulse" />
+                    ) : (
+                      <ChevronLeft className="w-4 h-4 stroke-[2.5] group-hover:-translate-x-0.5 transition-transform" />
+                    )}
                   </div>
+                </div>
 
-                  <div className="space-y-4 overflow-y-auto max-h-[600px] pr-1">
+                {/* Cột Phải: Bảng Chi Tiết Ngày VIP Concierge Docket (Có thể kéo co giãn độ rộng tùy ý) */}
+                {(!isLargeScreen || !isRightPanelCollapsed) && (
+                  <div
+                    style={{
+                      width: isLargeScreen ? `${rightPanelWidth}px` : '100%',
+                      minWidth: isLargeScreen ? '320px' : 'auto',
+                    }}
+                    className="w-full shrink-0 bg-white p-5 sm:p-6 rounded-2xl shadow-xs border border-[#EFE5E1] flex flex-col h-fit transition-all duration-150"
+                  >
+                    <div className="border-b border-[#F2E5E0] pb-3 mb-4">
+                      <div className="flex items-center justify-between">
+                        <div className="text-xl font-bold text-gray-900 capitalize font-playfair">
+                          {selectedDate.toLocaleDateString('vi-VN', {
+                            weekday: 'long',
+                            day: 'numeric',
+                            month: 'numeric',
+                            year: 'numeric',
+                          })}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            handleToggleRightPanel();
+                          }}
+                          className="flex items-center justify-center w-6 h-6 rounded-lg text-gray-400 hover:text-[#733F49] hover:bg-[#FAF0EC] transition cursor-pointer"
+                          title="Thu gọn bảng chi tiết"
+                        >
+                          <ChevronRight className="w-4 h-4" />
+                        </button>
+                      </div>
+                    </div>
+
+                  <div className="space-y-4 overflow-y-auto max-h-[680px] pr-1">
                     {currentDayEvents.length === 0 ? (
                       <div className="py-14 text-center text-gray-400 text-xs">
                         <Empty
@@ -786,9 +1911,24 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                     ) : (
                       currentDayEvents.map((item) => {
                         const isFitting = item.type === 'fitting';
+                        const isDelivery = item.type === 'delivery';
+                        const isReturn = item.type === 'return';
                         const isPending = item.status === 'pending';
                         const isConfirmed = item.status === 'confirmed';
                         const isCompleted = item.status === 'completed';
+                        const badge = getEventBadge(item);
+
+                        // Trạng thái Giao Váy: Vàng (khách sắp lấy), Xanh (khách đã lấy/ship đã giao), Đỏ (chưa đến lấy/chưa giao)
+                        const isDeliveryDone = isDelivery && (['delivered', 'renting', 'returned', 'completed', 'waiting_refund'].includes((item.status || '').toLowerCase()) || Boolean(item.actualDeliveryDate));
+                        const deliveryDateKey = isDelivery ? (item.deliveryDate || item.date) : '';
+                        const isDeliveryOverdue = isDelivery && !isDeliveryDone && Boolean(deliveryDateKey && deliveryDateKey < todayKey);
+                        const isDeliveryFutureOrToday = isDelivery && !isDeliveryDone && (!deliveryDateKey || deliveryDateKey >= todayKey);
+
+                        // Trạng thái Trả Váy: Vàng (sắp đến hạn/tương lai), Xanh (đã trả), Đỏ (chưa trả)
+                        const isReturnDone = isReturn && (item.status === 'completed' || item.status === 'returned' || item.status === 'waiting_refund' || Boolean(item.actualReturnDate));
+                        const returnDateKey = isReturn ? (item.date || toDateKey(item.rentalEndDate)) : '';
+                        const isReturnOverdue = isReturn && !isReturnDone && Boolean(returnDateKey && returnDateKey < todayKey);
+                        const isReturnFutureOrToday = isReturn && !isReturnDone && (!returnDateKey || returnDateKey >= todayKey);
 
                         return (
                           <div
@@ -800,10 +1940,20 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                                   : isConfirmed
                                   ? 'border-emerald-300 bg-emerald-50/30'
                                   : 'border-purple-300 bg-purple-50/20'
+                                : isDelivery
+                                ? isDeliveryDone
+                                  ? 'border-emerald-300 bg-emerald-50/30'
+                                  : isDeliveryFutureOrToday
+                                  ? 'border-amber-300 bg-amber-50/30'
+                                  : 'border-rose-300 bg-rose-50/30'
+                                : isReturnDone
+                                ? 'border-emerald-300 bg-emerald-50/30'
+                                : isReturnFutureOrToday
+                                ? 'border-amber-300 bg-amber-50/30'
                                 : 'border-rose-300 bg-rose-50/30'
                             }`}
                           >
-                            {/* Dòng 1: Giờ hẹn & Trạng thái */}
+                            {/* Dòng 1: Header sự kiện và Trạng thái */}
                             <div className="flex items-center justify-between text-xs mb-2">
                               <span className="font-bold text-gray-900 flex items-center gap-1.5">
                                 {isFitting ? (
@@ -811,34 +1961,106 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                                     <Clock className="w-3.5 h-3.5 text-[#733F49]" />
                                     <span className="font-mono text-sm">{item.timeSlot}</span>
                                   </>
+                                ) : isDelivery ? (
+                                  <>
+                                    {item.deliveryMethod === 'express' ? (
+                                      <>
+                                        <Truck className={`w-3.5 h-3.5 ${
+                                          isDeliveryDone
+                                            ? 'text-emerald-700'
+                                            : isDeliveryFutureOrToday
+                                            ? 'text-amber-700'
+                                            : 'text-rose-700'
+                                        }`} />
+                                        <span className={`font-mono font-bold ${
+                                          isDeliveryDone
+                                            ? 'text-emerald-900'
+                                            : isDeliveryFutureOrToday
+                                            ? 'text-amber-900'
+                                            : 'text-rose-900'
+                                        }`}>
+                                          SHIP VÁY: {item.code}
+                                        </span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Building2 className={`w-3.5 h-3.5 ${
+                                          isDeliveryDone
+                                            ? 'text-emerald-700'
+                                            : isDeliveryFutureOrToday
+                                            ? 'text-amber-700'
+                                            : 'text-rose-700'
+                                        }`} />
+                                        <span className={`font-mono font-bold ${
+                                          isDeliveryDone
+                                            ? 'text-emerald-900'
+                                            : isDeliveryFutureOrToday
+                                            ? 'text-amber-900'
+                                            : 'text-rose-900'
+                                        }`}>
+                                          KHÁCH LẤY: {item.code}
+                                        </span>
+                                      </>
+                                    )}
+                                  </>
                                 ) : (
                                   <>
-                                    <ShoppingBag className="w-3.5 h-3.5 text-rose-700" />
-                                    <span className="font-mono font-bold text-rose-800">
-                                      Đơn {item.code}
+                                    <RotateCcw className={`w-3.5 h-3.5 ${
+                                      isReturnDone
+                                        ? 'text-emerald-700'
+                                        : isReturnFutureOrToday
+                                        ? 'text-amber-700'
+                                        : 'text-rose-700'
+                                    }`} />
+                                    <span className={`font-mono font-bold ${
+                                      isReturnDone
+                                        ? 'text-emerald-900'
+                                        : isReturnFutureOrToday
+                                        ? 'text-amber-900'
+                                        : 'text-rose-900'
+                                    }`}>
+                                      HẠN TRẢ: {item.code}
                                     </span>
                                   </>
                                 )}
                               </span>
-                              <span
-                                className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider ${
-                                  isPending
-                                    ? 'bg-amber-100 text-amber-800 border border-amber-300 animate-pulse'
-                                    : isConfirmed
-                                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-300'
-                                    : isCompleted
-                                    ? 'bg-purple-100 text-purple-800 border border-purple-300'
-                                    : 'bg-gray-100 text-gray-600'
-                                }`}
-                              >
-                                {item.status === 'pending'
-                                  ? 'CHỜ DUYỆT'
-                                  : item.status === 'confirmed'
-                                  ? 'ĐÃ XÁC NHẬN'
-                                  : item.status === 'completed'
-                                  ? 'HOÀN TẤT'
-                                  : item.status.toUpperCase()}
-                              </span>
+                              {!isReturn && !isDelivery && (
+                                <span
+                                  className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border ${badge.className}`}
+                                >
+                                  {badge.label}
+                                </span>
+                              )}
+                              {isDelivery && (
+                                <span
+                                  className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
+                                    isDeliveryDone
+                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                      : isDeliveryFutureOrToday
+                                      ? 'bg-amber-50 text-amber-900 border-amber-300'
+                                      : 'bg-rose-50 text-rose-900 border-rose-300'
+                                  }`}
+                                >
+                                  {isDeliveryDone
+                                    ? (item.deliveryMethod === 'express' ? 'Ship đã giao' : 'Khách đã lấy')
+                                    : isDeliveryFutureOrToday
+                                    ? (item.deliveryMethod === 'express' ? 'Sắp giao' : 'Khách sắp lấy')
+                                    : (item.deliveryMethod === 'express' ? 'Chưa giao' : 'Chưa đến lấy')}
+                                </span>
+                              )}
+                              {isReturn && (
+                                <span
+                                  className={`text-[10px] px-2.5 py-0.5 rounded-full font-bold uppercase tracking-wider border ${
+                                    isReturnDone
+                                      ? 'bg-emerald-50 text-emerald-800 border-emerald-300'
+                                      : isReturnFutureOrToday
+                                      ? 'bg-amber-50 text-amber-900 border-amber-300'
+                                      : 'bg-rose-50 text-rose-900 border-rose-300'
+                                  }`}
+                                >
+                                  {isReturnDone ? 'Đã trả' : isReturnFutureOrToday ? 'Sắp đến hạn' : 'Chưa trả'}
+                                </span>
+                              )}
                             </div>
 
                             {/* Tên khách hàng */}
@@ -846,7 +2068,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                               {item.customerName}
                             </div>
 
-                            {/* Điện thoại & Zalo liên hệ */}
+                            {/* Điện thoại liên hệ */}
                             {item.phone && (
                               <div className="flex items-center gap-2 mt-2">
                                 <a
@@ -856,29 +2078,56 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                                   <Phone className="w-3.5 h-3.5 text-[#733F49]" />
                                   <span>{item.phone}</span>
                                 </a>
-                                <a
-                                  href={`https://zalo.me/${item.phone.replace(/[^0-9]/g, '')}`}
-                                  target="_blank"
-                                  rel="noreferrer"
-                                  className="inline-flex items-center gap-1 px-2.5 py-1 rounded-lg bg-blue-50 text-blue-700 border border-blue-200 text-xs font-semibold hover:bg-blue-100 transition"
-                                >
-                                  <MessageSquare size={12} />
-                                  <span>Zalo</span>
-                                </a>
                               </div>
                             )}
 
-                            {/* Chi nhánh Showroom */}
-                            <div className="text-[11px] text-gray-500 flex items-center gap-1.5 mt-2 font-medium">
-                              <Building2 size={12} className="text-[#BA7A83]" />
-                              <span>
-                                {item.branch === 'hn-hoankiem'
-                                  ? 'Showroom Hoàn Kiếm, Hà Nội'
-                                  : 'Flagship Showroom Q.1, TP. HCM'}
-                              </span>
-                            </div>
+                            {/* Chi nhánh Showroom / Phương thức & Địa chỉ giao hoặc trả */}
+                            {isFitting ? (
+                              <div className="text-[11px] text-gray-500 flex items-center gap-1.5 mt-2 font-medium">
+                                <Building2 size={12} className="text-[#BA7A83]" />
+                                <span>
+                                  {item.branch === 'hn-hoankiem'
+                                    ? 'Showroom Hoàn Kiếm, Hà Nội (26 Lý Thường Kiệt)'
+                                    : 'Flagship Showroom Q.1, TP. HCM (88 Nam Kỳ Khởi Nghĩa)'}
+                                </span>
+                              </div>
+                            ) : isDelivery ? (
+                              item.deliveryMethod === 'express' ? (
+                                <div className="mt-2.5 text-[11px] p-2.5 rounded-xl border font-medium space-y-1 bg-sky-50/80 text-sky-900 border-sky-200">
+                                  <div className="flex items-center gap-1.5 font-bold">
+                                    <MapPin className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                                    <span>Địa chỉ khách yêu cầu giao:</span>
+                                  </div>
+                                  <div className="text-gray-800 font-semibold pl-5 text-xs">
+                                    📍 {formatAddress(item.shippingAddress) || 'Địa chỉ khách hàng đã đăng ký'}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="mt-2.5 text-[11.5px] p-2.5 rounded-xl border font-bold flex items-center gap-1.5 bg-indigo-50/80 text-indigo-950 border-indigo-200">
+                                  <Building2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                  <span>Khách đến lấy tại Showroom</span>
+                                </div>
+                              )
+                            ) : (
+                              item.deliveryMethod === 'express' ? (
+                                <div className="mt-2.5 text-[11px] p-2.5 rounded-xl border font-medium space-y-1 bg-sky-50/80 text-sky-900 border-sky-200">
+                                  <div className="flex items-center gap-1.5 font-bold">
+                                    <Truck className="w-3.5 h-3.5 text-sky-600 shrink-0" />
+                                    <span>Nhân viên lấy:</span>
+                                  </div>
+                                  <div className="text-gray-800 font-semibold pl-5 text-xs">
+                                    📍 {formatAddress(item.shippingAddress) || 'Địa chỉ khách hàng đã đăng ký'}
+                                  </div>
+                                </div>
+                              ) : (
+                                <div className="mt-2.5 text-[11.5px] p-2.5 rounded-xl border font-bold flex items-center gap-1.5 bg-indigo-50/80 text-indigo-950 border-indigo-200">
+                                  <Building2 className="w-3.5 h-3.5 text-indigo-600 shrink-0" />
+                                  <span>Khách đến trả tại Showroom</span>
+                                </div>
+                              )
+                            )}
 
-                            {/* Lễ phục quan tâm */}
+                            {/* Lễ phục quan tâm / Lễ phục thuê */}
                             {isFitting && item.interestedDresses?.length > 0 && (
                               <div className="p-2.5 rounded-xl bg-white/80 border border-[#F2D8D4] text-xs text-[#733F49] font-medium mt-2.5 space-y-1">
                                 <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
@@ -894,8 +2143,23 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                               </div>
                             )}
 
-                            {/* Ghi chú từ khách hàng */}
-                            {item.notes && (
+                            {!isFitting && item.items?.length > 0 && (
+                              <div className="p-2.5 rounded-xl bg-white/80 border border-[#EFE5E1] text-xs font-medium mt-2.5 space-y-1">
+                                <div className="text-[11px] font-bold text-gray-500 uppercase tracking-wider">
+                                  {isDelivery ? '📦 Lễ phục bàn giao:' : '🔄 Lễ phục trả:'}
+                                </div>
+                                <div className="space-y-0.5">
+                                  {item.items.map((it, idx) => (
+                                    <div key={idx} className="font-semibold text-gray-800">
+                                      • {it.name} (Size: {it.size || 'M'}{it.color ? ` • Màu: ${it.color}` : ''})
+                                    </div>
+                                  ))}
+                                </div>
+                              </div>
+                            )}
+
+                            {/* Ghi chú (chỉ hiển thị ở lịch thử váy, ẩn ở phần giao và trả theo yêu cầu) */}
+                            {isFitting && item.notes && (
                               <div className="p-2.5 bg-white/70 rounded-xl text-xs text-gray-600 border border-gray-200/80 italic mt-2.5 leading-relaxed">
                                 &ldquo;{item.notes}&rdquo;
                               </div>
@@ -903,487 +2167,170 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
                             {/* CÁC NÚT THAO TÁC TRỰC TIẾP DÀNH CHO STAFF */}
                             <div className="flex items-center gap-2 pt-3 border-t border-gray-200/70 mt-3">
-                              {isFitting && isPending && (
+                              {isFitting && item.status === 'confirmed' && (
+                                (item.date || toDateKey(item.appointmentDate)) <= todayKey ? (
+                                  <>
+                                    <button
+                                      type="button"
+                                      disabled={updatingId === item.id}
+                                      onClick={() =>
+                                        handleUpdateAppointmentStatus(item.id, 'completed')
+                                      }
+                                      className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
+                                      title="Khách hàng đã đến showroom: Đánh dấu có mặt"
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                      <span>Có Mặt</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={updatingId === item.id}
+                                      onClick={() =>
+                                        handleUpdateAppointmentStatus(item.id, 'cancelled')
+                                      }
+                                      className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center justify-center gap-1 transition cursor-pointer disabled:opacity-50"
+                                      title="Khách bận hoặc không đến: Đánh dấu vắng mặt"
+                                    >
+                                      <XCircle className="w-3.5 h-3.5" />
+                                      <span>Vắng Mặt</span>
+                                    </button>
+                                  </>
+                                ) : (
+                                  <div className="flex-1 py-1.5 px-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-500 text-xs font-semibold flex items-center justify-center gap-1.5">
+                                    <Clock className="w-3.5 h-3.5 text-gray-400" />
+                                    <span>Chờ đến ngày hẹn</span>
+                                  </div>
+                                )
+                              )}
+
+                              {isDelivery && (
                                 <button
                                   type="button"
-                                  disabled={updatingId === item.id}
-                                  onClick={() =>
-                                    handleUpdateAppointmentStatus(item.id, 'confirmed')
-                                  }
-                                  className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
+                                  onClick={() => {
+                                    const targetCode = item.code || item.id || '';
+                                    navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}`);
+                                  }}
+                                  className="w-full py-2 px-3 rounded-xl bg-sky-600 hover:bg-sky-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer"
+                                  title="Xem chi tiết đơn thuê và bàn giao"
                                 >
-                                  <Check className="w-3.5 h-3.5" />
-                                  <span>Xác Nhận Lịch</span>
+                                  <PackageCheck className="w-3.5 h-3.5" />
+                                  <span>Đơn Thuê</span>
                                 </button>
                               )}
 
-                              {isFitting && isConfirmed && (
+                              {isReturn && (
                                 <button
                                   type="button"
-                                  disabled={updatingId === item.id}
-                                  onClick={() =>
-                                    handleUpdateAppointmentStatus(item.id, 'completed')
-                                  }
-                                  className="flex-1 py-2 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
+                                  onClick={() => {
+                                    const targetCode = item.code || item.id || '';
+                                    navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}&action=inspect`);
+                                  }}
+                                  className="w-full py-2 px-3 rounded-xl bg-[#FAF0EC] hover:bg-[#F2D8D4] text-[#733F49] text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer border border-[#F2D8D4]"
                                 >
-                                  <CheckCircle2 className="w-3.5 h-3.5" />
-                                  <span>Đã Thử Váy Xong</span>
+                                  <RotateCcw className="w-3.5 h-3.5" />
+                                  <span>Kiểm Định Trả Váy</span>
                                 </button>
                               )}
 
-                              {isFitting &&
-                                item.status !== 'cancelled' &&
-                                item.status !== 'completed' && (
-                                  <button
-                                    type="button"
-                                    disabled={updatingId === item.id}
-                                    onClick={() =>
-                                      handleUpdateAppointmentStatus(item.id, 'cancelled')
-                                    }
-                                    className="p-2 rounded-xl bg-white hover:bg-red-50 text-gray-500 hover:text-red-600 border border-gray-200 text-xs font-medium transition cursor-pointer"
-                                    title="Hủy lịch hẹn này"
-                                  >
-                                    <XCircle className="w-4 h-4" />
-                                  </button>
-                                )}
-
-                              <button
-                                type="button"
-                                onClick={() => {
-                                  setSelectedEvent(item);
-                                  setDetailModalOpen(true);
-                                }}
-                                className="p-2 rounded-xl bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 text-xs font-medium transition cursor-pointer"
-                                title="Xem chi tiết đầy đủ"
-                              >
-                                <Eye className="w-4 h-4" />
-                              </button>
+                              {!isReturn && !isDelivery && (
+                                <button
+                                  type="button"
+                                  onClick={() => {
+                                    setSelectedEvent(item);
+                                    setDetailModalOpen(true);
+                                  }}
+                                  className="p-2 rounded-xl bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 text-xs font-medium transition cursor-pointer"
+                                  title="Xem chi tiết đầy đủ"
+                                >
+                                  <Eye className="w-4 h-4" />
+                                </button>
+                              )}
                             </div>
                           </div>
-                        );
-                      })
+                        );                      })
                     )}
                   </div>
                 </div>
+              )}
               </div>
             </div>
           )}
 
           {/* ========================================================= */}
-          {/* NỘI DUNG TAB 2: QUẢN LÝ & PHÊ DUYỆT LỊCH HẸN (DANH SÁCH CHI TIẾT) */}
+          {/* NỘI DUNG LỊCH SỬ THỬ VÁY (BẢNG DANH SÁCH & BỘ LỌC)       */}
           {/* ========================================================= */}
-          {activeMainTab === 'appointments' && (
-            <div className="space-y-6">
-              {/* 4 Thẻ KPI Thông Số */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-                <div className="bg-white rounded-2xl border border-[#EFE5E1] p-5 shadow-xs">
-                  <span className="text-[11px] font-bold tracking-wider text-gray-500 uppercase">
-                    TỔNG LỊCH HẸN
-                  </span>
-                  <div className="text-3xl font-bold text-gray-900 mt-1">{appointments.length}</div>
-                  <div className="text-xs text-gray-500 mt-1">Toàn bộ hệ thống 2 Showroom</div>
-                </div>
+          {activeMainTab === 'history' && (
+            <div className="space-y-4">
+              {/* Bộ lọc Lịch Sử Thử Váy */}
+              <div className="bg-white p-3.5 sm:p-4 rounded-2xl border border-[#EFE5E1] shadow-2xs">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                  {/* Tìm kiếm */}
+                  <div className="relative flex-1 max-w-md">
+                    <Search className="w-4 h-4 text-gray-400 absolute left-3.5 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      value={historySearch}
+                      onChange={(e) => setHistorySearch(e.target.value)}
+                      placeholder="Tìm theo tên khách, SĐT, mã hẹn..."
+                      className="w-full pl-9 pr-8 py-2 bg-gray-50 border border-gray-200 rounded-xl text-xs sm:text-sm focus:outline-none focus:border-[#BA7A83] focus:bg-white transition"
+                    />
+                    {historySearch && (
+                      <button
+                        type="button"
+                        onClick={() => setHistorySearch('')}
+                        className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-400 hover:text-gray-600 text-xs cursor-pointer"
+                      >
+                        ✕
+                      </button>
+                    )}
+                  </div>
 
-                <div className="bg-white rounded-2xl border border-amber-200 p-5 shadow-xs bg-radial from-amber-50/60 to-transparent">
-                  <div className="flex items-center justify-between">
-                    <span className="text-[11px] font-bold tracking-wider text-amber-800 uppercase">
-                      CHỜ DUYỆT (PENDING)
-                    </span>
-                    {stats.pendingAppointments > 0 && (
-                      <span className="px-2 py-0.5 rounded-full bg-amber-500 text-white text-[10px] font-bold animate-pulse">
-                        Cần gọi xác nhận
+                  {/* Lọc Chi nhánh */}
+                  <div className="flex items-center gap-2">
+                    <span className="text-xs font-semibold text-gray-600 whitespace-nowrap">Chi nhánh:</span>
+                    <select
+                      value={historyBranch}
+                      onChange={(e) => setHistoryBranch(e.target.value)}
+                      className="text-xs font-semibold bg-gray-50 border border-gray-200 text-gray-800 rounded-xl px-3 py-2 focus:outline-none focus:border-[#BA7A83] cursor-pointer"
+                    >
+                      <option value="hcm-q1">UniBridal Q.1 TP.HCM</option>
+                      <option value="hn-hoankiem">UniBridal Hoàn Kiếm, HN</option>
+                    </select>
+                  </div>
+                </div>
+              </div>
+
+              {/* Bảng danh sách Lịch Sử Thử Váy */}
+              <div className="bg-white rounded-2xl border border-[#EFE5E1] shadow-2xs overflow-hidden p-4">
+                <Table
+                  dataSource={historyAppointments}
+                  columns={historyColumns}
+                  rowKey={(record) => record._id || record.id || record.appointmentCode}
+                  scroll={{ x: 1000 }}
+                  pagination={{
+                    pageSize: 10,
+                    showSizeChanger: true,
+                    pageSizeOptions: ['10', '20', '50'],
+                    showTotal: (total, range) => (
+                      <span className="text-xs text-gray-500">
+                        Hiển thị {range[0]}-{range[1]} trên tổng số {total} ca hẹn
                       </span>
-                    )}
-                  </div>
-                  <div className="text-3xl font-bold text-amber-700 mt-1">
-                    {stats.pendingAppointments}
-                  </div>
-                  <div className="text-xs text-amber-800 mt-1">Ưu tiên liên hệ cô dâu trước</div>
-                </div>
-
-                <div className="bg-white rounded-2xl border border-emerald-200 p-5 shadow-xs bg-radial from-emerald-50/60 to-transparent">
-                  <span className="text-[11px] font-bold tracking-wider text-emerald-800 uppercase">
-                    ĐÃ XÁC NHẬN (CONFIRMED)
-                  </span>
-                  <div className="text-3xl font-bold text-emerald-700 mt-1">
-                    {stats.confirmedAppointments}
-                  </div>
-                  <div className="text-xs text-emerald-800 mt-1">Phòng Suite 1:1 đã khóa giờ</div>
-                </div>
-
-                <div className="bg-white rounded-2xl border border-purple-200 p-5 shadow-xs bg-radial from-purple-50/60 to-transparent">
-                  <span className="text-[11px] font-bold tracking-wider text-purple-800 uppercase">
-                    HOÀN TẤT THỬ VÁY
-                  </span>
-                  <div className="text-3xl font-bold text-purple-700 mt-1">
-                    {stats.completedAppointments}
-                  </div>
-                  <div className="text-xs text-purple-800 mt-1">Đã trải nghiệm dịch vụ may đo</div>
-                </div>
-              </div>
-
-              {/* Thanh Tìm Kiếm & Bộ Lọc Nâng Cao */}
-              <div className="bg-white rounded-2xl border border-[#EFE5E1] p-4 shadow-xs flex flex-wrap items-center justify-between gap-3">
-                <div className="relative flex-1 min-w-[260px] max-w-md">
-                  <Search size={16} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
-                  <input
-                    type="text"
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    placeholder="Tìm theo mã lịch, tên cô dâu, số điện thoại..."
-                    className="w-full pl-9 pr-3 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-xs text-gray-800 outline-none focus:border-[#733F49] focus:bg-white transition"
-                  />
-                </div>
-
-                <div className="flex flex-wrap items-center gap-3 text-xs">
-                  {/* Lọc chi nhánh */}
-                  <select
-                    value={branchFilter}
-                    onChange={(e) => setBranchFilter(e.target.value)}
-                    className="px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-700 font-medium outline-none cursor-pointer"
-                  >
-                    <option value="all">Tất cả chi nhánh showroom (2 cơ sở)</option>
-                    <option value="hcm-q1">UniBridal Q.1 TP.HCM</option>
-                    <option value="hn-hoankiem">UniBridal Hoàn Kiếm, HN</option>
-                  </select>
-
-                  {/* Lọc trạng thái */}
-                  <select
-                    value={statusFilter}
-                    onChange={(e) => setStatusFilter(e.target.value)}
-                    className="px-3.5 py-2.5 rounded-xl bg-gray-50 border border-gray-200 text-gray-700 font-medium outline-none cursor-pointer"
-                  >
-                    <option value="all">Tất cả trạng thái</option>
-                    <option value="pending">Chờ duyệt (Pending)</option>
-                    <option value="confirmed">Đã xác nhận (Confirmed)</option>
-                    <option value="completed">Đã hoàn tất (Completed)</option>
-                    <option value="cancelled">Đã hủy (Cancelled)</option>
-                  </select>
-                </div>
-              </div>
-
-              {/* Bảng Dữ Liệu Lịch Hẹn */}
-              <div className="bg-white rounded-2xl border border-[#EFE5E1] shadow-xs overflow-hidden">
-                <div className="overflow-x-auto">
-                  <table className="w-full text-left border-collapse min-w-[900px]">
-                    <thead>
-                      <tr className="border-b border-gray-200 bg-[#FFF8F6] text-[11px] font-bold text-gray-600 uppercase tracking-wider">
-                        <th className="py-4 px-5">MÃ & KHÁCH HÀNG</th>
-                        <th className="py-4 px-4">SHOWROOM & KHUNG GIỜ</th>
-                        <th className="py-4 px-4">LỄ PHỤC QUAN TÂM</th>
-                        <th className="py-4 px-4 text-center">TRẠNG THÁI</th>
-                        <th className="py-4 px-5 text-right">THAO TÁC NHANH</th>
-                      </tr>
-                    </thead>
-                    <tbody className="divide-y divide-gray-100 text-xs">
-                      {filteredAppointments.length === 0 ? (
-                        <tr>
-                          <td colSpan={5} className="py-14 text-center text-gray-400 text-xs">
-                            Không tìm thấy lịch hẹn thử váy nào phù hợp với bộ lọc hiện tại.
-                          </td>
-                        </tr>
-                      ) : (
-                        filteredAppointments.map((apt) => {
-                          const aptId = apt._id || apt.id || apt.appointmentCode;
-                          const name = apt.customerName || apt.fullName || 'Cô dâu';
-                          const phone = apt.customerPhone || apt.phone || '—';
-                          const email = apt.customerEmail || apt.email || '';
-                          const dateStr = apt.appointmentDate
-                            ? new Date(apt.appointmentDate).toLocaleDateString('vi-VN')
-                            : apt.date || '—';
-                          const time = apt.timeSlot || '—';
-                          const dresses = apt.interestedDresses || apt.selectedDresses || [];
-                          const status = (apt.status || 'pending').toLowerCase();
-                          const branchLabel =
-                            apt.branch === 'hn-hoankiem' ? 'Hoàn Kiếm, HN' : 'Q.1, TP. HCM';
-
-                          return (
-                            <tr key={aptId} className="hover:bg-gray-50/70 transition-colors">
-                              {/* Cột 1: Mã & Khách hàng */}
-                              <td className="py-4 px-5">
-                                <div className="inline-block px-2 py-0.5 rounded bg-gray-100 text-gray-700 font-mono text-[10.5px] font-bold mb-1">
-                                  {apt.appointmentCode || aptId}
-                                </div>
-                                <div className="font-bold text-gray-900 text-sm">{name}</div>
-                                <div className="text-gray-600 flex items-center gap-1.5 mt-0.5">
-                                  <Phone size={12} className="text-[#733F49]" />
-                                  <a
-                                    href={`tel:${phone}`}
-                                    className="hover:text-[#733F49] hover:underline"
-                                  >
-                                    {phone}
-                                  </a>
-                                </div>
-                                {email && (
-                                  <div className="text-[11px] text-gray-400 flex items-center gap-1 mt-0.5">
-                                    <Mail size={11} />
-                                    <span>{email}</span>
-                                  </div>
-                                )}
-                              </td>
-
-                              {/* Cột 2: Showroom & Khung giờ */}
-                              <td className="py-4 px-4">
-                                <div className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded bg-gray-100 text-gray-700 text-[11px] font-semibold mb-1">
-                                  <Building2 size={11} className="text-[#733F49]" />
-                                  <span>{branchLabel}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5 font-semibold text-gray-900">
-                                  <CalendarIcon size={13} className="text-[#733F49]" />
-                                  <span>{dateStr}</span>
-                                </div>
-                                <div className="flex items-center gap-1.5 text-gray-600 mt-0.5 font-medium">
-                                  <Clock size={12} className="text-gray-400" />
-                                  <span>{time}</span>
-                                </div>
-                                {apt.guestsCount && (
-                                  <div className="text-[11px] text-gray-500 mt-1 flex items-center gap-1">
-                                    <Users size={11} />
-                                    <span>{apt.guestsCount} khách đi cùng</span>
-                                  </div>
-                                )}
-                              </td>
-
-                              {/* Cột 3: Lễ phục quan tâm */}
-                              <td className="py-4 px-4 max-w-[280px]">
-                                {dresses.length > 0 ? (
-                                  <div className="flex flex-wrap gap-1">
-                                    {dresses.map((d, i) => (
-                                      <span
-                                        key={i}
-                                        className="inline-block px-2 py-0.5 rounded-lg bg-[#FAF0EC] text-[#733F49] text-[11px] font-medium border border-[#F2D8D4]"
-                                      >
-                                        {d.name || d}
-                                      </span>
-                                    ))}
-                                  </div>
-                                ) : (
-                                  <span className="text-gray-400 italic">Tư vấn trực tiếp tại Showroom</span>
-                                )}
-                              </td>
-
-                              {/* Cột 4: Trạng thái */}
-                              <td className="py-4 px-4 text-center">
-                                <span
-                                  className={`inline-block px-2.5 py-1 rounded-full text-[10.5px] font-bold uppercase ${
-                                    status === 'confirmed'
-                                      ? 'bg-emerald-100 text-emerald-800'
-                                      : status === 'completed'
-                                      ? 'bg-purple-100 text-purple-800'
-                                      : status === 'cancelled'
-                                      ? 'bg-gray-100 text-gray-600'
-                                      : 'bg-amber-100 text-amber-800'
-                                  }`}
-                                >
-                                  {status === 'confirmed'
-                                    ? 'Đã xác nhận'
-                                    : status === 'completed'
-                                    ? 'Đã hoàn tất'
-                                    : status === 'cancelled'
-                                    ? 'Đã hủy'
-                                    : 'Chờ duyệt'}
-                                </span>
-                              </td>
-
-                              {/* Cột 5: Thao tác nhanh */}
-                              <td className="py-4 px-5 text-right">
-                                <div className="flex items-center justify-end gap-1.5">
-                                  {status === 'pending' && (
-                                    <button
-                                      type="button"
-                                      disabled={updatingId === aptId}
-                                      onClick={() => handleUpdateAppointmentStatus(aptId, 'confirmed')}
-                                      className="px-3 py-1.5 rounded-lg bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center gap-1 transition cursor-pointer disabled:opacity-50"
-                                      title="Xác nhận lịch hẹn"
-                                    >
-                                      <Check size={13} />
-                                      <span>Xác nhận</span>
-                                    </button>
-                                  )}
-
-                                  {status === 'confirmed' && (
-                                    <button
-                                      type="button"
-                                      disabled={updatingId === aptId}
-                                      onClick={() => handleUpdateAppointmentStatus(aptId, 'completed')}
-                                      className="px-3 py-1.5 rounded-lg bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center gap-1 transition cursor-pointer disabled:opacity-50"
-                                      title="Đánh dấu hoàn tất buổi thử"
-                                    >
-                                      <CheckCircle2 size={13} />
-                                      <span>Hoàn tất</span>
-                                    </button>
-                                  )}
-
-                                  {status !== 'cancelled' && status !== 'completed' && (
-                                    <button
-                                      type="button"
-                                      disabled={updatingId === aptId}
-                                      onClick={() => handleUpdateAppointmentStatus(aptId, 'cancelled')}
-                                      className="px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-red-50 text-gray-600 hover:text-red-600 text-xs font-semibold transition cursor-pointer disabled:opacity-50"
-                                      title="Hủy lịch hẹn"
-                                    >
-                                      <XCircle size={13} />
-                                    </button>
-                                  )}
-
-                                  <button
-                                    type="button"
-                                    onClick={() => {
-                                      setSelectedEvent({
-                                        type: 'fitting',
-                                        id: aptId,
-                                        code: apt.appointmentCode || aptId,
-                                        customerName: name,
-                                        phone,
-                                        email,
-                                        timeSlot: time,
-                                        guestsCount: apt.guestsCount,
-                                        branch: apt.branch,
-                                        status,
-                                        notes: apt.notes,
-                                        interestedDresses: dresses,
-                                        weddingDate: apt.weddingDate,
-                                        date: dateStr,
-                                      });
-                                      setDetailModalOpen(true);
-                                    }}
-                                    className="px-2.5 py-1.5 rounded-lg bg-gray-100 hover:bg-gray-200 text-gray-700 text-xs font-semibold transition cursor-pointer"
-                                    title="Xem chi tiết"
-                                  >
-                                    <Eye size={13} />
-                                  </button>
-                                </div>
-                              </td>
-                            </tr>
-                          );
-                        })
-                      )}
-                    </tbody>
-                  </table>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* ========================================================= */}
-          {/* NỘI DUNG TAB 3: LỊCH HẠN TRẢ & THU HỒI ĐỒ */}
-          {/* ========================================================= */}
-          {activeMainTab === 'returns' && (
-            <div className="bg-white rounded-2xl border border-[#EFE5E1] shadow-xs overflow-hidden">
-              <div className="p-5 border-b border-gray-100 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-                <div>
-                  <h3 className="text-lg font-bold text-gray-900 m-0">
-                    Theo Dõi Hạn Trả Lễ Phục & Hoàn Tiền Cọc
-                  </h3>
-                  <p className="text-xs text-gray-500 mt-1">
-                    Danh sách các đơn thuê đến hạn hoàn trả, bàn giao kiểm định và quyết toán cọc bảo lãnh.
-                  </p>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => navigate('/staff/don-thue')}
-                  className="inline-flex items-center gap-1.5 px-4 py-2 rounded-xl bg-[#733F49] hover:bg-[#5a3239] text-white text-xs font-bold transition shadow-xs cursor-pointer self-start sm:self-auto"
-                >
-                  <span>Mở Trang Quản Lý Đơn Thuê</span>
-                  <ArrowRight size={14} />
-                </button>
-              </div>
-
-              <div className="overflow-x-auto">
-                <table className="w-full text-left border-collapse min-w-[850px]">
-                  <thead>
-                    <tr className="border-b border-gray-200 bg-[#FFF8F6] text-[11px] font-bold text-gray-600 uppercase tracking-wider">
-                      <th className="py-4 px-5">MÃ ĐƠN & KHÁCH HÀNG</th>
-                      <th className="py-4 px-4">LỄ PHỤC THUÊ</th>
-                      <th className="py-4 px-4">HẠN HOÀN TRẢ VÁY</th>
-                      <th className="py-4 px-4">CỌC BẢO LÃNH</th>
-                      <th className="py-4 px-4 text-center">TRẠNG THÁI</th>
-                      <th className="py-4 px-5 text-right">KIỂM ĐỊNH</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-gray-100 text-xs">
-                    {orders.length === 0 ? (
-                      <tr>
-                        <td colSpan={6} className="py-14 text-center text-gray-400 text-xs">
-                          Chưa có đơn thuê nào cần theo dõi lịch hoàn trả.
-                        </td>
-                      </tr>
-                    ) : (
-                      orders.map((ord) => {
-                        const ordId = ord._id || ord.id;
-                        const code = ord.orderCode || ord.contractCode || 'UB-ORD';
-                        const name = ord.customerName || ord.brideName || 'Cô dâu';
-                        const phone = ord.customerPhone || ord.phone || '—';
-                        const endDate = ord.rentalEndDate
-                          ? new Date(ord.rentalEndDate).toLocaleDateString('vi-VN')
-                          : '—';
-                        const isReturned = ord.status === 'returned' || ord.status === 'completed';
-
-                        return (
-                          <tr key={ordId} className="hover:bg-gray-50/70 transition-colors">
-                            <td className="py-4 px-5">
-                              <div className="inline-block px-2 py-0.5 rounded bg-gray-100 text-gray-700 font-mono text-[10.5px] font-bold mb-1">
-                                {code}
-                              </div>
-                              <div className="font-bold text-gray-900 text-sm">{name}</div>
-                              <div className="text-gray-500">{phone}</div>
-                            </td>
-
-                            <td className="py-4 px-4">
-                              {ord.items && ord.items.length > 0 ? (
-                                <div className="space-y-0.5">
-                                  {ord.items.map((item, idx) => (
-                                    <div key={idx} className="font-medium text-gray-800">
-                                      • {item.name}
-                                    </div>
-                                  ))}
-                                </div>
-                              ) : (
-                                <span className="text-gray-400">Váy cưới Atelier</span>
-                              )}
-                            </td>
-
-                            <td className="py-4 px-4">
-                              <div className="font-bold text-[#733F49] flex items-center gap-1.5">
-                                <CalendarIcon size={13} />
-                                <span>{endDate}</span>
-                              </div>
-                              <div className="text-[11px] text-gray-500 mt-0.5">
-                                Trả trước 20:00 tại Showroom
-                              </div>
-                            </td>
-
-                            <td className="py-4 px-4 font-bold text-gray-900">
-                              {formatCurrencyVND(ord.totalDeposit || 0)}
-                            </td>
-
-                            <td className="py-4 px-4 text-center">
-                              <span
-                                className={`inline-block px-2.5 py-1 rounded-full text-[10.5px] font-bold uppercase ${
-                                  isReturned
-                                    ? 'bg-emerald-100 text-emerald-800'
-                                    : 'bg-rose-100 text-rose-800'
-                                }`}
-                              >
-                                {ord.status}
-                              </span>
-                            </td>
-
-                            <td className="py-4 px-5 text-right">
-                              <button
-                                type="button"
-                                onClick={() => navigate('/staff/don-thue')}
-                                className="px-3 py-1.5 rounded-lg bg-[#FAF0EC] hover:bg-[#F2D8D4] text-[#733F49] font-bold text-xs transition cursor-pointer"
-                              >
-                                Kiểm định cọc
-                              </button>
-                            </td>
-                          </tr>
-                        );
-                      })
-                    )}
-                  </tbody>
-                </table>
+                    ),
+                  }}
+                  locale={{
+                    emptyText: (
+                      <div className="py-12 text-center text-gray-400">
+                        <History className="w-12 h-12 mx-auto mb-3 opacity-30 text-[#733F49]" />
+                        <div className="text-sm font-semibold text-gray-600">
+                          Không tìm thấy lịch sử thử váy nào phù hợp
+                        </div>
+                        <div className="text-xs text-gray-400 mt-1">
+                          Hãy thử thay đổi từ khóa tìm kiếm hoặc điều chỉnh bộ lọc
+                        </div>
+                      </div>
+                    ),
+                  }}
+                />
               </div>
             </div>
           )}
@@ -1399,13 +2346,13 @@ export default function ScheduleOverviewPage({ defaultTab }) {
               <div className="flex items-center gap-2 text-base font-bold text-gray-900 font-playfair">
                 {selectedEvent?.type === 'fitting' ? (
                   <>
-                    <Sparkles className="w-5 h-5 text-[#733F49]" />
+                    <Crown className="w-5 h-5 text-[#733F49]" />
                     <span>Chi Tiết Lịch Hẹn Thử Váy Private Suite</span>
                   </>
                 ) : (
                   <>
                     <RotateCcw className="w-5 h-5 text-rose-600" />
-                    <span>Chi Tiết Đơn Thuê & Hạn Hoàn Trả Lễ Phục</span>
+                    <span>Chi Tiết Đơn Thuê và Hạn Hoàn Trả Lễ Phục</span>
                   </>
                 )}
               </div>
@@ -1442,7 +2389,11 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                   )}
                   <div className="flex justify-between items-center">
                     <span className="text-gray-500 font-medium">
-                      {selectedEvent.type === 'fitting' ? 'Khung giờ thử:' : 'Hạn hoàn trả:'}
+                      {selectedEvent.type === 'fitting'
+                        ? 'Khung giờ thử:'
+                        : selectedEvent.type === 'delivery'
+                        ? 'Ngày bàn giao:'
+                        : 'Hạn hoàn trả:'}
                     </span>
                     <span className="font-bold text-[#733F49]">
                       {selectedEvent.type === 'fitting'
@@ -1450,26 +2401,62 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                         : `Ngày ${selectedEvent.date}`}
                     </span>
                   </div>
+
+                  {/* Địa điểm bàn giao / hoàn trả / thử váy */}
+                  <div className="flex justify-between items-start pt-2 border-t border-gray-200">
+                    <span className="text-gray-500 font-medium shrink-0">
+                      {selectedEvent.type === 'fitting'
+                        ? 'Địa điểm thử:'
+                        : selectedEvent.type === 'delivery'
+                        ? 'Hình thức & Địa chỉ giao:'
+                        : 'Hình thức & Địa chỉ trả:'}
+                    </span>
+                    <div className="text-right text-xs font-semibold text-gray-800 max-w-[280px]">
+                      {selectedEvent.type === 'fitting' ? (
+                        <div>
+                          <div className="font-bold text-gray-900">
+                            {selectedEvent.branch === 'hn-hoankiem'
+                              ? 'UniBridal Showroom Hoàn Kiếm, HN'
+                              : 'UniBridal Flagship Showroom Q.1, TP.HCM'}
+                          </div>
+                          <div className="text-[11px] text-gray-600 font-normal">
+                            📍 {selectedEvent.branch === 'hn-hoankiem'
+                              ? '26 Lý Thường Kiệt, P. Hàng Bài, Q. Hoàn Kiếm, Hà Nội'
+                              : '88 Nam Kỳ Khởi Nghĩa, P. Bến Nghé, Q.1, TP. Hồ Chí Minh'}
+                          </div>
+                        </div>
+                      ) : selectedEvent.deliveryMethod === 'express' ? (
+                        <div>
+                          <span className="inline-block px-2 py-0.5 rounded bg-sky-100 text-sky-800 font-bold text-[10px] mb-1">
+                            {selectedEvent.type === 'delivery' ? 'Giao tận nơi' : 'Thu hồi tận nơi'}
+                          </span>
+                          <div className="text-gray-800">
+                            📍 {formatAddress(selectedEvent.shippingAddress) || 'Địa chỉ khách hàng đã đăng ký'}
+                          </div>
+                        </div>
+                      ) : (
+                        <div>
+                          <span className="inline-block px-2.5 py-1 rounded-lg bg-indigo-100 text-indigo-900 font-bold text-xs">
+                            {selectedEvent.type === 'delivery' ? 'Khách đến lấy tại Showroom' : 'Khách đến trả tại Showroom'}
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  </div>
                   <div className="flex justify-between items-center">
                     <span className="text-gray-500 font-medium">Trạng thái hiện tại:</span>
-                    <Tag
-                      color={
-                        selectedEvent.status === 'confirmed'
-                          ? 'green'
-                          : selectedEvent.status === 'completed'
-                          ? 'purple'
-                          : selectedEvent.status === 'cancelled'
-                          ? 'default'
-                          : 'gold'
-                      }
-                      className="uppercase font-bold m-0"
-                    >
-                      {selectedEvent.status}
-                    </Tag>
+                    {(() => {
+                        const badge = getEventBadge(selectedEvent);
+                        return (
+                          <span className={`text-xs px-3 py-1 rounded-full font-bold uppercase tracking-wider border ${badge.className}`}>
+                            {badge.label}
+                          </span>
+                        );
+                      })()}
                   </div>
                 </div>
 
-                {/* Ghi chú & Chi tiết váy */}
+                {/* Ghi chú và Chi tiết váy */}
                 {selectedEvent.type === 'fitting' && (
                   <div className="space-y-3">
                     {selectedEvent.interestedDresses?.length > 0 && (
@@ -1501,42 +2488,67 @@ export default function ScheduleOverviewPage({ defaultTab }) {
 
                     {/* Nút hành động phê duyệt trực tiếp trong Modal */}
                     <div className="pt-2 border-t border-gray-100 flex flex-wrap gap-2">
-                      {selectedEvent.status === 'pending' && (
-                        <button
-                          type="button"
-                          disabled={updatingId === selectedEvent.id}
-                          onClick={() => handleUpdateAppointmentStatus(selectedEvent.id, 'confirmed')}
-                          className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
-                        >
-                          <Check className="w-4 h-4" />
-                          <span>Xác Nhận Lịch Hẹn Này</span>
-                        </button>
-                      )}
-
                       {selectedEvent.status === 'confirmed' && (
-                        <button
-                          type="button"
-                          disabled={updatingId === selectedEvent.id}
-                          onClick={() => handleUpdateAppointmentStatus(selectedEvent.id, 'completed')}
-                          className="flex-1 py-2.5 px-3 rounded-xl bg-purple-600 hover:bg-purple-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
-                        >
-                          <CheckCircle2 className="w-4 h-4" />
-                          <span>Đánh Dấu Đã Thử Váy Xong</span>
-                        </button>
-                      )}
-
-                      {selectedEvent.status !== 'cancelled' && selectedEvent.status !== 'completed' && (
-                        <button
-                          type="button"
-                          disabled={updatingId === selectedEvent.id}
-                          onClick={() => handleUpdateAppointmentStatus(selectedEvent.id, 'cancelled')}
-                          className="py-2.5 px-3 rounded-xl bg-gray-100 hover:bg-red-50 text-gray-700 hover:text-red-700 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
-                        >
-                          <XCircle className="w-4 h-4" />
-                          <span>Hủy Lịch</span>
-                        </button>
+                        (selectedEvent.date || toDateKey(selectedEvent.appointmentDate)) <= todayKey ? (
+                          <>
+                            <button
+                              type="button"
+                              disabled={updatingId === selectedEvent.id}
+                              onClick={() => handleUpdateAppointmentStatus(selectedEvent.id, 'completed')}
+                              className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
+                              title="Khách hàng đã đến showroom: Đánh dấu có mặt"
+                            >
+                              <CheckCircle2 className="w-4 h-4" />
+                              <span>Có Mặt</span>
+                            </button>
+                            <button
+                              type="button"
+                              disabled={updatingId === selectedEvent.id}
+                              onClick={() => handleUpdateAppointmentStatus(selectedEvent.id, 'cancelled')}
+                              className="py-2.5 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
+                              title="Khách không đến: Đánh dấu vắng mặt"
+                            >
+                              <XCircle className="w-4 h-4" />
+                              <span>Vắng Mặt</span>
+                            </button>
+                          </>
+                        ) : (
+                          <div className="w-full py-2.5 px-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-600 text-xs font-semibold text-center flex items-center justify-center gap-2">
+                            <Clock className="w-4 h-4 text-gray-400" />
+                            <span>Lịch hẹn chưa đến ngày — Chỉ mở thao tác khi đến ngày hẹn</span>
+                          </div>
+                        )
                       )}
                     </div>
+                  </div>
+                )}
+
+                {selectedEvent.type === 'delivery' && (
+                  <div className="pt-2 flex flex-col sm:flex-row gap-2">
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDetailModalOpen(false);
+                        const targetCode = selectedEvent.code || selectedEvent.id || '';
+                        navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}&action=inspect`);
+                      }}
+                      className="flex-1 py-2.5 px-3 bg-[#733F49] hover:bg-[#5a3239] text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <RotateCcw className="w-4 h-4" />
+                      <span>Mở Quy Trình Kiểm Định &amp; Hoàn Cọc</span>
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setDetailModalOpen(false);
+                        const targetCode = selectedEvent.code || selectedEvent.id || '';
+                        navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}`);
+                      }}
+                      className="py-2.5 px-4 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl text-xs transition flex items-center justify-center gap-1.5 cursor-pointer shadow-xs"
+                    >
+                      <PackageCheck className="w-4 h-4" />
+                      <span>Quản Lý Đơn Thuê</span>
+                    </button>
                   </div>
                 )}
 
@@ -1546,11 +2558,12 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                       type="button"
                       onClick={() => {
                         setDetailModalOpen(false);
-                        navigate('/staff/don-thue');
+                        const targetCode = selectedEvent.code || selectedEvent.id || '';
+                        navigate(`${orderBasePath}?orderCode=${encodeURIComponent(targetCode)}&action=inspect`);
                       }}
                       className="w-full py-2.5 px-4 bg-[#733F49] hover:bg-[#5a3239] text-white font-bold rounded-xl text-xs sm:text-sm transition flex items-center justify-center gap-2 cursor-pointer shadow-xs"
                     >
-                      <span>Mở Quy Trình Kiểm Định & Hoàn Cọc</span>
+                      <span>Mở Quy Trình Kiểm Định &amp; Hoàn Cọc</span>
                       <ArrowRight className="w-4 h-4" />
                     </button>
                   </div>

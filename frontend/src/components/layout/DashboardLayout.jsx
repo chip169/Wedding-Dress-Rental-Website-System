@@ -1,6 +1,5 @@
 import React from 'react';
 import AdminLayout from './AdminLayout';
-import './Dashboard.css';
 
 export default function DashboardLayout({
   role = 'staff',

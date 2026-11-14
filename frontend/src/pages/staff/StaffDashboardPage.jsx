@@ -4,11 +4,11 @@ import {
   ChartNoAxesCombined,
   ClipboardCheck,
   PackageCheck,
-  ShieldPlus,
+  Wrench,
   Calendar,
   Clock,
   Phone,
-  Sparkles,
+  Crown
 } from 'lucide-react';
 import { message } from 'antd';
 import DashboardLayout from '../../components/layout/DashboardLayout';
@@ -16,8 +16,9 @@ import DashboardChart from '../../components/common/DashboardChart';
 import { getStaffDashboard } from '../../services/reportService';
 import { APPOINTMENT_EVENT } from '../../services/appointmentService';
 import { getStaffAppointments, updateStaffAppointmentStatus } from '../../services/staffDashboardService';
+import { calculateInventoryMaintenanceSummary } from '../../utils/maintenanceStorage';
 
-const PERIODS = { week: '7 ngày qua', month: 'Tháng này', quarter: 'Quý này' };
+const PERIODS = { today: 'Hôm nay', week: '7 ngày qua', month: 'Tháng này' };
 const STATUS_LABELS = { confirmed: 'Đã xác nhận', completed: 'Hoàn tất', cancelled: 'Đã hủy' };
 
 export default function StaffDashboardPage() {
@@ -29,6 +30,42 @@ export default function StaffDashboardPage() {
   const [appointments, setAppointments] = useState([]);
   const [loadingApt, setLoadingApt] = useState(false);
   const [appointmentsError, setAppointmentsError] = useState('');
+
+  // Đồng bộ chỉ số bảo dưỡng trực tiếp từ Quản lý kho hàng
+  const [inventoryMaintenance, setInventoryMaintenance] = useState(() => {
+    const c = localStorage.getItem('unibridal_inventory_maintenance_count');
+    const u = localStorage.getItem('unibridal_inventory_maintenance_units');
+    return {
+      count: c !== null ? Number(c) : null,
+      units: u !== null ? Number(u) : null,
+    };
+  });
+
+  const syncInventoryMaintenance = useCallback(async () => {
+    const cachedCount = localStorage.getItem('unibridal_inventory_maintenance_count');
+    const cachedUnits = localStorage.getItem('unibridal_inventory_maintenance_units');
+    if (cachedCount !== null) {
+      setInventoryMaintenance({
+        count: Number(cachedCount),
+        units: Number(cachedUnits || cachedCount),
+      });
+    }
+
+    try {
+      const summary = await calculateInventoryMaintenanceSummary();
+      if (summary && summary.count !== null) {
+        setInventoryMaintenance(summary);
+      }
+    } catch (err) {
+      console.warn('Lỗi đồng bộ bảo dưỡng từ kho:', err);
+    }
+  }, []);
+
+  useEffect(() => {
+    syncInventoryMaintenance();
+    window.addEventListener('unibridal_inventory_updated', syncInventoryMaintenance);
+    return () => window.removeEventListener('unibridal_inventory_updated', syncInventoryMaintenance);
+  }, [syncInventoryMaintenance]);
 
   const fetchAppointments = useCallback(async () => {
     setLoadingApt(true);
@@ -92,7 +129,6 @@ export default function StaffDashboardPage() {
       labels: values.map((item) => item.label),
       primary,
       secondary,
-      trend: primary,
       max: actualMax,
       ticks: [0, step, step * 2, step * 3, actualMax],
     };
@@ -114,10 +150,10 @@ export default function StaffDashboardPage() {
       color: 'gold',
     },
     {
-      title: 'SẢN PHẨM BẢO TRÌ',
-      value: data?.maintenance ?? '—',
-      note: 'Mẫu váy đang hấp tiệt trùng & bảo dưỡng',
-      Icon: ShieldPlus,
+      title: 'SẢN PHẨM BẢO DƯỠNG',
+      value: inventoryMaintenance.count !== null ? inventoryMaintenance.count : (data?.maintenance ?? '—'),
+      note: 'Mẫu váy đang hấp tiệt trùng và bảo dưỡng',
+      Icon: Wrench,
       color: 'amber',
     },
   ];
@@ -135,12 +171,6 @@ export default function StaffDashboardPage() {
         </div>
       )}
       {loading && <p role="status" className="mb-4 text-sm text-stone-500">Đang tải thống kê...</p>}
-      {data?.ordersMissingDepositTransaction > 0 && (
-        <p role="alert" className="mb-4 rounded-md border border-amber-200 bg-amber-50 p-3 text-sm text-amber-900">
-          Có {data.ordersMissingDepositTransaction} đơn đã chuyển sang trạng thái đặt cọc nhưng chưa có giao dịch cọc thành công. Vui lòng đối soát với bộ phận thu ngân.
-        </p>
-      )}
-
       <section
         className="ub-dashboard-metrics grid grid-cols-3 gap-[23px] max-[1120px]:gap-3 max-[650px]:grid-cols-1"
         aria-label="Chỉ số vận hành"
@@ -174,7 +204,7 @@ export default function StaffDashboardPage() {
             <p className="ub-dashboard-eyebrow">
               <ChartNoAxesCombined size={16} /> HAUTE COUTURE PERFORMANCE
             </p>
-            <h2 id="staff-chart-title">Đơn Thuê &amp; Bàn Giao Hoàn Tất</h2>
+            <h2 id="staff-chart-title">Đơn Thuê và Bàn Giao Hoàn Tất</h2>
             <p className="ub-dashboard-chart-subtitle">
               Dữ liệu đơn hàng thực tế trong kỳ đã chọn tại showroom.
             </p>
@@ -199,7 +229,6 @@ export default function StaffDashboardPage() {
             {...chart}
             primaryLabel="Đơn thuê"
             secondaryLabel="Hoàn tất"
-            trendLabel="Xu hướng đơn"
             unit=" đơn"
           />
         )}
@@ -213,10 +242,10 @@ export default function StaffDashboardPage() {
         <div className="flex items-center justify-between gap-4 border-b border-[#f3e9e5] pb-4 mb-5 max-[768px]:flex-col max-[768px]:items-start">
           <div>
             <p className="ub-dashboard-eyebrow text-[#B8737D] flex items-center gap-1.5 font-bold tracking-[1.5px] uppercase text-[11px]">
-              <Sparkles size={14} /> PRIVATE SUITE ATELIER
+              <Crown size={14} /> PRIVATE SUITE ATELIER
             </p>
             <h2 id="staff-appointments-title" className="font-playfair text-[20px] font-bold text-[#2C2523] mt-1">
-              Lịch Hẹn Thử Váy VIP Hôm Nay & Sắp Tới
+              Lịch Hẹn Thử Váy VIP Hôm Nay và Sắp Tới
             </h2>
             <p className="text-[12.5px] text-[#7A6B6C]">
               Quản lý và tiếp đón cô dâu đặt phòng thử riêng tư 1:1 cùng chuyên viên Haute Couture.
@@ -245,8 +274,8 @@ export default function StaffDashboardPage() {
             <table className="w-full text-left border-collapse min-w-[700px]">
               <thead>
                 <tr className="border-b border-[#F2E5E0] bg-[#FFF6F3] text-[11px] font-bold text-[#7A696B] uppercase tracking-wider">
-                  <th className="py-3 px-4">MÃ & KHÁCH HÀNG</th>
-                  <th className="py-3 px-4">NGÀY & KHUNG GIỜ</th>
+                  <th className="py-3 px-4">MÃ VÀ KHÁCH HÀNG</th>
+                  <th className="py-3 px-4">NGÀY VÀ KHUNG GIỜ</th>
                   <th className="py-3 px-4">LỄ PHỤC QUAN TÂM</th>
                   <th className="py-3 px-4 text-center">TRẠNG THÁI</th>
                   <th className="py-3 px-4 text-right">THAO TÁC</th>

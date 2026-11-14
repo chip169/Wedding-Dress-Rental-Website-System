@@ -33,7 +33,7 @@ export const SHOWROOM_BRANCHES = [
 ];
 
 export const TIME_SLOTS = [
-  { id: 't1', time: '09:00 — 10:30', period: 'Sáng', available: 2, label: 'Thanh bình & Ánh sáng tự nhiên' },
+  { id: 't1', time: '09:00 — 10:30', period: 'Sáng', available: 2, label: 'Thanh bình và Ánh sáng tự nhiên' },
   { id: 't2', time: '10:30 — 12:00', period: 'Sáng', available: 1, label: 'Thích hợp thử kỹ phom dáng' },
   { id: 't3', time: '13:30 — 15:00', period: 'Chiều', available: 3, label: 'Khung giờ vàng tư vấn NTK' },
   { id: 't4', time: '15:00 — 16:30', period: 'Chiều', available: 2, label: 'Thư thái cùng tiệc trà chiều' },
@@ -45,7 +45,7 @@ export const TIME_SLOTS = [
 export const VIP_SERVICES = [
   {
     id: 'tea',
-    name: 'Tiệc Trà Chiều Macaron & Trà Hoa Paris',
+    name: 'Tiệc Trà Chiều Macaron và Trà Hoa Paris',
     desc: 'Thưởng trà thượng hạng cùng bánh ngọt Pháp trong không gian âm nhạc thính phòng',
     price: 0,
     tag: 'ĐẶC QUYỀN MIỄN PHÍ',
@@ -59,14 +59,14 @@ export const VIP_SERVICES = [
   },
   {
     id: 'polaroid',
-    name: 'Bộ Ảnh Kỷ Niệm Polaroid & Clip Thử Váy 4K',
+    name: 'Bộ Ảnh Kỷ Niệm Polaroid và Clip Thử Váy 4K',
     desc: 'Chụp ảnh lấy ngay lưu giữ khoảnh khắc xúc động đầu tiên khi khoác lên chiếc váy mơ ước',
     price: 0,
     tag: 'MIỄN PHÍ',
   },
   {
     id: 'groom',
-    name: 'Phối Đồ & Thử Vest Chú Rể Đồng Điệu',
+    name: 'Phối Đồ và Thử Vest Chú Rể Đồng Điệu',
     desc: 'Dành riêng cho cặp đôi muốn chọn vest cưới đồng điệu màu sắc và phong cách',
     price: 0,
     tag: 'COMBO CẶP ĐÔI',
@@ -85,7 +85,7 @@ const INITIAL_APPOINTMENTS = [
     branchPhone: '028 3822 8998',
     date: '2026-10-25',
     timeSlot: '13:30 — 15:00',
-    guestsCount: 2,
+    guestsCount: 1,
     selectedDresses: [
       { id: 1, name: 'Elysian Rose Ballgown', code: 'BGW-2026' },
       { id: 2, name: 'Celeste Royal Mermaid', code: 'MMD-2026' },

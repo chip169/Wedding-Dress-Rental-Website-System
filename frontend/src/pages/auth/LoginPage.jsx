@@ -2,10 +2,10 @@ import { useState } from 'react';
 import { useNavigate, Link, useLocation } from 'react-router-dom';
 import { useAuth } from '../../contexts/AuthContext';
 import { login as apiLogin, loginAccount } from '../../services/authService';
-import { Mail, Lock, Eye, EyeOff, ArrowLeft, Sparkles, Gem, Crown, UserCheck, User } from 'lucide-react';
+import { Mail, Lock, Eye, EyeOff, ArrowLeft, Gem, Crown, UserCheck, User } from 'lucide-react';
 import Logo from '../../components/common/Logo';
 
-const SparkleIcon = () => <Sparkles size={12} fill="currentColor" stroke="none" />;
+const CrownIcon = () => <Crown size={12} fill="currentColor" stroke="none" />;
 const DiamondIcon = () => <Gem size={18} strokeWidth={1.8} color="#854F55" />;
 const MailIcon = () => <Mail size={16} strokeWidth={1.8} color="#7A6663" />;
 const LockIcon = () => <Lock size={16} strokeWidth={1.8} color="#7A6663" />;
@@ -36,7 +36,7 @@ export default function LoginPage() {
       if (res?.data?.user && res?.data?.token) {
         setAuth(res.data.user, res.data.token, rememberMe);
 
-        const userRole = (res.data.user.role || res.data.user.roleId?.code || '').toLowerCase();
+        const userRole = (res.data.user.role || '').toLowerCase();
         if (userRole === 'admin') {
           navigate('/admin/dashboard', { replace: true });
         } else if (userRole === 'staff') {
@@ -78,7 +78,7 @@ export default function LoginPage() {
       if (res?.data?.user && res?.data?.token) {
         setAuth(res.data.user, res.data.token, true);
 
-        const userRole = (res.data.user.role || res.data.user.roleId?.code || '').toLowerCase();
+        const userRole = (res.data.user.role || '').toLowerCase();
         if (userRole === 'admin') {
           navigate('/admin/dashboard', { replace: true });
         } else if (userRole === 'staff') {
@@ -1137,7 +1137,7 @@ export default function LoginPage() {
           <div className="ub-top-chips">
             <div className="ub-chip ub-chip--white">
               <span className="ub-chip__icon">
-                <SparkleIcon />
+                <CrownIcon />
               </span>
               <span className="ub-chip__text">WEDDING DRESS RENTAL</span>
             </div>
@@ -1160,10 +1160,10 @@ export default function LoginPage() {
               <span className="ub-brand-subtitle">HAUTE COUTURE</span>
               <span className="ub-dash-line" />
             </div>
-            <p className="ub-brand-tagline">Atelier de Robes de Mariée & Sur-Mesure</p>
+            <p className="ub-brand-tagline">Atelier de Robes de Mariée và Sur-Mesure</p>
           </div>
 
-          {/* Bottom Security & Est Footer */}
+          {/* Bottom Security và Est Footer */}
           <div className="ub-footer-row">
             <div className="ub-security-badge">
               <FootnoteLockIcon />

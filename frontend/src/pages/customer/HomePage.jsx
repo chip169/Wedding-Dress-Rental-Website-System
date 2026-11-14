@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
-import { Sparkles, X } from 'lucide-react';
+import { Crown, X } from 'lucide-react';
 import Header from '../../components/layout/Header';
 import HeroSection from '../../components/home/HeroSection';
 import SilhouetteShowcase from '../../components/home/SilhouetteShowcase';
@@ -52,7 +52,7 @@ export default function HomePage() {
     }
   }, [location]);
 
-  // Tự động mở Modal chào mừng & gợi ý cập nhật số đo khi vừa đăng ký tài khoản thành công
+  // Tự động mở Modal chào mừng và gợi ý cập nhật số đo khi vừa đăng ký tài khoản thành công
   useEffect(() => {
     const shouldShow = sessionStorage.getItem('unibridal_show_onboarding') === 'true' || location.state?.isNewRegister;
     if (shouldShow) {
@@ -99,12 +99,12 @@ export default function HomePage() {
       {/* Toast Notification */}
       {toastMessage && (
         <div className="fixed bottom-24 right-6 z-50 bg-[#2C2523] text-white px-5 py-3 rounded-xl shadow-2xl flex items-center gap-3 border border-[#E6DAC8]/40 animate-bounce text-[13px] font-medium">
-          <Sparkles className="w-4 h-4 text-[#B8737D]" />
+          <Crown className="w-4 h-4 text-[#B8737D]" />
           <span>{toastMessage}</span>
           <button
             type="button"
             onClick={() => setToastMessage(null)}
-            className="text-white/60 hover:text-white ml-2 bg-transparent border-0 cursor-pointer p-0"
+            className="text-white/60 hover:text-white ml-2 bg-transparent border-0 cursor-pointer p-0 flex items-center justify-center"
           >
             <X className="w-4 h-4" />
           </button>
@@ -127,7 +127,7 @@ export default function HomePage() {
         />
 
 
-        {/* Section - REAL BRIDES GALLERY & TESTIMONIALS */}
+        {/* Section - REAL BRIDES GALLERY VÀ TESTIMONIALS */}
         <RealBridesGallery />
       </main>
 

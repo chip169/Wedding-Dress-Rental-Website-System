@@ -36,10 +36,14 @@ axiosClient.interceptors.response.use(
     return response.data;
   },
   (error) => {
+    const responseData = error.response?.data;
     const customError = {
       success: false,
-      message: error.response?.data?.message || error.message || 'Lỗi kết nối máy chủ',
+      message: responseData?.message || error.message || 'Lỗi kết nối máy chủ',
       status: error.response?.status,
+      code: responseData?.code,
+      email: responseData?.email,
+      data: responseData?.data,
     };
     return Promise.reject(customError);
   }

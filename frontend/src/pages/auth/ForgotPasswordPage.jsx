@@ -1,12 +1,12 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useNavigate, Link } from 'react-router-dom';
-import {
-  ArrowLeft,
+import { Input } from 'antd';
+import OtpInput from '../../components/common/OtpInput';
+import { ArrowLeft,
   Mail,
   Lock,
   Eye,
   EyeOff,
-  Sparkles,
   RefreshCw,
   CheckCircle2,
   ShieldCheck,
@@ -14,8 +14,7 @@ import {
   Crown,
   Heart,
   Home,
-  Check
-} from 'lucide-react';
+  Check } from 'lucide-react';
 import heroBrideImg from '../../assets/hero_bride.jpg';
 import { forgotPassword as apiForgotPassword, verifyResetOtp, resetPassword } from '../../services/authService';
 
@@ -25,14 +24,14 @@ export default function ForgotPasswordPage() {
   // Multi-step states: 1 = Enter Gmail, 2 = Enter OTP, 3 = New Password, 4 = Success
   const [step, setStep] = useState(1);
   const [email, setEmail] = useState('');
-  const [otp, setOtp] = useState(['', '', '', '', '', '']);
+  const [otp, setOtp] = useState('');
   const [devOtp, setDevOtp] = useState('');
   const [newPassword, setNewPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
 
-  // Status & feedback
+  // Status và feedback
   const [isLoading, setIsLoading] = useState(false);
   const [feedback, setFeedback] = useState({ type: '', text: '' });
   const [countdown, setCountdown] = useState(60); // Đếm ngược gửi lại: 60s
@@ -201,12 +200,11 @@ export default function ForgotPasswordPage() {
       setCountdown(60);
       setOtpExpiresIn(180);
       setCanResend(false);
-      setOtp(['', '', '', '', '', '']);
+      setOtp('');
       if (res?.data?.devOtp) {
         setDevOtp(res.data.devOtp);
       }
       setFeedback({ type: 'success', text: res.message || 'Đã gửi lại mã xác thực mới vào hộp thư của bạn.' });
-      otpInputRefs.current[0]?.focus();
     } catch (err) {
       setIsLoading(false);
       setFeedback({ type: 'error', text: err.message || 'Lỗi gửi lại mã OTP.' });
@@ -219,7 +217,7 @@ export default function ForgotPasswordPage() {
       setFeedback({ type: 'error', text: 'Mã OTP đã hết hiệu lực (sau 3 phút). Vui lòng bấm "Gửi lại mã" bên dưới.' });
       return;
     }
-    const code = otp.join('');
+    const code = (typeof otp === 'string' ? otp : (Array.isArray(otp) ? otp.join('') : '')).trim();
     if (code.length < 6) {
       setFeedback({ type: 'error', text: 'Vui lòng nhập đủ 6 chữ số mã xác thực OTP.' });
       return;
@@ -303,7 +301,7 @@ export default function ForgotPasswordPage() {
           </Link>
 
           <div className="inline-flex items-center gap-2 px-3.5 py-1.5 rounded-full bg-white/15 backdrop-blur-md border border-white/20 text-[11px] font-medium tracking-wider uppercase text-white/90">
-            <Sparkles className="w-3.5 h-3.5 text-[#E6DAC8]" />
+            <Crown className="w-3.5 h-3.5 text-[#E6DAC8]" />
             <span>Dịch Vụ Thuê Cao Cấp</span>
           </div>
         </div>
@@ -333,7 +331,7 @@ export default function ForgotPasswordPage() {
             </div>
             <div>
               <p className="text-xs font-semibold text-white">Chất lượng Haute Couture</p>
-              <p className="text-[11px] text-white/70">Ren Pháp &amp; pha lê đính kết thủ công</p>
+              <p className="text-[11px] text-white/70">Ren Pháp và pha lê đính kết thủ công</p>
             </div>
           </div>
 
@@ -343,7 +341,7 @@ export default function ForgotPasswordPage() {
             </div>
             <div>
               <p className="text-xs font-semibold text-white">Uy tín dịch vụ 100%</p>
-              <p className="text-[11px] text-white/70">Bảo chứng độ mới &amp; chỉnh sửa số đo</p>
+              <p className="text-[11px] text-white/70">Bảo chứng độ mới và chỉnh sửa số đo</p>
             </div>
           </div>
         </div>
@@ -357,7 +355,7 @@ export default function ForgotPasswordPage() {
         <div className="absolute top-0 right-0 w-[450px] h-[450px] rounded-full bg-[rgba(184,115,125,0.06)] blur-[90px] pointer-events-none" />
         <div className="absolute bottom-0 left-0 w-[350px] h-[350px] rounded-full bg-[rgba(230,218,200,0.15)] blur-[80px] pointer-events-none" />
 
-        {/* Top Action Bar (Mobile & Right Panel Header) */}
+        {/* Top Action Bar (Mobile và Right Panel Header) */}
         <div className="flex items-center justify-between mb-4 xl:mb-6 relative z-10">
           <button
             type="button"
@@ -549,7 +547,7 @@ export default function ForgotPasswordPage() {
                   <div style={{ fontWeight: 700, marginBottom: '4px' }}>🔔 [Môi trường thử nghiệm] Mã OTP:</div>
                   Mã OTP đặt lại mật khẩu là: <strong style={{ fontSize: '18px', letterSpacing: '3px', color: '#AD4E00', background: '#FFF1B8', padding: '2px 8px', borderRadius: '4px' }}>{devOtp}</strong>
                   <div style={{ fontSize: '11px', color: '#874D00', marginTop: '4px' }}>
-                    * Hệ thống chưa cấu hình EMAIL_USER &amp; EMAIL_PASS trong backend/.env nên mã hiển thị tại đây để bạn kiểm thử.
+                    * Hệ thống chưa cấu hình EMAIL_USER và EMAIL_PASS trong backend/.env nên mã hiển thị tại đây để bạn kiểm thử.
                   </div>
                 </div>
               )}
@@ -561,25 +559,21 @@ export default function ForgotPasswordPage() {
                     NHẬP 6 CHỮ SỐ XÁC THỰC
                   </label>
                   
-                  {/* 6 Digits Boxes */}
-                  <div className="flex items-center justify-center gap-2 sm:gap-3" onPaste={handleOtpPaste}>
-                    {otp.map((digit, idx) => (
-                      <input
-                        key={idx}
-                        ref={(el) => (otpInputRefs.current[idx] = el)}
-                        type="text"
-                        inputMode="numeric"
-                        maxLength={1}
-                        value={digit}
-                        autoFocus={idx === 0}
-                        onChange={(e) => handleOtpChange(idx, e.target.value)}
-                        onKeyDown={(e) => handleOtpKeyDown(idx, e)}
-                        className="w-11 h-13 sm:w-12 sm:h-14 text-center font-jakarta text-2xl font-bold bg-[#FDFBF9] hover:bg-white focus:bg-white border-2 border-[#EADBDA] focus:border-[#854F55] rounded-xl text-[#2C2523] focus:outline-none focus:ring-4 focus:ring-[#B8737D]/20 transition-all duration-200"
-                      />
-                    ))}
+                  {/* 6 Digits OTP Box (Single-Input Haute Couture) */}
+                  <div className="flex justify-center my-3">
+                    <OtpInput
+                      length={6}
+                      autoFocus
+                      value={typeof otp === 'string' ? otp : (Array.isArray(otp) ? otp.join('') : '')}
+                      onChange={(text) => {
+                        setOtp(text);
+                        setFeedback({ type: '', text: '' });
+                      }}
+                      disabled={isLoading || otpExpiresIn === 0}
+                    />
                   </div>
 
-                  {/* Resend & Countdown */}
+                  {/* Resend và Countdown */}
                   <div className="flex items-center justify-between text-xs text-[#7A6663] mt-4 px-1">
                     <span>
                       {otpExpiresIn > 0 ? (
@@ -707,7 +701,7 @@ export default function ForgotPasswordPage() {
                     <span>
                       Độ an toàn: <span className={`font-semibold ${strength.textCol}`}>{strength.text}</span>
                     </span>
-                    <span>Tối thiểu 8 ký tự, có số & chữ</span>
+                    <span>Tối thiểu 8 ký tự, có số và chữ</span>
                   </div>
                 </div>
 

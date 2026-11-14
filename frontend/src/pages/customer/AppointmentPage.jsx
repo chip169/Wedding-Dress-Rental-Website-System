@@ -2,11 +2,9 @@ import { formatCurrencyVND } from '../../utils/formatCurrency';
 import React, { useState, useMemo, useEffect } from 'react';
 import { useAuth } from '../../contexts/AuthContext';
 import { Link, useNavigate, useSearchParams } from 'react-router-dom';
-import {
-  Calendar,
+import { Calendar,
   Clock,
   MapPin,
-  Sparkles,
   Check,
   CheckCircle2,
   Users,
@@ -14,7 +12,7 @@ import {
   Phone,
   Mail,
   Heart,
-  QrCode,
+  Sparkles,
   Download,
   CalendarCheck,
   ChevronRight,
@@ -29,11 +27,11 @@ import {
   Crown,
   ExternalLink,
   Printer,
-  CalendarPlus,
-} from 'lucide-react';
+  CalendarPlus } from 'lucide-react';
 import { message } from 'antd';
 import Header from '../../components/layout/Header';
 import Footer from '../../components/layout/Footer';
+import { formatVietnameseDate, formatShortDate } from '../../utils/formatDate';
 import {
   SHOWROOM_BRANCHES,
   TIME_SLOTS,
@@ -43,42 +41,12 @@ import {
 } from '../../services/appointmentService';
 import { getAllDresses } from '../../services/dressService';
 
-// Helper: Format Vietnamese Date
-function formatVietnameseDate(dateStr) {
-  if (!dateStr) return '';
-  try {
-    const parts = dateStr.split('-');
-    if (parts.length === 3) {
-      const year = parseInt(parts[0], 10);
-      const month = parseInt(parts[1], 10);
-      const day = parseInt(parts[2], 10);
-      const d = new Date(year, month - 1, day);
-      const daysOfWeek = ['Chủ Nhật', 'Thứ Hai', 'Thứ Ba', 'Thứ Tư', 'Thứ Năm', 'Thứ Sáu', 'Thứ Bảy'];
-      const dayName = daysOfWeek[d.getDay()];
-      return `${dayName}, ngày ${day.toString().padStart(2, '0')}/${month.toString().padStart(2, '0')}/${year}`;
-    }
-    return dateStr;
-  } catch {
-    return dateStr;
-  }
-}
-
-// Helper: Format Short Date (DD/MM/YYYY)
-function formatShortDate(dateStr) {
-  if (!dateStr) return '';
-  const parts = dateStr.split('-');
-  if (parts.length === 3) {
-    return `${parts[2]}/${parts[1]}/${parts[0]}`;
-  }
-  return dateStr;
-}
-
 // Helper: Build Google Calendar event URL
 function buildGoogleCalendarUrl(booking) {
   if (!booking) return '#';
   try {
     const title = encodeURIComponent('Lịch Thử Váy Cưới Private Suite — UniBridal Atelier');
-    const dateClean = (booking.date || '').replace(/-/g, '');
+    const dateClean = (booking.date || '').split('T')[0].replace(/-/g, '');
     let startTime = '133000';
     let endTime = '150000';
     if (booking.timeSlot && booking.timeSlot.includes('—')) {
@@ -89,7 +57,7 @@ function buildGoogleCalendarUrl(booking) {
     const dates = `${dateClean}T${startTime}/${dateClean}T${endTime}`;
     const location = encodeURIComponent(`${booking.branchName || ''} - ${booking.branchAddress || ''}`);
     const details = encodeURIComponent(
-      `Mã Check-in: ${booking.id}\nCô dâu vinh dự: ${booking.fullName}\nSĐT: ${booking.phone}\nĐịa chỉ: ${booking.branchAddress || ''}\nPhụ trách đón tiếp: ${booking.stylistName || 'NTK UniBridal'}\nTrân trọng đón tiếp nàng!`
+      `Mã Check-in: ${booking.id}\nCô dâu vinh dự: ${booking.fullName}\nSĐT: ${booking.phone}\nĐịa chỉ: ${booking.branchAddress || ''}\nTrân trọng đón tiếp nàng!`
     );
     return `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${title}&dates=${dates}&location=${location}&details=${details}`;
   } catch {
@@ -105,7 +73,7 @@ export default function AppointmentPage() {
   // Step 1: Branch selection
   const [selectedBranchId, setSelectedBranchId] = useState('hcm-q1');
 
-  // Step 2: Date & Time Slot selection
+  // Step 2: Date và Time Slot selection
   const tomorrowStr = useMemo(() => {
     const d = new Date();
     d.setDate(d.getDate() + 1);
@@ -138,7 +106,7 @@ export default function AppointmentPage() {
   const [fullName, setFullName] = useState(() => (isLoggedIn ? (user?.fullName || user?.name || '') : ''));
   const [phone, setPhone] = useState(() => (isLoggedIn ? (user?.phone || '') : ''));
   const [email, setEmail] = useState(() => (isLoggedIn ? (user?.email || '') : ''));
-  const [guestsCount, setGuestsCount] = useState(2);
+  const [guestsCount, setGuestsCount] = useState(1);
   const [weddingDate, setWeddingDate] = useState(() => (isLoggedIn ? (user?.weddingDate || '') : ''));
   const [notes, setNotes] = useState('');
 
@@ -211,7 +179,7 @@ export default function AppointmentPage() {
     );
   }, [availableDresses, selectedDressIds]);
 
-  // Gợi ý 4 thiết kế phù hợp dựa trên phom dáng & phong cách váy chính
+  // Gợi ý 4 thiết kế phù hợp dựa trên phom dáng và phong cách váy chính
   const recommendedDresses = useMemo(() => {
     if (!availableDresses || availableDresses.length === 0 || !primaryDress) return [];
     const primaryId = primaryDress?.id;
@@ -303,20 +271,34 @@ export default function AppointmentPage() {
     }
   };
 
+  // Validate helpers
+  const validateFullNameInput = (val) => {
+    const trimmed = (val || '').trim();
+    if (!trimmed) return 'Vui lòng nhập họ và tên cô dâu';
+    if (/\d/.test(trimmed)) return 'Họ và tên không được chứa chữ số';
+    return null;
+  };
+
+  const validatePhoneInput = (val) => {
+    const clean = (val || '').replace(/[\s.-]/g, '');
+    if (!clean) return 'Vui lòng nhập số điện thoại liên hệ';
+    if (!/^\d+$/.test(clean)) return 'Số điện thoại chỉ được chứa chữ số';
+    if (clean.length !== 10) return `Số điện thoại phải có đúng 10 số (hiện có ${clean.length} số)`;
+    if (!/^(0[2|3|5|7|8|9])[0-9]{8}$/.test(clean)) {
+      return 'Số điện thoại không hợp lệ (phải bắt đầu bằng các đầu số 03, 05, 07, 08, 09, 02)';
+    }
+    return null;
+  };
+
   // Validate form
   const validateForm = () => {
     const errs = {};
-    if (!fullName.trim()) {
-      errs.fullName = 'Vui lòng nhập họ và tên cô dâu';
-    }
-    if (!phone.trim()) {
-      errs.phone = 'Vui lòng nhập số điện thoại liên hệ';
-    } else {
-      const cleanPhone = phone.replace(/[\s.-]/g, '');
-      if (!/^[0-9]{9,11}$/.test(cleanPhone)) {
-        errs.phone = 'Số điện thoại không hợp lệ (từ 9 đến 11 số)';
-      }
-    }
+    const nameErr = validateFullNameInput(fullName);
+    if (nameErr) errs.fullName = nameErr;
+
+    const phoneErr = validatePhoneInput(phone);
+    if (phoneErr) errs.phone = phoneErr;
+
     if (!email.trim()) {
       errs.email = 'Vui lòng nhập email nhận thư xác nhận';
     } else if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email.trim())) {
@@ -324,6 +306,12 @@ export default function AppointmentPage() {
     }
     if (selectedDressIds.length === 0) {
       errs.dresses = 'Vui lòng chọn ít nhất 1 mẫu váy cưới nàng muốn thử';
+    }
+    if (selectedDate && selectedDate < tomorrowStr) {
+      errs.selectedDate = 'Ngày hẹn thử váy không thể là ngày trong quá khứ';
+    }
+    if (weddingDate && weddingDate < tomorrowStr) {
+      errs.weddingDate = 'Ngày cưới không thể là ngày trong quá khứ';
     }
 
     setErrors(errs);
@@ -371,13 +359,48 @@ export default function AppointmentPage() {
 
     try {
       const res = await createAppointmentApi(appointmentData);
-      const result = res?.data || createAppointment(appointmentData);
+      const raw = res?.data || res || {};
+      const apiData = raw?.appointmentCode ? raw : (raw?.data || raw);
+      const generatedCode = `APT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+      const appointmentCode = apiData?.appointmentCode || apiData?.id || raw?.appointmentCode || raw?.data?.appointmentCode || appointmentData.id || generatedCode;
+
+      const result = {
+        ...appointmentData,
+        ...(typeof apiData === 'object' ? apiData : {}),
+        id: appointmentCode,
+        appointmentCode: appointmentCode,
+        branchId: selectedBranch.id,
+        branch: selectedBranch.id,
+        branchName: selectedBranch.name,
+        branchLocation: selectedBranch.location,
+        branchAddress: selectedBranch.address,
+        branchPhone: selectedBranch.phone,
+        branchMapUrl: selectedBranch.mapUrl,
+        branchHours: selectedBranch.hours,
+        stylistName: apiData.stylistName || 'NTK. Hoàng Yến (Lead Haute Couture Stylist)',
+      };
       setConfirmedBooking(result);
       message.success('Đặt lịch hẹn Private Suite thành công!');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     } catch (err) {
       const localResult = createAppointment(appointmentData);
-      setConfirmedBooking(localResult);
+      const generatedCode = `APT-2026-${Math.floor(1000 + Math.random() * 9000)}`;
+      const appointmentCode = localResult?.appointmentCode || localResult?.id || generatedCode;
+      setConfirmedBooking({
+        ...appointmentData,
+        ...(typeof localResult === 'object' ? localResult : {}),
+        id: appointmentCode,
+        appointmentCode: appointmentCode,
+        branchId: selectedBranch.id,
+        branch: selectedBranch.id,
+        branchName: selectedBranch.name,
+        branchLocation: selectedBranch.location,
+        branchAddress: selectedBranch.address,
+        branchPhone: selectedBranch.phone,
+        branchMapUrl: selectedBranch.mapUrl,
+        branchHours: selectedBranch.hours,
+        stylistName: 'NTK. Hoàng Yến (Lead Haute Couture Stylist)',
+      });
       message.success('Đặt lịch hẹn Private Suite thành công!');
       window.scrollTo({ top: 0, behavior: 'smooth' });
     }
@@ -387,6 +410,20 @@ export default function AppointmentPage() {
   const handlePrintInvitation = () => {
     window.print();
   };
+
+  // Thông tin chi nhánh chính xác hiển thị trên Giấy mời
+  const bookingBranch = useMemo(() => {
+    if (!confirmedBooking) return null;
+    const bId = confirmedBooking.branchId || confirmedBooking.branch;
+    const matched = SHOWROOM_BRANCHES.find(
+      (b) => b.id === bId || (bId === 'hn-hk' && b.id === 'hn-hoankiem')
+    );
+    if (matched) return matched;
+    if (String(confirmedBooking.branchName || '').includes('Hà Nội')) {
+      return SHOWROOM_BRANCHES.find((b) => b.id === 'hn-hoankiem');
+    }
+    return SHOWROOM_BRANCHES[0];
+  }, [confirmedBooking]);
 
   return (
     <div className="min-h-screen bg-[#FDFBF7] text-[#2C2523] flex flex-col font-jakarta selection:bg-[#FCEEE9] selection:text-[#B8737D]">
@@ -407,7 +444,7 @@ export default function AppointmentPage() {
                 <CheckCircle2 className="w-9 h-9" />
               </div>
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF0EC] text-[#B8737D] text-[11.5px] font-bold tracking-[1.5px] uppercase border border-[#F2D8D4] mb-2">
-                <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
+                <Crown className="w-3.5 h-3.5 text-[#D4AF37]" />
                 XÁC NHẬN ĐẶT LỊCH HẸN PRIVATE SUITE THÀNH CÔNG
               </span>
               <h1 className="font-jakarta text-[26px] sm:text-[34px] font-extrabold text-[#2C2523] mt-2 mb-2 leading-tight tracking-tight">
@@ -420,7 +457,7 @@ export default function AppointmentPage() {
               </p>
               <div className="mt-3.5 inline-flex items-center gap-2 bg-[#F0FDF4] text-[#166534] border border-[#BBF7D0] px-4 py-2 rounded-xl text-[13px] font-medium shadow-xs">
                 <Mail className="w-4 h-4 text-[#16a34a] shrink-0" />
-                <span>Toàn bộ thông tin lịch hẹn & mã check-in đã được gửi tới email <strong>{confirmedBooking.email}</strong></span>
+                <span>Toàn bộ thông tin lịch hẹn đã được gửi tới email <strong>{confirmedBooking.email}</strong></span>
               </div>
             </div>
 
@@ -435,7 +472,7 @@ export default function AppointmentPage() {
               <div className="p-6 sm:p-10 space-y-7">
 
                 {/* Invitation Card Header */}
-                <div className="flex flex-col sm:flex-row items-center justify-between pb-6 border-b border-[#F0E5DC] text-center sm:text-left gap-4">
+                <div className="pb-6 border-b border-[#F0E5DC] text-center sm:text-left">
                   <div className="space-y-1">
                     <div className="inline-flex items-center gap-1.5 text-[11px] font-bold tracking-[2px] uppercase text-[#D4AF37]">
                       <Crown className="w-3.5 h-3.5 text-[#D4AF37]" />
@@ -449,14 +486,6 @@ export default function AppointmentPage() {
                       Hệ thống phòng thử váy cô dâu tiêu chuẩn Haute Couture độc bản
                     </p>
                   </div>
-                  <div className="text-center sm:text-right shrink-0">
-                    <span className="text-[10.5px] uppercase font-bold text-[#847374] block tracking-wider mb-1">
-                      MÃ CHECK-IN TẠI QUẦY
-                    </span>
-                    <span className="font-mono text-[17px] font-extrabold text-[#733F49] bg-[#FAF0EC] px-3.5 py-1.5 rounded-xl border border-[#F2D8D4] shadow-xs inline-block">
-                      {confirmedBooking.id}
-                    </span>
-                  </div>
                 </div>
 
                 {/* Primary Booking Details Grid */}
@@ -466,7 +495,7 @@ export default function AppointmentPage() {
                   <div className="bg-[#FCF9F6] p-5 rounded-2xl border border-[#EEDECF]/90 flex flex-col justify-between space-y-3">
                     <div>
                       <span className="text-[10.5px] font-bold text-[#847374] tracking-wider uppercase block mb-1">
-                        CÔ DÂU VINH DỰ & ĐOÀN ĐỒNG HÀNH
+                        CÔ DÂU VINH DỰ VÀ ĐOÀN ĐỒNG HÀNH
                       </span>
                       <div className="font-jakarta font-bold text-[18px] text-[#2C2523] leading-snug">
                         {confirmedBooking.fullName}
@@ -478,24 +507,21 @@ export default function AppointmentPage() {
                       </div>
                     </div>
 
-                    <div className="pt-2 border-t border-[#EEDECF]/60 flex items-center justify-between text-[12px] text-[#6B5C5D]">
-                      <span>Số người cùng trải nghiệm:</span>
-                      <strong className="text-[#2C2523] font-bold">{confirmedBooking.guestsCount} khách</strong>
-                    </div>
-
                     {confirmedBooking.weddingDate && (
-                      <div className="text-[11.5px] text-[#847374] bg-white px-2.5 py-1.5 rounded-lg border border-[#EEDECF] flex items-center justify-between">
-                        <span>Ngày cưới dự kiến:</span>
-                        <strong className="text-[#733F49]">{formatShortDate(confirmedBooking.weddingDate)}</strong>
+                      <div className="pt-2 border-t border-[#EEDECF]/60">
+                        <div className="text-[11.5px] text-[#847374] bg-white px-2.5 py-1.5 rounded-lg border border-[#EEDECF] flex items-center justify-between">
+                          <span>Ngày cưới dự kiến:</span>
+                          <strong className="text-[#733F49]">{formatShortDate(confirmedBooking.weddingDate)}</strong>
+                        </div>
                       </div>
                     )}
                   </div>
 
-                  {/* Time & Slot Box */}
+                  {/* Time và Slot Box */}
                   <div className="bg-[#FCF9F6] p-5 rounded-2xl border border-[#EEDECF]/90 flex flex-col justify-between space-y-3">
                     <div>
                       <span className="text-[10.5px] font-bold text-[#847374] tracking-wider uppercase block mb-1">
-                        THỜI GIAN & KHUNG GIỜ VÀNG
+                        THỜI GIAN VÀ KHUNG GIỜ VÀNG
                       </span>
                       <div className="font-jakarta font-extrabold text-[18px] text-[#733F49]">
                         {confirmedBooking.timeSlot}
@@ -512,47 +538,43 @@ export default function AppointmentPage() {
                         <span>Phòng thử Suite riêng tư 90 phút trọn vẹn</span>
                       </div>
                       <div className="text-[11px] text-[#847374]">
-                        ✦ Váy được hấp sấy tiệt trùng & ủi phẳng trước 2 giờ
+                        ✦ Váy được hấp sấy tiệt trùng và ủi phẳng trước 2 giờ
                       </div>
                     </div>
                   </div>
 
                 </div>
 
-                {/* Showroom Atelier Location Box */}
-                <div className="bg-[#FAF4EE] p-5 rounded-2xl border border-[#EEDECF] flex flex-col sm:flex-row items-start justify-between gap-4">
-                  <div className="flex items-start gap-3.5">
-                    <div className="w-10 h-10 rounded-xl bg-white border border-[#EEDECF] text-[#B8737D] flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
-                      <MapPin className="w-5 h-5 text-[#B8737D]" />
-                    </div>
-                    <div>
-                      <span className="text-[10.5px] font-bold uppercase tracking-wider text-[#733F49] block mb-0.5">
-                        ĐỊA ĐIỂM SHOWROOM ATELIER ĐÓN TIẾP
-                      </span>
-                      <div className="font-jakarta font-bold text-[16px] text-[#2C2523]">
-                        {confirmedBooking.branchName}
+                {/* Showroom Atelier Location Box (Hiển thị rõ ràng đúng chi nhánh khách đã đặt: TP.HCM hoặc Hoàn Kiếm) */}
+                {bookingBranch && (
+                  <div className="bg-[#FAF4EE] p-5 rounded-2xl border border-[#EEDECF] flex flex-col sm:flex-row items-start justify-between gap-4">
+                    <div className="flex items-start gap-3.5">
+                      <div className="w-11 h-11 rounded-xl bg-white border border-[#EEDECF] text-[#B8737D] flex items-center justify-center shrink-0 shadow-2xs mt-0.5">
+                        <MapPin className="w-5 h-5 text-[#B8737D]" />
                       </div>
-                      <div className="text-[12.5px] text-[#6B5C5D] mt-1">
-                        {confirmedBooking.branchAddress || 'Chi nhánh trung tâm UniBridal'}
-                      </div>
-                      <div className="text-[12px] text-[#733F49] font-medium mt-1">
-                        Hotline showroom: <strong>{confirmedBooking.branchPhone || '1800 8998'}</strong> • Phụ trách đón tiếp: <strong>{confirmedBooking.stylistName}</strong>
+                      <div>
+                        <div className="flex items-center gap-2 mb-1.5 flex-wrap">
+                          <span className="text-[10.5px] font-extrabold uppercase tracking-wider text-[#733F49] bg-[#F2DDD7] px-2.5 py-0.5 rounded-md border border-[#E7C7BE]">
+                            {bookingBranch.id.includes('hn') ? '✦ CHI NHÁNH HOÀN KIẾM — HÀ NỘI' : '✦ CHI NHÁNH QUẬN 1 — TP. HỒ CHÍ MINH'}
+                          </span>
+                          <span className="text-[11.5px] text-[#847374] font-medium">
+                            Giờ tiếp đón: {bookingBranch.hours}
+                          </span>
+                        </div>
+                        <div className="font-jakarta font-bold text-[17px] text-[#2C2523] leading-snug">
+                          {bookingBranch.name}
+                        </div>
+                        <div className="text-[13px] text-[#4A3B3C] mt-1 font-semibold flex items-center gap-1.5">
+                          <span>📍</span>
+                          <span>{bookingBranch.address}</span>
+                        </div>
+                        <div className="text-[12px] text-[#733F49] font-medium mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1">
+                          <span>Hotline chi nhánh: <strong className="text-[#2C2523] font-bold">{bookingBranch.phone}</strong></span>
+                        </div>
                       </div>
                     </div>
                   </div>
-
-                  {confirmedBooking.branchMapUrl && (
-                    <a
-                      href={confirmedBooking.branchMapUrl}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      className="inline-flex items-center gap-1.5 px-3 py-2 rounded-xl bg-white border border-[#EEDECF] hover:bg-[#FAF0EC] text-[#733F49] text-[12px] font-bold transition-all no-underline shrink-0 shadow-2xs print:hidden"
-                    >
-                      <ExternalLink className="w-3.5 h-3.5" />
-                      <span>Xem bản đồ</span>
-                    </a>
-                  )}
-                </div>
+                )}
 
                 {/* Selected Dresses Preview */}
                 <div>
@@ -609,7 +631,7 @@ export default function AppointmentPage() {
                           key={srv.id || idx}
                           className="flex items-center gap-2.5 p-2.5 rounded-xl bg-[#FAF0EC]/60 border border-[#F2D8D4] text-[12px]"
                         >
-                          <Sparkles className="w-4 h-4 text-[#D4AF37] shrink-0" />
+                          <Crown className="w-4 h-4 text-[#D4AF37] shrink-0" />
                           <div className="min-w-0 flex-1">
                             <span className="font-bold text-[#2C2523] block truncate">{srv.name}</span>
                             <span className="text-[10px] text-[#733F49] font-medium">{srv.tag || 'MIỄN PHÍ'}</span>
@@ -624,24 +646,29 @@ export default function AppointmentPage() {
                 {confirmedBooking.notes && (
                   <div className="p-3.5 rounded-xl bg-[#FCF9F6] border border-[#EEDECF] text-[12px] text-[#6B5C5D]">
                     <span className="font-bold text-[#733F49] uppercase text-[10.5px] block mb-0.5">
-                      YÊU CẦU & GHI CHÚ RIÊNG TỪ CÔ DÂU:
+                      YÊU CẦU VÀ GHI CHÚ RIÊNG TỪ CÔ DÂU:
                     </span>
                     <p className="m-0 italic">"{confirmedBooking.notes}"</p>
                   </div>
                 )}
 
-                {/* QR Code Check-in Pass Strip */}
+                {/* Check-in Pass Strip (Đã xóa ô QR, hiển thị mã đơn rõ ràng) */}
                 <div className="p-4 sm:p-5 rounded-2xl bg-[#FCF9F6] border border-[#EEDECF] flex flex-col sm:flex-row items-center justify-between gap-4">
-                  <div className="flex items-center gap-4 text-center sm:text-left">
-                    <div className="w-16 h-16 bg-white p-1.5 rounded-2xl border border-[#EEDECF] flex items-center justify-center shrink-0 shadow-sm">
-                      <QrCode className="w-12 h-12 text-[#2C2523]" />
+                  <div className="flex items-center gap-3.5 text-center sm:text-left">
+                    <div className="w-11 h-11 bg-white rounded-xl border border-[#EEDECF] flex items-center justify-center shrink-0 shadow-xs text-[#733F49]">
+                      <Sparkles className="w-5 h-5 text-[#D4AF37]" />
                     </div>
                     <div>
-                      <div className="font-bold text-[13.5px] text-[#2C2523]">
-                        Mã QR Thẻ Khách Hàng Danh Dự
+                      <div className="flex flex-wrap items-center gap-2 justify-center sm:justify-start">
+                        <span className="font-bold text-[13.5px] text-[#2C2523]">
+                          Mã Đơn Lịch Hẹn:
+                        </span>
+                        <span className="font-mono text-[16px] font-extrabold text-[#733F49] bg-white px-3 py-0.5 rounded-lg border border-[#F2D8D4] shadow-2xs">
+                          {confirmedBooking.appointmentCode || confirmedBooking.id || 'APT-2026-8888'}
+                        </span>
                       </div>
-                      <div className="text-[11.5px] text-[#847374] leading-relaxed max-w-[380px]">
-                        Xuất trình mã này tại quầy tiếp tân để chuyên viên hướng dẫn nàng bước thẳng vào Private Suite.
+                      <div className="text-[12px] text-[#847374] leading-relaxed mt-1 max-w-[420px]">
+                        Quý cô chỉ cần đọc mã này tại quầy tiếp tân để chuyên viên hướng dẫn nàng bước thẳng vào Private Suite.
                       </div>
                     </div>
                   </div>
@@ -685,19 +712,9 @@ export default function AppointmentPage() {
                 </Link>
 
                 <div className="flex items-center gap-3 w-full sm:w-auto">
-                  <button
-                    type="button"
-                    onClick={() => {
-                      setConfirmedBooking(null);
-                      window.scrollTo({ top: 0, behavior: 'smooth' });
-                    }}
-                    className="flex-1 sm:flex-initial px-5 py-2.5 rounded-xl bg-white border border-[#EEDECF] text-[#2C2523] text-[13px] font-bold hover:bg-[#FAF0EC] transition-colors cursor-pointer shadow-2xs"
-                  >
-                    Đặt Thêm Lịch Mới
-                  </button>
                   <Link
                     to="/"
-                    className="flex-1 sm:flex-initial px-6 py-2.5 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white text-[13px] font-bold transition-all text-center no-underline shadow-xs"
+                    className="w-full sm:w-auto px-6 py-2.5 rounded-xl bg-[#733F49] hover:bg-[#5F323B] text-white text-[13px] font-bold transition-all text-center no-underline shadow-xs"
                   >
                     Về Trang Chủ
                   </Link>
@@ -714,7 +731,7 @@ export default function AppointmentPage() {
             {/* Page Header */}
             <div className="mb-2 sm:mb-4">
               <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#FAF0EC] text-[#733F49] text-[11px] font-bold tracking-[1.5px] uppercase border border-[#F2D8D4] mb-2">
-                <Sparkles className="w-3.5 h-3.5 text-[#D4AF37]" />
+                <Crown className="w-3.5 h-3.5 text-[#D4AF37]" />
                 TRẢI NGHIỆM THỬ VÁY RIÊNG TƯ 1:1
               </span>
               <h1 className="font-jakarta text-[24px] sm:text-[30px] font-extrabold text-[#2C2523] m-0 tracking-tight leading-tight">
@@ -811,7 +828,7 @@ export default function AppointmentPage() {
                   </div>
                 </section>
 
-                {/* BƯỚC 2: CHỌN NGÀY & KHUNG GIỜ VÀNG */}
+                {/* BƯỚC 2: CHỌN NGÀY VÀ KHUNG GIỜ VÀNG */}
                 <section className="bg-white rounded-2xl border border-[#F0E5DC] shadow-[0_4px_24px_rgba(44,37,35,0.03)] p-6 sm:p-7">
                   <div className="flex items-center gap-3 pb-4 border-b border-[#F5EDE8] mb-5">
                     <span className="w-7 h-7 rounded-full bg-[#733F49] text-white flex items-center justify-center text-[12px] font-bold shrink-0">
@@ -827,7 +844,7 @@ export default function AppointmentPage() {
                     </div>
                   </div>
 
-                  {/* Date Input & Filters */}
+                  {/* Date Input và Filters */}
                   <div className="grid grid-cols-1 md:grid-cols-12 gap-4 mb-5 items-end">
                     <div className="md:col-span-5">
                       <label className="block font-jakarta text-[11px] font-bold uppercase tracking-wider text-[#733F49] mb-1.5">
@@ -1126,7 +1143,7 @@ export default function AppointmentPage() {
                       <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-3.5 gap-1">
                         <div>
                           <span className="text-[11px] font-bold uppercase tracking-wider text-[#B8737D] flex items-center gap-1.5">
-                            <Sparkles className="w-3.5 h-3.5 text-[#B8737D]" />
+                            <Crown className="w-3.5 h-3.5 text-[#B8737D]" />
                             Gợi Ý Thiết Kế Tương Đồng Dành Riêng Cho Nàng
                           </span>
                         </div>
@@ -1223,12 +1240,23 @@ export default function AppointmentPage() {
                           required
                           value={fullName}
                           onChange={(e) => {
-                            setFullName(e.target.value);
-                            if (errors.fullName) setErrors({ ...errors, fullName: null });
+                            const val = e.target.value;
+                            setFullName(val);
+                            if (/\d/.test(val)) {
+                              setErrors((prev) => ({ ...prev, fullName: 'Họ và tên không được chứa chữ số' }));
+                            } else if (errors.fullName) {
+                              setErrors((prev) => ({ ...prev, fullName: null }));
+                            }
+                          }}
+                          onBlur={() => {
+                            const err = validateFullNameInput(fullName);
+                            if (err) {
+                              setErrors((prev) => ({ ...prev, fullName: err }));
+                            }
                           }}
                           className={`w-full bg-[#FCF9F6] border rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:bg-white ${errors.fullName ? 'border-red-500' : 'border-[#EEDECF] focus:border-[#733F49]'
                             }`}
-                          placeholder="Nhập họ tên cô dâu"
+                          placeholder="Nhập họ tên cô dâu (không chứa số)"
                         />
                         {errors.fullName && (
                           <span className="text-[11px] text-red-600 mt-1 block">{errors.fullName}</span>
@@ -1240,16 +1268,31 @@ export default function AppointmentPage() {
                           SỐ ĐIỆN THOẠI *
                         </label>
                         <input
-                          type="text"
+                          type="tel"
                           required
+                          maxLength={10}
                           value={phone}
                           onChange={(e) => {
-                            setPhone(e.target.value);
-                            if (errors.phone) setErrors({ ...errors, phone: null });
+                            const rawVal = e.target.value;
+                            const cleanVal = rawVal.replace(/[^\d]/g, '').slice(0, 10);
+                            setPhone(cleanVal);
+                            if (errors.phone) {
+                              if (cleanVal.length === 10 && /^(0[2|3|5|7|8|9])[0-9]{8}$/.test(cleanVal)) {
+                                setErrors((prev) => ({ ...prev, phone: null }));
+                              }
+                            }
+                          }}
+                          onBlur={() => {
+                            const err = validatePhoneInput(phone);
+                            if (err) {
+                              setErrors((prev) => ({ ...prev, phone: err }));
+                            } else if (errors.phone) {
+                              setErrors((prev) => ({ ...prev, phone: null }));
+                            }
                           }}
                           className={`w-full bg-[#FCF9F6] border rounded-xl px-3.5 py-2.5 text-[14px] text-[#2C2523] font-medium focus:outline-none focus:bg-white ${errors.phone ? 'border-red-500' : 'border-[#EEDECF] focus:border-[#733F49]'
                             }`}
-                          placeholder="Nhập số điện thoại liên hệ"
+                          placeholder="Nhập số điện thoại liên hệ (10 số)"
                         />
                         {errors.phone && (
                           <span className="text-[11px] text-red-600 mt-1 block">{errors.phone}</span>
@@ -1287,10 +1330,16 @@ export default function AppointmentPage() {
                         </label>
                         <input
                           type="date"
+                          min={tomorrowStr}
                           value={weddingDate}
                           onChange={(e) => setWeddingDate(e.target.value)}
                           className="w-full bg-[#FCF9F6] border border-[#EEDECF] rounded-xl px-3.5 py-2 text-[13.5px] text-[#2C2523] font-medium focus:outline-none focus:border-[#733F49] focus:bg-white"
                         />
+                        {errors.weddingDate && (
+                          <span className="text-[11px] text-red-500 font-semibold mt-1 block">
+                            {errors.weddingDate}
+                          </span>
+                        )}
                       </div>
                     </div>
 
@@ -1399,7 +1448,7 @@ export default function AppointmentPage() {
                     </div>
                     <p className="m-0 text-[#6B5C5D] leading-relaxed">
                       ✓ Phòng thử riêng tư 100% không ghép khách.<br />
-                      ✓ Hấp tiệt trùng sinh học & chuẩn bị váy trước 2 giờ.<br />
+                      ✓ Hấp tiệt trùng sinh học và chuẩn bị váy trước 2 giờ.<br />
                       ✓ Không ép cọc, hoàn toàn thoải mái trải nghiệm.
                     </p>
                   </div>

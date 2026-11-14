@@ -54,11 +54,11 @@ const RealBridesGallery = () => {
     <section id="brides" className="py-20 bg-white">
       <div className="max-w-[1280px] mx-auto px-6 sm:px-8">
         {/* Section Header */}
-        <div className="max-w-[700px] mb-12 text-left">
+        <div className="max-w-[850px] mb-12 text-left">
           <h2 className="font-playfair text-[32px] sm:text-[40px] leading-[1.15] font-normal tracking-tight text-[#2C2523] mb-3 m-0">
             Khoảnh Khắc Nàng Dâu UniBridal
           </h2>
-          <p className="font-jakarta text-[14px] leading-[22px] text-[#514344] m-0 font-normal">
+          <p className="font-jakarta text-[14px] leading-[24px] text-[#514344] m-0 font-normal">
             Những xúc cảm chân thực và trọn vẹn nhất từ các nàng dâu đã tin chọn UniBridal cho ngày hạnh phúc nhất đời mình.
           </p>
         </div>

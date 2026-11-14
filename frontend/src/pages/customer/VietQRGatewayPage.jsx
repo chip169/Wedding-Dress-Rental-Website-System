@@ -1,22 +1,20 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useParams, useNavigate, useSearchParams, Link } from 'react-router-dom';
-import {
-  QrCode,
+import { QrCode,
   ShieldCheck,
   CheckCircle2,
   Copy,
   Clock,
   ArrowLeft,
   RefreshCw,
-  Sparkles,
+  Crown,
   Smartphone,
   ExternalLink,
   Download,
   Building2,
   AlertCircle,
   Zap,
-  Lock,
-} from 'lucide-react';
+  Lock } from 'lucide-react';
 import { message } from 'antd';
 import { formatCurrencyVND } from '../../utils/formatCurrency';
 import { checkPaymentStatusApi, simulateVietQRPaymentApi } from '../../services/paymentService';
@@ -192,7 +190,7 @@ export default function VietQRGatewayPage() {
       });
       setIsSuccess(true);
       message.success({
-        content: `✓ [Sandbox Test]: Đã nhận thanh toán ${formatCurrencyVND(amountToPay)} qua VietQR! Hợp đồng & Lịch thuê đã được kích hoạt.`,
+        content: `✓ [Sandbox Test]: Đã nhận thanh toán ${formatCurrencyVND(amountToPay)} qua VietQR! Hợp đồng và Lịch thuê đã được kích hoạt.`,
         key: 'sim_p',
         duration: 3,
       });
@@ -262,7 +260,7 @@ export default function VietQRGatewayPage() {
 
             <div className="bg-[#FAF5F3] p-4 rounded-2xl border border-[#EEDECF] text-[13px] text-[#6B5C5D] space-y-1.5 mb-7">
               <div>Mã giao dịch ngân hàng: <strong className="font-mono text-[#733F49]">FT26{Date.now().toString().slice(-8)}88</strong></div>
-              <div>Thư xác nhận & Hợp đồng số đã được tự động gửi tới email cô dâu.</div>
+              <div>Thư xác nhận và Hợp đồng số đã được tự động gửi tới email cô dâu.</div>
             </div>
 
             <div className="flex flex-col sm:flex-row items-center justify-center gap-3">
@@ -314,7 +312,7 @@ export default function VietQRGatewayPage() {
 
                   <div className="mt-3 flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#E8F5E9] text-[#1E8347] text-[11px] font-bold">
                     <span className="w-2 h-2 rounded-full bg-[#1E8347] animate-pulse"></span>
-                    <span>TỰ ĐỘNG KHỚP SỐ TIỀN & NỘI DUNG</span>
+                    <span>TỰ ĐỘNG KHỚP SỐ TIỀN VÀ NỘI DUNG</span>
                   </div>
                 </div>
 
@@ -358,7 +356,7 @@ export default function VietQRGatewayPage() {
               </div>
             </div>
 
-            {/* CỘT PHẢI: THÔNG TIN TÀI KHOẢN & ĐỐI SOÁT */}
+            {/* CỘT PHẢI: THÔNG TIN TÀI KHOẢN VÀ ĐỐI SOÁT */}
             <div className="lg:col-span-5 space-y-5">
               
               {/* Thẻ đếm ngược phiên thanh toán */}
@@ -472,7 +470,7 @@ export default function VietQRGatewayPage() {
               <div className="p-4 sm:p-5 rounded-2xl bg-[#FFF9F6] border-2 border-dashed border-[#D4AF37] space-y-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-[11px] font-extrabold text-[#854D0E] uppercase tracking-wider">
-                    <Sparkles className="w-4 h-4 text-[#D4AF37]" />
+                    <Crown className="w-4 h-4 text-[#D4AF37]" />
                     <span>CHẾ ĐỘ TEST (SANDBOX SIMULATOR)</span>
                   </div>
                   <span className="text-[10px] bg-[#FEF3C7] text-[#92400E] px-2 py-0.5 rounded font-bold">Dành cho Tester</span>
@@ -497,7 +495,7 @@ export default function VietQRGatewayPage() {
                   onClick={() => navigate('/checkout')}
                   className="text-[12px] text-[#847374] hover:text-[#733F49] transition-colors underline cursor-pointer bg-transparent border-0"
                 >
-                  ← Quay lại trang Hợp đồng &amp; Thông tin thanh toán
+                  ← Quay lại trang Hợp đồng và Thông tin thanh toán
                 </button>
               </div>
 

@@ -13,7 +13,9 @@ function localExtras(id) {
 }
 
 function normalize(profile) {
-    const extras = localExtras(profile.id || profile._id);
+    if (!profile) return {};
+    const id = profile.id || profile._id || '';
+    const extras = id ? localExtras(id) : {};
     return {
         ...profile,
         name: profile.name || profile.fullName || '',

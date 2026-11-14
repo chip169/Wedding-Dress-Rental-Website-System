@@ -1,9 +1,8 @@
-import Order from '../models/Order.model.js';
-import Payment from '../models/Payment.model.js';
-import Dress from '../models/Dress.model.js';
-import User from '../models/User.model.js';
-import Role from '../models/Role.model.js';
-import Appointment from '../models/Appointment.model.js';
+import Order from '../models/orderModel.js';
+import Payment from '../models/paymentModel.js';
+import Dress from '../models/dressModel.js';
+import User from '../models/userModel.js';
+import Appointment from '../models/appointmentModel.js';
 import { reportBounds, reportBuckets } from '../utils/adminReportMetrics.js';
 
 const REVENUE_TYPES = ['rental_payment', 'damage_compensation'];
@@ -112,16 +111,19 @@ function buckets(period, start, end) {
 }
 
 export async function dashboard(role, period = 'month', now = new Date()) {
-  if (!['week', 'month', 'quarter', 'year'].includes(period)) period = 'month';
+  if (!['today', 'week', 'month', 'quarter', 'year'].includes(period)) period = 'month';
   const { start, end } = reportBounds(period, now);
-  const [orders, payments, maintenanceOrdersDressIds, roleCustomer, appointments] = await Promise.all([
+  const [orders, payments, maintenanceOrdersDressIds, appointments, members] = await Promise.all([
     Order.find({ createdAt: { $gte: start, $lt: end } }).select('status createdAt rentalStartDate rentalEndDate totalRentPrice totalDeposit items customerName orderCode').lean(),
     Payment.find({ status: 'success', paidAt: { $gte: start, $lt: end } }).select('transactionType amount paidAt').lean(),
     Order.distinct('items.dressId', {
-      status: { $in: ['returned', 'inspecting', 'maintenance'] },
+      $or: [
+        { status: { $in: ['returned', 'inspecting', 'maintenance'] } },
+        { status: 'completed', maintenanceUntil: { $gt: now } },
+      ],
     }),
-    Role.findOne({ code: 'CUSTOMER' }).select('_id').lean(),
     Appointment.find({ appointmentDate: { $gte: start, $lt: end } }).select('status appointmentDate customerName phone serviceType').lean(),
+    User.countDocuments({ role: 'customer', isActive: true }),
   ]);
 
   const maintenance = await Dress.countDocuments({
@@ -130,8 +132,6 @@ export async function dashboard(role, period = 'month', now = new Date()) {
       { _id: { $in: (maintenanceOrdersDressIds || []).filter(Boolean) } },
     ],
   });
-
-  const members = roleCustomer ? await User.countDocuments({ roleId: roleCustomer._id, isActive: true }) : 0;
   const activeOrders = orders.filter((order) => ACTIVE_ORDER_STATUSES.includes(order.status));
   const recordedDeposits = activeOrders.length
     ? await Payment.distinct('orderId', {

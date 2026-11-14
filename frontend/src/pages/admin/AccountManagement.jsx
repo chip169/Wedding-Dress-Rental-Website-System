@@ -1,17 +1,13 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import AdminLayout from '../../components/layout/AdminLayout';
 import { message, Modal } from 'antd';
-import {
-  Users,
-  UserCheck,
+import { UserCheck,
   ShieldCheck,
-  Sparkles,
+  Crown,
   Search,
   Filter,
   Plus,
-  Edit2,
   Trash2,
-  KeyRound,
   Lock,
   Unlock,
   ChevronDown,
@@ -25,19 +21,19 @@ import {
   Shield,
   CreditCard,
   User,
-} from 'lucide-react';
+  ChevronLeft,
+  ChevronRight } from 'lucide-react';
 import {
   getAllUsers,
+  getCachedUsers,
   getUserRoles,
   createUser,
-  updateUser,
   toggleUserStatus,
-  resetUserPassword,
   deleteUser,
 } from '../../services/userService';
 import { useAuth } from '../../contexts/AuthContext';
 
-const PAGE_SIZE = 10;
+const DEFAULT_PAGE_SIZE = 10;
 
 const ROLE_CONFIG = {
   ADMIN: {
@@ -53,7 +49,7 @@ const ROLE_CONFIG = {
   CUSTOMER: {
     label: 'Khách Hàng',
     bg: 'bg-[#FAF0EC] text-[#733F49] border-[#F2D8D4]',
-    icon: Sparkles,
+    icon: Crown,
   },
 };
 
@@ -61,32 +57,25 @@ const fmtDate = (d) => (d ? new Date(d).toLocaleDateString('vi-VN') : '—');
 
 export default function AccountManagement() {
   const { user: currentUser } = useAuth();
-  const [users, setUsers] = useState([]);
+  const initialCached = useMemo(() => {
+    return getCachedUsers({ page: 1, limit: DEFAULT_PAGE_SIZE });
+  }, []);
+
+  const [users, setUsers] = useState(() => initialCached?.users || []);
   const [roles, setRoles] = useState([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(() => !initialCached);
   const [error, setError] = useState('');
-  const [total, setTotal] = useState(0);
+  const [total, setTotal] = useState(() => initialCached?.total || 0);
   const [activePage, setActivePage] = useState(1);
+  const [pageSize, setPageSize] = useState(DEFAULT_PAGE_SIZE);
 
-  // Thống kê toàn hệ thống
-  const [stats, setStats] = useState({
-    total: 0,
-    admin: 0,
-    staff: 0,
-    customer: 0,
-    active: 0,
-    blocked: 0,
-  });
-
-  // Bộ lọc & tìm kiếm
+  // Bộ lọc và tìm kiếm
   const [searchTerm, setSearchTerm] = useState('');
   const [roleFilter, setRoleFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
 
   // Modals state
   const [isCreateModalOpen, setIsCreateModalOpen] = useState(false);
-  const [editingUser, setEditingUser] = useState(null);
-  const [passwordUser, setPasswordUser] = useState(null);
   const [deletingUser, setDeletingUser] = useState(null);
 
   // Form states cho Create User
@@ -99,29 +88,15 @@ export default function AccountManagement() {
     idCard: '',
   });
   const [createLoading, setCreateLoading] = useState(false);
-
-  // Form states cho Edit User
-  const [editForm, setEditForm] = useState({
-    fullName: '',
-    phone: '',
-    roleCode: 'CUSTOMER',
-    idCard: '',
-    isActive: true,
-  });
-  const [editLoading, setEditLoading] = useState(false);
-
-  // Form states cho Reset Password
-  const [newPassword, setNewPassword] = useState('');
-  const [passwordLoading, setPasswordLoading] = useState(false);
   const [deleteLoading, setDeleteLoading] = useState(false);
 
   // ── Load dữ liệu tài khoản từ API ──────────────────────────────────────────
-  const loadUsers = useCallback(async () => {
-    setLoading(true);
+  const loadUsers = useCallback(async (isSilent = false) => {
+    if (!isSilent) setLoading(true);
     try {
       const params = {
         page: activePage,
-        limit: PAGE_SIZE,
+        limit: pageSize,
       };
       if (roleFilter !== 'all') params.role = roleFilter;
       if (statusFilter !== 'all') params.status = statusFilter;
@@ -134,21 +109,20 @@ export default function AccountManagement() {
 
       setUsers(usersRes.users || []);
       setTotal(usersRes.total || 0);
-      if (usersRes.stats) {
-        setStats(usersRes.stats);
-      }
       setRoles(rolesRes || []);
       setError('');
     } catch (err) {
       console.error('Lỗi khi tải danh sách người dùng:', err);
-      setError('Không thể kết nối đến máy chủ để tải danh sách tài khoản.');
+      if (!isSilent) {
+        setError('Không thể kết nối đến máy chủ để tải danh sách tài khoản.');
+      }
     } finally {
       setLoading(false);
     }
-  }, [activePage, roleFilter, statusFilter, searchTerm]);
+  }, [activePage, pageSize, roleFilter, statusFilter, searchTerm]);
 
   useEffect(() => {
-    loadUsers();
+    loadUsers(Boolean(initialCached));
   }, [loadUsers]);
 
   // ── Xử lý tạo mới tài khoản ────────────────────────────────────────────────
@@ -156,6 +130,10 @@ export default function AccountManagement() {
     e.preventDefault();
     if (!createForm.fullName.trim() || !createForm.email.trim() || !createForm.phone.trim() || !createForm.password) {
       message.error('Vui lòng điền đầy đủ các trường thông tin bắt buộc.');
+      return;
+    }
+    if (/\d/.test(createForm.fullName.trim())) {
+      message.error('Họ và tên không được chứa chữ số.');
       return;
     }
     if (createForm.password.length < 6) {
@@ -184,35 +162,6 @@ export default function AccountManagement() {
     }
   };
 
-  // ── Xử lý cập nhật thông tin tài khoản ────────────────────────────────────
-  const handleOpenEdit = (u) => {
-    setEditingUser(u);
-    setEditForm({
-      fullName: u.fullName || '',
-      phone: u.phone || '',
-      roleCode: u.roleCode || 'CUSTOMER',
-      idCard: u.idCard || '',
-      isActive: u.isActive !== false,
-    });
-  };
-
-  const handleEditSubmit = async (e) => {
-    e.preventDefault();
-    if (!editingUser) return;
-
-    setEditLoading(true);
-    try {
-      await updateUser(editingUser._id, editForm);
-      message.success(`Cập nhật thông tin tài khoản "${editForm.fullName}" thành công!`);
-      setEditingUser(null);
-      loadUsers();
-    } catch (err) {
-      message.error(err.message || 'Không thể cập nhật tài khoản.');
-    } finally {
-      setEditLoading(false);
-    }
-  };
-
   // ── Xử lý Khóa / Mở khóa tài khoản ────────────────────────────────────────
   const handleToggleStatus = async (u) => {
     try {
@@ -221,28 +170,6 @@ export default function AccountManagement() {
       loadUsers();
     } catch (err) {
       message.error(err.message || 'Lỗi khi thay đổi trạng thái.');
-    }
-  };
-
-  // ── Xử lý Đặt lại mật khẩu ────────────────────────────────────────────────
-  const handleResetPasswordSubmit = async (e) => {
-    e.preventDefault();
-    if (!passwordUser || !newPassword) return;
-    if (newPassword.length < 6) {
-      message.error('Mật khẩu mới phải từ 6 ký tự trở lên.');
-      return;
-    }
-
-    setPasswordLoading(true);
-    try {
-      await resetUserPassword(passwordUser._id, newPassword);
-      message.success(`Đã đặt lại mật khẩu mới cho tài khoản "${passwordUser.fullName}"!`);
-      setPasswordUser(null);
-      setNewPassword('');
-    } catch (err) {
-      message.error(err.message || 'Lỗi khi đặt lại mật khẩu.');
-    } finally {
-      setPasswordLoading(false);
     }
   };
 
@@ -262,15 +189,28 @@ export default function AccountManagement() {
     }
   };
 
-  const totalPages = Math.max(1, Math.ceil(total / PAGE_SIZE));
+  const totalPages = Math.max(1, Math.ceil(total / pageSize));
+
+  // ── Pagination Helper ───────────────────────────────────────────────────────
+  const pageNumbers = useMemo(() => {
+    if (totalPages <= 6) {
+      return Array.from({ length: totalPages }, (_, i) => i + 1);
+    }
+    if (activePage < 3) {
+      return [1, 2, 3, '...', totalPages - 1, totalPages];
+    }
+    if (activePage >= totalPages - 2) {
+      return [1, 2, '...', totalPages - 2, totalPages - 1, totalPages];
+    }
+    return [1, '...', activePage - 1, activePage, activePage + 1, '...', totalPages];
+  }, [totalPages, activePage]);
 
   return (
     <AdminLayout activeMenu="accounts">
       <div className="font-jakarta text-[#2C2523] pb-12">
-        {/* Header & Page Title */}
+        {/* Header và Page Title */}
         <div className="mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
           <div>
-            <div className="w-2.5 h-2.5 rounded-full bg-[#B8737D] mb-3" />
             <h1 className="font-playfair text-[32px] sm:text-[38px] font-normal text-[#5F2B36] tracking-tight leading-tight mb-2">
               Quản Lý Tài Khoản
             </h1>
@@ -289,114 +229,7 @@ export default function AccountManagement() {
           </button>
         </div>
 
-        {/* 4 Metric Cards */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4 mb-7">
-          {/* Card 1: Tổng tài khoản */}
-          <div
-            onClick={() => { setRoleFilter('all'); setStatusFilter('all'); }}
-            className="bg-white bg-[radial-gradient(ellipse_at_top_right,_#FDE8EC_0%,_transparent_70%)] rounded-2xl border border-[#FAD2DA] p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition-all cursor-pointer"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold tracking-[1.2px] text-[#733F49] uppercase">
-                  TỔNG TÀI KHOẢN
-                </span>
-                <div className="w-10 h-10 rounded-xl bg-[#FAF0EC] flex items-center justify-center text-[#733F49]">
-                  <Users size={18} />
-                </div>
-              </div>
-              <div className="flex items-baseline">
-                <span className="text-[32px] font-bold text-[#2C2523] leading-none">
-                  {stats.total}
-                </span>
-                <span className="text-[12px] font-medium text-[#8C7D7E] ml-2">thành viên</span>
-              </div>
-            </div>
-            <div className="mt-4 flex items-center gap-1.5 text-[11.5px] text-[#733F49] font-medium">
-              <span>{stats.active} đang hoạt động • {stats.blocked} bị khóa</span>
-            </div>
-          </div>
-
-          {/* Card 2: Quản trị viên */}
-          <div
-            onClick={() => { setRoleFilter('ADMIN'); setActivePage(1); }}
-            className="bg-white bg-[radial-gradient(ellipse_at_top_right,_#F3E8FF_0%,_transparent_70%)] rounded-2xl border border-[#E9D5FF] p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition-all cursor-pointer"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold tracking-[1.2px] text-purple-800 uppercase">
-                  QUẢN TRỊ VIÊN
-                </span>
-                <div className="w-10 h-10 rounded-xl bg-purple-50 flex items-center justify-center text-purple-700">
-                  <ShieldCheck size={18} />
-                </div>
-              </div>
-              <div className="flex items-baseline">
-                <span className="text-[32px] font-bold text-purple-950 leading-none">
-                  {stats.admin}
-                </span>
-                <span className="text-[12px] font-medium text-purple-600 ml-2">tài khoản</span>
-              </div>
-            </div>
-            <div className="mt-4 flex items-center gap-1.5 text-[11.5px] text-purple-700 font-medium">
-              <span>Toàn quyền cấu hình &amp; tài chính</span>
-            </div>
-          </div>
-
-          {/* Card 3: Nhân viên Showroom */}
-          <div
-            onClick={() => { setRoleFilter('STAFF'); setActivePage(1); }}
-            className="bg-white bg-[radial-gradient(ellipse_at_top_right,_#EFF6FF_0%,_transparent_70%)] rounded-2xl border border-[#BFDBFE] p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition-all cursor-pointer"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold tracking-[1.2px] text-[#1D4ED8] uppercase">
-                  NHÂN VIÊN SHOWROOM
-                </span>
-                <div className="w-10 h-10 rounded-xl bg-[#EFF6FF] flex items-center justify-center text-[#1D4ED8]">
-                  <UserCheck size={18} />
-                </div>
-              </div>
-              <div className="flex items-baseline">
-                <span className="text-[32px] font-bold text-[#1E3A8A] leading-none">
-                  {stats.staff}
-                </span>
-                <span className="text-[12px] font-medium text-[#60A5FA] ml-2">chuyên viên</span>
-              </div>
-            </div>
-            <div className="mt-4 flex items-center gap-1.5 text-[11.5px] text-[#1D4ED8] font-medium">
-              <span>Bàn giao, kiểm định &amp; thử váy</span>
-            </div>
-          </div>
-
-          {/* Card 4: Khách hàng */}
-          <div
-            onClick={() => { setRoleFilter('CUSTOMER'); setActivePage(1); }}
-            className="bg-white bg-[radial-gradient(ellipse_at_top_right,_#FEF3C7_0%,_transparent_70%)] rounded-2xl border border-[#FDE68A] p-5 shadow-xs flex flex-col justify-between hover:shadow-md transition-all cursor-pointer"
-          >
-            <div>
-              <div className="flex items-center justify-between mb-2">
-                <span className="text-[11px] font-bold tracking-[1.2px] text-[#92400E] uppercase">
-                  CÔ DÂU &amp; KHÁCH HÀNG
-                </span>
-                <div className="w-10 h-10 rounded-xl bg-[#FEF2E6] flex items-center justify-center text-[#D97706]">
-                  <Sparkles size={18} />
-                </div>
-              </div>
-              <div className="flex items-baseline">
-                <span className="text-[32px] font-bold text-[#78350F] leading-none">
-                  {stats.customer}
-                </span>
-                <span className="text-[12px] font-medium text-[#D97706] ml-2">khách hàng</span>
-              </div>
-            </div>
-            <div className="mt-4 flex items-center gap-1.5 text-[11.5px] text-[#B45309] font-medium">
-              <span>Hợp đồng điện tử &amp; cọc bảo lãnh</span>
-            </div>
-          </div>
-        </div>
-
-        {/* Thanh Tìm Kiếm & Bộ Lọc */}
+        {/* Thanh Tìm Kiếm và Bộ Lọc */}
         <div className="bg-white rounded-2xl border border-[#EFE5E1] p-4 shadow-xs mb-6">
           <div className="flex flex-col md:flex-row items-stretch md:items-center gap-3">
             <div className="relative flex-1">
@@ -493,7 +326,7 @@ export default function AccountManagement() {
 
                     return (
                       <tr key={u._id} className="hover:bg-[#FCF9F7] transition-colors">
-                        {/* Cột 1: Họ tên & Avatar */}
+                        {/* Cột 1: Họ tên và Avatar */}
                         <td className="py-4 px-5">
                           <div className="flex items-center gap-3.5">
                             <div className="w-10 h-10 rounded-full bg-[#FAF0EC] text-[#733F49] font-bold flex items-center justify-center border border-[#EFE2DC] uppercase text-[14px] shrink-0">
@@ -517,7 +350,7 @@ export default function AccountManagement() {
                           </div>
                         </td>
 
-                        {/* Cột 2: Email & SĐT */}
+                        {/* Cột 2: Email và SĐT */}
                         <td className="py-4 px-4">
                           <div className="flex items-center gap-1.5 text-[12.5px] text-[#4A3B3D] font-medium">
                             <Mail size={13} className="text-[#8C7D7E]" />
@@ -562,26 +395,6 @@ export default function AccountManagement() {
                         {/* Cột 6: Thao tác */}
                         <td className="py-4 px-5 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1.5">
-                            {/* Nút sửa */}
-                            <button
-                              type="button"
-                              onClick={() => handleOpenEdit(u)}
-                              title="Chỉnh sửa thông tin & vai trò"
-                              className="p-1.5 rounded-lg text-[#7A6B6C] hover:text-[#733F49] hover:bg-[#FAF0EC] transition-colors cursor-pointer border-0"
-                            >
-                              <Edit2 size={15} />
-                            </button>
-
-                            {/* Nút đổi mật khẩu */}
-                            <button
-                              type="button"
-                              onClick={() => setPasswordUser(u)}
-                              title="Đặt lại mật khẩu"
-                              className="p-1.5 rounded-lg text-[#7A6B6C] hover:text-amber-700 hover:bg-amber-50 transition-colors cursor-pointer border-0"
-                            >
-                              <KeyRound size={15} />
-                            </button>
-
                             {/* Nút Khóa / Mở khóa */}
                             {!isSelf && (
                               <button
@@ -619,44 +432,88 @@ export default function AccountManagement() {
             </table>
           </div>
 
-          {/* Phân trang */}
-          {totalPages > 1 && (
-            <div className="p-4 border-t border-[#F0E5DC] flex items-center justify-between text-xs text-[#7A6B6C]">
-              <span>Hiển thị trang {activePage} trên tổng số {totalPages} trang ({total} tài khoản)</span>
-              <div className="flex items-center gap-1">
+          {/* Phân trang chuẩn UniBridal */}
+          <div className="p-4 border-t border-[#F0E5DC] flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-[#7A6B6C] bg-[#FFFBF9]">
+            <div className="flex items-center gap-3">
+              <span>
+                {total === 0
+                  ? 'Chưa có tài khoản nào'
+                  : `Hiển thị ${(activePage - 1) * pageSize + 1} – ${Math.min(activePage * pageSize, total)} trong tổng số ${total} tài khoản`}
+              </span>
+              <div className="flex items-center gap-1.5 border-l border-[#F0E5DC] pl-3">
+                <span className="text-[11.5px] text-[#8C7D7E]">Dòng/trang:</span>
+                <select
+                  value={pageSize}
+                  onChange={(e) => {
+                    setPageSize(Number(e.target.value));
+                    setActivePage(1);
+                  }}
+                  className="py-1 px-2 rounded-lg bg-white border border-[#EFE5E1] text-xs font-semibold text-[#2C2523] outline-none cursor-pointer focus:border-[#733F49]"
+                >
+                  <option value={10}>10</option>
+                  <option value={20}>20</option>
+                  <option value={50}>50</option>
+                </select>
+              </div>
+            </div>
+
+            {totalPages > 1 && (
+              <div className="flex items-center gap-1.5">
                 <button
                   type="button"
-                  disabled={activePage <= 1}
-                  onClick={() => setActivePage((p) => p - 1)}
-                  className="px-3 py-1.5 rounded-lg border border-[#EFE2DC] bg-[#FAF5F2] hover:bg-[#F2E8E4] disabled:opacity-50 cursor-pointer"
+                  disabled={activePage === 1}
+                  onClick={() => setActivePage((p) => Math.max(1, p - 1))}
+                  className="w-8 h-8 rounded-lg bg-white border border-[#EFE5E1] shadow-2xs flex items-center justify-center text-[#7A6B6C] hover:bg-[#F5ECE8] disabled:opacity-40 transition-colors cursor-pointer"
+                  title="Trang trước"
                 >
-                  Trước
+                  <ChevronLeft size={16} />
                 </button>
-                {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-                  <button
-                    key={p}
-                    type="button"
-                    onClick={() => setActivePage(p)}
-                    className={`px-3 py-1.5 rounded-lg font-bold cursor-pointer ${
-                      activePage === p
-                        ? 'bg-[#733F49] text-white'
-                        : 'border border-[#EFE2DC] bg-white text-[#554748] hover:bg-[#FAF5F2]'
-                    }`}
-                  >
-                    {p}
-                  </button>
-                ))}
+
+                {pageNumbers.map((p, idx) => {
+                  if (p === '...') {
+                    return (
+                      <button
+                        key={`ellipsis-${idx}`}
+                        type="button"
+                        title={idx === 0 || p < activePage ? 'Về các trang trước' : 'Đến các trang sau'}
+                        onClick={() => {
+                          if (idx === 0 || p < activePage) setActivePage((prev) => Math.max(1, prev - 3));
+                          else setActivePage((prev) => Math.min(totalPages, prev + 3));
+                        }}
+                        className="w-8 h-8 rounded-lg bg-white border border-[#EFE5E1] shadow-2xs flex items-center justify-center text-[#8C7D7E] text-xs font-bold hover:bg-[#F5ECE8] hover:text-[#733F49] transition-colors cursor-pointer"
+                      >
+                        ...
+                      </button>
+                    );
+                  }
+                  return (
+                    <button
+                      key={p}
+                      type="button"
+                      onClick={() => setActivePage(p)}
+                      className={`w-8 h-8 rounded-lg font-bold flex items-center justify-center transition-colors cursor-pointer text-xs ${
+                        activePage === p
+                          ? 'bg-[#733F49] text-white shadow-xs'
+                          : 'bg-white border border-[#EFE5E1] shadow-2xs text-[#4A3B3D] hover:bg-[#F5ECE8]'
+                      }`}
+                    >
+                      {p}
+                    </button>
+                  );
+                })}
+
                 <button
                   type="button"
                   disabled={activePage >= totalPages}
-                  onClick={() => setActivePage((p) => p + 1)}
-                  className="px-3 py-1.5 rounded-lg border border-[#EFE2DC] bg-[#FAF5F2] hover:bg-[#F2E8E4] disabled:opacity-50 cursor-pointer"
+                  onClick={() => setActivePage((p) => Math.min(totalPages, p + 1))}
+                  className="w-8 h-8 rounded-lg bg-white border border-[#EFE5E1] shadow-2xs flex items-center justify-center text-[#7A6B6C] hover:bg-[#F5ECE8] disabled:opacity-40 transition-colors cursor-pointer"
+                  title="Trang sau"
                 >
-                  Sau
+                  <ChevronRight size={16} />
                 </button>
               </div>
-            </div>
-          )}
+            )}
+          </div>
         </div>
       </div>
 
@@ -789,197 +646,6 @@ export default function AccountManagement() {
                 >
                   {createLoading && <RefreshCw size={13} className="animate-spin" />}
                   <span>Tạo Tài Khoản</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── Modal Chỉnh Sửa Tài Khoản ─────────────────────────────────────── */}
-      {editingUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn font-jakarta">
-          <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-md w-full shadow-2xl border border-[#F2E5E0] animate-scaleUp">
-            <div className="flex items-center justify-between pb-3 border-b border-[#F0E5DC] mb-4">
-              <div>
-                <span className="text-[11px] font-bold text-[#8C7D7E] uppercase tracking-wider">
-                  Chỉnh Sửa Thông Tin
-                </span>
-                <h3 className="font-playfair text-[20px] font-bold text-[#5F2B36] leading-tight">
-                  Tài Khoản: {editingUser.fullName}
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setEditingUser(null)}
-                className="w-8 h-8 rounded-full bg-[#FAF5F2] hover:bg-[#F2E8E4] flex items-center justify-center text-[#7A696B] transition-colors cursor-pointer border-0"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <form onSubmit={handleEditSubmit} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block text-[11.5px] font-bold text-[#554748] mb-1">
-                  Email (Cố định)
-                </label>
-                <input
-                  type="text"
-                  disabled
-                  value={editingUser.email}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-gray-100 border border-gray-200 text-gray-500 text-[13px] outline-none"
-                />
-              </div>
-
-              <div>
-                <label className="block text-[11.5px] font-bold text-[#554748] mb-1">
-                  Họ và tên *
-                </label>
-                <input
-                  type="text"
-                  required
-                  value={editForm.fullName}
-                  onChange={(e) => setEditForm({ ...editForm, fullName: e.target.value })}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF5F2] border border-[#EFE2DC] text-[13px] text-[#2C2523] outline-none focus:border-[#B8737D]"
-                />
-              </div>
-
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="block text-[11.5px] font-bold text-[#554748] mb-1">
-                    Số điện thoại *
-                  </label>
-                  <input
-                    type="tel"
-                    required
-                    value={editForm.phone}
-                    onChange={(e) => setEditForm({ ...editForm, phone: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF5F2] border border-[#EFE2DC] text-[13px] text-[#2C2523] outline-none focus:border-[#B8737D]"
-                  />
-                </div>
-                <div>
-                  <label className="block text-[11.5px] font-bold text-[#554748] mb-1">
-                    Số CCCD
-                  </label>
-                  <input
-                    type="text"
-                    value={editForm.idCard}
-                    onChange={(e) => setEditForm({ ...editForm, idCard: e.target.value })}
-                    className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF5F2] border border-[#EFE2DC] text-[13px] text-[#2C2523] outline-none focus:border-[#B8737D]"
-                  />
-                </div>
-              </div>
-
-              <div>
-                <label className="block text-[11.5px] font-bold text-[#554748] mb-1">
-                  Vai trò hệ thống *
-                </label>
-                <select
-                  value={editForm.roleCode}
-                  onChange={(e) => setEditForm({ ...editForm, roleCode: e.target.value })}
-                  disabled={editingUser.email === 'admin@unibridal.com'}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF5F2] border border-[#EFE2DC] text-[13px] text-[#2C2523] outline-none cursor-pointer focus:border-[#B8737D] disabled:opacity-50"
-                >
-                  <option value="ADMIN">Quản Trị Viên (Admin)</option>
-                  <option value="STAFF">Nhân Viên Showroom (Staff)</option>
-                  <option value="CUSTOMER">Khách Hàng (Customer)</option>
-                </select>
-              </div>
-
-              <div>
-                <label className="block text-[11.5px] font-bold text-[#554748] mb-1">
-                  Trạng thái tài khoản
-                </label>
-                <select
-                  value={editForm.isActive ? 'active' : 'blocked'}
-                  onChange={(e) => setEditForm({ ...editForm, isActive: e.target.value === 'active' })}
-                  disabled={String(editingUser._id) === String(currentUser?._id)}
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF5F2] border border-[#EFE2DC] text-[13px] text-[#2C2523] outline-none cursor-pointer focus:border-[#B8737D] disabled:opacity-50"
-                >
-                  <option value="active">Đang Hoạt Động (Active)</option>
-                  <option value="blocked">Tạm Khóa (Blocked)</option>
-                </select>
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-3">
-                <button
-                  type="button"
-                  onClick={() => setEditingUser(null)}
-                  className="px-4 py-2.5 rounded-xl border border-[#D5C7C2] text-[#4A3B3D] text-xs font-bold hover:bg-[#F5ECE8] transition-colors cursor-pointer bg-white"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={editLoading}
-                  className="px-5 py-2.5 rounded-xl bg-[#733F49] hover:bg-[#5A2D35] text-white text-xs font-bold transition-all cursor-pointer border-0 disabled:opacity-50 flex items-center gap-2"
-                >
-                  {editLoading && <RefreshCw size={13} className="animate-spin" />}
-                  <span>Lưu Thay Đổi</span>
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      )}
-
-      {/* ── Modal Đặt Lại Mật Khẩu ────────────────────────────────────────── */}
-      {passwordUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/50 backdrop-blur-xs animate-fadeIn font-jakarta">
-          <div className="bg-white rounded-3xl p-6 sm:p-7 max-w-sm w-full shadow-2xl border border-[#F2E5E0] animate-scaleUp">
-            <div className="flex items-center justify-between pb-3 border-b border-[#F0E5DC] mb-4">
-              <div>
-                <span className="text-[11px] font-bold text-amber-700 uppercase tracking-wider">
-                  Bảo Mật Tài Khoản
-                </span>
-                <h3 className="font-playfair text-[20px] font-bold text-[#5F2B36] leading-tight">
-                  Đặt Lại Mật Khẩu
-                </h3>
-              </div>
-              <button
-                type="button"
-                onClick={() => setPasswordUser(null)}
-                className="w-8 h-8 rounded-full bg-[#FAF5F2] hover:bg-[#F2E8E4] flex items-center justify-center text-[#7A696B] transition-colors cursor-pointer border-0"
-              >
-                <X size={16} />
-              </button>
-            </div>
-
-            <p className="text-xs text-[#7A6B6C] mb-3">
-              Cài đặt mật khẩu mới cho tài khoản: <strong>{passwordUser.fullName}</strong> ({passwordUser.email})
-            </p>
-
-            <form onSubmit={handleResetPasswordSubmit} className="space-y-3.5 text-xs">
-              <div>
-                <label className="block text-[11.5px] font-bold text-[#554748] mb-1">
-                  Mật khẩu mới *
-                </label>
-                <input
-                  type="password"
-                  required
-                  minLength={6}
-                  value={newPassword}
-                  onChange={(e) => setNewPassword(e.target.value)}
-                  placeholder="Nhập ít nhất 6 ký tự"
-                  className="w-full px-3.5 py-2.5 rounded-xl bg-[#FAF5F2] border border-[#EFE2DC] text-[13px] text-[#2C2523] outline-none focus:border-[#B8737D]"
-                />
-              </div>
-
-              <div className="flex items-center justify-end gap-2.5 pt-2">
-                <button
-                  type="button"
-                  onClick={() => setPasswordUser(null)}
-                  className="px-4 py-2 rounded-xl border border-[#D5C7C2] text-[#4A3B3D] text-xs font-bold hover:bg-[#F5ECE8] transition-colors cursor-pointer bg-white"
-                >
-                  Hủy
-                </button>
-                <button
-                  type="submit"
-                  disabled={passwordLoading}
-                  className="px-5 py-2 rounded-xl bg-amber-700 hover:bg-amber-800 text-white text-xs font-bold transition-all cursor-pointer border-0 disabled:opacity-50 flex items-center gap-2"
-                >
-                  {passwordLoading && <RefreshCw size={13} className="animate-spin" />}
-                  <span>Xác Nhận Mật Khẩu</span>
                 </button>
               </div>
             </form>

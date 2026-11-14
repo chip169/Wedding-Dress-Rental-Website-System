@@ -28,3 +28,7 @@ yarn-error.log*
 *.njsproj
 *.sln
 .DS_Store
+
+# Temporary raw assets
+frontend/Ảnh Váy Cưới WDP/
+
