@@ -912,12 +912,30 @@ function InspectionModal({ order, onClose, onSuccess }) {
       return;
     }
 
-    // Nếu hoàn tất kiểm định và có tiền hoàn trả thì bắt buộc nhập STK
+    // Nếu hoàn tất kiểm định và có tiền hoàn trả thì bắt buộc kiểm tra và validate STK nhận hoàn cọc
     const confirmOnSite = isGuestOrder || actionType === 'complete';
-    if (!isHoldCase && confirmOnSite && finalRefund > 0 &&
-      (!onSiteBankName.trim() || !/^\d{6,30}$/.test(onSiteAccountNum.trim()) || !onSiteAccountHolder.trim())) {
-      message.warning('Vui lòng kiểm tra ngân hàng, số tài khoản và tên chủ tài khoản.');
-      return;
+    if (!isHoldCase && confirmOnSite && finalRefund > 0) {
+      if (!onSiteBankName?.trim()) {
+        message.warning('Vui lòng nhập tên ngân hàng nhận tiền hoàn cọc.');
+        return;
+      }
+      const cleanStk = (onSiteAccountNum || '').trim();
+      if (!cleanStk) {
+        message.warning('Vui lòng nhập số tài khoản (STK) nhận hoàn cọc.');
+        return;
+      }
+      if (cleanStk.length < 6) {
+        message.warning(`Số tài khoản phải có tối thiểu 6 chữ số (hiện có ${cleanStk.length} số).`);
+        return;
+      }
+      if (cleanStk.length > 25 || !/^\d+$/.test(cleanStk)) {
+        message.warning('Số tài khoản chỉ bao gồm các chữ số (từ 6 đến 25 chữ số).');
+        return;
+      }
+      if (!onSiteAccountHolder?.trim()) {
+        message.warning('Vui lòng nhập tên chủ tài khoản nhận tiền hoàn cọc.');
+        return;
+      }
     }
 
     const payload = itemsCondition.map((ic) => {
@@ -1395,16 +1413,27 @@ function InspectionModal({ order, onClose, onSuccess }) {
                   />
                 </div>
                 <div>
-                  <span className="text-[10.5px] text-[#7A6A6B] block mb-1 font-semibold">
-                    Số tài khoản (STK) <span className="text-red-600">*</span>
+                  <span className="text-[10.5px] text-[#7A6A6B] block mb-1 font-semibold flex items-center justify-between">
+                    <span>Số tài khoản (STK) <span className="text-red-600">*</span></span>
+                    {onSiteAccountNum && (
+                      <span className={`text-[10px] ${onSiteAccountNum.length >= 6 ? 'text-emerald-600 font-bold' : 'text-amber-600 font-medium'}`}>
+                        {onSiteAccountNum.length >= 6 ? `✓ ${onSiteAccountNum.length} số` : `${onSiteAccountNum.length}/6 số`}
+                      </span>
+                    )}
                   </span>
                   <Input
                     size="small"
-                    placeholder="Nhập STK nhận tiền..."
+                    inputMode="numeric"
+                    maxLength={25}
+                    placeholder="Nhập 6 - 25 chữ số..."
                     value={onSiteAccountNum}
-                    onChange={(e) => setOnSiteAccountNum(e.target.value)}
+                    onChange={(e) => setOnSiteAccountNum(e.target.value.replace(/\D/g, ''))}
+                    status={onSiteAccountNum && onSiteAccountNum.length < 6 ? 'warning' : ''}
                     className="text-xs font-mono font-bold text-[#1E8347]"
                   />
+                  {onSiteAccountNum && onSiteAccountNum.length < 6 && (
+                    <span className="text-[10px] text-amber-600 block mt-0.5">Tối thiểu 6 chữ số</span>
+                  )}
                 </div>
                 <div>
                   <span className="text-[10.5px] text-[#7A6A6B] block mb-1 font-semibold">
@@ -1565,9 +1594,28 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
       message.error(`Mức phạt không được vượt quá số tiền cọc (${fmtVnd(totalDeposit)})!`);
       return;
     }
-    if (remaining > 0 && (!bankName.trim() || !/^\d{6,30}$/.test(accountNumber.trim()) || !accountHolder.trim())) {
-      message.warning('Vui lòng kiểm tra ngân hàng, số tài khoản và tên chủ tài khoản nhận hoàn cọc.');
-      return;
+    if (remaining > 0) {
+      if (!bankName?.trim()) {
+        message.warning('Vui lòng nhập tên ngân hàng nhận tiền hoàn cọc.');
+        return;
+      }
+      const cleanStk = (accountNumber || '').trim();
+      if (!cleanStk) {
+        message.warning('Vui lòng nhập số tài khoản (STK) nhận hoàn cọc.');
+        return;
+      }
+      if (cleanStk.length < 6) {
+        message.warning(`Số tài khoản phải có tối thiểu 6 chữ số (hiện có ${cleanStk.length} số).`);
+        return;
+      }
+      if (cleanStk.length > 25 || !/^\d+$/.test(cleanStk)) {
+        message.warning('Số tài khoản chỉ bao gồm các chữ số (từ 6 đến 25 chữ số).');
+        return;
+      }
+      if (!accountHolder?.trim()) {
+        message.warning('Vui lòng nhập tên chủ tài khoản nhận hoàn cọc.');
+        return;
+      }
     }
 
     setSubmitting(true);
@@ -1829,14 +1877,27 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
                   />
                 </div>
                 <div>
-                  <span className="text-[10.5px] text-stone-600 block mb-0.5 font-medium">Số tài khoản <span className="text-red-600">*</span></span>
+                  <span className="text-[10.5px] text-stone-600 block mb-0.5 font-medium flex items-center justify-between">
+                    <span>Số tài khoản <span className="text-red-600">*</span></span>
+                    {accountNumber && (
+                      <span className={`text-[10px] ${accountNumber.length >= 6 ? 'text-emerald-600 font-bold' : 'text-amber-600 font-medium'}`}>
+                        {accountNumber.length >= 6 ? `✓ ${accountNumber.length} số` : `${accountNumber.length}/6 số`}
+                      </span>
+                    )}
+                  </span>
                   <Input
                     size="small"
-                    placeholder="Nhập STK nhận tiền..."
+                    inputMode="numeric"
+                    maxLength={25}
+                    placeholder="Nhập 6 - 25 chữ số..."
                     value={accountNumber}
-                    onChange={(e) => setAccountNumber(e.target.value)}
+                    onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ''))}
+                    status={accountNumber && accountNumber.length < 6 ? 'warning' : ''}
                     className="text-xs font-mono font-bold text-[#1E8347]"
                   />
+                  {accountNumber && accountNumber.length < 6 && (
+                    <span className="text-[10px] text-amber-600 block mt-0.5">Tối thiểu 6 chữ số</span>
+                  )}
                 </div>
                 <div>
                   <span className="text-[10.5px] text-stone-600 block mb-0.5 font-medium">Chủ tài khoản <span className="text-red-600">*</span></span>

@@ -86,8 +86,17 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
       message.warning('Vui lòng chọn hoặc nhập tên ngân hàng thụ hưởng.');
       return;
     }
-    if (needsBankDetails && !/^\d{6,30}$/.test(accountNumber.trim())) {
-      message.warning('Số tài khoản cần gồm 6 đến 30 chữ số.');
+    const cleanStk = (accountNumber || '').trim();
+    if (needsBankDetails && !cleanStk) {
+      message.warning('Vui lòng nhập số tài khoản (STK) nhận hoàn cọc.');
+      return;
+    }
+    if (needsBankDetails && cleanStk.length < 6) {
+      message.warning(`Số tài khoản phải gồm tối thiểu 6 chữ số (hiện có ${cleanStk.length} số).`);
+      return;
+    }
+    if (needsBankDetails && (cleanStk.length > 25 || !/^\d+$/.test(cleanStk))) {
+      message.warning('Số tài khoản chỉ bao gồm các chữ số (từ 6 đến 25 chữ số).');
       return;
     }
     if (needsBankDetails && !accountHolder.trim()) {
@@ -287,22 +296,32 @@ export default function CustomerInspectionModal({ order, onClose, onUpdated }) {
 
                   {/* Số tài khoản (STK) */}
                   <div>
-                    <label className="block text-[11.5px] font-bold text-[#4A3B3D] mb-1 flex items-center gap-1.5">
-                      <CreditCard size={13} className="text-[#B8737D]" />
-                      <span>Số tài khoản (STK) <span className="text-rose-500">*</span></span>
+                    <label className="block text-[11.5px] font-bold text-[#4A3B3D] mb-1 flex items-center justify-between">
+                      <span className="flex items-center gap-1.5">
+                        <CreditCard size={13} className="text-[#B8737D]" />
+                        <span>Số tài khoản (STK) <span className="text-rose-500">*</span></span>
+                      </span>
+                      {accountNumber && (
+                        <span className={`text-[10px] ${accountNumber.length >= 6 ? 'text-emerald-600 font-bold' : 'text-amber-600 font-medium'}`}>
+                          {accountNumber.length >= 6 ? `✓ ${accountNumber.length} số` : `${accountNumber.length}/6 số`}
+                        </span>
+                      )}
                     </label>
                     <input
                       type="text"
                       required
                       inputMode="numeric"
-                      pattern="[0-9]{6,30}"
+                      pattern="[0-9]{6,25}"
                       minLength={6}
-                      maxLength={30}
-                      placeholder="Nhập số tài khoản ngân hàng"
+                      maxLength={25}
+                      placeholder="Nhập 6 - 25 chữ số tài khoản..."
                       value={accountNumber}
                       onChange={(e) => setAccountNumber(e.target.value.replace(/\D/g, ''))}
-                      className="w-full px-3 py-2 rounded-xl border border-[#E0D0CA] bg-white text-[13px] font-mono tracking-wider font-semibold text-[#2C2523] outline-none focus:border-[#733F49]"
+                      className={`w-full px-3 py-2 rounded-xl border ${accountNumber && accountNumber.length < 6 ? 'border-amber-400' : 'border-[#E0D0CA]'} bg-white text-[13px] font-mono tracking-wider font-semibold text-[#2C2523] outline-none focus:border-[#733F49]`}
                     />
+                    {accountNumber && accountNumber.length < 6 && (
+                      <span className="text-[10px] text-amber-600 block mt-0.5">Tối thiểu 6 chữ số</span>
+                    )}
                   </div>
 
                   {/* Tên chủ tài khoản */}
