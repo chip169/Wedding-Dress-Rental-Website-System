@@ -1280,7 +1280,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
               <span>Chi Tiết</span>
             </button>
 
-            {!isPast && isToday && st === 'confirmed' && (
+            {st === 'confirmed' && (
               <>
                 <button
                   type="button"
@@ -2275,76 +2275,43 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                             <div className="flex items-center gap-2 pt-3 border-t border-gray-200/70 mt-3">
                               {isFitting && (
                                 item.status === 'confirmed' ? (
-                                  (item.date || toDateKey(item.appointmentDate)) === todayKey ? (
-                                    <div className="flex items-center gap-2 w-full">
-                                      <button
-                                        type="button"
-                                        disabled={updatingId === item.id}
-                                        onClick={() =>
-                                          handleUpdateAppointmentStatus(item.id, 'completed')
-                                        }
-                                        className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
-                                        title="Khách hàng đã đến showroom: Đánh dấu có mặt"
-                                      >
-                                        <CheckCircle2 className="w-3.5 h-3.5" />
-                                        <span>Có Mặt</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        disabled={updatingId === item.id}
-                                        onClick={() =>
-                                          handleUpdateAppointmentStatus(item.id, 'cancelled')
-                                        }
-                                        className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center justify-center gap-1 transition cursor-pointer disabled:opacity-50"
-                                        title="Khách bận hoặc không đến: Đánh dấu vắng mặt"
-                                      >
-                                        <XCircle className="w-3.5 h-3.5" />
-                                        <span>Vắng Mặt</span>
-                                      </button>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setSelectedEvent(item);
-                                          setDetailModalOpen(true);
-                                        }}
-                                        className="p-2 rounded-xl bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 text-xs font-medium transition cursor-pointer"
-                                        title="Xem chi tiết đầy đủ"
-                                      >
-                                        <Eye className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                  ) : (item.date || toDateKey(item.appointmentDate)) > todayKey ? (
-                                    <div className="flex items-center gap-2 w-full">
-                                      <div className="flex-1 py-1.5 px-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-500 text-xs font-semibold flex items-center justify-center gap-1.5">
-                                        <Clock className="w-3.5 h-3.5 text-gray-400" />
-                                        <span>Chờ đến ngày hẹn</span>
-                                      </div>
-                                      <button
-                                        type="button"
-                                        onClick={() => {
-                                          setSelectedEvent(item);
-                                          setDetailModalOpen(true);
-                                        }}
-                                        className="p-2 rounded-xl bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 text-xs font-medium transition cursor-pointer"
-                                        title="Xem chi tiết đầy đủ"
-                                      >
-                                        <Eye className="w-4 h-4" />
-                                      </button>
-                                    </div>
-                                  ) : (
+                                  <div className="flex items-center gap-2 w-full">
+                                    <button
+                                      type="button"
+                                      disabled={updatingId === item.id}
+                                      onClick={() =>
+                                        handleUpdateAppointmentStatus(item.id, 'completed')
+                                      }
+                                      className="flex-1 py-2 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center justify-center gap-1.5 transition shadow-xs cursor-pointer disabled:opacity-50"
+                                      title="Khách hàng đã đến showroom: Đánh dấu có mặt"
+                                    >
+                                      <CheckCircle2 className="w-3.5 h-3.5" />
+                                      <span>Có Mặt</span>
+                                    </button>
+                                    <button
+                                      type="button"
+                                      disabled={updatingId === item.id}
+                                      onClick={() =>
+                                        handleUpdateAppointmentStatus(item.id, 'cancelled')
+                                      }
+                                      className="py-2 px-3 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 text-xs font-bold flex items-center justify-center gap-1 transition cursor-pointer disabled:opacity-50"
+                                      title="Khách bận hoặc không đến: Đánh dấu vắng mặt"
+                                    >
+                                      <XCircle className="w-3.5 h-3.5" />
+                                      <span>Vắng Mặt</span>
+                                    </button>
                                     <button
                                       type="button"
                                       onClick={() => {
                                         setSelectedEvent(item);
                                         setDetailModalOpen(true);
                                       }}
-                                      className="w-full py-2 px-3 rounded-xl bg-gray-50 hover:bg-[#FAF0EC] text-gray-700 hover:text-[#733F49] border border-gray-200 text-xs font-semibold flex items-center justify-center gap-1.5 transition cursor-pointer shadow-xs"
-                                      title="Xem chi tiết ca thử"
+                                      className="p-2 rounded-xl bg-white hover:bg-gray-100 text-gray-700 border border-gray-200 text-xs font-medium transition cursor-pointer"
+                                      title="Xem chi tiết đầy đủ"
                                     >
-                                      <Eye className="w-3.5 h-3.5 text-[#733F49]" />
-                                      <span>Xem Chi Tiết</span>
+                                      <Eye className="w-4 h-4" />
                                     </button>
-                                  )
+                                  </div>
                                 ) : (
                                   <button
                                     type="button"
@@ -2650,40 +2617,28 @@ export default function ScheduleOverviewPage({ defaultTab }) {
                     {/* Nút hành động phê duyệt trực tiếp trong Modal */}
                     <div className="pt-2 border-t border-gray-100 flex flex-wrap gap-2">
                       {selectedEvent.status === 'confirmed' ? (
-                        (selectedEvent.date || toDateKey(selectedEvent.appointmentDate)) === todayKey ? (
-                          <>
-                            <button
-                              type="button"
-                              disabled={updatingId === selectedEvent.id}
-                              onClick={() => handleUpdateAppointmentStatus(selectedEvent.id, 'completed')}
-                              className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
-                              title="Khách hàng đã đến showroom: Đánh dấu có mặt"
-                            >
-                              <CheckCircle2 className="w-4 h-4" />
-                              <span>Có Mặt</span>
-                            </button>
-                            <button
-                              type="button"
-                              disabled={updatingId === selectedEvent.id}
-                              onClick={() => handleUpdateAppointmentStatus(selectedEvent.id, 'cancelled')}
-                              className="py-2.5 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
-                              title="Khách không đến: Đánh dấu vắng mặt"
-                            >
-                              <XCircle className="w-4 h-4" />
-                              <span>Vắng Mặt</span>
-                            </button>
-                          </>
-                        ) : (selectedEvent.date || toDateKey(selectedEvent.appointmentDate)) > todayKey ? (
-                          <div className="w-full py-2.5 px-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-600 text-xs font-semibold text-center flex items-center justify-center gap-2">
-                            <Clock className="w-4 h-4 text-gray-400" />
-                            <span>Lịch hẹn chưa đến ngày — Chỉ mở thao tác khi đến ngày hẹn</span>
-                          </div>
-                        ) : (
-                          <div className="w-full py-2.5 px-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-600 text-xs font-semibold text-center flex items-center justify-center gap-2">
-                            <Clock className="w-4 h-4 text-gray-400" />
-                            <span>Lịch hẹn đã qua — Không thể chỉnh sửa</span>
-                          </div>
-                        )
+                        <>
+                          <button
+                            type="button"
+                            disabled={updatingId === selectedEvent.id}
+                            onClick={() => handleUpdateAppointmentStatus(selectedEvent.id, 'completed')}
+                            className="flex-1 py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
+                            title="Khách hàng đã đến showroom: Đánh dấu có mặt"
+                          >
+                            <CheckCircle2 className="w-4 h-4" />
+                            <span>Có Mặt</span>
+                          </button>
+                          <button
+                            type="button"
+                            disabled={updatingId === selectedEvent.id}
+                            onClick={() => handleUpdateAppointmentStatus(selectedEvent.id, 'cancelled')}
+                            className="py-2.5 px-4 rounded-xl bg-rose-50 hover:bg-rose-100 text-rose-700 border border-rose-200 font-bold text-xs flex items-center justify-center gap-1.5 transition cursor-pointer"
+                            title="Khách không đến: Đánh dấu vắng mặt"
+                          >
+                            <XCircle className="w-4 h-4" />
+                            <span>Vắng Mặt</span>
+                          </button>
+                        </>
                       ) : (
                         <div className="w-full py-2.5 px-3 rounded-xl bg-gray-50 border border-gray-200 text-gray-600 text-xs font-medium text-center flex items-center justify-center gap-2">
                           <CheckCircle2 className="w-4 h-4 text-gray-400" />

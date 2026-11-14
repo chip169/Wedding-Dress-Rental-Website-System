@@ -268,15 +268,6 @@ export const updateAppointmentStatus = async (id, status, staffId = null) => {
     throw new Error('Không tìm thấy lịch hẹn.');
   }
 
-  // Ràng buộc nghiệp vụ: Chưa đến ngày hẹn thì không được đánh dấu hoàn tất
-  if (status === 'completed' && appointment.appointmentDate) {
-    const now = new Date();
-    const todayEnd = new Date(now.getFullYear(), now.getMonth(), now.getDate(), 23, 59, 59, 999);
-    if (new Date(appointment.appointmentDate) > todayEnd) {
-      throw new Error('Chưa đến ngày hẹn thử váy, không thể đánh dấu hoàn tất.');
-    }
-  }
-
   appointment.status = status;
   if (staffId) appointment.staffId = staffId;
   await appointment.save();
