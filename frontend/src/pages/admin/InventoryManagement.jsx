@@ -551,35 +551,26 @@ export default function InventoryManagement() {
     };
 
     // QUY TẮC CỐT LÕI: Khi khả dụng = 0 (tất cả các bộ trong kho đã cho thuê, cọc hoặc bảo dưỡng),
-    // TUYỆT ĐỐI KHÔNG ĐƯỢC hiển thị là "CÒN HÀNG" dù có manualStatus hay không!
+    // BẮT BUỘC hiển thị là "HẾT HÀNG" vì chi tiết từng size (đang thuê, đã cọc, bảo dưỡng) đã được thể hiện ở cột "TỒN KHO THEO SIZE"
     if (availableStock <= 0) {
-      if (maintenanceCount > 0 && maintenanceCount === totalStock) {
-        statusType = 'drying';
-        statusText = 'ĐANG BẢO DƯỠNG';
-        statusSubNote = `Đang kiểm định & bảo dưỡng (${maintenanceCount} bộ)`;
-      } else if (rentedCount > 0) {
-        statusType = 'ready';
-        statusText = 'ĐÃ CHO THUÊ';
-        const reasons = [];
-        if (rentedCount > 0) reasons.push(`${rentedCount} đang thuê`);
-        if (bookedCount > 0) reasons.push(`${bookedCount} đã cọc`);
-        if (maintenanceCount > 0) reasons.push(`${maintenanceCount} bảo dưỡng`);
-        statusSubNote = reasons.join(' • ');
-      } else {
-        statusType = 'out_of_stock';
-        statusText = 'HẾT HÀNG';
-        const reasons = [];
-        if (bookedCount > 0) reasons.push(`${bookedCount} đã cọc`);
-        if (maintenanceCount > 0) reasons.push(`${maintenanceCount} bảo dưỡng`);
-        statusSubNote = totalStock > 0
-          ? `Tạm hết khả dụng (${reasons.length > 0 ? reasons.join(' • ') : `${totalStock} bộ`})`
-          : 'Tạm hết mẫu này trong kho';
-      }
+      statusType = 'out_of_stock';
+      statusText = 'HẾT HÀNG';
+      const reasons = [];
+      if (rentedCount > 0) reasons.push(`${rentedCount} đang thuê`);
+      if (bookedCount > 0) reasons.push(`${bookedCount} đã cọc`);
+      if (maintenanceCount > 0) reasons.push(`${maintenanceCount} bảo dưỡng`);
+      statusSubNote = totalStock > 0
+        ? `Tạm hết khả dụng (${reasons.length > 0 ? reasons.join(' • ') : `${totalStock} bộ`})`
+        : 'Tạm hết mẫu này trong kho';
     } else {
       if (statusType === 'drying' || manualStatus === 'drying') {
         statusType = 'drying';
         statusText = 'ĐANG BẢO DƯỠNG';
         statusSubNote = maintenanceCount > 0 ? `Đang kiểm định và bảo dưỡng (${maintenanceCount} bộ)` : 'Giặt khô, là hơi phục hồi';
+      } else if (statusType === 'ready' || manualStatus === 'ready') {
+        statusType = 'ready';
+        statusText = 'ĐÃ CHO THUÊ';
+        statusSubNote = `Sẵn sàng: ${availableStock}/${totalStock} bộ • Đang thuê: ${rentedCount}`;
       } else {
         statusType = 'stored';
         statusText = 'CÒN HÀNG';
@@ -1803,12 +1794,12 @@ export default function InventoryManagement() {
                       </td>
                       <td className="py-2.5 px-3 text-center">
                         <span className={`inline-block px-2.5 py-0.5 rounded-full text-[10px] font-bold ${
+                          it.availableStock <= 0 || it.statusType === 'out_of_stock' ? 'bg-red-50 text-red-700 border border-red-200' :
                           it.statusType === 'drying' ? 'bg-amber-50 text-amber-800 border border-amber-200' :
-                          it.statusType === 'out_of_stock' ? 'bg-red-50 text-red-700 border border-red-200' :
                           it.statusType === 'ready' || it.statusType === 'partially_rented' ? 'bg-blue-50 text-blue-700 border border-blue-200' :
                           'bg-emerald-50 text-emerald-700 border border-emerald-200'
                         }`}>
-                          {it.statusText}
+                          {it.availableStock <= 0 ? 'HẾT HÀNG' : it.statusText}
                         </span>
                       </td>
                     </tr>
@@ -2067,28 +2058,25 @@ export default function InventoryManagement() {
                       {/* Col 5: Tình trạng kho */}
                       <td className="py-4 px-4 text-center whitespace-nowrap">
                         <div className="flex flex-col items-center gap-1">
-                          {item.statusType === 'stored' && (
-                            <span className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase whitespace-nowrap bg-[#EFF6FF] text-[#1D4ED8] border border-[#BFDBFE]">
-                              <Crown size={12} className="text-[#1D4ED8]" />
-                              <span>Còn Hàng</span>
-                            </span>
-                          )}
-                          {item.statusType === 'ready' && (
-                            <span className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase whitespace-nowrap bg-[#EAF7EE] text-[#1E8347] border border-[#BCE7C7]">
-                              <CheckCircle2 size={12} className="text-[#1E8347]" />
-                              <span>Đã Cho Thuê</span>
-                            </span>
-                          )}
-                          {item.statusType === 'out_of_stock' && (
+                          {item.availableStock <= 0 || item.statusType === 'out_of_stock' ? (
                             <span className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase whitespace-nowrap bg-[#FEF2F2] text-[#DC2626] border border-[#FECACA]">
                               <AlertTriangle size={12} className="text-[#DC2626]" />
                               <span>Hết Hàng</span>
                             </span>
-                          )}
-                          {item.statusType === 'drying' && (
+                          ) : item.statusType === 'drying' ? (
                             <span className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase whitespace-nowrap bg-[#FEF2E6] text-[#D97706] border border-[#FED7AA]">
                               <Wrench size={12} className="text-[#D97706]" />
                               <span>Đang Bảo Dưỡng</span>
+                            </span>
+                          ) : item.statusType === 'ready' ? (
+                            <span className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase whitespace-nowrap bg-[#EAF7EE] text-[#1E8347] border border-[#BCE7C7]">
+                              <CheckCircle2 size={12} className="text-[#1E8347]" />
+                              <span>Đã Cho Thuê</span>
+                            </span>
+                          ) : (
+                            <span className="inline-flex items-center justify-center gap-1.5 px-3 py-1 rounded-full text-[11px] font-bold tracking-wide uppercase whitespace-nowrap bg-[#EFF6FF] text-[#1D4ED8] border border-[#BFDBFE]">
+                              <Crown size={12} className="text-[#1D4ED8]" />
+                              <span>Còn Hàng</span>
                             </span>
                           )}
                         </div>

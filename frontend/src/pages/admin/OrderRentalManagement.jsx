@@ -121,8 +121,8 @@ const NEXT_STATUSES = {
   cancelled: [],
 };
 
-const canRecordReturn = (order) => order.status === 'renting' || order.status === 'delivered';
-const canInspectOrder = (order) => order.status === 'renting' || order.status === 'delivered';
+const canRecordReturn = (order) => order.status === 'renting';
+const canInspectOrder = (order) => order.status === 'renting';
 const hasDisputedInspection = (order) => order.status === 'disputed'
   || (order.inspection?.customerStatus || order.inspectionCustomerStatus) === 'disputed';
 
@@ -131,6 +131,31 @@ const CONDITION_OPTIONS = [
   { value: 'minor_stain', label: 'Vết nhỏ' },
   { value: 'heavy_damage', label: 'Hư hỏng nặng' },
   { value: 'torn_lace', label: 'Rách ren/đính kết' },
+];
+
+const POPULAR_BANKS_OPTIONS = [
+  { value: 'Vietcombank', label: 'Vietcombank (VCB - Ngoại Thương)' },
+  { value: 'Techcombank', label: 'Techcombank (TCB - Kỹ Thương)' },
+  { value: 'MB Bank', label: 'MB Bank (Quân Đội)' },
+  { value: 'ACB', label: 'ACB (Á Châu)' },
+  { value: 'BIDV', label: 'BIDV (Đầu Tư & Phát Triển)' },
+  { value: 'VietinBank', label: 'VietinBank (Công Thương)' },
+  { value: 'VPBank', label: 'VPBank (Việt Nam Thịnh Vượng)' },
+  { value: 'TPBank', label: 'TPBank (Tiên Phong)' },
+  { value: 'Sacombank', label: 'Sacombank (Sài Gòn Thương Tín)' },
+  { value: 'Agribank', label: 'Agribank (Nông Nghiệp)' },
+  { value: 'VIB', label: 'VIB (Quốc Tế)' },
+  { value: 'HDBank', label: 'HDBank (Phát Triển TP.HCM)' },
+  { value: 'MSB', label: 'MSB (Hàng Hải)' },
+  { value: 'OCB', label: 'OCB (Phương Đông)' },
+  { value: 'SHB', label: 'SHB (Sài Gòn - Hà Nội)' },
+  { value: 'SeABank', label: 'SeABank (Đông Nam Á)' },
+  { value: 'LPBank', label: 'LPBank (Bưu Điện Liên Việt)' },
+  { value: 'Eximbank', label: 'Eximbank (Xuất Nhập Khẩu)' },
+  { value: 'Bac A Bank', label: 'Bac A Bank (Bắc Á)' },
+  { value: 'Nam A Bank', label: 'Nam A Bank (Nam Á)' },
+  { value: 'PVcomBank', label: 'PVcomBank (Đại Chúng)' },
+  { value: 'Khác', label: 'Khác (Tự nhập tên ngân hàng)' },
 ];
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -610,6 +635,21 @@ function InspectionModal({ order, onClose, onSuccess }) {
   const [inspectionReload, setInspectionReload] = useState(0);
   const [customerDisputeNote, setCustomerDisputeNote] = useState('');
   const [onSiteBankName, setOnSiteBankName] = useState(initialInsp?.refundBankDetails?.bankName || 'Vietcombank');
+  const [isCustomBank, setIsCustomBank] = useState(false);
+  const bankOptions = useMemo(() => {
+    const list = [...POPULAR_BANKS_OPTIONS];
+    if (
+      onSiteBankName &&
+      !list.some(
+        (b) =>
+          b.value.toLowerCase() === onSiteBankName.toLowerCase() ||
+          b.label.toLowerCase().includes(onSiteBankName.toLowerCase())
+      )
+    ) {
+      list.unshift({ value: onSiteBankName, label: onSiteBankName });
+    }
+    return list;
+  }, [onSiteBankName]);
   const [onSiteAccountNum, setOnSiteAccountNum] = useState(initialInsp?.refundBankDetails?.accountNumber || '');
   const [onSiteAccountHolder, setOnSiteAccountHolder] = useState(initialInsp?.refundBankDetails?.accountHolder || order.customerName || '');
 
@@ -1404,13 +1444,36 @@ function InspectionModal({ order, onClose, onSuccess }) {
                   <span className="text-[10.5px] text-[#7A6A6B] block mb-1 font-semibold">
                     Ngân hàng <span className="text-red-600">*</span>
                   </span>
-                  <Input
+                  <Select
                     size="small"
-                    placeholder="VD: Vietcombank, MB, Techcombank..."
-                    value={onSiteBankName}
-                    onChange={(e) => setOnSiteBankName(e.target.value)}
-                    className="text-xs"
+                    showSearch
+                    placeholder="Chọn hoặc gõ tìm ngân hàng..."
+                    value={onSiteBankName || undefined}
+                    onChange={(val) => {
+                      if (val === 'Khác') {
+                        setOnSiteBankName('');
+                        setIsCustomBank(true);
+                      } else {
+                        setOnSiteBankName(val);
+                        setIsCustomBank(false);
+                      }
+                    }}
+                    filterOption={(input, option) =>
+                      (option?.label ?? '').toLowerCase().includes(input.toLowerCase()) ||
+                      (option?.value ?? '').toLowerCase().includes(input.toLowerCase())
+                    }
+                    options={bankOptions}
+                    className="w-full text-xs"
                   />
+                  {isCustomBank && (
+                    <Input
+                      size="small"
+                      placeholder="Nhập tên ngân hàng của khách..."
+                      value={onSiteBankName}
+                      onChange={(e) => setOnSiteBankName(e.target.value)}
+                      className="text-xs mt-1.5"
+                    />
+                  )}
                 </div>
                 <div>
                   <span className="text-[10.5px] text-[#7A6A6B] block mb-1 font-semibold flex items-center justify-between">
@@ -1536,6 +1599,21 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
   const [loadError, setLoadError] = useState('');
   const [reload, setReload] = useState(0);
   const [bankName, setBankName] = useState(initialInsp?.refundBankDetails?.bankName || 'Vietcombank');
+  const [isCustomRefundBank, setIsCustomRefundBank] = useState(false);
+  const refundBankOptions = useMemo(() => {
+    const list = [...POPULAR_BANKS_OPTIONS];
+    if (
+      bankName &&
+      !list.some(
+        (b) =>
+          b.value.toLowerCase() === bankName.toLowerCase() ||
+          b.label.toLowerCase().includes(bankName.toLowerCase())
+      )
+    ) {
+      list.unshift({ value: bankName, label: bankName });
+    }
+    return list;
+  }, [bankName]);
   const [accountNumber, setAccountNumber] = useState(initialInsp?.refundBankDetails?.accountNumber || '');
   const [accountHolder, setAccountHolder] = useState(initialInsp?.refundBankDetails?.accountHolder || order.customerName || '');
   const [negotiationNotes, setNegotiationNotes] = useState(initialInsp?.adminNegotiationNotes || '');
@@ -1868,13 +1946,36 @@ function AdminNegotiationModal({ order, onClose, onSuccess }) {
               <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 pt-1">
                 <div>
                   <span className="text-[10.5px] text-stone-600 block mb-0.5 font-medium">Ngân hàng <span className="text-red-600">*</span></span>
-                  <Input
+                  <Select
                     size="small"
-                    placeholder="VD: Vietcombank, MB..."
-                    value={bankName}
-                    onChange={(e) => setBankName(e.target.value)}
-                    className="text-xs"
+                    showSearch
+                    placeholder="Chọn hoặc gõ tìm ngân hàng..."
+                    value={bankName || undefined}
+                    onChange={(val) => {
+                      if (val === 'Khác') {
+                        setBankName('');
+                        setIsCustomRefundBank(true);
+                      } else {
+                        setBankName(val);
+                        setIsCustomRefundBank(false);
+                      }
+                    }}
+                    filterOption={(input, option) =>
+                      (option?.label ?? '').toLowerCase().includes(input.toLowerCase()) ||
+                      (option?.value ?? '').toLowerCase().includes(input.toLowerCase())
+                    }
+                    options={refundBankOptions}
+                    className="w-full text-xs"
                   />
+                  {isCustomRefundBank && (
+                    <Input
+                      size="small"
+                      placeholder="Nhập tên ngân hàng..."
+                      value={bankName}
+                      onChange={(e) => setBankName(e.target.value)}
+                      className="text-xs mt-1"
+                    />
+                  )}
                 </div>
                 <div>
                   <span className="text-[10.5px] text-stone-600 block mb-0.5 font-medium flex items-center justify-between">

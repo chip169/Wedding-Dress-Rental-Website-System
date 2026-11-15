@@ -892,7 +892,7 @@ export default function ScheduleOverviewPage({ defaultTab }) {
       });
 
       // Tải lại dữ liệu đồng bộ trong nền
-      loadData(false);
+      fetchData(true);
     } catch (err) {
       console.error('Lỗi khi cập nhật trạng thái đơn thuê:', err);
       message.error(err?.response?.data?.message || err.message || 'Không thể cập nhật trạng thái đơn thuê.');

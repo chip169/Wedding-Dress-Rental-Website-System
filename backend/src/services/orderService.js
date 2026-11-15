@@ -854,8 +854,8 @@ const createReturnInspection = async (order, data, staffUser) => {
 export const submitReturnInspection = async (orderId, data = {}, staffUser) => {
   const order = await Order.findById(orderId);
   if (!order) throw returnError(404, 'Không tìm thấy đơn thuê.');
-  if (!['renting', 'delivered', 'returned', 'waiting_refund'].includes(order.status)) {
-    throw returnError(409, 'Đơn thuê hiện không đủ điều kiện lập biên bản kiểm định. Vui lòng kiểm tra lại trạng thái đơn.');
+  if (!['renting', 'returned', 'waiting_refund'].includes(order.status)) {
+    throw returnError(409, 'Đơn thuê phải ở trạng thái "Đang Thuê" mới đủ điều kiện lập biên bản kiểm định.');
   }
 
   const existing = await ReturnInspection.findOne({ orderId: order._id });

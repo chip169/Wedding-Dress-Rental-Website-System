@@ -623,7 +623,7 @@ export default function AdminLayout({
                   </span>
                 </div>
 
-                <div className="flex items-center gap-0.5 shrink-0 pl-1.5 border-l border-[#EFE2DC]">
+                <div className="flex items-center gap-1 shrink-0 pl-1.5 border-l border-[#EFE2DC]">
                   {/* Nút lùi */}
                   <button
                     type="button"
@@ -653,6 +653,19 @@ export default function AdminLayout({
                     title="Thông báo kế tiếp"
                   >
                     <ChevronRight size={13} />
+                  </button>
+
+                  {/* Nút Dấu Tích: Xác nhận đã đọc -> Ẩn thông báo này */}
+                  <button
+                    type="button"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      markIdAsRead(currentNotif.id);
+                    }}
+                    className="ml-1 p-1 rounded-full bg-emerald-50 text-emerald-600 hover:bg-emerald-100 hover:text-emerald-700 border border-emerald-200 transition-all cursor-pointer flex items-center justify-center shadow-2xs"
+                    title="Xác nhận đã đọc (Ẩn thông báo này)"
+                  >
+                    <Check size={12} strokeWidth={2.5} />
                   </button>
                 </div>
               </div>
